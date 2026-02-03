@@ -17,9 +17,6 @@
         <!-- Favicon -->
         <link rel="icon" href="{{asset('build/assets/images/brand-logos/favicon.ico')}}" type="image/x-icon">
     
-        <!-- Main Theme Js -->
-        <script src="{{asset('build/assets/main.js')}}"></script>
-
         <!-- ICONS CSS -->
         <link href="{{asset('build/assets/icon-fonts/icons.css')}}" rel="stylesheet">
 
@@ -82,7 +79,7 @@
         @include('layouts.components.scripts')
 
         <!-- Sticky JS -->
-        <script src="{{asset('build/assets/sticky.js')}}"></script>
+        @vite('resources/assets/js/sticky.js')
 
         <!-- Custom-Switcher JS -->
         @vite('resources/assets/js/custom-switcher.js')
