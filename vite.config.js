@@ -14,6 +14,8 @@ export default defineConfig({
                 'resources/assets/js/simplebar.js',
                 'resources/assets/js/sticky.js',
                 'resources/assets/js/main.js',
+                'resources/assets/js/defaultmenu.js',
+                'resources/assets/js/landing.js'
             ],
             refresh: true,
         }),
