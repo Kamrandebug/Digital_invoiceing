@@ -11,7 +11,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->redirectTo(
+            guests: '/login',
+            users: '/index2'
+        );
+        $middleware->web(append: [
+            \App\Http\Middleware\InitializeTenantContext::class,
+        ]);
+        $middleware->api(append: [
+            \App\Http\Middleware\InitializeTenantContext::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
