@@ -58,7 +58,7 @@
                         <li class="slide side-menu__label1">
                             <a href="javascript:void(0)">Dashboards</a>
                         </li>
-                        <li class="slide {{ request()->is('index') ? 'active' : '' }}">
+                        {{-- <li class="slide {{ request()->is('index') ? 'active' : '' }}">
                             <a href="{{ url('index') }}" class="side-menu__item">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="side-menu-doublemenu__icon"
                                     viewBox="0 0 256 256">
@@ -80,7 +80,7 @@
                                         stroke-linejoin="round" stroke-width="16" />
                                 </svg>
                                 Sales</a>
-                        </li>
+                        </li> --}}
                         <li class="slide has-sub {{ request()->is('index') ? 'active' : '' }}">
                             <a href="javascript:void(0);" class="side-menu__item">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="side-menu-doublemenu__icon"
