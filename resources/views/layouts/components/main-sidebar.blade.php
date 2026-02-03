@@ -2,7 +2,7 @@
 
     <!-- Start::main-sidebar-header -->
     <div class="main-sidebar-header">
-        <a href="{{ url('index') }}" class="header-logo">
+        <a href="{{ url('dashboard') }}" class="header-logo">
             <img src="{{ asset('build/assets/images/brand-logos/desktop-logo.png') }}" alt="logo" class="desktop-logo">
             <img src="{{ asset('build/assets/images/brand-logos/toggle-dark.png') }}" alt="logo" class="toggle-dark">
             <img src="{{ asset('build/assets/images/brand-logos/desktop-dark.png') }}" alt="logo"
@@ -130,7 +130,36 @@
                 </li>
                 <!-- End::slide -->
 
+                <!-- Logout -->
+                <li class="slide__category"><span class="category-name">Account</span></li>
+                <li class="slide">
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <a href="javascript:void(0);" onclick="event.preventDefault(); this.closest('form').submit();"
+                            class="side-menu__item">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="side-menu__icon" viewBox="0 0 256 256">
+                                <rect width="256" height="256" fill="none" />
+                                <path
+                                    d="M48,40H208a16,16,0,0,1,16,16V200a16,16,0,0,1-16,16H48a0,0,0,0,1,0,0V40A0,0,0,0,1,48,40Z"
+                                    opacity="0.2" />
+                                <polyline points="112 40 48 40 48 216 112 216" fill="none" stroke="currentColor"
+                                    stroke-linecap="round" stroke-linejoin="round" stroke-width="16" />
+                                <line x1="112" y1="128" x2="224" y2="128" fill="none"
+                                    stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke-width="16" />
+                                <polyline points="184 88 224 128 184 168" fill="none" stroke="currentColor"
+                                    stroke-linecap="round" stroke-linejoin="round" stroke-width="16" />
+                            </svg>
+                            <span class="side-menu__label">Logout</span>
+                        </a>
+                    </form>
+                </li>
+
             </ul>
+            <div class="slide-right" id="slide-right"><svg xmlns="http://www.w3.org/2000/svg" fill="#7b8191"
+                    width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M10.707 17.707 16.414 12l-5.707-5.707-1.414 1.414L13.586 12l-4.293 4.293z"></path>
+                </svg></div>
         </nav>
         <!-- End::nav -->
 

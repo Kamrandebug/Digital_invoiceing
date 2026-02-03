@@ -1,1 +1,7 @@
-import "../assets/js/custom";
+import './bootstrap';
+
+import Alpine from 'alpinejs';
+
+window.Alpine = Alpine;
+
+Alpine.start();
