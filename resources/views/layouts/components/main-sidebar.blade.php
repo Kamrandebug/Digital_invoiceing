@@ -100,8 +100,12 @@
                                     <a href="{{ url('index2') }}" class="side-menu__item">Dashboard</a>
                                 </li>
                                 <li class="slide">
+                                    <a href="{{ url('customers-list') }}" class="side-menu__item">Customers</a>
+                                </li>
+                                <li class="slide">
                                     <a href="{{ url('products') }}" class="side-menu__item">Products</a>
                                 </li>
+
                                 <li class="slide">
                                     <a href="{{ url('product-details') }}" class="side-menu__item">Product
                                         Details</a>
@@ -111,9 +115,6 @@
                                 </li>
                                 <li class="slide">
                                     <a href="{{ url('checkout') }}" class="side-menu__item">Checkout</a>
-                                </li>
-                                <li class="slide">
-                                    <a href="{{ url('customers-list') }}" class="side-menu__item">Customers</a>
                                 </li>
                                 <li class="slide">
                                     <a href="{{ url('orders') }}" class="side-menu__item">Orders</a>
