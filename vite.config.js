@@ -1,6 +1,20 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import fs from 'fs';
+import path from 'path';
+
+// Helper to get all JS files from a directory
+function getFilesFromDir(dir) {
+    const directoryPath = path.resolve(__dirname, dir);
+    if (!fs.existsSync(directoryPath)) return [];
+
+    return fs.readdirSync(directoryPath)
+        .filter(file => file.endsWith('.js'))
+        .map(file => `${dir}/${file}`);
+}
+
+const assetJsFiles = getFilesFromDir('resources/assets/js');
 
 export default defineConfig({
     plugins: [
@@ -9,13 +23,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/sass/app.scss',
                 'resources/js/app.js',
-                'resources/assets/js/custom-switcher.js',
-                'resources/assets/js/ecommerce-dashboard.js',
-                'resources/assets/js/simplebar.js',
-                'resources/assets/js/sticky.js',
-                'resources/assets/js/main.js',
-                'resources/assets/js/defaultmenu.js',
-                'resources/assets/js/landing.js'
+                ...assetJsFiles,
             ],
             refresh: true,
         }),
