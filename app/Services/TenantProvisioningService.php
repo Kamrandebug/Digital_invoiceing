@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Tenant;
+use App\Models\TenantMigrationLog;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
@@ -63,5 +64,30 @@ class TenantProvisioningService
             '--path' => 'database/migrations/tenant',
             '--force' => true,
         ]);
+
+        // Sync logs to centralized table
+        $this->syncMigrationLogs($tenant);
+    }
+
+    protected function syncMigrationLogs(Tenant $tenant)
+    {
+        // Get the migrations from the tenant DB
+        $tenantMigrations = DB::connection('tenant')->table('migrations')->get();
+
+        foreach ($tenantMigrations as $migration) {
+            TenantMigrationLog::updateOrCreate(
+                [
+                    'tenant_id' => $tenant->id,
+                    'migration' => $migration->migration,
+                ],
+                [
+                    'batch' => $migration->batch,
+                    'status' => 'success',
+                    'error_message' => null,
+                    'started_at' => now(), // Approximate
+                    'completed_at' => now(),
+                ]
+            );
+        }
     }
 }

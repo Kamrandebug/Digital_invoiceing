@@ -111,18 +111,6 @@
                                         Details</a>
                                 </li>
                                 <li class="slide">
-                                    <a href="{{ url('cart') }}" class="side-menu__item">Cart</a>
-                                </li>
-                                <li class="slide">
-                                    <a href="{{ url('checkout') }}" class="side-menu__item">Checkout</a>
-                                </li>
-                                <li class="slide">
-                                    <a href="{{ url('orders') }}" class="side-menu__item">Orders</a>
-                                </li>
-                                <li class="slide">
-                                    <a href="{{ url('orders-details') }}" class="side-menu__item">Order Details</a>
-                                </li>
-                                <li class="slide">
                                     <a href="{{ url('add-product') }}" class="side-menu__item">Add Product</a>
                                 </li>
                             </ul>
