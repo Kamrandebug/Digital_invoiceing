@@ -15,12 +15,22 @@ Route::get('/dashboard', [DashboardsController::class, 'index2'])
     ->name('dashboard');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    // Existing customer route (probably already there)
+Route::get('/customers-list', function () {
+    return view('pages.dashboards.customers-list');
+})->name('customers.list');
+
+// NEW products route
+Route::get('/products', function () {
+    return view('pages.dashboards.products');
+})->name('products.index');
     Route::get('/index2', [DashboardsController::class, 'index2'])->name('index2');
     Route::get('/products', [DashboardsController::class, 'products']);
     Route::get('/product-details', [DashboardsController::class, 'product_details']);
     Route::get('/cart', [DashboardsController::class, 'cart']);
     Route::get('/checkout', [DashboardsController::class, 'checkout']);
     Route::get('/customers-list', [DashboardsController::class, 'customers_list']);
+    Route::view('/customers', 'customers')->name('customers');
     Route::get('/orders', [DashboardsController::class, 'orders']);
     Route::get('/orders-details', [DashboardsController::class, 'orders_details']);
     Route::get('/add-product', [DashboardsController::class, 'add_product']);

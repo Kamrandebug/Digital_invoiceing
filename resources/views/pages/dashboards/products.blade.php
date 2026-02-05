@@ -1,210 +1,170 @@
+{{--
+    Product Management Page
+    
+    Path: resources/views/pages/dashboards/products.blade.php
+    URL: /products
+    
+    This page REUSES the same components as customers-list.blade.php
+    
+    IMPORTANT: Converted to @include/@component to fix location issues.
+--}}
 
 @extends('layouts.master')
 
 @section('styles')
-
-        <link rel="stylesheet" href="{{asset('build/assets/libs/gridjs/theme/mermaid.min.css')}}">
-
-        <link rel="stylesheet" href="{{asset('build/assets/libs/sweetalert2/sweetalert2.min.css')}}">
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
 @endsection
 
 @section('content')
-	
-                    <!-- Start::page-header -->
-                    <div class="page-header-breadcrumb mb-3">
-                        <div class="d-flex align-center justify-content-between flex-wrap">
-                            <h1 class="page-title fw-medium fs-18 mb-0">Products</h1>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a href="javascript:void(0);">Dashboards</a></li>
-                                <li class="breadcrumb-item"><a href="javascript:void(0);">Ecommerce</a></li>
-                                <li class="breadcrumb-item active" aria-current="page">Products</li>
-                            </ol>
-                        </div>
-                    </div>
-                    <!-- End::page-header -->
 
-                    <!-- Start::row-1 -->
-                    <div class="row row-cols-xxl-5 row-cols-md-3 row-cols-1">
-                        <div class="col">
-                            <div class="card custom-card dashboard-main-card primary">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-start gap-3 flex-wrap">
-                                        <div class="flex-fill">
-                                            <span class="fs-13 fw-medium">Total Products</span>
-                                            <h4 class="fw-semibold my-2 lh-1">12,350</h4>
-                                            <div class="d-flex align-items-center justify-content-between">
-                                                <span class="d-block text-muted"><span class="fs-12 badge bg-success-transparent me-1">+15%</span>this month</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <span class="avatar avatar-md bg-primary-transparent svg-primary">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM192,184H64a8,8,0,0,1,0-16H192a8,8,0,0,1,0,16Zm0-48H64a8,8,0,0,1,0-16H192a8,8,0,0,1,0,16Zm0-48H64a8,8,0,0,1,0-16H192a8,8,0,0,1,0,16Z"/></svg>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card custom-card dashboard-main-card success">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-start gap-3 flex-wrap">
-                                        <div class="flex-fill">
-                                            <span class="fs-13 fw-medium">Products in Stock</span>
-                                            <h4 class="fw-semibold my-2 lh-1">7,890</h4>
-                                            <div class="d-flex align-items-center justify-content-between">
-                                                <span class="d-block text-muted"><span class="fs-12 badge bg-success-transparent me-1">+10%</span>this month</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <span class="avatar avatar-md bg-success-transparent svg-success">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.35,44L178.57,92.29l-80.35-44Zm0,88L47.65,76,81.56,57.43l80.35,44Zm88,55.85h0l-80,43.79V133.83l32-17.51V152a8,8,0,0,0,16,0V107.56l32-17.51v85.76Z"/></svg>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card custom-card dashboard-main-card warning">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-start gap-3 flex-wrap">
-                                        <div class="flex-fill">
-                                            <span class="fs-13 fw-medium">Out of Stock Products</span>
-                                            <h4 class="fw-semibold my-2 lh-1">2,430</h4>
-                                            <div class="d-flex align-items-center justify-content-between">
-                                                <span class="d-block text-muted"><span class="fs-12 badge bg-danger-transparent me-1">-8%</span>this month</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <span class="avatar avatar-md bg-warning-transparent svg-warning">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm37.66,130.34a8,8,0,0,1-11.32,11.32L128,139.31l-26.34,26.35a8,8,0,0,1-11.32-11.32L116.69,128,90.34,101.66a8,8,0,0,1,11.32-11.32L128,116.69l26.34-26.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card custom-card dashboard-main-card secondary">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-start gap-3 flex-wrap">
-                                        <div class="flex-fill">
-                                            <span class="fs-13 fw-medium">Recently Added</span>
-                                            <h4 class="fw-semibold my-2 lh-1">550</h4>
-                                            <div class="d-flex align-items-center justify-content-between">
-                                                <span class="d-block text-muted"><span class="fs-12 badge bg-success-transparent me-1">+30%</span>this month</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <span class="avatar avatar-md bg-secondary-transparent svg-secondary">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><path d="M128,24A104,104,0,1,0,232,128,104.13,104.13,0,0,0,128,24Zm40,112H136v32a8,8,0,0,1-16,0V136H88a8,8,0,0,1,0-16h32V88a8,8,0,0,1,16,0v32h32a8,8,0,0,1,0,16Z"/></svg>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card custom-card dashboard-main-card info">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-start gap-3 flex-wrap">
-                                        <div class="flex-fill">
-                                            <span class="fs-13 fw-medium">Total Revenue</span>
-                                            <h4 class="fw-semibold my-2 lh-1">$1,250,450</h4>
-                                            <div class="d-flex align-items-center justify-content-between">
-                                                <span class="d-block text-muted"><span class="fs-12 badge bg-success-transparent me-1">+25%</span>this month</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <span class="avatar avatar-md bg-info-transparent svg-info">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" fill="none"/><path d="M168,128a40,40,0,1,1-40-40A40,40,0,0,1,168,128Zm80-64V192a8,8,0,0,1-8,8H16a8,8,0,0,1-8-8V64a8,8,0,0,1,8-8H240A8,8,0,0,1,248,64Zm-16,46.35A56.78,56.78,0,0,1,193.65,72H62.35A56.78,56.78,0,0,1,24,110.35v35.3A56.78,56.78,0,0,1,62.35,184h131.3A56.78,56.78,0,0,1,232,145.65Z"/></svg>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!--End::row-1 -->
+<!-- Start::page-header -->
+<div class="page-header-breadcrumb mb-3">
+    <div class="d-flex align-center justify-content-between flex-wrap">
+        <h1 class="page-title fw-medium fs-18 mb-0">Product Management</h1>
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="javascript:void(0);">Dashboards</a></li>
+            <li class="breadcrumb-item"><a href="javascript:void(0);">Ecommerce</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Products</li>
+        </ol>
+    </div>
+</div>
+<!-- End::page-header -->
 
-                    <!-- Start::row-2 -->
-                    <div class="row">
-                        <div class="col-xl-12">
-                            <div class="card custom-card products-filter">
-                                <div class="card-header justify-content-between border-bottom-0">
-                                    <!-- Search Bar -->
-                                    <div class="w-sm-25">
-                                    <input class="form-control" type="search" id="search-input" placeholder="Search Product" aria-label="search-product">
-                                    </div>
-                                
-                                    <!-- Filters Section -->
-                                    <div class="row gy-2 w-sm-50">
-                                    <!-- Category Filter -->
-                                    <div class="col">
-                                        <select class="form-control" data-trigger name="choices-single-default" id="category-filter">
-                                        <option value="">Categories</option>
-                                        <option value="all">All Categories</option>
-                                        <option value="electronics">Electronics</option>
-                                        <option value="fashion">Fashion</option>
-                                        <option value="home">Home</option>
-                                        </select>
-                                    </div>
-                                
-                                    <!-- Status Filter -->
-                                    <div class="col">
-                                        <select class="form-control" data-trigger name="choices-single-default" id="status-filter">
-                                        <option value="">Status</option>
-                                        <option value="all">All Status</option>
-                                        <option value="published">Published</option>
-                                        <option value="draft">Draft</option>
-                                        <option value="archived">Archived</option>
-                                        </select>
-                                    </div>
-                                
-                                    <!-- Stock Filter -->
-                                    <div class="col">
-                                        <select class="form-control" data-trigger name="choices-single-default" id="stock-filter">
-                                        <option value="">Stock</option>
-                                        <option value="all">All Status</option>
-                                        <option value="in-stock">In Stock</option>
-                                        <option value="out-of-stock">Out of Stock</option>
-                                        </select>
-                                    </div>
-                                
-                                    <!-- Sort By Filter -->
-                                    <div class="col">
-                                        <select class="form-control" data-trigger name="choices-single-default" id="sort-filter">
-                                        <option value="">Sort By</option>
-                                        <option value="date">Date Added</option>
-                                        <option value="price">Price</option>
-                                        <option value="name">Product Name</option>
-                                        </select>
-                                    </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Table inside the card-body -->
-                                <div class="card-body p-0">
-                                    <div id="product-table" class="grid-card-table"></div> 
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- End::row-2 -->
+<!-- Low Stock Alert (specific to products page) -->
+<div class="alert alert-warning" style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <i class="fas fa-exclamation-triangle" style="color: #ff9800; margin-right: 10px;"></i>
+        <strong>1 product is running low on stock (≤ 10 units).</strong>
+    </div>
+    <div>
+        <button style="background-color: #fff; border: 1px solid #ffc107; color: #ff9800; padding: 5px 15px; margin-right: 10px; border-radius: 4px; cursor: pointer;">
+            <i class="fas fa-eye"></i> View Low Stock Products
+        </button>
+        <button style="background-color: transparent; border: none; color: #dc3545; padding: 5px 15px; cursor: pointer;">
+            <i class="fas fa-times"></i> Dismiss
+        </button>
+    </div>
+</div>
+
+<!-- Product Management Container -->
+<div class="customer-management-container">
+    
+    {{-- ✅ FIXED: Using correct component path --}}
+    @include('layouts.components.data-management.page-header', ['addButtonText' => 'Add Product'])
+
+    {{-- Custom product filters --}}
+    <div class="search-filters-section">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search products...">
+        </div>
+
+        <div style="display: flex; gap: 15px; flex: 1; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 150px;">
+                <label style="font-size: 12px; color: #666; margin-bottom: 5px; display: block;">Category</label>
+                <select style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                    <option>All Categories</option>
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 150px;">
+                <label style="font-size: 12px; color: #666; margin-bottom: 5px; display: block;">Brand</label>
+                <select style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                    <option>All Brands</option>
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 150px;">
+                <label style="font-size: 12px; color: #666; margin-bottom: 5px; display: block;">Stock Status</label>
+                <select style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                    <option>All Status</option>
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 12px; color: #666; margin-bottom: 5px; display: block;">Date Range</label>
+                <input type="text" placeholder="Select date range" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+            </div>
+        </div>
+    </div>
+
+    {{-- Price/Cost Range Filters --}}
+    <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+        <input type="text" placeholder="Min price" style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 120px;">
+        <input type="text" placeholder="Max price" style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 120px;">
+        <input type="text" placeholder="Min cost" style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 120px;">
+        <input type="text" placeholder="Max cost" style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 120px;">
+        <button class="btn-clear-filters">
+            <i class="fas fa-times"></i> Clear Filters
+        </button>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+            <label>Search:</label>
+            <input type="text" style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 200px;">
+        </div>
+    </div>
+
+    {{-- ✅ FIXED: Using correct component path --}}
+    @include('layouts.components.data-management.export-buttons')
+
+    {{-- ✅ FIXED: Using correct component path and @component for slots --}}
+    @component('layouts.components.data-management.data-table', ['columns' => [
+        ['label' => 'Sr. #'],
+        ['label' => 'Code'],
+        ['label' => 'SKU'],
+        ['label' => 'Unique ID'],
+        ['label' => 'Name'],
+        ['label' => 'Description'],
+        ['label' => 'Category'],
+        ['label' => 'Brand'],
+        ['label' => 'Price'],
+        ['label' => 'Cost'],
+        ['label' => 'Total Quantity'],
+        ['label' => 'Total Cost'],
+        ['label' => 'Type']
+    ]])
+        @php
+            // Dummy product data
+            $products = [
+                ['sr' => 1, 'code' => '1258', 'sku' => '-', 'uid' => '-', 'name' => 'one product', 'desc' => '', 'category' => 'Sample Category 1307', 'brand' => 'Sample Brand 325', 'price' => 100.00, 'cost' => 50.00, 'qty' => 10, 'total_cost' => 950.00, 'type' => 'stock'],
+                ['sr' => 2, 'code' => 'PRD-276', 'sku' => 'SKU-276', 'uid' => 'UID-276', 'name' => 'Example Product 276', 'desc' => 'Product Description 276', 'category' => 'Sample Category 1313', 'brand' => 'Sample Brand 390', 'price' => 99.99, 'cost' => 50.00, 'qty' => 100, 'total_cost' => 5000.00, 'type' => 'stock'],
+                ['sr' => 3, 'code' => 'PRD-275', 'sku' => 'SKU-275', 'uid' => 'UID-275', 'name' => 'Example Product 275', 'desc' => 'Product Description 275', 'category' => 'Sample Category 1205', 'brand' => 'Sample Brand 282', 'price' => 99.99, 'cost' => 50.00, 'qty' => 100, 'total_cost' => 5000.00, 'type' => 'stock'],
+                ['sr' => 4, 'code' => 'PRD-274', 'sku' => 'SKU-274', 'uid' => 'UID-274', 'name' => 'Example Product 274', 'desc' => 'Product Description 274', 'category' => 'Sample Category 1077', 'brand' => 'Another Brand 389', 'price' => 99.99, 'cost' => 50.00, 'qty' => 100, 'total_cost' => 5000.00, 'type' => 'stock'],
+                ['sr' => 5, 'code' => 'PRD-273', 'sku' => 'SKU-273', 'uid' => 'UID-273', 'name' => 'Example Product 273', 'desc' => 'Product Description 273', 'category' => 'Sample Category 949', 'brand' => 'Another Brand 281', 'price' => 99.99, 'cost' => 50.00, 'qty' => 100, 'total_cost' => 5000.00, 'type' => 'stock'],
+            ];
+        @endphp
+
+        @foreach($products as $product)
+        <tr>
+            <td><input type="checkbox"></td>
+            <td>{{ $product['sr'] }}</td>
+            <td>{{ $product['code'] }}</td>
+            <td>{{ $product['sku'] }}</td>
+            <td>{{ $product['uid'] }}</td>
+            <td>{{ $product['name'] }}</td>
+            <td>{{ $product['desc'] }}</td>
+            <td>{{ $product['category'] }}</td>
+            <td>{{ $product['brand'] }}</td>
+            <td>{{ number_format($product['price'], 2) }}</td>
+            <td>{{ number_format($product['cost'], 2) }}</td>
+            <td>{{ $product['qty'] }}</td>
+            <td>{{ number_format($product['total_cost'], 2) }}</td>
+            <td>{{ $product['type'] }}</td>
+            <td>
+                <button class="btn-action btn-edit" style="background-color: #3b82f6; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-action btn-delete" style="background-color: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+        @endforeach
+    @endcomponent
+
+    {{-- ✅ FIXED: Using correct component path --}}
+    @include('layouts.components.data-management.pagination', ['from' => 1, 'to' => 5, 'total' => 5])
+
+</div>
 
 @endsection
 
 @section('scripts')
-	
-        <!-- Grid JS -->
-        <script src="{{asset('build/assets/libs/gridjs/gridjs.umd.js')}}"></script>
-
-        <!-- Sweetalerts JS -->
-        <script src="{{asset('build/assets/libs/sweetalert2/sweetalert2.min.js')}}"></script>
-
-        <!-- Products List JS -->
-        @vite('resources/assets/js/products.js')
-
 @endsection
