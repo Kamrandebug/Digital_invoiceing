@@ -15,7 +15,9 @@ export default defineConfig({
                 'resources/assets/js/sticky.js',
                 'resources/assets/js/main.js',
                 'resources/assets/js/defaultmenu.js',
-                'resources/assets/js/landing.js'
+                'resources/assets/js/landing.js',
+                'resources/assets/js/products.js',
+                'resources/assets/js/add-products.js',
             ],
             refresh: true,
         }),
