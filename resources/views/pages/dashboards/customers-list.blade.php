@@ -4,10 +4,10 @@
     Path: resources/views/pages/dashboards/customers-list.blade.php
     URL: /customers-list
     
-    This page uses reusable components from:
-    resources/views/layouts/components/data-management/
-    
-    IMPORTANT: Converted to @include/@component to fix location issues.
+    Updated to use REAL DATABASE DATA with transaction-based CRUD functions:
+    - save_transaction (Add Customer)
+    - edit_transaction (Edit Customer)
+    - delete_transaction (Delete Customer)
 --}}
 
 @extends('layouts.master')
@@ -34,98 +34,223 @@
 </div>
 <!-- End::page-header -->
 
+<!-- Success/Error Messages -->
+@if(session('success'))
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle"></i> {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+@endif
+
+@if(session('error'))
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+@endif
+
 <!-- Customer Management Container -->
 <div class="customer-management-container">
     
-    {{-- 
-        ✅ COMPONENT 1: Page Header with Action Buttons 
-    --}}
-    @include('layouts.components.data-management.page-header', ['addButtonText' => 'Add Customer'])
+    {{-- Header with Action Buttons --}}
+    <div class="header">
+        <h1>Customer Management</h1>
+        <div class="action-buttons">
+            <button onclick="window.location.href='{{ route('customers.create') }}'">
+                <i class="fas fa-plus"></i> Add Customer
+            </button>
+            <button><i class="fas fa-file-upload"></i> Import</button>
+        </div>
+    </div>
 
-    {{-- 
-        ✅ COMPONENT 2: Search & Filters Section 
-    --}}
-    @include('layouts.components.data-management.search-filters', [
-        'searchPlaceholder' => 'Search customers...', 
-        'showDateFilters' => true
-    ])
+    {{-- Search & Filters Section --}}
+    <div class="search-filters-section">
+        <div class="search-box">
+            <input type="text" id="searchCustomers" placeholder="Search customers..." onkeyup="filterTable()">
+        </div>
 
-    {{-- 
-        ✅ COMPONENT 3: Export Buttons 
-    --}}
-    @include('layouts.components.data-management.export-buttons')
+        <div class="date-filters">
+            <div>
+                <label>Start Date</label>
+                <input type="date" id="startDate">
+            </div>
+            <div>
+                <label>End Date</label>
+                <input type="date" id="endDate">
+            </div>
+        </div>
 
-    {{-- 
-        ✅ COMPONENT 4: Data Table with Customer Data 
-        Using @component because it requires a slot for the rows
-    --}}
-    @component('layouts.components.data-management.data-table', ['columns' => [
-        ['label' => 'ID', 'sortable' => true],
-        ['label' => 'Name', 'sortable' => true],
-        ['label' => 'Address'],
-        ['label' => 'Contact Number'],
-        ['label' => 'Closing Balance', 'info' => true],
-        ['label' => 'Opening Balance Date', 'info' => true]
-    ]])
-        
-        @php
-            // Dummy customer data (hardcoded for demonstration)
-            $customers = [
-                ['id' => 161, 'name' => 'Sukkur General Store', 'address' => 'Civil Lines, Sukkur', 'phone' => '3355578001', 'balance' => 2200.00],
-                ['id' => 147, 'name' => 'Ahmad Electronics', 'address' => 'Shop #15, Main Market, Lahore', 'phone' => '3001234567', 'balance' => 5000.00],
-                ['id' => 148, 'name' => 'Karachi Traders', 'address' => 'Plot 45, Industrial Area, Karachi', 'phone' => '3211234567', 'balance' => 0.00],
-                ['id' => 149, 'name' => 'Islamabad Office Solutions', 'address' => 'F-8 Markaz, Islamabad', 'phone' => '3331234567', 'balance' => 6300.00],
-                ['id' => 150, 'name' => 'Faisalabad Furniture Co.', 'address' => 'Jhang Road, Faisalabad', 'phone' => '3041234567', 'balance' => 0.00],
-                ['id' => 151, 'name' => 'Multan Medical Store', 'address' => 'Nawan Sheir, Multan', 'phone' => '3061234567', 'balance' => 1500.00],
-                ['id' => 152, 'name' => 'Peshawar Auto Parts', 'address' => 'University Road, Peshawar', 'phone' => '3451234567', 'balance' => 0.00],
-                ['id' => 153, 'name' => 'Quetta Hardware Store', 'address' => 'Jinnah Road, Quetta', 'phone' => '3361234567', 'balance' => 3000.00],
-                ['id' => 154, 'name' => 'Sialkot Sports', 'address' => 'Paris Road, Sialkot', 'phone' => '3241234567', 'balance' => 0.00],
-                ['id' => 155, 'name' => 'Gujranwala Textiles', 'address' => 'GT Road, Gujranwala', 'phone' => '3004567890', 'balance' => 4000.00],
-                ['id' => 156, 'name' => 'Rawalpindi Electronics', 'address' => 'Murree Road, Rawalpindi', 'phone' => '3123456789', 'balance' => 0.00],
-                ['id' => 157, 'name' => 'Hyderabad Traders', 'address' => 'Latifabad, Hyderabad', 'phone' => '3332345678', 'balance' => 2500.00],
-                ['id' => 158, 'name' => 'Bahawalpur Furniture', 'address' => 'Model Town, Bahawalpur', 'phone' => '3012345678', 'balance' => 0.00],
-                ['id' => 159, 'name' => 'Sargodha Hardware', 'address' => 'University Road, Sargodha', 'phone' => '3456789012', 'balance' => 1800.00],
-                ['id' => 160, 'name' => 'Abbottabad Textiles', 'address' => 'Supply Bazar, Abbottabad', 'phone' => '3223456789', 'balance' => 3500.00],
-            ];
-        @endphp
+        <button onclick="clearFilters()"><i class="fas fa-times"></i> Clear Filters</button>
 
-        {{-- Loop through customers and create table rows --}}
-        @foreach($customers as $customer)
-        <tr>
-            <td><input type="checkbox"></td>
-            <td>{{ $customer['id'] }}</td>
-            <td>{{ $customer['name'] }}</td>
-            <td>{{ $customer['address'] }}</td>
-            <td>{{ $customer['phone'] }}</td>
-            <td class="{{ $customer['balance'] > 0 ? 'balance-red' : 'balance-green' }}">
-                {{ number_format($customer['balance'], 2) }} PKR
-            </td>
-            <td>N/A</td>
-            <td>
-                <button class="btn-action btn-edit">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn-action btn-info">
-                    <i class="fas fa-file-alt"></i>
-                </button>
-                <button class="btn-action btn-delete">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-        @endforeach
-        
-    @endcomponent
+        <div class="search-right">
+            <label>Search:</label>
+            <input type="text" id="searchRight" onkeyup="filterTable()">
+        </div>
+    </div>
 
-    {{-- 
-        ✅ COMPONENT 5: Pagination 
-    --}}
-    @include('layouts.components.data-management.pagination', ['from' => 1, 'to' => 10, 'total' => 15])
+    {{-- Export Buttons --}}
+    <div class="export-buttons">
+        <button onclick="window.location.href='{{ route('customers.export-csv') }}'">
+            <i class="fas fa-download"></i> Export CSV
+        </button>
+        <button onclick="window.print()">
+            <i class="fas fa-print"></i> Print
+        </button>
+    </div>
+
+    {{-- Customers Table with REAL DATABASE DATA --}}
+    <div class="customers-table-wrapper">
+        <table class="customers-table" id="customersTable">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                    <th>ID <i class="fas fa-sort"></i></th>
+                    <th>Name <i class="fas fa-sort"></i></th>
+                    <th>Address</th>
+                    <th>Contact Number</th>
+                    <th>Closing Balance <i class="fas fa-info-circle" title="Current balance"></i></th>
+                    <th>Opening Balance Date <i class="fas fa-info-circle" title="Date of opening balance"></i></th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{-- Loop through REAL customers from database --}}
+                @forelse($customers as $customer)
+                <tr>
+                    <td><input type="checkbox" class="customer-checkbox" value="{{ $customer->ID }}"></td>
+                    <td>{{ $customer->ID }}</td>
+                    <td>
+                        <strong>{{ $customer->DisplayName ?? $customer->name }}</strong>
+                        @if($customer->BusinessName)
+                        <br><small class="text-muted">{{ $customer->BusinessName }}</small>
+                        @endif
+                    </td>
+                    <td>{{ $customer->Address ?? 'N/A' }}</td>
+                    <td>{{ $customer->Mobile ?? $customer->Phone ?? 'N/A' }}</td>
+                    <td class="{{ $customer->PartyBalance > 0 ? 'balance-positive' : ($customer->PartyBalance < 0 ? 'balance-negative' : 'balance-zero') }}">
+                        {{ number_format(abs($customer->PartyBalance), 2) }} PKR
+                    </td>
+                    <td>{{ $customer->CreatedOn ? $customer->CreatedOn->format('d/m/Y') : 'N/A' }}</td>
+                    <td>
+                        {{-- Edit Button (uses edit_transaction) --}}
+                        <button class="action-btn btn-edit" 
+                                onclick="window.location.href='{{ route('customers.edit', $customer->ID) }}'"
+                                title="Edit Customer">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+                        
+                        {{-- View/Info Button --}}
+                        <button class="action-btn btn-info"
+                                onclick="window.location.href='{{ route('customers.show', $customer->ID) }}'"
+                                title="View Details">
+                            <i class="fas fa-clipboard-list"></i>
+                        </button>
+                        
+                        {{-- Delete Button (uses delete_transaction) --}}
+                        <form action="{{ route('customers.delete_transaction', $customer->ID) }}" 
+                              method="POST" 
+                              style="display: inline;"
+                              onsubmit="return confirmDelete('{{ $customer->DisplayName ?? $customer->name }}')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="action-btn btn-delete" title="Archive Customer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
+                        <p class="text-muted mb-2">No customers found.</p>
+                        <button class="btn btn-primary" onclick="window.location.href='{{ route('customers.create') }}'">
+                            <i class="fas fa-plus"></i> Add Your First Customer
+                        </button>
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    {{-- Pagination --}}
+    <div class="pagination">
+        <span>Showing {{ $customers->count() > 0 ? '1 to ' . $customers->count() : '0' }} of {{ $customers->count() }} entries</span>
+        <div>
+            <button disabled>Previous</button>
+            <button class="active">1</button>
+            <button disabled>Next</button>
+        </div>
+    </div>
 
 </div>
 
 @endsection
 
 @section('scripts')
-{{-- No JavaScript needed for static table --}}
+<script>
+    // Auto-hide success/error messages after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 150);
+        });
+    }, 5000);
+    
+    // Delete confirmation with customer name
+    function confirmDelete(customerName) {
+        return confirm(`Are you sure you want to archive the customer "${customerName}"?\n\nThis will set IsArchive = 1 and hide the customer from the active list.`);
+    }
+    
+    // Filter table function
+    function filterTable() {
+        const searchValue = document.getElementById('searchCustomers').value.toLowerCase();
+        const searchRight = document.getElementById('searchRight').value.toLowerCase();
+        const table = document.getElementById('customersTable');
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const cells = row.getElementsByTagName('td');
+            
+            if (cells.length === 0) continue;
+            
+            // Get text content
+            const name = cells[2]?.textContent.toLowerCase() || '';
+            const address = cells[3]?.textContent.toLowerCase() || '';
+            const contact = cells[4]?.textContent.toLowerCase() || '';
+            
+            // Check search match
+            const searchMatch = name.includes(searchValue) || 
+                              name.includes(searchRight) ||
+                              address.includes(searchValue) || 
+                              address.includes(searchRight) ||
+                              contact.includes(searchValue) ||
+                              contact.includes(searchRight);
+            
+            // Show/hide row
+            row.style.display = searchMatch ? '' : 'none';
+        }
+    }
+    
+    // Clear filters
+    function clearFilters() {
+        document.getElementById('searchCustomers').value = '';
+        document.getElementById('searchRight').value = '';
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        filterTable();
+    }
+    
+    // Select all checkboxes
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.customer-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAll.checked;
+        });
+    }
+</script>
 @endsection

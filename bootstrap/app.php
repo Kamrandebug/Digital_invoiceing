@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [
             \App\Http\Middleware\InitializeTenantContext::class,
         ]);
+        
+        // Register the 'tenant' middleware alias
+        $middleware->alias([
+            'tenant' => \App\Http\Middleware\InitializeTenantContext::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

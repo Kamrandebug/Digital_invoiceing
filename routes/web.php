@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardsController;
+use App\Http\Controllers\CustomerController;
 use Illuminate\Support\Facades\Route;
 use App\Models\Task;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +21,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/product-details', [DashboardsController::class, 'product_details']);
     Route::get('/cart', [DashboardsController::class, 'cart']);
     Route::get('/checkout', [DashboardsController::class, 'checkout']);
-    Route::get('/customers-list', [DashboardsController::class, 'customers_list']);
-    Route::view('/customers', 'customers')->name('customers');
+    Route::get('/customers-list', [CustomerController::class, 'index'])->middleware('tenant');
+    // Route::view('/customers', 'customers')->name('customers'); // Commented out to allow CustomerController to handle /customers
     Route::get('/orders', [DashboardsController::class, 'orders']);
     Route::get('/orders-details', [DashboardsController::class, 'orders_details']);
     Route::get('/add-product', [DashboardsController::class, 'add_product']);
@@ -39,10 +40,32 @@ Route::middleware('auth')->get('/test-tenant', function () {
 
     return response()->json([
         'database' => DB::connection()->getDatabaseName(),
-        'tenant_id' => auth()->user()->tenant->id,
+        'tenant_id' => optional(auth()->guard()->user())->tenant->id ?? null,
         'task' => $task,
         'all_tasks' => Task::all(),
     ]);
+});
+
+Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->group(function () {
+    // List customers
+    Route::get('/', [CustomerController::class, 'index'])->name('index');
+    
+    // Create customer
+    Route::get('/create', [CustomerController::class, 'create'])->name('create');
+    Route::post('/save', [CustomerController::class, 'save_transaction'])->name('save_transaction');
+    
+    // Edit customer
+    Route::get('/{id}/edit', [CustomerController::class, 'edit'])->name('edit');
+    Route::put('/{id}/update', [CustomerController::class, 'edit_transaction'])->name('edit_transaction');
+    
+    // Delete customer
+    Route::delete('/{id}/delete', [CustomerController::class, 'delete_transaction'])->name('delete_transaction');
+    
+    // View customer
+    Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
+    
+    // Export
+    Route::get('/export/csv', [CustomerController::class, 'exportCSV'])->name('export-csv');
 });
 
 require __DIR__.'/auth.php';
