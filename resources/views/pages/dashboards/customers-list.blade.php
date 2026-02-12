@@ -134,20 +134,20 @@
                     <td>
                         {{-- Edit Button (uses edit_transaction) --}}
                         <button class="action-btn btn-edit" 
-                                onclick="window.location.href='{{ route('customers.edit', $customer->ID) }}'"
+                                onclick="window.location.href='{{ route('customers.edit', $customer->ID?? 0) }}'"
                                 title="Edit Customer">
                             <i class="fas fa-pencil-alt"></i>
                         </button>
                         
                         {{-- View/Info Button --}}
                         <button class="action-btn btn-info"
-                                onclick="window.location.href='{{ route('customers.show', $customer->ID) }}'"
+                                onclick="window.location.href='{{ route('customers.show', $customer->ID?? 0) }}'"
                                 title="View Details">
                             <i class="fas fa-clipboard-list"></i>
                         </button>
                         
                         {{-- Delete Button (uses delete_transaction) --}}
-                        <form action="{{ route('customers.delete_transaction', $customer->ID) }}" 
+                        <form action="{{ route('customers.delete_transaction', $customer->ID?? 0) }}" 
                               method="POST" 
                               style="display: inline;"
                               onsubmit="return confirmDelete('{{ $customer->DisplayName ?? $customer->name }}')">

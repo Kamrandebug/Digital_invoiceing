@@ -123,6 +123,17 @@
         border-color: #6f42c1;
         box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
     }
+    
+    .clear-form-link {
+        color: #6f42c1;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+    }
+    
+    .clear-form-link:hover {
+        text-decoration: underline;
+    }
 </style>
 @endsection
 
@@ -141,6 +152,14 @@
 </div>
 <!-- End::page-header -->
 
+<!-- Success Message -->
+@if(session('success'))
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <strong>Success!</strong> {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+@endif
+
 <!-- Error Messages -->
 @if($errors->any())
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -158,6 +177,9 @@
 <div class="customer-form-container">
     <div class="form-header">
         <h1><i class="fas fa-user-plus"></i> Add New Customer</h1>
+        <a href="javascript:void(0);" class="clear-form-link" onclick="clearFormData()">
+            <i class="fas fa-trash-alt"></i> Clear Form Data
+        </a>
     </div>
 
     <form action="{{ route('customers.save_transaction') }}" method="POST" id="customerForm">
@@ -173,13 +195,13 @@
                 <div class="col-md-2">
                     <div class="mb-3">
                         <label for="Title" class="form-label">Title</label>
-                        <select name="Title" id="Title" class="form-select" value="{{ old('Title') }}">
+                        <select name="Title" id="Title" class="form-select" data-persist="true">
                             <option value="">Select</option>
-                            <option value="Mr">Mr</option>
-                            <option value="Mrs">Mrs</option>
-                            <option value="Miss">Miss</option>
-                            <option value="Dr">Dr</option>
-                            <option value="Prof">Prof</option>
+                            <option value="Mr" {{ old('Title') == 'Mr' ? 'selected' : '' }}>Mr</option>
+                            <option value="Mrs" {{ old('Title') == 'Mrs' ? 'selected' : '' }}>Mrs</option>
+                            <option value="Miss" {{ old('Title') == 'Miss' ? 'selected' : '' }}>Miss</option>
+                            <option value="Dr" {{ old('Title') == 'Dr' ? 'selected' : '' }}>Dr</option>
+                            <option value="Prof" {{ old('Title') == 'Prof' ? 'selected' : '' }}>Prof</option>
                         </select>
                     </div>
                 </div>
@@ -188,7 +210,7 @@
                     <div class="mb-3">
                         <label for="FirstName" class="form-label required-field">First Name</label>
                         <input type="text" class="form-control" id="FirstName" name="FirstName" 
-                               value="{{ old('FirstName') }}" placeholder="Enter first name" required>
+                               value="{{ old('FirstName') }}" placeholder="Enter first name" required data-persist="true">
                     </div>
                 </div>
                 
@@ -196,7 +218,7 @@
                     <div class="mb-3">
                         <label for="LastName" class="form-label">Last Name</label>
                         <input type="text" class="form-control" id="LastName" name="LastName" 
-                               value="{{ old('LastName') }}" placeholder="Enter last name">
+                               value="{{ old('LastName') }}" placeholder="Enter last name" data-persist="true">
                     </div>
                 </div>
             </div>
@@ -206,7 +228,7 @@
                     <div class="mb-3">
                         <label for="BusinessName" class="form-label">Business Name</label>
                         <input type="text" class="form-control" id="BusinessName" name="BusinessName" 
-                               value="{{ old('BusinessName') }}" placeholder="Enter business name">
+                               value="{{ old('BusinessName') }}" placeholder="Enter business name" data-persist="true">
                     </div>
                 </div>
                 
@@ -214,7 +236,7 @@
                     <div class="mb-3">
                         <label for="DisplayName" class="form-label">Display Name</label>
                         <input type="text" class="form-control" id="DisplayName" name="DisplayName" 
-                               value="{{ old('DisplayName') }}" placeholder="Auto-generated if left empty">
+                               value="{{ old('DisplayName') }}" placeholder="Auto-generated if left empty" data-persist="true">
                         <small class="text-muted">This will be used to display the customer name</small>
                     </div>
                 </div>
@@ -232,7 +254,7 @@
                     <div class="mb-3">
                         <label for="Email" class="form-label required-field">Email</label>
                         <input type="email" class="form-control" id="Email" name="Email" 
-                               value="{{ old('Email') }}" placeholder="customer@example.com" required>
+                               value="{{ old('Email') }}" placeholder="customer@example.com" required data-persist="true">
                     </div>
                 </div>
                 
@@ -240,7 +262,7 @@
                     <div class="mb-3">
                         <label for="Mobile" class="form-label required-field">Mobile</label>
                         <input type="text" class="form-control" id="Mobile" name="Mobile" 
-                               value="{{ old('Mobile') }}" placeholder="3001234567" required>
+                               value="{{ old('Mobile') }}" placeholder="3001234567" required data-persist="true">
                     </div>
                 </div>
                 
@@ -248,7 +270,7 @@
                     <div class="mb-3">
                         <label for="Phone" class="form-label">Phone</label>
                         <input type="text" class="form-control" id="Phone" name="Phone" 
-                               value="{{ old('Phone') }}" placeholder="042 1234567">
+                               value="{{ old('Phone') }}" placeholder="042 1234567" data-persist="true">
                     </div>
                 </div>
             </div>
@@ -258,7 +280,7 @@
                     <div class="mb-3">
                         <label for="Website" class="form-label">Website</label>
                         <input type="url" class="form-control" id="Website" name="Website" 
-                               value="{{ old('Website') }}" placeholder="https://www.example.com">
+                               value="{{ old('Website') }}" placeholder="https://www.example.com" data-persist="true">
                     </div>
                 </div>
             </div>
@@ -275,7 +297,7 @@
                     <div class="mb-3">
                         <label for="Address" class="form-label">Street Address</label>
                         <textarea class="form-control" id="Address" name="Address" rows="2" 
-                                  placeholder="Enter street address">{{ old('Address') }}</textarea>
+                                  placeholder="Enter street address" data-persist="true">{{ old('Address') }}</textarea>
                     </div>
                 </div>
             </div>
@@ -285,7 +307,7 @@
                     <div class="mb-3">
                         <label for="City" class="form-label">City</label>
                         <input type="text" class="form-control" id="City" name="City" 
-                               value="{{ old('City') }}" placeholder="City">
+                               value="{{ old('City') }}" placeholder="City" data-persist="true">
                     </div>
                 </div>
                 
@@ -293,7 +315,7 @@
                     <div class="mb-3">
                         <label for="County" class="form-label">State/Province</label>
                         <input type="text" class="form-control" id="County" name="County" 
-                               value="{{ old('County') }}" placeholder="State/Province">
+                               value="{{ old('County') }}" placeholder="State/Province" data-persist="true">
                     </div>
                 </div>
                 
@@ -301,7 +323,7 @@
                     <div class="mb-3">
                         <label for="PostalCode" class="form-label">Postal Code</label>
                         <input type="text" class="form-control" id="PostalCode" name="PostalCode" 
-                               value="{{ old('PostalCode') }}" placeholder="54000">
+                               value="{{ old('PostalCode') }}" placeholder="54000" data-persist="true">
                     </div>
                 </div>
                 
@@ -309,7 +331,7 @@
                     <div class="mb-3">
                         <label for="Country" class="form-label">Country</label>
                         <input type="text" class="form-control" id="Country" name="Country" 
-                               value="{{ old('Country', 'Pakistan') }}" placeholder="Pakistan">
+                               value="{{ old('Country', 'Pakistan') }}" placeholder="Pakistan" data-persist="true">
                     </div>
                 </div>
             </div>
@@ -326,7 +348,7 @@
                     <div class="mb-3">
                         <label for="NTN" class="form-label">NTN Number</label>
                         <input type="text" class="form-control" id="NTN" name="NTN" 
-                               value="{{ old('NTN') }}" placeholder="Enter NTN">
+                               value="{{ old('NTN') }}" placeholder="Enter NTN" data-persist="true">
                     </div>
                 </div>
                 
@@ -334,7 +356,7 @@
                     <div class="mb-3">
                         <label for="CNIC" class="form-label">CNIC</label>
                         <input type="text" class="form-control" id="CNIC" name="CNIC" 
-                               value="{{ old('CNIC') }}" placeholder="12345-1234567-1">
+                               value="{{ old('CNIC') }}" placeholder="12345-1234567-1" data-persist="true">
                     </div>
                 </div>
                 
@@ -342,7 +364,7 @@
                     <div class="mb-3">
                         <label for="CreditLimit" class="form-label">Credit Limit (PKR)</label>
                         <input type="number" step="0.01" class="form-control" id="CreditLimit" name="CreditLimit" 
-                               value="{{ old('CreditLimit', '0.00') }}" placeholder="0.00">
+                               value="{{ old('CreditLimit', '0.00') }}" placeholder="0.00" data-persist="true">
                     </div>
                 </div>
             </div>
@@ -351,7 +373,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="PaymentTerms" class="form-label">Payment Terms</label>
-                        <select name="PaymentTerms" id="PaymentTerms" class="form-select">
+                        <select name="PaymentTerms" id="PaymentTerms" class="form-select" data-persist="true">
                             <option value="">Select</option>
                             <option value="Cash" {{ old('PaymentTerms') == 'Cash' ? 'selected' : '' }}>Cash</option>
                             <option value="Net 15" {{ old('PaymentTerms') == 'Net 15' ? 'selected' : '' }}>Net 15 Days</option>
@@ -365,7 +387,7 @@
                 <div class="col-md-6">
                     <label class="checkbox-label">
                         <input type="checkbox" name="IsFiler" id="IsFiler" value="1" 
-                               {{ old('IsFiler', true) ? 'checked' : '' }}>
+                               {{ old('IsFiler', true) ? 'checked' : '' }} data-persist="true">
                         <span>Is Tax Filer?</span>
                     </label>
                 </div>
@@ -383,7 +405,7 @@
                     <div class="mb-3">
                         <label for="Notes" class="form-label">Notes</label>
                         <textarea class="form-control" id="Notes" name="Notes" rows="3" 
-                                  placeholder="Any additional notes about the customer">{{ old('Notes') }}</textarea>
+                                  placeholder="Any additional notes about the customer" data-persist="true">{{ old('Notes') }}</textarea>
                     </div>
                 </div>
             </div>
@@ -392,7 +414,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="Status" class="form-label">Status</label>
-                        <select name="Status" id="Status" class="form-select">
+                        <select name="Status" id="Status" class="form-select" data-persist="true">
                             <option value="1" {{ old('Status', '1') == '1' ? 'selected' : '' }}>Active</option>
                             <option value="0" {{ old('Status') == '0' ? 'selected' : '' }}>Inactive</option>
                         </select>
@@ -417,6 +439,97 @@
 
 @section('scripts')
 <script>
+    // LocalStorage key for form data
+    const FORM_STORAGE_KEY = 'customerFormData';
+    
+    // Check if we have Laravel old() data (from validation errors)
+    const hasOldData = {{ $errors->any() ? 'true' : 'false' }};
+    
+    // Load form data from localStorage on page load
+    window.addEventListener('DOMContentLoaded', function() {
+        // Only load from localStorage if there's no Laravel old() data
+        if (!hasOldData) {
+            loadFormData();
+        }
+        
+        // Attach event listeners to save data on input
+        attachFormListeners();
+    });
+    
+    // Save form data to localStorage
+    function saveFormData() {
+        const formData = {};
+        const formElements = document.querySelectorAll('[data-persist="true"]');
+        
+        formElements.forEach(element => {
+            if (element.type === 'checkbox') {
+                formData[element.name] = element.checked;
+            } else if (element.type === 'radio') {
+                if (element.checked) {
+                    formData[element.name] = element.value;
+                }
+            } else {
+                formData[element.name] = element.value;
+            }
+        });
+        
+        localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData));
+    }
+    
+    // Load form data from localStorage
+    function loadFormData() {
+        const savedData = localStorage.getItem(FORM_STORAGE_KEY);
+        
+        if (!savedData) return;
+        
+        try {
+            const formData = JSON.parse(savedData);
+            
+            Object.keys(formData).forEach(fieldName => {
+                const element = document.querySelector(`[name="${fieldName}"]`);
+                
+                if (!element) return;
+                
+                if (element.type === 'checkbox') {
+                    element.checked = formData[fieldName];
+                } else if (element.type === 'radio') {
+                    if (element.value === formData[fieldName]) {
+                        element.checked = true;
+                    }
+                } else {
+                    element.value = formData[fieldName];
+                }
+            });
+            
+            console.log('Form data restored from localStorage');
+        } catch (error) {
+            console.error('Error loading form data:', error);
+        }
+    }
+    
+    // Clear form data from localStorage
+    function clearFormData() {
+        if (confirm('Are you sure you want to clear all form data?')) {
+            localStorage.removeItem(FORM_STORAGE_KEY);
+            document.getElementById('customerForm').reset();
+            console.log('Form data cleared');
+            
+            // Optionally reload the page to show clean form
+            location.reload();
+        }
+    }
+    
+    // Attach event listeners to form elements
+    function attachFormListeners() {
+        const formElements = document.querySelectorAll('[data-persist="true"]');
+        
+        formElements.forEach(element => {
+            // Save on input change
+            element.addEventListener('input', saveFormData);
+            element.addEventListener('change', saveFormData);
+        });
+    }
+    
     // Auto-generate Display Name
     function updateDisplayName() {
         const businessName = document.getElementById('BusinessName').value.trim();
@@ -448,6 +561,16 @@
             alert('Please fill in all required fields (First Name, Email, Mobile)');
             return false;
         }
+        
+        // Clear localStorage only on successful form submission
+        // Note: This will clear immediately. If you want to clear only after server confirms success,
+        // you'll need to handle this in the controller and redirect with a success flag
     });
+    
+    // Optional: Clear form data when coming from a success redirect
+    @if(session('success'))
+        localStorage.removeItem(FORM_STORAGE_KEY);
+        console.log('Form data cleared after successful submission');
+    @endif
 </script>
 @endsection
