@@ -9,29 +9,28 @@ class Customer extends Model
 {
     use HasFactory;
 
-    protected $table = 'temp_customer';
+    protected $table = 'crm_customer';
     protected $primaryKey = 'ID';
     
     // Disable standard timestamps since we use CreatedOn/UpdatedOn
     public $timestamps = false;
 
-    // Define custom timestamp columns
+    // Define custom timestamp columns if we wanted to use automatic handling, 
+    // but the controller handles them manually. 
+    // However, for consistency with Laravel, we can define them:
     const CREATED_AT = 'CreatedOn';
     const UPDATED_AT = 'UpdatedOn';
 
     protected $fillable = [
-        'IsArchive',
-        'VoucherID',
         'AccountNo',
         'Title',
         'FirstName',
         'LastName',
-        'Email',
         'BusinessName',
-        'PartyBalance',
+        'DisplayName',
+        'Email',
         'Mobile',
         'Phone',
-        'DisplayName',
         'Website',
         'Address',
         'City',
@@ -44,51 +43,25 @@ class Customer extends Model
         'BillingCounty',
         'BillingPostalCode',
         'FullBillingAddress',
+        'SameAsBilling',
         'NTN',
-        'SalesTtaxNumber',
+        'SalesTaxNumber',
         'IsFiler',
-        'Notes',
+        'CNIC',
+        'CreditLimit',
         'PaymentTerms',
+        'Notes',
         'Status',
+        'PartyBalance',
+        'Type',
+        'Typei',
+        'IsDashboard',
         'CreatedBy',
         'CreatedOn',
         'UpdatedBy',
         'UpdatedOn',
-        'SameAsBilling',
-        'CNIC',
-        'CreditLimit',
-        'FieldA',
-        'FieldB',
-        'FieldC',
-        'FieldD',
-        'Field1',
-        'Field2',
-        'Field3',
-        'Field4',
-        'Typei',
-        'Type',
-        'IsDashboard',
-        'RequestID',
+        'IsArchive',
     ];
-
-       public static function save_transaction($validated)
-    {
-        $query = "SAVE_TRANSACTION FUNCTION CALL";
-        return $query;
-    }
-
-     public function edit_transaction()
-    {
-        $query = "EDIT_TRANSACTION FUNCTION CALL";
-        return $query;
-    }
-
-     public function delete_transaction()
-    {
-        $query = "DELETE_TRANSACTION FUNCTION CALL";
-        return $query;
-    }
-
 
     /**
      * Scope a query to only include active customers.
