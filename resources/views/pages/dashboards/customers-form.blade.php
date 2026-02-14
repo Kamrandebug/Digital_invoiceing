@@ -970,6 +970,85 @@
             firstError.focus();
         }
     });
+
+    /**
+     * AUTO-SAVE / DRAFT FEATURE (LocalStorage)
+     * Persists form data across page refreshes (F5)
+     */
+    const formId = 'customerForm';
+    const formMode = '{{ $mode }}';
+    // Use customer ID for edits, or 'new' for create mode
+    const customerId = '{{ $customer->ID ?? "new" }}';
+    const storagePrefix = 'customer_draft_' + formMode + '_' + customerId + '_';
+
+    if (document.getElementById(formId)) {
+        const form = document.getElementById(formId);
+        const inputs = form.querySelectorAll('input, textarea, select');
+
+        // 1. Restore data on load
+        // Only restore if there are NO validation errors (server-side old() takes precedence)
+        // If the user just refreshed (F5), there are no errors, so we restore.
+        if (!document.querySelector('.alert-danger')) {
+            inputs.forEach(input => {
+                // Skip hidden inputs (like _token, _method) and passwords
+                if (input.type === 'hidden' || input.type === 'password') return;
+                
+                const key = storagePrefix + input.name;
+                const storedValue = localStorage.getItem(key);
+                
+                if (storedValue !== null) {
+                    if (input.type === 'checkbox' || input.type === 'radio') {
+                        const shouldBeChecked = (storedValue === 'true');
+                        if (input.checked !== shouldBeChecked) {
+                            input.checked = shouldBeChecked;
+                            // Trigger change for dependencies (like billing address toggle)
+                            input.dispatchEvent(new Event('change'));
+                        }
+                    } else {
+                        if (input.value !== storedValue) {
+                            input.value = storedValue;
+                            // Trigger input event for any listeners
+                            input.dispatchEvent(new Event('input'));
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Save data on change
+        inputs.forEach(input => {
+            const saveHandler = function() {
+                if (this.type === 'hidden' || this.type === 'password') return;
+                
+                const key = storagePrefix + this.name;
+                let value;
+                
+                if (this.type === 'checkbox' || this.type === 'radio') {
+                    value = this.checked;
+                } else {
+                    value = this.value;
+                }
+                
+                localStorage.setItem(key, value);
+            };
+
+            input.addEventListener('input', saveHandler);
+            input.addEventListener('change', saveHandler);
+        });
+
+        // 3. Clear data on submit
+        form.addEventListener('submit', function() {
+            // We clear storage so the next visit starts fresh
+            // If submission fails, Laravel redirects back with input, 
+            // and our 'if (!document.querySelector('.alert-danger'))' check prevents
+            // overwriting the server's repopulated data with the (now deleted) local storage.
+            // Wait! If we delete it now, and submission fails, we rely ENTIRELY on Laravel old().
+            // That is correct behavior.
+            inputs.forEach(input => {
+                localStorage.removeItem(storagePrefix + input.name);
+            });
+        });
+    }
     
     @endif
 </script>
