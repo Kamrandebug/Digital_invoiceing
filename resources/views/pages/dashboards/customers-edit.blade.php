@@ -1,5 +1,5 @@
 {{--
-    Customer Edit Page - Matching Existing Design
+    Customer Edit Page - With Field-Level Validation (FIXED)
     
     Path: resources/views/pages/dashboards/customers-edit.blade.php
     URL: /customers/{id}/edit
@@ -131,16 +131,40 @@
         border-radius: 5px;
         padding: 10px;
         font-size: 14px;
+        width: 100%;
     }
     
     .form-control:focus, .form-select:focus {
         border-color: #6f42c1;
         box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+        outline: none;
     }
     
     .last-updated-info {
         color: #6c757d;
         font-size: 14px;
+    }
+    
+    /* Validation Error Styles - MATCHING CREATE FORM */
+    .is-invalid {
+        border-color: #dc3545 !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        padding-right: calc(1.5em + 0.75rem);
+    }
+    
+    .invalid-feedback {
+        display: block;
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+        color: #dc3545;
+    }
+    
+    .error-icon {
+        margin-right: 5px;
     }
 </style>
 @endsection
@@ -159,6 +183,37 @@
     </div>
 </div>
 <!-- End::page-header -->
+
+<!-- Display Success Message -->
+@if(session('success'))
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+@endif
+
+<!-- Display Error Message -->
+@if(session('error'))
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+@endif
+
+<!-- Display Validation Errors - COMMENTED OUT LIKE CREATE FORM -->
+{{-- 
+@if($errors->any())
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong><i class="fas fa-exclamation-triangle"></i> Please fix the following errors:</strong>
+    <ul class="mb-0 mt-2">
+        @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+@endif
+--}}
 
 <!-- Customer Info Badge -->
 <div class="customer-info-badge">
@@ -183,26 +238,13 @@
     </div>
 </div>
 
-<!-- Error Messages -->
-@if($errors->any())
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <strong>Please fix the following errors:</strong>
-    <ul class="mb-0 mt-2">
-        @foreach($errors->all() as $error)
-            <li>{{ $error }}</li>
-        @endforeach
-    </ul>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-@endif
-
 <!-- Customer Edit Form -->
 <div class="customer-form-container">
     <div class="form-header">
         <h1><i class="fas fa-user-edit"></i> Edit Customer Details</h1>
     </div>
 
-    <form action="{{ route('customers.edit_transaction', $customer->ID) }}" method="POST" id="customerEditForm">
+    <form action="{{ route('customers.edit_transaction', $customer->ID) }}" method="POST" id="customerEditForm" novalidate>
         @csrf
         @method('PUT')
         
@@ -215,8 +257,8 @@
             <div class="row">
                 <div class="col-md-2">
                     <div class="mb-3">
-                        <label for="Title" class="form-label">Title</label>
-                        <select name="Title" id="Title" class="form-select">
+                        <label for="Title" class="form-label required-field">Title</label>
+                        <select name="Title" id="Title" class="form-select @error('Title') is-invalid @enderror" required>
                             <option value="">Select</option>
                             <option value="Mr" {{ old('Title', $customer->Title) == 'Mr' ? 'selected' : '' }}>Mr</option>
                             <option value="Mrs" {{ old('Title', $customer->Title) == 'Mrs' ? 'selected' : '' }}>Mrs</option>
@@ -224,22 +266,39 @@
                             <option value="Dr" {{ old('Title', $customer->Title) == 'Dr' ? 'selected' : '' }}>Dr</option>
                             <option value="Prof" {{ old('Title', $customer->Title) == 'Prof' ? 'selected' : '' }}>Prof</option>
                         </select>
+                        @error('Title')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-5">
                     <div class="mb-3">
                         <label for="FirstName" class="form-label required-field">First Name</label>
-                        <input type="text" class="form-control" id="FirstName" name="FirstName" 
+                        <input type="text" class="form-control @error('FirstName') is-invalid @enderror" 
+                               id="FirstName" name="FirstName" 
                                value="{{ old('FirstName', $customer->FirstName) }}" placeholder="Enter first name" required>
+                        @error('FirstName')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-5">
                     <div class="mb-3">
-                        <label for="LastName" class="form-label">Last Name</label>
-                        <input type="text" class="form-control" id="LastName" name="LastName" 
-                               value="{{ old('LastName', $customer->LastName) }}" placeholder="Enter last name">
+                        <label for="LastName" class="form-label required-field">Last Name</label>
+                        <input type="text" class="form-control @error('LastName') is-invalid @enderror" 
+                               id="LastName" name="LastName" 
+                               value="{{ old('LastName', $customer->LastName) }}" placeholder="Enter last name" required>
+                        @error('LastName')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -247,18 +306,30 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="BusinessName" class="form-label">Business Name</label>
-                        <input type="text" class="form-control" id="BusinessName" name="BusinessName" 
-                               value="{{ old('BusinessName', $customer->BusinessName) }}" placeholder="Enter business name">
+                        <label for="BusinessName" class="form-label required-field">Business Name</label>
+                        <input type="text" class="form-control @error('BusinessName') is-invalid @enderror" 
+                               id="BusinessName" name="BusinessName" 
+                               value="{{ old('BusinessName', $customer->BusinessName) }}" placeholder="Enter business name" required>
+                        @error('BusinessName')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="DisplayName" class="form-label">Display Name</label>
-                        <input type="text" class="form-control" id="DisplayName" name="DisplayName" 
+                        <input type="text" class="form-control @error('DisplayName') is-invalid @enderror" 
+                               id="DisplayName" name="DisplayName" 
                                value="{{ old('DisplayName', $customer->DisplayName) }}" placeholder="Display name">
-                        <small class="text-muted">This will be used to display the customer name</small>
+                        <small class="text-muted">This will be used to display the customer name (Optional)</small>
+                        @error('DisplayName')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -274,24 +345,43 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="Email" class="form-label required-field">Email</label>
-                        <input type="email" class="form-control" id="Email" name="Email" 
+                        <input type="email" class="form-control @error('Email') is-invalid @enderror" 
+                               id="Email" name="Email" 
                                value="{{ old('Email', $customer->Email) }}" placeholder="customer@example.com" required>
+                        @error('Email')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-3">
                     <div class="mb-3">
                         <label for="Mobile" class="form-label required-field">Mobile</label>
-                        <input type="text" class="form-control" id="Mobile" name="Mobile" 
+                        <input type="text" class="form-control @error('Mobile') is-invalid @enderror" 
+                               id="Mobile" name="Mobile" 
                                value="{{ old('Mobile', $customer->Mobile) }}" placeholder="3001234567" required>
+                        @error('Mobile')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-3">
                     <div class="mb-3">
                         <label for="Phone" class="form-label">Phone</label>
-                        <input type="text" class="form-control" id="Phone" name="Phone" 
+                        <input type="text" class="form-control @error('Phone') is-invalid @enderror" 
+                               id="Phone" name="Phone" 
                                value="{{ old('Phone', $customer->Phone) }}" placeholder="042 1234567">
+                        <small class="text-muted">(Optional)</small>
+                        @error('Phone')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -300,8 +390,15 @@
                 <div class="col-md-12">
                     <div class="mb-3">
                         <label for="Website" class="form-label">Website</label>
-                        <input type="url" class="form-control" id="Website" name="Website" 
+                        <input type="url" class="form-control @error('Website') is-invalid @enderror" 
+                               id="Website" name="Website" 
                                value="{{ old('Website', $customer->Website) }}" placeholder="https://www.example.com">
+                        <small class="text-muted">(Optional)</small>
+                        @error('Website')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -316,9 +413,15 @@
             <div class="row">
                 <div class="col-md-12">
                     <div class="mb-3">
-                        <label for="Address" class="form-label">Street Address</label>
-                        <textarea class="form-control" id="Address" name="Address" rows="2" 
-                                  placeholder="Enter street address">{{ old('Address', $customer->Address) }}</textarea>
+                        <label for="Address" class="form-label required-field">Street Address</label>
+                        <textarea class="form-control @error('Address') is-invalid @enderror" 
+                                  id="Address" name="Address" rows="2" 
+                                  placeholder="Enter street address" required>{{ old('Address', $customer->Address) }}</textarea>
+                        @error('Address')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -326,39 +429,156 @@
             <div class="row">
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="City" class="form-label">City</label>
-                        <input type="text" class="form-control" id="City" name="City" 
-                               value="{{ old('City', $customer->City) }}" placeholder="City">
+                        <label for="City" class="form-label required-field">City</label>
+                        <input type="text" class="form-control @error('City') is-invalid @enderror" 
+                               id="City" name="City" 
+                               value="{{ old('City', $customer->City) }}" placeholder="City" required>
+                        @error('City')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="County" class="form-label">State/Province</label>
-                        <input type="text" class="form-control" id="County" name="County" 
-                               value="{{ old('County', $customer->County) }}" placeholder="State/Province">
+                        <label for="County" class="form-label required-field">State/Province</label>
+                        <input type="text" class="form-control @error('County') is-invalid @enderror" 
+                               id="County" name="County" 
+                               value="{{ old('County', $customer->County) }}" placeholder="State/Province" required>
+                        @error('County')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-2">
                     <div class="mb-3">
-                        <label for="PostalCode" class="form-label">Postal Code</label>
-                        <input type="text" class="form-control" id="PostalCode" name="PostalCode" 
-                               value="{{ old('PostalCode', $customer->PostalCode) }}" placeholder="54000">
+                        <label for="PostalCode" class="form-label required-field">Postal Code</label>
+                        <input type="text" class="form-control @error('PostalCode') is-invalid @enderror" 
+                               id="PostalCode" name="PostalCode" 
+                               value="{{ old('PostalCode', $customer->PostalCode) }}" placeholder="54000" required>
+                        @error('PostalCode')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-2">
                     <div class="mb-3">
-                        <label for="Country" class="form-label">Country</label>
-                        <input type="text" class="form-control" id="Country" name="Country" 
-                               value="{{ old('Country', $customer->Country) }}" placeholder="Pakistan">
+                        <label for="Country" class="form-label required-field">Country</label>
+                        <input type="text" class="form-control @error('Country') is-invalid @enderror" 
+                               id="Country" name="Country" 
+                               value="{{ old('Country', $customer->Country) }}" placeholder="Pakistan" required>
+                        @error('Country')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
         </div>
         
-        {{-- SECTION 4: Financial Information --}}
+        {{-- SECTION 4: Billing Address --}}
+        <div class="form-section">
+            <h3 class="form-section-title">
+                <i class="fas fa-file-invoice"></i> Billing Address
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="SameAsBilling" id="SameAsBilling" value="1" 
+                               {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
+                        <span>Same as Primary Address</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div id="billingAddressFields" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'display:none' : '' }}">
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="mb-3">
+                            <label for="BillingAddress" class="form-label required-field">Billing Street Address</label>
+                            <textarea class="form-control @error('BillingAddress') is-invalid @enderror" 
+                                      id="BillingAddress" name="BillingAddress" rows="2" 
+                                      placeholder="Enter billing address" required>{{ old('BillingAddress', $customer->BillingAddress) }}</textarea>
+                            @error('BillingAddress')
+                                <div class="invalid-feedback">
+                                    <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="BillingCity" class="form-label required-field">Billing City</label>
+                            <input type="text" class="form-control @error('BillingCity') is-invalid @enderror" 
+                                   id="BillingCity" name="BillingCity" 
+                                   value="{{ old('BillingCity', $customer->BillingCity) }}" placeholder="City" required>
+                            @error('BillingCity')
+                                <div class="invalid-feedback">
+                                    <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="BillingCounty" class="form-label required-field">Billing State/Province</label>
+                            <input type="text" class="form-control @error('BillingCounty') is-invalid @enderror" 
+                                   id="BillingCounty" name="BillingCounty" 
+                                   value="{{ old('BillingCounty', $customer->BillingCounty) }}" placeholder="State/Province" required>
+                            @error('BillingCounty')
+                                <div class="invalid-feedback">
+                                    <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="BillingPostalCode" class="form-label required-field">Billing Postal Code</label>
+                            <input type="text" class="form-control @error('BillingPostalCode') is-invalid @enderror" 
+                                   id="BillingPostalCode" name="BillingPostalCode" 
+                                   value="{{ old('BillingPostalCode', $customer->BillingPostalCode) }}" placeholder="54000" required>
+                            @error('BillingPostalCode')
+                                <div class="invalid-feedback">
+                                    <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="BillingCountry" class="form-label required-field">Billing Country</label>
+                            <input type="text" class="form-control @error('BillingCountry') is-invalid @enderror" 
+                                   id="BillingCountry" name="BillingCountry" 
+                                   value="{{ old('BillingCountry', $customer->BillingCountry ?? 'Pakistan') }}" placeholder="Pakistan" required>
+                            @error('BillingCountry')
+                                <div class="invalid-feedback">
+                                    <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {{-- SECTION 5: Financial Information --}}
         <div class="form-section">
             <h3 class="form-section-title">
                 <i class="fas fa-calculator"></i> Financial & Tax Information
@@ -367,34 +587,67 @@
             <div class="row">
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="NTN" class="form-label">NTN Number</label>
-                        <input type="text" class="form-control" id="NTN" name="NTN" 
-                               value="{{ old('NTN', $customer->NTN) }}" placeholder="Enter NTN">
+                        <label for="NTN" class="form-label required-field">NTN Number</label>
+                        <input type="text" class="form-control @error('NTN') is-invalid @enderror" 
+                               id="NTN" name="NTN" 
+                               value="{{ old('NTN', $customer->NTN) }}" placeholder="Enter NTN" required>
+                        @error('NTN')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="CNIC" class="form-label">CNIC</label>
-                        <input type="text" class="form-control" id="CNIC" name="CNIC" 
-                               value="{{ old('CNIC', $customer->CNIC) }}" placeholder="12345-1234567-1">
+                        <label for="SalesTaxNumber" class="form-label">Sales Tax Number</label>
+                        <input type="text" class="form-control @error('SalesTaxNumber') is-invalid @enderror" 
+                               id="SalesTaxNumber" name="SalesTaxNumber" 
+                               value="{{ old('SalesTaxNumber', $customer->SalesTaxNumber) }}" placeholder="Enter STN">
+                        <small class="text-muted">(Optional)</small>
+                        @error('SalesTaxNumber')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="CreditLimit" class="form-label">Credit Limit (PKR)</label>
-                        <input type="number" step="0.01" class="form-control" id="CreditLimit" name="CreditLimit" 
-                               value="{{ old('CreditLimit', $customer->CreditLimit) }}" placeholder="0.00">
+                        <label for="CNIC" class="form-label required-field">CNIC</label>
+                        <input type="text" class="form-control @error('CNIC') is-invalid @enderror" 
+                               id="CNIC" name="CNIC" 
+                               value="{{ old('CNIC', $customer->CNIC) }}" placeholder="12345-1234567-1" required>
+                        @error('CNIC')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
             
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="PaymentTerms" class="form-label">Payment Terms</label>
-                        <select name="PaymentTerms" id="PaymentTerms" class="form-select">
+                        <label for="CreditLimit" class="form-label required-field">Credit Limit (PKR)</label>
+                        <input type="number" step="0.01" class="form-control @error('CreditLimit') is-invalid @enderror" 
+                               id="CreditLimit" name="CreditLimit" 
+                               value="{{ old('CreditLimit', $customer->CreditLimit) }}" placeholder="0.00" required>
+                        @error('CreditLimit')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="PaymentTerms" class="form-label required-field">Payment Terms</label>
+                        <select name="PaymentTerms" id="PaymentTerms" class="form-select @error('PaymentTerms') is-invalid @enderror" required>
                             <option value="">Select</option>
                             <option value="Cash" {{ old('PaymentTerms', $customer->PaymentTerms) == 'Cash' ? 'selected' : '' }}>Cash</option>
                             <option value="Net 15" {{ old('PaymentTerms', $customer->PaymentTerms) == 'Net 15' ? 'selected' : '' }}>Net 15 Days</option>
@@ -402,20 +655,32 @@
                             <option value="Net 45" {{ old('PaymentTerms', $customer->PaymentTerms) == 'Net 45' ? 'selected' : '' }}>Net 45 Days</option>
                             <option value="Net 60" {{ old('PaymentTerms', $customer->PaymentTerms) == 'Net 60' ? 'selected' : '' }}>Net 60 Days</option>
                         </select>
+                        @error('PaymentTerms')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
                 
-                <div class="col-md-6">
-                    <label class="checkbox-label">
+                <div class="col-md-4">
+                    <label for="IsFiler" class="form-label required-field">Tax Filer Status</label>
+                    <div class="checkbox-label">
+                        <input type="hidden" name="IsFiler" value="0">
                         <input type="checkbox" name="IsFiler" id="IsFiler" value="1" 
                                {{ old('IsFiler', $customer->IsFiler) ? 'checked' : '' }}>
                         <span>Is Tax Filer?</span>
-                    </label>
+                    </div>
+                    @error('IsFiler')
+                        <div class="invalid-feedback d-block">
+                            <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                        </div>
+                    @enderror
                 </div>
             </div>
         </div>
         
-        {{-- SECTION 5: Additional Information --}}
+        {{-- SECTION 6: Additional Information --}}
         <div class="form-section">
             <h3 class="form-section-title">
                 <i class="fas fa-sticky-note"></i> Additional Information
@@ -424,9 +689,15 @@
             <div class="row">
                 <div class="col-md-12">
                     <div class="mb-3">
-                        <label for="Notes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="Notes" name="Notes" rows="3" 
-                                  placeholder="Any additional notes about the customer">{{ old('Notes', $customer->Notes) }}</textarea>
+                        <label for="Notes" class="form-label required-field">Notes</label>
+                        <textarea class="form-control @error('Notes') is-invalid @enderror" 
+                                  id="Notes" name="Notes" rows="3" 
+                                  placeholder="Any additional notes about the customer" required>{{ old('Notes', $customer->Notes) }}</textarea>
+                        @error('Notes')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -434,11 +705,16 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="Status" class="form-label">Status</label>
-                        <select name="Status" id="Status" class="form-select">
+                        <label for="Status" class="form-label required-field">Status</label>
+                        <select name="Status" id="Status" class="form-select @error('Status') is-invalid @enderror" required>
                             <option value="1" {{ old('Status', $customer->Status) == '1' ? 'selected' : '' }}>Active</option>
                             <option value="0" {{ old('Status', $customer->Status) == '0' ? 'selected' : '' }}>Inactive</option>
                         </select>
+                        @error('Status')
+                            <div class="invalid-feedback">
+                                <i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -486,16 +762,54 @@
     document.getElementById('FirstName').addEventListener('blur', updateDisplayName);
     document.getElementById('LastName').addEventListener('blur', updateDisplayName);
     
-    // Form validation
-    document.getElementById('customerEditForm').addEventListener('submit', function(e) {
-        const firstName = document.getElementById('FirstName').value.trim();
-        const email = document.getElementById('Email').value.trim();
-        const mobile = document.getElementById('Mobile').value.trim();
+    // Toggle billing address fields
+    function toggleBillingFields() {
+        const checkbox = document.getElementById('SameAsBilling');
+        const billingFields = document.getElementById('billingAddressFields');
+        const billingInputs = billingFields.querySelectorAll('input, textarea');
         
-        if (!firstName || !email || !mobile) {
-            e.preventDefault();
-            alert('Please fill in all required fields (First Name, Email, Mobile)');
-            return false;
+        if (checkbox.checked) {
+            billingFields.style.display = 'none';
+            // Remove required attribute and clear validation when hidden
+            billingInputs.forEach(input => {
+                input.removeAttribute('required');
+                input.classList.remove('is-invalid');
+            });
+            // Copy values from primary address to billing address
+            document.getElementById('BillingAddress').value = document.getElementById('Address').value;
+            document.getElementById('BillingCity').value = document.getElementById('City').value;
+            document.getElementById('BillingCounty').value = document.getElementById('County').value;
+            document.getElementById('BillingPostalCode').value = document.getElementById('PostalCode').value;
+            document.getElementById('BillingCountry').value = document.getElementById('Country').value;
+        } else {
+            billingFields.style.display = 'block';
+            // Add back required attribute when visible
+            billingInputs.forEach(input => {
+                if (input.id !== 'BillingAddress' && input.tagName !== 'TEXTAREA') {
+                    if (input.type !== 'hidden') {
+                        input.setAttribute('required', 'required');
+                    }
+                } else if (input.tagName === 'TEXTAREA') {
+                    input.setAttribute('required', 'required');
+                }
+            });
+        }
+    }
+    
+    // Initialize billing fields state on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleBillingFields();
+    });
+    
+    // Add event listener for checkbox change
+    document.getElementById('SameAsBilling').addEventListener('change', toggleBillingFields);
+    
+    // Scroll to first error if validation fails
+    window.addEventListener('load', function() {
+        const firstError = document.querySelector('.is-invalid');
+        if (firstError) {
+            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstError.focus();
         }
     });
 </script>

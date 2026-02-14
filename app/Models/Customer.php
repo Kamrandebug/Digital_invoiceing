@@ -78,7 +78,7 @@ class Customer extends Model
         return $query;
     }
 
-     public function edit_transaction()
+     public static function edit_transaction()
     {
         $query = "UPDATE temp_customer SET IsArchive = ?, VoucherID = ?, AccountNo = ?, Title = ?, FirstName = ?, LastName = ?, Email = ?, BusinessName = ?, PartyBalance = ?, Mobile = ?, Phone = ?, DisplayName = ?, Website = ?, Address = ?, City = ?, Country = ?, County = ?, PostalCode = ?, BillingAddress = ?, BillingCity = ?, BillingCountry = ?, BillingCounty = ?, BillingPostalCode = ?, FullBillingAddress = ?, NTN = ?, SalesTtaxNumber = ?, IsFiler = ?, Notes = ?, PaymentTerms = ?, Status = ?, UpdatedBy = ?, UpdatedOn = ?, SameAsBilling = ?, CNIC = ?, CreditLimit = ?, FieldA = ?, FieldB = ?, FieldC = ?, FieldD = ?, Field1 = ?, Field2 = ?, Field3 = ?, Field4 = ?, Typei = ?, Type = ?, IsDashboard = ?, RequestID = ? WHERE ID = ?";
 

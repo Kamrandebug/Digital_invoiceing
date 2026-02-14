@@ -1,3 +1,5 @@
+--- START OF FILE ---
+
 {{--
     Customer Create/Add Page - ALL FIELDS REQUIRED (except DisplayName, Phone, Website, SalesTaxNumber)
     
@@ -176,7 +178,8 @@
 </div>
 @endif
 
-<!-- Display Validation Errors -->
+<!-- Display Validation Errors - COMMENTED OUT AS REQUESTED -->
+{{-- 
 @if($errors->any())
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <strong><i class="fas fa-exclamation-triangle"></i> Please fix the following errors:</strong>
@@ -188,6 +191,8 @@
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 @endif
+--}}
+
 {{-- COMMENTED OUT - Error summary at top (errors now shown only at field level below each input)
 <!-- Error Summary Alert -->
 @if($errors->any())
