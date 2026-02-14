@@ -364,7 +364,7 @@
             <a href="{{ route('customers.index') }}" class="btn-back">
                 <i class="fas fa-arrow-left"></i> Back to List
             </a>
-            <a href="{{ route('customers.edit', $customer->ID) }}" class="btn-edit">
+            <a href="{{ route('customers.edit', $customer->ID ?? 0) }}" class="btn-edit">
                 <i class="fas fa-edit"></i> Edit Customer
             </a>
         </div>
