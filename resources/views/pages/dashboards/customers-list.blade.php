@@ -132,13 +132,7 @@
                     </td>
                     <td>{{ $customer->CreatedOn ? $customer->CreatedOn->format('d/m/Y') : 'N/A' }}</td>
                     <td>
-                        {{-- Edit Button (uses edit_transaction) --}}
-                        <button class="action-btn btn-edit" 
-                                onclick="window.location.href='{{ route('customers.edit', $customer->ID ?? 0) }}'"
-                                title="Edit Customer">
-                            <i class="fas fa-pencil-alt"></i>
-                        </button>
-                        
+
                         {{-- View/Info Button --}}
                         <button class="action-btn btn-info"
                                 onclick="window.location.href='{{ route('customers.show', $customer->ID ?? 0) }}'"

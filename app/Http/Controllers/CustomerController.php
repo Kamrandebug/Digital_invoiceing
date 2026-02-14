@@ -26,7 +26,7 @@ class CustomerController extends Controller
      */
     public function create()
     {
-        return view('pages.dashboards.customers-create');
+        return view('pages.dashboards.customers-form', ['mode' => 'create', 'customer' => new Customer()]);
     }
     
     /**
@@ -157,7 +157,7 @@ class CustomerController extends Controller
     public function show($id)
     {
         $customer = Customer::findOrFail($id);
-        return view('pages.dashboards.customers-show', compact('customer'));
+        return view('pages.dashboards.customers-form', ['mode' => 'show', 'customer' => $customer]);
     }
     
     /**
@@ -166,7 +166,7 @@ class CustomerController extends Controller
     public function edit($id)
     {
         $customer = Customer::findOrFail($id);
-        return view('pages.dashboards.customers-edit', compact('customer'));
+        return view('pages.dashboards.customers-form', ['mode' => 'edit', 'customer' => $customer]);
     }
     
     /**
@@ -397,35 +397,6 @@ class CustomerController extends Controller
         return redirect()
             ->back()
             ->with('error', 'Error deleting customer: ' . $e->getMessage());
-    }
-}
-public function restore_transaction($id)
-{
-    try {
-        // Find the archived customer (bypass the active scope)
-        $customer = Customer::withArchived()->findOrFail($id);
-        
-        // Check if customer is actually archived
-        if ($customer->IsArchive == 0) {
-            return redirect()
-                ->route('customers.index')
-                ->with('error', 'Customer is not archived!');
-        }
-        
-        // Restore query: Set IsArchive = 0 and update timestamp
-        $query = "UPDATE temp_customer SET IsArchive = 0, UpdatedOn = NOW() WHERE ID = ?";
-        
-        // Execute the restore
-        DB::update($query, [(int)$id]);
-        
-        return redirect()
-            ->route('customers.index')
-            ->with('success', 'Customer restored successfully!');
-            
-    } catch (\Exception $e) {
-        return redirect()
-            ->back()
-            ->with('error', 'Error restoring customer: ' . $e->getMessage());
     }
 }
 }
