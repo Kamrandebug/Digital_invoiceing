@@ -87,11 +87,16 @@ class CustomerController extends Controller
         $displayName = $request->DisplayName ?: $request->BusinessName;
         $fullBillingAddress = $request->BillingAddress . ', ' . $request->BillingCity . ', ' . $request->BillingCountry;
 
-        // 2. The Values Array (Must be exactly 49 items)
+        // Calculate next ID (Fix for missing AUTO_INCREMENT)
+        $maxId = DB::table('temp_customer')->max('ID');
+        $nextId = $maxId ? $maxId + 1 : 1;
+
+        // 2. The Values Array (Must be exactly 50 items with ID)
         $values_array = [
-            0,                          // 1. IsArchive
-            0,                          // 2. VoucherID
-            '0',                        // 3. AccountNo
+            $nextId,                    // 1. ID (New, Manual Increment)
+            0,                          // 2. IsArchive
+            0,                          // 3. VoucherID
+            '0',                        // 4. AccountNo
             $request->Title,            // 4. Title
             $request->FirstName,        // 5. FirstName
             $request->LastName,         // 6. LastName

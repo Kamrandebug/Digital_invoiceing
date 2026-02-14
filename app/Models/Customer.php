@@ -73,7 +73,7 @@ class Customer extends Model
 
        public static function save_transaction($validated)
     {
-        $query = "INSERT INTO temp_customer (IsArchive, VoucherID, AccountNo, Title, FirstName, LastName, Email, BusinessName, PartyBalance, Mobile, Phone, DisplayName, Website, Address, City, Country, County, PostalCode, BillingAddress, BillingCity, BillingCountry, BillingCounty, BillingPostalCode, FullBillingAddress, NTN, SalesTtaxNumber, IsFiler, Notes, PaymentTerms, Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, SameAsBilling, CNIC, CreditLimit, FieldA, FieldB, FieldC, FieldD, Field1, Field2, Field3, Field4, Typei, Type, IsDashboard, RequestID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $query = "INSERT INTO temp_customer (ID, IsArchive, VoucherID, AccountNo, Title, FirstName, LastName, Email, BusinessName, PartyBalance, Mobile, Phone, DisplayName, Website, Address, City, Country, County, PostalCode, BillingAddress, BillingCity, BillingCountry, BillingCounty, BillingPostalCode, FullBillingAddress, NTN, SalesTtaxNumber, IsFiler, Notes, PaymentTerms, Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, SameAsBilling, CNIC, CreditLimit, FieldA, FieldB, FieldC, FieldD, Field1, Field2, Field3, Field4, Typei, Type, IsDashboard, RequestID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         return $query;
     }
