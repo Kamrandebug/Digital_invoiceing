@@ -6,6 +6,7 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
@@ -60,139 +61,211 @@ class CustomerController extends Controller
     /**
      * Store a newly created customer - CALLS MODEL save_transaction()
      */
-  public function save_transaction(Request $request)
-{
-    // 1. Handle "Same as Billing" Logic
-    if ($request->has('SameAsBilling') && $request->SameAsBilling == '1') {
+    public function save_transaction(Request $request)
+    {
+        // Trim and format inputs
         $request->merge([
-            'BillingAddress' => $request->Address,
-            'BillingCity' => $request->City,
-            'BillingCountry' => $request->Country,
-            'BillingCounty' => $request->County,
-            'BillingPostalCode' => $request->PostalCode,
+            'FirstName' => trim($request->FirstName ?? ''),
+            'LastName' => trim($request->LastName ?? ''),
+            'Email' => strtolower(trim($request->Email ?? '')),
+            'Mobile' => preg_replace('/[^0-9+]/', '', $request->Mobile ?? ''),
+            'Phone' => $request->Phone ? preg_replace('/[^0-9+]/', '', $request->Phone) : null,
         ]);
-    }
-    
-    // 2. Validate the Request
-    // $validated = $request->validate([
-    //     'Title' => 'required|string|max:50',
-    //     'FirstName' => 'required|string|max:100',
-    //     'LastName' => 'required|string|max:100',
-    //     'BusinessName' => 'required|string|max:200',
-    //     'DisplayName' => 'nullable|string|max:200',
-    //     'Email' => 'required|email|max:500',
-    //     'Mobile' => 'required|string|max:100',
-    //     'Phone' => 'nullable|string|max:100',
-    //     'Website' => 'nullable|url|max:200',
-    //     'Address' => 'required|string|max:500',
-    //     'City' => 'required|string|max:100',
-    //     'Country' => 'required|string|max:100',
-    //     'County' => 'required|string|max:100',
-    //     'PostalCode' => 'required|string|max:20',
-    //     'BillingAddress' => 'required|string|max:500',
-    //     'BillingCity' => 'required|string|max:100',
-    //     'BillingCountry' => 'required|string|max:100',
-    //     'BillingCounty' => 'required|string|max:100',
-    //     'BillingPostalCode' => 'required|string|max:20',
-    //     'SameAsBilling' => 'nullable|boolean',
-    //     'NTN' => 'required|string|max:20',
-    //     'SalesTaxNumber' => 'nullable|string|max:50',
-    //     'IsFiler' => 'nullable|boolean',
-    //     'CNIC' => 'required|string|max:50',
-    //     'CreditLimit' => 'required|numeric|min:0',
-    //     'PaymentTerms' => 'required|string|max:20',
-    //     'Notes' => 'required|string|max:500',
-    //     'Status' => 'required|integer|in:0,1',
-    // ]);
-    
-    try {
-        // 1. Generate the Secure UUID
-        $requestId = (string) Str::uuid(); 
-
-        $userId = auth()->id() ?? 1;
-        $now = now()->toDateTimeString(); // SQL format: YYYY-MM-DD HH:MM:SS
         
-        $displayName = $request->DisplayName ?: $request->BusinessName;
-        $fullBillingAddress = $request->BillingAddress . ', ' . $request->BillingCity . ', ' . $request->BillingCountry;
-
-        // Calculate next ID (Fix for missing AUTO_INCREMENT)
-        $maxId = DB::table('temp_customer')->max('ID');
-        $nextId = $maxId ? $maxId + 1 : 1;
-
-        // 2. The Values Array (Associative) for easy insertion
-        $data = [
-            'ID' => $nextId,
-            'TID' => $nextId,
-            'IsArchive' => 0,
-            'VoucherID' => 0,
-            'AccountNo' => 'CUST-' . str_pad($nextId, 6, '0', STR_PAD_LEFT), // Generate Unique AccountNo
-            'Title' => $request->Title,
-            'FirstName' => $request->FirstName,
-            'LastName' => $request->LastName,
-            'Email' => $request->Email,
-            'BusinessName' => $request->BusinessName,
-            'PartyBalance' => 0.00,
-            'Mobile' => $request->Mobile,
-            'Phone' => $request->Phone ?? '',
-            'DisplayName' => $displayName,
-            'Website' => $request->Website ?? '',
-            'Address' => $request->Address,
-            'City' => $request->City,
-            'Country' => $request->Country,
-            'County' => $request->County,
-            'PostalCode' => $request->PostalCode,
-            'BillingAddress' => $request->BillingAddress,
-            'BillingCity' => $request->BillingCity,
-            'BillingCountry' => $request->BillingCountry,
-            'BillingCounty' => $request->BillingCounty,
-            'BillingPostalCode' => $request->BillingPostalCode,
-            'FullBillingAddress' => $fullBillingAddress,
-            'NTN' => $request->NTN,
-            'SalesTtaxNumber' => $request->SalesTaxNumber ?? '',
-            'IsFiler' => $request->input('IsFiler', 0),
-            'Notes' => $request->Notes,
-            'PaymentTerms' => $request->PaymentTerms,
-            'Status' => $request->Status,
-            'CreatedBy' => (int)$userId,
-            'CreatedOn' => $now,
-            'UpdatedBy' => (int)$userId,
-            'UpdatedOn' => $now,
-            'SameAsBilling' => $request->input('SameAsBilling', 0),
-            'CNIC' => $request->CNIC,
-            'CreditLimit' => $request->CreditLimit,
-            'FieldA' => null, 'FieldB' => null, 'FieldC' => null, 'FieldD' => null,
-            'Field1' => null, 'Field2' => null, 'Field3' => null, 'Field4' => null,
-            'Typei' => 0,
-            'Type' => 1,
-            'IsDashboard' => 0,
-            'RequestID' => $requestId
-        ];
-
-        // 3. Drop into temp_customer table
-        \Log::info('Inserting Customer Data', ['data' => $data]);
-        DB::table('temp_customer')->insert($data);
-
-        // 4. Call model function (as requested, even if empty/dummy)
-        // Pass RequestID because model expects it
-        $query = Customer::save_transaction(['RequestID' => $requestId]);
+        // 1. Handle "Same as Billing" Logic
+        if ($request->has('SameAsBilling') && $request->SameAsBilling == '1') {
+            $request->merge([
+                'BillingAddress' => $request->Address,
+                'BillingCity' => $request->City,
+                'BillingCountry' => $request->Country,
+                'BillingCounty' => $request->County,
+                'BillingPostalCode' => $request->PostalCode,
+            ]);
+        }
         
-        // Execute the returned query if it's not empty
-        if (!empty($query) && $query !== "Empty") {
-            DB::statement($query);
+        // 2. Validate the Request
+        $validated = $request->validate([
+            // Basic Information
+            'Title' => 'required|string|in:Mr,Mrs,Miss,Ms,Dr,Prof,Engr',
+            'FirstName' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
+            'LastName' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
+            'BusinessName' => ['nullable', 'string', 'max:200', 'regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
+            'DisplayName' => 'nullable|string|max:200',
+            
+            // Contact Information
+            'Email' => ['required', 'email', 'max:500', 'unique:crm_customer,Email'],
+            'Mobile' => ['required', 'string', 'regex:/^(\+92|0)?[0-9]{10}$/', 'unique:crm_customer,Mobile'],
+            'Phone' => ['nullable', 'string', 'regex:/^(\+92|0)?[0-9]{9,11}$/'],
+            'Website' => ['nullable', 'url', 'max:200', 'regex:/^https?:\/\//'],
+            
+            // Address Information
+            'Address' => 'nullable|string|max:500',
+            'City' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'County' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'PostalCode' => ['nullable', 'string', 'regex:/^[0-9]{5}$/'],
+            'Country' => 'nullable|string|max:100',
+            
+            // Billing Address (conditional validation)
+            'BillingAddress' => 'required_if:SameAsBilling,0|nullable|string|max:500',
+            'BillingCity' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'BillingCounty' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'BillingPostalCode' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'regex:/^[0-9]{5}$/'],
+            'BillingCountry' => 'required_if:SameAsBilling,0|nullable|string|max:100',
+            'SameAsBilling' => 'nullable|boolean',
+            
+            // Financial & Tax Information
+            'NTN' => ['nullable', 'string', 'regex:/^[0-9]{7}$/', 'unique:crm_customer,NTN'],
+            'SalesTaxNumber' => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]{5,50}$/', 'unique:crm_customer,SalesTaxNumber'],
+            'IsFiler' => 'nullable|boolean',
+            'CNIC' => ['required', 'string', 'regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', 'unique:crm_customer,CNIC'],
+            'CreditLimit' => 'required|numeric|min:0|max:999999999999.99',
+            'PaymentTerms' => 'required|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
+            
+            // Additional Information
+            'Notes' => 'nullable|string|max:500',
+            'Status' => 'required|integer|in:0,1',
+        ], [
+            // Custom Error Messages
+            'Title.required' => 'Please select a title.',
+            'Title.in' => 'Invalid title selected.',
+            'FirstName.required' => 'First name is required.',
+            'FirstName.min' => 'First name must be at least 2 characters.',
+            'FirstName.regex' => 'First name can only contain letters, spaces, hyphens and apostrophes.',
+            'LastName.required' => 'Last name is required.',
+            'LastName.min' => 'Last name must be at least 2 characters.',
+            'LastName.regex' => 'Last name can only contain letters, spaces, hyphens and apostrophes.',
+            'BusinessName.regex' => 'Business name contains invalid characters.',
+            
+            'Email.required' => 'Email address is required.',
+            'Email.email' => 'Please enter a valid email address.',
+            'Email.unique' => 'This email address is already registered.',
+            'Mobile.required' => 'Mobile number is required.',
+            'Mobile.regex' => 'Mobile number must be in Pakistan format (e.g., 03001234567 or +923001234567).',
+            'Mobile.unique' => 'This mobile number is already registered.',
+            'Phone.regex' => 'Phone number must be in Pakistan format.',
+            'Website.url' => 'Please enter a valid website URL.',
+            'Website.regex' => 'Website URL must start with http:// or https://',
+            
+            'City.regex' => 'City name can only contain letters and spaces.',
+            'County.regex' => 'State/Province can only contain letters and spaces.',
+            'PostalCode.regex' => 'Postal code must be exactly 5 digits.',
+            
+            'BillingAddress.required_if' => 'Billing address is required when not same as primary address.',
+            'BillingCity.required_if' => 'Billing city is required when not same as primary address.',
+            'BillingCity.regex' => 'Billing city can only contain letters and spaces.',
+            'BillingCounty.required_if' => 'Billing state/province is required when not same as primary address.',
+            'BillingCounty.regex' => 'Billing state/province can only contain letters and spaces.',
+            'BillingPostalCode.required_if' => 'Billing postal code is required when not same as primary address.',
+            'BillingPostalCode.regex' => 'Billing postal code must be exactly 5 digits.',
+            'BillingCountry.required_if' => 'Billing country is required when not same as primary address.',
+            
+            'NTN.regex' => 'NTN must be exactly 7 digits.',
+            'NTN.unique' => 'This NTN is already registered.',
+            'SalesTaxNumber.regex' => 'Sales Tax Number format is invalid (alphanumeric with hyphens, 5-50 characters).',
+            'SalesTaxNumber.unique' => 'This Sales Tax Number is already registered.',
+            'CNIC.required' => 'CNIC is required.',
+            'CNIC.regex' => 'CNIC must be in format: 12345-1234567-1 (13 digits with hyphens).',
+            'CNIC.unique' => 'This CNIC is already registered.',
+            'CreditLimit.required' => 'Credit limit is required.',
+            'CreditLimit.numeric' => 'Credit limit must be a valid number.',
+            'CreditLimit.min' => 'Credit limit cannot be negative.',
+            'CreditLimit.max' => 'Credit limit exceeds maximum allowed value.',
+            'PaymentTerms.required' => 'Payment terms are required.',
+            'PaymentTerms.in' => 'Invalid payment terms selected.',
+            
+            'Notes.max' => 'Notes cannot exceed 500 characters.',
+            'Status.required' => 'Status is required.',
+            'Status.in' => 'Invalid status value.',
+        ]);
+        
+        try {
+            // 1. Generate the Secure UUID
+            $requestId = (string) Str::uuid(); 
+
+            $userId = auth()->id() ?? 1;
+            $now = now()->toDateTimeString(); // SQL format: YYYY-MM-DD HH:MM:SS
+            
+            $displayName = $request->DisplayName ?: $request->BusinessName;
+            $fullBillingAddress = $request->BillingAddress . ', ' . $request->BillingCity . ', ' . $request->BillingCountry;
+
+            // Calculate next ID (Fix for missing AUTO_INCREMENT)
+            $maxId = DB::table('temp_customer')->max('ID');
+            $nextId = $maxId ? $maxId + 1 : 1;
+
+            // 2. The Values Array (Associative) for easy insertion
+            $data = [
+                'ID' => $nextId,
+                'TID' => $nextId,
+                'IsArchive' => 0,
+                'VoucherID' => 0,
+                'AccountNo' => 'CUST-' . str_pad($nextId, 6, '0', STR_PAD_LEFT), // Generate Unique AccountNo
+                'Title' => $request->Title,
+                'FirstName' => $request->FirstName,
+                'LastName' => $request->LastName,
+                'Email' => $request->Email,
+                'BusinessName' => $request->BusinessName,
+                'PartyBalance' => 0.00,
+                'Mobile' => $request->Mobile,
+                'Phone' => $request->Phone ?? '',
+                'DisplayName' => $displayName,
+                'Website' => $request->Website ?? '',
+                'Address' => $request->Address,
+                'City' => $request->City,
+                'Country' => $request->Country,
+                'County' => $request->County,
+                'PostalCode' => $request->PostalCode,
+                'BillingAddress' => $request->BillingAddress,
+                'BillingCity' => $request->BillingCity,
+                'BillingCountry' => $request->BillingCountry,
+                'BillingCounty' => $request->BillingCounty,
+                'BillingPostalCode' => $request->BillingPostalCode,
+                'FullBillingAddress' => $fullBillingAddress,
+                'NTN' => $request->NTN,
+                'SalesTtaxNumber' => $request->SalesTaxNumber ?? '',
+                'IsFiler' => $request->input('IsFiler', 0),
+                'Notes' => $request->Notes,
+                'PaymentTerms' => $request->PaymentTerms,
+                'Status' => $request->Status,
+                'CreatedBy' => (int)$userId,
+                'CreatedOn' => $now,
+                'UpdatedBy' => (int)$userId,
+                'UpdatedOn' => $now,
+                'SameAsBilling' => $request->input('SameAsBilling', 0),
+                'CNIC' => $request->CNIC,
+                'CreditLimit' => $request->CreditLimit,
+                'FieldA' => null, 'FieldB' => null, 'FieldC' => null, 'FieldD' => null,
+                'Field1' => null, 'Field2' => null, 'Field3' => null, 'Field4' => null,
+                'Typei' => 0,
+                'Type' => 1,
+                'IsDashboard' => 0,
+                'RequestID' => $requestId
+            ];
+
+            // 3. Drop into temp_customer table
+            \Log::info('Inserting Customer Data', ['data' => $data]);
+            DB::table('temp_customer')->insert($data);
+
+            // 4. Call model function (as requested, even if empty/dummy)
+            // Pass RequestID because model expects it
+            $query = Customer::save_transaction(['RequestID' => $requestId]);
+            
+            // Execute the returned query if it's not empty
+            if (!empty($query) && $query !== "Empty") {
+                DB::statement($query);
+            }
+
+            return redirect()
+                ->route('customers.index')
+                ->with('success', 'Customer created successfully with Request ID: ' . $requestId);
+
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Error: ' . $e->getMessage())
+                ->withInput();
         }
 
-        return redirect()
-            ->route('customers.index')
-            ->with('success', 'Customer created successfully with Request ID: ' . $requestId);
-
-    } catch (\Exception $e) {
-        return redirect()
-            ->back()
-            ->with('error', 'Error: ' . $e->getMessage())
-            ->withInput();
     }
-
-}
     
     /**
      * Display the specified customer
@@ -249,22 +322,121 @@ class CustomerController extends Controller
         if (!$customer) {
             return redirect()->back()->with('error', 'Customer not found.');
         }
-    
-    // 1. Handle "Same as Billing" Logic
-    if ($request->has('SameAsBilling') && $request->SameAsBilling == '1') {
+        
+        // Trim and format inputs
         $request->merge([
-            'BillingAddress' => $request->Address,
-            'BillingCity' => $request->City,
-            'BillingCountry' => $request->Country,
-            'BillingCounty' => $request->County,
-            'BillingPostalCode' => $request->PostalCode,
+            'FirstName' => trim($request->FirstName ?? ''),
+            'LastName' => trim($request->LastName ?? ''),
+            'Email' => strtolower(trim($request->Email ?? '')),
+            'Mobile' => preg_replace('/[^0-9+]/', '', $request->Mobile ?? ''),
+            'Phone' => $request->Phone ? preg_replace('/[^0-9+]/', '', $request->Phone) : null,
         ]);
-    }
     
-        // 2. Validate the Request
-        // $validated = $request->validate([
-        // ... (validation rules)
-        // ]);
+        // 1. Handle "Same as Billing" Logic
+        if ($request->has('SameAsBilling') && $request->SameAsBilling == '1') {
+            $request->merge([
+                'BillingAddress' => $request->Address,
+                'BillingCity' => $request->City,
+                'BillingCountry' => $request->Country,
+                'BillingCounty' => $request->County,
+                'BillingPostalCode' => $request->PostalCode,
+            ]);
+        }
+        
+        // 2. Validate the Request (with unique rule exceptions for current record)
+        $validated = $request->validate([
+            // Basic Information
+            'Title' => 'required|string|in:Mr,Mrs,Miss,Ms,Dr,Prof,Engr',
+            'FirstName' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
+            'LastName' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
+            'BusinessName' => ['nullable', 'string', 'max:200', 'regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
+            'DisplayName' => 'nullable|string|max:200',
+            
+            // Contact Information (exclude current record from unique check)
+            'Email' => ['required', 'email', 'max:500', Rule::unique('crm_customer', 'Email')->ignore($id, 'ID')],
+            'Mobile' => ['required', 'string', 'regex:/^(\+92|0)?[0-9]{10}$/', Rule::unique('crm_customer', 'Mobile')->ignore($id, 'ID')],
+            'Phone' => ['nullable', 'string', 'regex:/^(\+92|0)?[0-9]{9,11}$/'],
+            'Website' => ['nullable', 'url', 'max:200', 'regex:/^https?:\/\//'],
+            
+            // Address Information
+            'Address' => 'nullable|string|max:500',
+            'City' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'County' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'PostalCode' => ['nullable', 'string', 'regex:/^[0-9]{5}$/'],
+            'Country' => 'nullable|string|max:100',
+            
+            // Billing Address (conditional validation)
+            'BillingAddress' => 'required_if:SameAsBilling,0|nullable|string|max:500',
+            'BillingCity' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'BillingCounty' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'BillingPostalCode' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'regex:/^[0-9]{5}$/'],
+            'BillingCountry' => 'required_if:SameAsBilling,0|nullable|string|max:100',
+            'SameAsBilling' => 'nullable|boolean',
+            
+            // Financial & Tax Information (exclude current record from unique check)
+            'NTN' => ['nullable', 'string', 'regex:/^[0-9]{7}$/', Rule::unique('crm_customer', 'NTN')->ignore($id, 'ID')],
+            'SalesTaxNumber' => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]{5,50}$/', Rule::unique('crm_customer', 'SalesTaxNumber')->ignore($id, 'ID')],
+            'IsFiler' => 'nullable|boolean',
+            'CNIC' => ['required', 'string', 'regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('crm_customer', 'CNIC')->ignore($id, 'ID')],
+            'CreditLimit' => 'required|numeric|min:0|max:999999999999.99',
+            'PaymentTerms' => 'required|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
+            
+            // Additional Information
+            'Notes' => 'nullable|string|max:500',
+            'Status' => 'required|integer|in:0,1',
+        ], [
+            // Custom Error Messages
+            'Title.required' => 'Please select a title.',
+            'Title.in' => 'Invalid title selected.',
+            'FirstName.required' => 'First name is required.',
+            'FirstName.min' => 'First name must be at least 2 characters.',
+            'FirstName.regex' => 'First name can only contain letters, spaces, hyphens and apostrophes.',
+            'LastName.required' => 'Last name is required.',
+            'LastName.min' => 'Last name must be at least 2 characters.',
+            'LastName.regex' => 'Last name can only contain letters, spaces, hyphens and apostrophes.',
+            'BusinessName.regex' => 'Business name contains invalid characters.',
+            
+            'Email.required' => 'Email address is required.',
+            'Email.email' => 'Please enter a valid email address.',
+            'Email.unique' => 'This email address is already registered.',
+            'Mobile.required' => 'Mobile number is required.',
+            'Mobile.regex' => 'Mobile number must be in Pakistan format (e.g., 03001234567 or +923001234567).',
+            'Mobile.unique' => 'This mobile number is already registered.',
+            'Phone.regex' => 'Phone number must be in Pakistan format.',
+            'Website.url' => 'Please enter a valid website URL.',
+            'Website.regex' => 'Website URL must start with http:// or https://',
+            
+            'City.regex' => 'City name can only contain letters and spaces.',
+            'County.regex' => 'State/Province can only contain letters and spaces.',
+            'PostalCode.regex' => 'Postal code must be exactly 5 digits.',
+            
+            'BillingAddress.required_if' => 'Billing address is required when not same as primary address.',
+            'BillingCity.required_if' => 'Billing city is required when not same as primary address.',
+            'BillingCity.regex' => 'Billing city can only contain letters and spaces.',
+            'BillingCounty.required_if' => 'Billing state/province is required when not same as primary address.',
+            'BillingCounty.regex' => 'Billing state/province can only contain letters and spaces.',
+            'BillingPostalCode.required_if' => 'Billing postal code is required when not same as primary address.',
+            'BillingPostalCode.regex' => 'Billing postal code must be exactly 5 digits.',
+            'BillingCountry.required_if' => 'Billing country is required when not same as primary address.',
+            
+            'NTN.regex' => 'NTN must be exactly 7 digits.',
+            'NTN.unique' => 'This NTN is already registered.',
+            'SalesTaxNumber.regex' => 'Sales Tax Number format is invalid (alphanumeric with hyphens, 5-50 characters).',
+            'SalesTaxNumber.unique' => 'This Sales Tax Number is already registered.',
+            'CNIC.required' => 'CNIC is required.',
+            'CNIC.regex' => 'CNIC must be in format: 12345-1234567-1 (13 digits with hyphens).',
+            'CNIC.unique' => 'This CNIC is already registered.',
+            'CreditLimit.required' => 'Credit limit is required.',
+            'CreditLimit.numeric' => 'Credit limit must be a valid number.',
+            'CreditLimit.min' => 'Credit limit cannot be negative.',
+            'CreditLimit.max' => 'Credit limit exceeds maximum allowed value.',
+            'PaymentTerms.required' => 'Payment terms are required.',
+            'PaymentTerms.in' => 'Invalid payment terms selected.',
+            
+            'Notes.max' => 'Notes cannot exceed 500 characters.',
+            'Status.required' => 'Status is required.',
+            'Status.in' => 'Invalid status value.',
+        ]);
         
         try {
             // Generate UUID for tracking
@@ -340,18 +512,18 @@ class CustomerController extends Controller
                 ->with('success', 'Customer updated successfully with Request ID: ' . $requestId);
                 
         } catch (\Exception $e) {
-        \Log::error('Edit transaction failed', [
-            'error' => $e->getMessage(),
-            'customer_id' => $id,
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return redirect()
-            ->back()
-            ->with('error', 'Error updating customer: ' . $e->getMessage())
-            ->withInput();
+            \Log::error('Edit transaction failed', [
+                'error' => $e->getMessage(),
+                'customer_id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()
+                ->back()
+                ->with('error', 'Error updating customer: ' . $e->getMessage())
+                ->withInput();
+        }
     }
-}
     
     /**
      * Archive/Delete the specified customer - CALLS MODEL delete_transaction()

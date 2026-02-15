@@ -141,9 +141,9 @@ class Customer extends Model
         return $query;
     }
 
-     public function delete_transaction($validated = [])
+     public static function delete_transaction($validated = [])
     {
-         $reqId = $validated['RequestID'] ?? ($this->RequestID ?? '');
+         $reqId = $validated['RequestID'] ?? '';
          
          $query = "UPDATE crm_customer uu 
             JOIN 

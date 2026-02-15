@@ -344,6 +344,7 @@
                                 <option value="Miss" {{ old('Title', $customer->Title ?? '') == 'Miss' ? 'selected' : '' }}>Miss</option>
                                 <option value="Dr" {{ old('Title', $customer->Title ?? '') == 'Dr' ? 'selected' : '' }}>Dr</option>
                                 <option value="Prof" {{ old('Title', $customer->Title ?? '') == 'Prof' ? 'selected' : '' }}>Prof</option>
+                                <option value="Engr" {{ old('Title', $customer->Title ?? '') == 'Engr' ? 'selected' : '' }}>Engr</option>
                             </select>
                             @error('Title')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
@@ -763,10 +764,12 @@
                             <select name="PaymentTerms" id="PaymentTerms" class="form-select @error('PaymentTerms') is-invalid @enderror" required>
                                 <option value="">Select</option>
                                 <option value="Cash" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Cash' ? 'selected' : '' }}>Cash</option>
-                                <option value="Net 15" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Net 15' ? 'selected' : '' }}>Net 15 Days</option>
-                                <option value="Net 30" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Net 30' ? 'selected' : '' }}>Net 30 Days</option>
-                                <option value="Net 45" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Net 45' ? 'selected' : '' }}>Net 45 Days</option>
-                                <option value="Net 60" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Net 60' ? 'selected' : '' }}>Net 60 Days</option>
+                                <option value="Net 15" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Net 15' ? 'selected' : '' }}>Net 15</option>
+                                <option value="Net 30" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Net 30' ? 'selected' : '' }}>Net 30</option>
+                                <option value="Net 45" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Net 45' ? 'selected' : '' }}>Net 45</option>
+                                <option value="Net 60" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Net 60' ? 'selected' : '' }}>Net 60</option>
+                                <option value="Due on Receipt" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'Due on Receipt' ? 'selected' : '' }}>Due on Receipt</option>
+                                <option value="COD" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == 'COD' ? 'selected' : '' }}>COD</option>
                             </select>
                             @error('PaymentTerms')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
