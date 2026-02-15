@@ -20,6 +20,7 @@ class Customer extends Model
     const UPDATED_AT = 'UpdatedOn';
 
     protected $fillable = [
+        'TID',
         'IsArchive',
         'VoucherID',
         'AccountNo',
@@ -73,22 +74,49 @@ class Customer extends Model
 
        public static function save_transaction($validated)
     {
-        $query = "INSERT INTO temp_customer (ID, IsArchive, VoucherID, AccountNo, Title, FirstName, LastName, Email, BusinessName, PartyBalance, Mobile, Phone, DisplayName, Website, Address, City, Country, County, PostalCode, BillingAddress, BillingCity, BillingCountry, BillingCounty, BillingPostalCode, FullBillingAddress, NTN, SalesTtaxNumber, IsFiler, Notes, PaymentTerms, Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, SameAsBilling, CNIC, CreditLimit, FieldA, FieldB, FieldC, FieldD, Field1, Field2, Field3, Field4, Typei, Type, IsDashboard, RequestID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $query = "INSERT INTO crm_customer ( AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn)
+        SELECT  AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
+        FROM temp_customer WHERE RequestID = '{$validated['RequestID']}';";
 
         return $query;
     }
 
-     public static function edit_transaction()
+     public static function edit_transaction($validated)
     {
-        $query = "UPDATE temp_customer SET IsArchive = ?, VoucherID = ?, AccountNo = ?, Title = ?, FirstName = ?, LastName = ?, Email = ?, BusinessName = ?, PartyBalance = ?, Mobile = ?, Phone = ?, DisplayName = ?, Website = ?, Address = ?, City = ?, Country = ?, County = ?, PostalCode = ?, BillingAddress = ?, BillingCity = ?, BillingCountry = ?, BillingCounty = ?, BillingPostalCode = ?, FullBillingAddress = ?, NTN = ?, SalesTtaxNumber = ?, IsFiler = ?, Notes = ?, PaymentTerms = ?, Status = ?, UpdatedBy = ?, UpdatedOn = ?, SameAsBilling = ?, CNIC = ?, CreditLimit = ?, FieldA = ?, FieldB = ?, FieldC = ?, FieldD = ?, Field1 = ?, Field2 = ?, Field3 = ?, Field4 = ?, Typei = ?, Type = ?, IsDashboard = ?, RequestID = ? WHERE ID = ?";
+        $query = "UPDATE crm_customer uu
+        JOIN 
+        (
+        SELECT  AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+        FROM temp_customer WHERE RequestID = '{$validated['RequestID']}'
+
+        ) u ON uu.ID = u.TID
+        SET
+        uu.AccountNo = u.AccountNo,
+        uu.Title = u.Title,
+        uu.FirstName = u.FirstName,
+        uu.UpdatedBy = u.UpdatedBy,
+        uu.UpdatedOn = u.UpdatedOn";
 
         return $query;
     }
 
-     public function delete_transaction()
+     public function delete_transaction($validated = [])
     {
-        $query = "UPDATE temp_customer SET IsArchive = 1, UpdatedOn = NOW() WHERE ID = ?";
-        return $query;
+         $reqId = $validated['RequestID'] ?? ($this->RequestID ?? '');
+         
+         $query = "UPDATE crm_customer uu 
+            JOIN 
+            ( 
+            SELECT  TID, 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn 
+            FROM temp_customer WHERE RequestID = '{$reqId}'
+            
+            ) u ON uu.ID = u.TID 
+            SET 
+            uu.Status = u.Status, 
+            uu.UpdatedBy = u.UpdatedBy, 
+            uu.UpdatedOn = u.UpdatedOn";
+  
+         return $query;
     }
 
 

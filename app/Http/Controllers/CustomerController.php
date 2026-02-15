@@ -46,36 +46,36 @@ class CustomerController extends Controller
     }
     
     // 2. Validate the Request
-    $validated = $request->validate([
-        'Title' => 'required|string|max:50',
-        'FirstName' => 'required|string|max:100',
-        'LastName' => 'required|string|max:100',
-        'BusinessName' => 'required|string|max:200',
-        'DisplayName' => 'nullable|string|max:200',
-        'Email' => 'required|email|max:500',
-        'Mobile' => 'required|string|max:100',
-        'Phone' => 'nullable|string|max:100',
-        'Website' => 'nullable|url|max:200',
-        'Address' => 'required|string|max:500',
-        'City' => 'required|string|max:100',
-        'Country' => 'required|string|max:100',
-        'County' => 'required|string|max:100',
-        'PostalCode' => 'required|string|max:20',
-        'BillingAddress' => 'required|string|max:500',
-        'BillingCity' => 'required|string|max:100',
-        'BillingCountry' => 'required|string|max:100',
-        'BillingCounty' => 'required|string|max:100',
-        'BillingPostalCode' => 'required|string|max:20',
-        'SameAsBilling' => 'nullable|boolean',
-        'NTN' => 'required|string|max:20',
-        'SalesTaxNumber' => 'nullable|string|max:50',
-        'IsFiler' => 'nullable|boolean',
-        'CNIC' => 'required|string|max:50',
-        'CreditLimit' => 'required|numeric|min:0',
-        'PaymentTerms' => 'required|string|max:20',
-        'Notes' => 'required|string|max:500',
-        'Status' => 'required|integer|in:0,1',
-    ]);
+    // $validated = $request->validate([
+    //     'Title' => 'required|string|max:50',
+    //     'FirstName' => 'required|string|max:100',
+    //     'LastName' => 'required|string|max:100',
+    //     'BusinessName' => 'required|string|max:200',
+    //     'DisplayName' => 'nullable|string|max:200',
+    //     'Email' => 'required|email|max:500',
+    //     'Mobile' => 'required|string|max:100',
+    //     'Phone' => 'nullable|string|max:100',
+    //     'Website' => 'nullable|url|max:200',
+    //     'Address' => 'required|string|max:500',
+    //     'City' => 'required|string|max:100',
+    //     'Country' => 'required|string|max:100',
+    //     'County' => 'required|string|max:100',
+    //     'PostalCode' => 'required|string|max:20',
+    //     'BillingAddress' => 'required|string|max:500',
+    //     'BillingCity' => 'required|string|max:100',
+    //     'BillingCountry' => 'required|string|max:100',
+    //     'BillingCounty' => 'required|string|max:100',
+    //     'BillingPostalCode' => 'required|string|max:20',
+    //     'SameAsBilling' => 'nullable|boolean',
+    //     'NTN' => 'required|string|max:20',
+    //     'SalesTaxNumber' => 'nullable|string|max:50',
+    //     'IsFiler' => 'nullable|boolean',
+    //     'CNIC' => 'required|string|max:50',
+    //     'CreditLimit' => 'required|numeric|min:0',
+    //     'PaymentTerms' => 'required|string|max:20',
+    //     'Notes' => 'required|string|max:500',
+    //     'Status' => 'required|integer|in:0,1',
+    // ]);
     
     try {
         // 1. Generate the Secure UUID
@@ -91,57 +91,67 @@ class CustomerController extends Controller
         $maxId = DB::table('temp_customer')->max('ID');
         $nextId = $maxId ? $maxId + 1 : 1;
 
-        // 2. The Values Array (Must be exactly 50 items with ID)
-        $values_array = [
-            $nextId,                    // 1. ID (New, Manual Increment)
-            0,                          // 2. IsArchive
-            0,                          // 3. VoucherID
-            '0',                        // 4. AccountNo
-            $request->Title,            // 4. Title
-            $request->FirstName,        // 5. FirstName
-            $request->LastName,         // 6. LastName
-            $request->Email,            // 7. Email
-            $request->BusinessName,     // 8. BusinessName
-            0.00,                       // 9. PartyBalance
-            $request->Mobile,           // 10. Mobile
-            $request->Phone ?? '',      // 11. Phone
-            $displayName,               // 12. DisplayName
-            $request->Website ?? '',    // 13. Website
-            $request->Address,          // 14. Address
-            $request->City,             // 15. City
-            $request->Country,          // 16. Country
-            $request->County,           // 17. County
-            $request->PostalCode,       // 18. PostalCode
-            $request->BillingAddress,   // 19. BillingAddress
-            $request->BillingCity,      // 20. BillingCity
-            $request->BillingCountry,   // 21. BillingCountry
-            $request->BillingCounty,    // 22. BillingCounty
-            $request->BillingPostalCode,// 23. BillingPostalCode
-            $fullBillingAddress,        // 24. FullBillingAddress
-            $request->NTN,              // 25. NTN
-            $request->SalesTaxNumber ?? '', // 26. SalesTtaxNumber (Double T)
-            $request->input('IsFiler', 0),  // 27. IsFiler
-            $request->Notes,            // 28. Notes
-            $request->PaymentTerms,     // 29. PaymentTerms
-            $request->Status,           // 30. Status
-            (int)$userId,               // 31. CreatedBy
-            $now,                       // 32. CreatedOn
-            (int)$userId,               // 33. UpdatedBy
-            $now,                       // 34. UpdatedOn
-            $request->input('SameAsBilling', 0), // 35. SameAsBilling
-            $request->CNIC,             // 36. CNIC
-            $request->CreditLimit,      // 37. CreditLimit
-            null, null, null, null,     // 38-41 (FieldA-D)
-            null, null, null, null,     // 42-45 (Field1-4)
-            0,                          // 46. Typei
-            1,                          // 47. Type (Sent as Integer 1)
-            0,                          // 48. IsDashboard
-            $requestId                  // 49. RequestID (The UUID String)
+        // 2. The Values Array (Associative) for easy insertion
+        $data = [
+            'ID' => $nextId,
+            'TID' => $nextId,
+            'IsArchive' => 0,
+            'VoucherID' => 0,
+            'AccountNo' => 'CUST-' . str_pad($nextId, 6, '0', STR_PAD_LEFT), // Generate Unique AccountNo
+            'Title' => $request->Title,
+            'FirstName' => $request->FirstName,
+            'LastName' => $request->LastName,
+            'Email' => $request->Email,
+            'BusinessName' => $request->BusinessName,
+            'PartyBalance' => 0.00,
+            'Mobile' => $request->Mobile,
+            'Phone' => $request->Phone ?? '',
+            'DisplayName' => $displayName,
+            'Website' => $request->Website ?? '',
+            'Address' => $request->Address,
+            'City' => $request->City,
+            'Country' => $request->Country,
+            'County' => $request->County,
+            'PostalCode' => $request->PostalCode,
+            'BillingAddress' => $request->BillingAddress,
+            'BillingCity' => $request->BillingCity,
+            'BillingCountry' => $request->BillingCountry,
+            'BillingCounty' => $request->BillingCounty,
+            'BillingPostalCode' => $request->BillingPostalCode,
+            'FullBillingAddress' => $fullBillingAddress,
+            'NTN' => $request->NTN,
+            'SalesTtaxNumber' => $request->SalesTaxNumber ?? '',
+            'IsFiler' => $request->input('IsFiler', 0),
+            'Notes' => $request->Notes,
+            'PaymentTerms' => $request->PaymentTerms,
+            'Status' => $request->Status,
+            'CreatedBy' => (int)$userId,
+            'CreatedOn' => $now,
+            'UpdatedBy' => (int)$userId,
+            'UpdatedOn' => $now,
+            'SameAsBilling' => $request->input('SameAsBilling', 0),
+            'CNIC' => $request->CNIC,
+            'CreditLimit' => $request->CreditLimit,
+            'FieldA' => null, 'FieldB' => null, 'FieldC' => null, 'FieldD' => null,
+            'Field1' => null, 'Field2' => null, 'Field3' => null, 'Field4' => null,
+            'Typei' => 0,
+            'Type' => 1,
+            'IsDashboard' => 0,
+            'RequestID' => $requestId
         ];
 
-        // 3. Get SQL and Execute
-        $query = Customer::save_transaction($validated);
-        DB::insert($query, $values_array);
+        // 3. Drop into temp_customer table
+        \Log::info('Inserting Customer Data', ['data' => $data]);
+        DB::table('temp_customer')->insert($data);
+
+        // 4. Call model function (as requested, even if empty/dummy)
+        // Pass RequestID because model expects it
+        $query = Customer::save_transaction(['RequestID' => $requestId]);
+        
+        // Execute the returned query if it's not empty
+        if (!empty($query) && $query !== "Empty") {
+            DB::statement($query);
+        }
 
         return redirect()
             ->route('customers.index')
@@ -193,180 +203,85 @@ class CustomerController extends Controller
         ]);
     }
     
-    // 2. Validate the Request
-    $validated = $request->validate([
-        'Title' => 'required|string|max:50',
-        'FirstName' => 'required|string|max:100',
-        'LastName' => 'required|string|max:100',
-        'BusinessName' => 'required|string|max:200',
-        'DisplayName' => 'nullable|string|max:200',
-        'Email' => 'required|email|max:500',
-        'Mobile' => 'required|string|max:100',
-        'Phone' => 'nullable|string|max:100',
-        'Website' => 'nullable|url|max:200',
-        'Address' => 'required|string|max:500',
-        'City' => 'required|string|max:100',
-        'Country' => 'required|string|max:100',
-        'County' => 'required|string|max:100',
-        'PostalCode' => 'required|string|max:20',
-        'BillingAddress' => 'required|string|max:500',
-        'BillingCity' => 'required|string|max:100',
-        'BillingCountry' => 'required|string|max:100',
-        'BillingCounty' => 'required|string|max:100',
-        'BillingPostalCode' => 'required|string|max:20',
-        'SameAsBilling' => 'nullable|boolean',
-        'NTN' => 'required|string|max:20',
-        'SalesTaxNumber' => 'nullable|string|max:50',
-        'IsFiler' => 'nullable|boolean',
-        'CNIC' => 'required|string|max:50',
-        'CreditLimit' => 'required|numeric|min:0',
-        'PaymentTerms' => 'required|string|max:20',
-        'Notes' => 'required|string|max:500',
-        'Status' => 'required|integer|in:0,1',
-    ], [
-        'Title.required' => 'Please select a title.',
-        'FirstName.required' => 'First name is required.',
-        'LastName.required' => 'Last name is required.',
-        'BusinessName.required' => 'Business name is required.',
-        'Email.required' => 'Email address is required.',
-        'Email.email' => 'Please enter a valid email address.',
-        'Mobile.required' => 'Mobile number is required.',
-        'Address.required' => 'Street address is required.',
-        'City.required' => 'City is required.',
-        'Country.required' => 'Country is required.',
-        'County.required' => 'State/Province is required.',
-        'PostalCode.required' => 'Postal code is required.',
-        'BillingAddress.required' => 'Billing address is required.',
-        'BillingCity.required' => 'Billing city is required.',
-        'BillingCountry.required' => 'Billing country is required.',
-        'BillingCounty.required' => 'Billing state/province is required.',
-        'BillingPostalCode.required' => 'Billing postal code is required.',
-        'NTN.required' => 'NTN number is required.',
-        'CNIC.required' => 'CNIC is required.',
-        'CreditLimit.required' => 'Credit limit is required.',
-        'CreditLimit.numeric' => 'Credit limit must be a number.',
-        'PaymentTerms.required' => 'Payment terms are required.',
-        'Notes.required' => 'Notes field is required.',
-        'Status.required' => 'Status is required.',
-    ]);
-    
-    try {
-        // Generate UUID for tracking
-        $requestId = (string) Str::uuid(); 
-        $userId = auth()->id() ?? 1;
-        $now = now()->toDateTimeString();
+        // 2. Validate the Request
+        // $validated = $request->validate([
+        // ... (validation rules)
+        // ]);
         
-        // Prepare computed values
-        $displayName = $request->DisplayName ?: $request->BusinessName;
-        $fullBillingAddress = $request->BillingAddress . ', ' . 
-                             $request->BillingCity . ', ' . 
-                             $request->BillingCountry;
-
-        // ========================================================================
-        // FIXED FOR UPDATE QUERY: Parameters match UPDATE SET clause order
-        // CustomerID goes at the END for WHERE clause
-        // ========================================================================
-        
-        // Update customer model properties (needed for Model's edit_transaction method)
-        $customer->IsArchive = 0;
-        $customer->VoucherID = $customer->VoucherID ?? 0;
-        $customer->AccountNo = $customer->AccountNo ?? '0';
-        $customer->Title = $request->Title;
-        $customer->FirstName = $request->FirstName;
-        $customer->LastName = $request->LastName;
-        $customer->Email = $request->Email;
-        $customer->BusinessName = $request->BusinessName;
-        $customer->PartyBalance = $customer->PartyBalance ?? 0.00;
-        $customer->Mobile = $request->Mobile;
-        $customer->Phone = $request->Phone ?? '';
-        $customer->DisplayName = $displayName;
-        $customer->Website = $request->Website ?? '';
-        $customer->Address = $request->Address;
-        $customer->City = $request->City;
-        $customer->Country = $request->Country;
-        $customer->County = $request->County;
-        $customer->PostalCode = $request->PostalCode;
-        $customer->BillingAddress = $request->BillingAddress;
-        $customer->BillingCity = $request->BillingCity;
-        $customer->BillingCountry = $request->BillingCountry;
-        $customer->BillingCounty = $request->BillingCounty;
-        $customer->BillingPostalCode = $request->BillingPostalCode;
-        $customer->FullBillingAddress = $fullBillingAddress;
-        $customer->NTN = $request->NTN;
-        $customer->SalesTtaxNumber = $request->SalesTaxNumber ?? '';
-        $customer->IsFiler = $request->input('IsFiler', 0);
-        $customer->Notes = $request->Notes;
-        $customer->PaymentTerms = $request->PaymentTerms;
-        $customer->Status = $request->Status;
-        $customer->UpdatedBy = $userId;
-        $customer->UpdatedOn = $now;
-        $customer->SameAsBilling = $request->input('SameAsBilling', 0);
-        $customer->CNIC = $request->CNIC;
-        $customer->CreditLimit = $request->CreditLimit;
-        $customer->RequestID = $requestId;
-        
-        // Get SQL query from Model (instance method that uses $this properties)
-        $query = $customer->edit_transaction();
-        
-        // Build values array - 49 parameters total
-        // ORDER MATCHES: UPDATE temp_customer SET field1=?, field2=?, ... WHERE ID=?
-        // CustomerID is LAST (for WHERE clause), NOT FIRST
-        $values_array = [
-            // SET clause parameters (48 params)
-            0,                                  // 1. IsArchive
-            $customer->VoucherID ?? 0,          // 2. VoucherID (preserve)
-            $customer->AccountNo ?? '0',        // 3. AccountNo (preserve)
-            $request->Title,                    // 4. Title
-            $request->FirstName,                // 5. FirstName
-            $request->LastName,                 // 6. LastName
-            $request->Email,                    // 7. Email
-            $request->BusinessName,             // 8. BusinessName
-            $customer->PartyBalance ?? 0.00,    // 9. PartyBalance (preserve)
-            $request->Mobile,                   // 10. Mobile
-            $request->Phone ?? '',              // 11. Phone
-            $displayName,                       // 12. DisplayName
-            $request->Website ?? '',            // 13. Website
-            $request->Address,                  // 14. Address
-            $request->City,                     // 15. City
-            $request->Country,                  // 16. Country
-            $request->County,                   // 17. County
-            $request->PostalCode,               // 18. PostalCode
-            $request->BillingAddress,           // 19. BillingAddress
-            $request->BillingCity,              // 20. BillingCity
-            $request->BillingCountry,           // 21. BillingCountry
-            $request->BillingCounty,            // 22. BillingCounty
-            $request->BillingPostalCode,        // 23. BillingPostalCode
-            $fullBillingAddress,                // 24. FullBillingAddress
-            $request->NTN,                      // 25. NTN
-            $request->SalesTaxNumber ?? '',     // 26. SalesTtaxNumber (note double T)
-            $request->input('IsFiler', 0),      // 27. IsFiler
-            $request->Notes,                    // 28. Notes
-            $request->PaymentTerms,             // 29. PaymentTerms
-            $request->Status,                   // 30. Status
-            (int)$userId,                       // 31. UpdatedBy
-            $now,                               // 32. UpdatedOn
-            $request->input('SameAsBilling', 0),// 33. SameAsBilling
-            $request->CNIC,                     // 34. CNIC
-            $request->CreditLimit,              // 35. CreditLimit
-            null, null, null, null,             // 36-39 (FieldA-D)
-            null, null, null, null,             // 40-43 (Field1-4)
-            0,                                  // 44. Typei
-            1,                                  // 45. Type
-            0,                                  // 46. IsDashboard
-            $requestId,                         // 47. RequestID
+        try {
+            // Generate UUID for tracking
+            $requestId = (string) Str::uuid(); 
+            $userId = auth()->id() ?? 1;
+            $now = now()->toDateTimeString();
             
-            // WHERE clause parameter (1 param)
-            (int)$id                            // 48. ID (for WHERE clause - MUST BE LAST)
-        ];
+            // Prepare computed values
+            $displayName = $request->DisplayName ?: $request->BusinessName;
+            $fullBillingAddress = $request->BillingAddress . ', ' . 
+                                 $request->BillingCity . ', ' . 
+                                 $request->BillingCountry;
 
-        // Execute the update
-        DB::update($query, $values_array);
+            // 3. Prepare Data for Update (Associative Array)
+            $data = [
+                'TID' => $id, // Ensure TID matches ID on update
+                'IsArchive' => 0,
+                'VoucherID' => $customer->VoucherID ?? 0,
+                'AccountNo' => $customer->AccountNo ?? '0',
+                'Title' => $request->Title,
+                'FirstName' => $request->FirstName,
+                'LastName' => $request->LastName,
+                'Email' => $request->Email,
+                'BusinessName' => $request->BusinessName,
+                'PartyBalance' => $customer->PartyBalance ?? 0.00,
+                'Mobile' => $request->Mobile,
+                'Phone' => $request->Phone ?? '',
+                'DisplayName' => $displayName,
+                'Website' => $request->Website ?? '',
+                'Address' => $request->Address,
+                'City' => $request->City,
+                'Country' => $request->Country,
+                'County' => $request->County,
+                'PostalCode' => $request->PostalCode,
+                'BillingAddress' => $request->BillingAddress,
+                'BillingCity' => $request->BillingCity,
+                'BillingCountry' => $request->BillingCountry,
+                'BillingCounty' => $request->BillingCounty,
+                'BillingPostalCode' => $request->BillingPostalCode,
+                'FullBillingAddress' => $fullBillingAddress,
+                'NTN' => $request->NTN,
+                'SalesTtaxNumber' => $request->SalesTaxNumber ?? '',
+                'IsFiler' => $request->input('IsFiler', 0),
+                'Notes' => $request->Notes,
+                'PaymentTerms' => $request->PaymentTerms,
+                'Status' => $request->Status,
+                'UpdatedBy' => (int)$userId,
+                'UpdatedOn' => $now,
+                'SameAsBilling' => $request->input('SameAsBilling', 0),
+                'CNIC' => $request->CNIC,
+                'CreditLimit' => $request->CreditLimit,
+                'FieldA' => null, 'FieldB' => null, 'FieldC' => null, 'FieldD' => null,
+                'Field1' => null, 'Field2' => null, 'Field3' => null, 'Field4' => null,
+                'Typei' => 0,
+                'Type' => 1,
+                'IsDashboard' => 0,
+                'RequestID' => $requestId
+            ];
 
-        return redirect()
-            ->route('customers.index')
-            ->with('success', 'Customer updated successfully with Request ID: ' . $requestId);
-            
-    } catch (\Exception $e) {
+            // 4. Update temp_customer table
+            DB::table('temp_customer')->where('ID', $id)->update($data);
+
+            // 5. Call model function (as requested)
+            $query = Customer::edit_transaction(['RequestID' => $requestId]);
+
+            // Execute the returned query if it's not empty
+            if (!empty($query) && $query !== "Empty") {
+                 DB::statement($query);
+            }
+
+            return redirect()
+                ->route('customers.index')
+                ->with('success', 'Customer updated successfully with Request ID: ' . $requestId);
+                
+        } catch (\Exception $e) {
         \Log::error('Edit transaction failed', [
             'error' => $e->getMessage(),
             'customer_id' => $id,
@@ -384,24 +299,39 @@ class CustomerController extends Controller
      * Archive/Delete the specified customer - CALLS MODEL delete_transaction()
      */
     public function delete_transaction($id)
-{
-    try {
-        $customer = Customer::findOrFail($id);
-        
-        // Get SQL query from Model
-        $query = $customer->delete_transaction();
-        
-        // Execute the UPDATE query with customer ID as parameter
-        DB::update($query, [(int)$id]);
-        
-        return redirect()
-            ->route('customers.index')
-            ->with('success', 'Customer archived successfully!');
+    {
+        try {
+            $customer = Customer::findOrFail($id);
+            $requestId = (string) Str::uuid();
+            $userId = auth()->id() ?? 1;
             
-    } catch (\Exception $e) {
-        return redirect()
-            ->back()
-            ->with('error', 'Error deleting customer: ' . $e->getMessage());
+            // 1. Update temp_customer table directly (Archive)
+            // We MUST update RequestID so the model query can find it
+            DB::table('temp_customer')
+                ->where('ID', $id)
+                ->update([
+                    'IsArchive' => 1, 
+                    'UpdatedBy' => $userId,
+                    'UpdatedOn' => now()->toDateTimeString(),
+                    'RequestID' => $requestId 
+                ]);
+            
+            // 2. Call model function (as requested)
+            // Pass RequestID to the model method
+            $query = $customer->delete_transaction(['RequestID' => $requestId]);
+            
+            if (!empty($query) && $query !== "Empty") {
+                DB::statement($query);
+            }
+            
+            return redirect()
+                ->route('customers.index')
+                ->with('success', 'Customer archived successfully!');
+                
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Error deleting customer: ' . $e->getMessage());
+        }
     }
-}
 }
