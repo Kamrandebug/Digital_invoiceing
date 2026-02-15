@@ -61,11 +61,11 @@ Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->
     // Delete customer
     Route::delete('/{id}/delete', [CustomerController::class, 'delete_transaction'])->name('delete_transaction');
     
-    // View customer
-    Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
-    
     // Export
     Route::get('/export/csv', [CustomerController::class, 'exportCSV'])->name('export-csv');
+
+    // View customer
+    Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
 });
 
 require __DIR__.'/auth.php';

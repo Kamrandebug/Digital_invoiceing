@@ -12,11 +12,39 @@ class CustomerController extends Controller
     /**
      * Display a listing of customers
      */
-    public function index()
+    public function index(Request $request)
     {
-        $customers = Customer::active()
-            ->orderBy('CreatedOn', 'desc')
-            ->get();
+        // Gather filters from request
+        $filters = [
+            'search' => $request->input('search'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+        ];
+
+        // Validation Rules
+        $rules = [];
+        $messages = [];
+
+        // Date Validation
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $rules['start_date'] = 'date';
+            $rules['end_date'] = 'date|after_or_equal:start_date';
+            $messages['end_date.after_or_equal'] = 'End date must be after or equal to start date.';
+        }
+
+        // Search Validation (Optional: prevent very short or special char searches if desired)
+        if ($request->filled('search')) {
+            $rules['search'] = 'string|max:100|regex:/^[a-zA-Z0-9\s\-\.\,\@]+$/';
+            $messages['search.regex'] = 'Search term contains invalid characters.';
+            $messages['search.max'] = 'Search term is too long (max 100 chars).';
+        }
+
+        if (!empty($rules)) {
+            $request->validate($rules, $messages);
+        }
+
+        // Pass filters to model function
+        $customers = Customer::getlistingdata($filters);
         
         return view('pages.dashboards.customers-list', compact('customers'));
     }
@@ -333,5 +361,75 @@ class CustomerController extends Controller
                 ->back()
                 ->with('error', 'Error deleting customer: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Export customers to CSV
+     */
+    public function exportCSV(Request $request)
+    {
+        $filename = 'customers-export-' . date('Y-m-d-His') . '.csv';
+        
+        $headers = [
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=$filename",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        ];
+
+        // Get filtered data using the same model function
+        $filters = [
+            'search' => $request->input('search'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+        ];
+        
+        $customers = Customer::getlistingdata($filters);
+        
+        $callback = function() use ($customers) {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for Excel compatibility
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // CSV Header
+            fputcsv($file, [
+                'ID', 
+                'Account No',
+                'Name', 
+                'Business Name',
+                'Email',
+                'Mobile',
+                'Address', 
+                'City',
+                'Balance',
+                'Status',
+                'Created Date'
+            ]);
+
+            foreach ($customers as $customer) {
+                // Determine name
+                $name = $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName);
+                
+                fputcsv($file, [
+                    $customer->ID,
+                    $customer->AccountNo,
+                    $name,
+                    $customer->BusinessName,
+                    $customer->Email,
+                    $customer->Mobile,
+                    $customer->Address,
+                    $customer->City,
+                    number_format($customer->PartyBalance, 2),
+                    $customer->Status == 1 ? 'Active' : 'Inactive',
+                    $customer->CreatedOn
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

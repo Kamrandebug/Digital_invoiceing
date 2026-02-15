@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Customer extends Model
 {
@@ -72,8 +73,48 @@ class Customer extends Model
         'RequestID',
     ];
 
+    public static function getlistingdata($filters = [])
+    {
+        // 1. Base Query with WHERE 1=1
+        $query = "SELECT * FROM crm_customer WHERE 1=1";
+        $bindings = [];
+
+        // 2. Search Filter (Supports Name, Address, Contact)
+        if (!empty($filters['search'])) {
+            $search = '%' . $filters['search'] . '%';
+            $query .= " AND (DisplayName LIKE ? OR BusinessName LIKE ? OR FirstName LIKE ? OR LastName LIKE ? OR Address LIKE ? OR Mobile LIKE ? OR Phone LIKE ?)";
+            // Bind search term 7 times for 7 columns
+            $bindings = array_merge($bindings, [$search, $search, $search, $search, $search, $search, $search]);
+        }
+        
+        // 3. Date Filtering
+        if (!empty($filters['start_date'])) {
+            $query .= " AND DATE(CreatedOn) >= ?";
+            $bindings[] = $filters['start_date'];
+        }
+        
+        if (!empty($filters['end_date'])) {
+            $query .= " AND DATE(CreatedOn) <= ?";
+            $bindings[] = $filters['end_date'];
+        }
+
+        // 4. Exclude Archived Customers (Soft Delete Check)
+        // Assuming 'Status' column or 'IsArchive' is used. 
+        // Based on previous code, IsArchive is in temp_customer but crm_customer has Status.
+        // Let's assume Status != 2 (Archived) if that's the logic, or check IsArchive if it exists.
+        // Looking at your previous delete query: "SET uu.Status = u.Status" where u.Status was hardcoded to 2.
+        // So Status = 2 means Archived.
+        $query .= " AND Status != 2";
+
+        // 5. Order By
+        $query .= " ORDER BY CreatedOn DESC";
+        
+        return DB::select($query, $bindings);
+    }
+
        public static function save_transaction($validated)
     {
+        //purpose of the query (ask to sir shahid)
         $query = "INSERT INTO crm_customer ( AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn)
         SELECT  AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
         FROM temp_customer WHERE RequestID = '{$validated['RequestID']}';";

@@ -17,6 +17,109 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 {{-- Custom CSS for customer management --}}
 <link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
+<style>
+    .search-filters-section {
+        display: flex;
+        align-items: flex-end; /* Bottom align everything so inputs match */
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 20px; /* Add some space below */
+    }
+
+    .search-box {
+        position: relative;
+        flex: 1;
+        min-width: 300px;
+        display: flex;
+        align-items: center; /* Vertical alignment for input and button */
+        gap: 10px; /* RESTORE GAP */
+    }
+    
+    .search-box input {
+        width: 100%;
+        padding: 0 15px 0 35px; 
+        border: 1px solid #ddd;
+        /* border-right: none; REMOVE THIS */
+        border-radius: 5px; /* RESTORE RADIUS */
+        font-size: 14px;
+        height: 40px; 
+    }
+
+    .search-filters-section .btn-search {
+        border-radius: 5px; /* RESTORE RADIUS */
+        margin-left: 0 !important; 
+    }
+    
+    .date-filters {
+        display: flex;
+        gap: 10px;
+        align-items: flex-end; /* Align inputs and labels properly */
+    }
+    
+    .date-filters > div {
+        display: flex;
+        flex-direction: column; /* Stack label above input */
+        gap: 5px;
+    }
+
+    .date-filters label {
+        margin: 0;
+        white-space: nowrap;
+        font-weight: 500;
+        color: #555;
+        font-size: 12px; /* Smaller font for labels */
+    }
+    
+    .date-filters input {
+        height: 40px; 
+        padding: 5px 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+    
+    /* Ensure all buttons have the same height and alignment */
+    .export-buttons button, 
+    .search-filters-section button, 
+    .search-filters-section .btn-search {
+        padding: 0 20px; /* Horizontal padding */
+        height: 40px;    /* Fixed height matching inputs */
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+        line-height: 1; /* Reset line height for centering */
+    }
+    
+    /* Clear filters button specific style */
+    .search-filters-section button[type="button"]:not(.btn-search) {
+        background-color: #dc3545; /* Red */
+    }
+
+    .btn-search {
+        background-color: #0d6efd; /* Blue like Print */
+    }
+    
+    .btn-export-csv {
+        background-color: #6f42c1; /* Purple */
+    }
+    
+    .btn-print {
+        background-color: #0d6efd; /* Blue */
+    }
+
+    .export-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        height: 40px; /* Match height of filter bar */
+        margin-bottom: 20px; /* Space below export buttons */
+    }
+</style>
 @endsection
 
 @section('content')
@@ -49,6 +152,17 @@
 </div>
 @endif
 
+{{-- Validation Errors --}}
+@if($errors->any())
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle"></i> 
+    @foreach ($errors->all() as $error)
+        {{ $error }}
+    @endforeach
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+@endif
+
 <!-- Customer Management Container -->
 <div class="customer-management-container">
     
@@ -64,36 +178,39 @@
     </div>
 
     {{-- Search & Filters Section --}}
-    <div class="search-filters-section">
+    <form action="{{ route('customers.index') }}" method="GET" class="search-filters-section">
         <div class="search-box">
-            <input type="text" id="searchCustomers" placeholder="Search customers..." onkeyup="filterTable()">
+            <div style="position: relative; width: 100%;">
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #aaa;"></i>
+                <input type="text" name="search" id="searchCustomers" value="{{ request('search') }}" placeholder="Search customers..." onkeyup="filterTable()">
+            </div>
+            
+            {{-- Visible Search Button ATTACHED TO INPUT --}}
+            <button type="submit" class="btn-search">
+                <i class="fas fa-search"></i> Search
+            </button>
         </div>
 
         <div class="date-filters">
             <div>
                 <label>Start Date</label>
-                <input type="date" id="startDate">
+                <input type="date" name="start_date" id="startDate" value="{{ request('start_date') }}">
             </div>
             <div>
                 <label>End Date</label>
-                <input type="date" id="endDate">
+                <input type="date" name="end_date" id="endDate" value="{{ request('end_date') }}">
             </div>
         </div>
 
-        <button onclick="clearFilters()"><i class="fas fa-times"></i> Clear Filters</button>
-
-        <div class="search-right">
-            <label>Search:</label>
-            <input type="text" id="searchRight" onkeyup="filterTable()">
-        </div>
-    </div>
+        <button type="button" onclick="window.location.href='{{ route('customers.index') }}'"><i class="fas fa-times"></i> Clear Filters</button>
+    </form>
 
     {{-- Export Buttons --}}
     <div class="export-buttons">
-        <button onclick="window.location.href='{{ route('customers.export-csv') }}'">
+        <button onclick="window.location.href='{{ route('customers.export-csv') }}'" class="btn-export-csv">
             <i class="fas fa-download"></i> Export CSV
         </button>
-        <button onclick="window.print()">
+        <button onclick="window.print()" class="btn-print">
             <i class="fas fa-print"></i> Print
         </button>
     </div>
@@ -120,7 +237,7 @@
                     <td><input type="checkbox" class="customer-checkbox" value="{{ $customer->ID }}"></td>
                     <td>{{ $customer->ID }}</td>
                     <td>
-                        <strong>{{ $customer->DisplayName ?? $customer->name }}</strong>
+                        <strong>{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}</strong>
                         @if($customer->BusinessName)
                         <br><small class="text-muted">{{ $customer->BusinessName }}</small>
                         @endif
@@ -130,7 +247,7 @@
                     <td class="{{ $customer->PartyBalance > 0 ? 'balance-positive' : ($customer->PartyBalance < 0 ? 'balance-negative' : 'balance-zero') }}">
                         {{ number_format(abs($customer->PartyBalance), 2) }} PKR
                     </td>
-                    <td>{{ $customer->CreatedOn ? $customer->CreatedOn->format('d/m/Y') : 'N/A' }}</td>
+                    <td>{{ $customer->CreatedOn ? \Carbon\Carbon::parse($customer->CreatedOn)->format('d/m/Y') : 'N/A' }}</td>
                     <td>
 
                         {{-- View/Info Button --}}
@@ -144,7 +261,7 @@
                         <form action="{{ route('customers.delete_transaction', $customer->ID ?? 0) }}" 
                               method="POST" 
                               style="display: inline;"
-                              onsubmit="return confirmDelete('{{ $customer->DisplayName ?? $customer->name }}')">
+                              onsubmit="return confirmDelete('{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}')">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="action-btn btn-delete" title="Archive Customer">
@@ -158,9 +275,14 @@
                     <td colspan="8" class="text-center py-5">
                         <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
                         <p class="text-muted mb-2">No customers found.</p>
+                        {{-- Only show Add button if NO search/filter is active --}}
+                        @if(!request('search') && !request('start_date') && !request('end_date'))
                         <button class="btn btn-primary" onclick="window.location.href='{{ route('customers.create') }}'">
                             <i class="fas fa-plus"></i> Add Your First Customer
                         </button>
+                        @else
+                        <p class="text-muted small">Try adjusting your search or filters.</p>
+                        @endif
                     </td>
                 </tr>
                 @endforelse
@@ -170,7 +292,7 @@
 
     {{-- Pagination --}}
     <div class="pagination">
-        <span>Showing {{ $customers->count() > 0 ? '1 to ' . $customers->count() : '0' }} of {{ $customers->count() }} entries</span>
+        <span>Showing {{ count($customers) > 0 ? '1 to ' . count($customers) : '0' }} of {{ count($customers) }} entries</span>
         <div>
             <button disabled>Previous</button>
             <button class="active">1</button>
@@ -200,8 +322,16 @@
     
     // Filter table function
     function filterTable() {
+        // Backend search is now used, so this frontend filter might be redundant 
+        // if we rely fully on the search button. 
+        // But for "live" feel we can keep it, OR remove it if it conflicts.
+        // Given the requirement to use the search button, let's keep it simple:
+        // The backend filter works on submit.
+        // If you want purely backend, remove this function call from onkeyup.
+        // But the user might like the instant feedback for loaded rows.
+        
         const searchValue = document.getElementById('searchCustomers').value.toLowerCase();
-        const searchRight = document.getElementById('searchRight').value.toLowerCase();
+        // searchRight was removed
         const table = document.getElementById('customersTable');
         const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
         
@@ -218,11 +348,8 @@
             
             // Check search match
             const searchMatch = name.includes(searchValue) || 
-                              name.includes(searchRight) ||
                               address.includes(searchValue) || 
-                              address.includes(searchRight) ||
-                              contact.includes(searchValue) ||
-                              contact.includes(searchRight);
+                              contact.includes(searchValue);
             
             // Show/hide row
             row.style.display = searchMatch ? '' : 'none';
@@ -232,10 +359,11 @@
     // Clear filters
     function clearFilters() {
         document.getElementById('searchCustomers').value = '';
-        document.getElementById('searchRight').value = '';
+        // searchRight removed
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = '';
-        filterTable();
+        // Reload page to clear backend filters
+        window.location.href = '{{ route('customers.index') }}';
     }
     
     // Select all checkboxes
