@@ -199,8 +199,22 @@ class CustomerController extends Controller
      */
     public function show($id)
     {
-        $customer = Customer::findOrFail($id);
-        return view('pages.dashboards.customers-form', ['mode' => 'show', 'customer' => $customer]);
+        // READ FROM crm_customer (Production Table)
+        $customer = DB::table('crm_customer')->where('ID', $id)->first();
+        
+        if (!$customer) {
+            abort(404, 'Customer not found in CRM');
+        }
+        
+        // Convert to Customer model instance if needed for view compatibility,
+        // or just pass the object since DB::table returns stdClass which views handle fine.
+        // However, the view might expect Eloquent accessors.
+        // Let's hydration a model instance for best compatibility.
+        $customerModel = new Customer();
+        $customerModel->setRawAttributes((array)$customer, true);
+        $customerModel->exists = true;
+
+        return view('pages.dashboards.customers-form', ['mode' => 'show', 'customer' => $customerModel]);
     }
     
     /**
@@ -208,17 +222,33 @@ class CustomerController extends Controller
      */
     public function edit($id)
     {
-        $customer = Customer::findOrFail($id);
-        return view('pages.dashboards.customers-form', ['mode' => 'edit', 'customer' => $customer]);
+        // READ FROM crm_customer (Production Table)
+        $customer = DB::table('crm_customer')->where('ID', $id)->first();
+        
+        if (!$customer) {
+            abort(404, 'Customer not found in CRM');
+        }
+
+        // Hydrate model for view compatibility
+        $customerModel = new Customer();
+        $customerModel->setRawAttributes((array)$customer, true);
+        $customerModel->exists = true;
+
+        return view('pages.dashboards.customers-form', ['mode' => 'edit', 'customer' => $customerModel]);
     }
     
     /**
      * Update the specified customer - CALLS MODEL edit_transaction()
      */
     public function edit_transaction(Request $request, $id)
-{
-    // Get existing customer for preservation of original values
-    $customer = Customer::findOrFail($id);
+    {
+        // Get existing customer from crm_customer for preservation of original values
+        // We use DB table to get the raw data from production table
+        $customer = DB::table('crm_customer')->where('ID', $id)->first();
+        
+        if (!$customer) {
+            return redirect()->back()->with('error', 'Customer not found.');
+        }
     
     // 1. Handle "Same as Billing" Logic
     if ($request->has('SameAsBilling') && $request->SameAsBilling == '1') {
@@ -329,7 +359,13 @@ class CustomerController extends Controller
     public function delete_transaction($id)
     {
         try {
-            $customer = Customer::findOrFail($id);
+            // READ FROM crm_customer (Production Table)
+            $customer = DB::table('crm_customer')->where('ID', $id)->first();
+            
+            if (!$customer) {
+                return redirect()->back()->with('error', 'Customer not found.');
+            }
+            
             $requestId = (string) Str::uuid();
             $userId = auth()->id() ?? 1;
             
@@ -345,8 +381,9 @@ class CustomerController extends Controller
                 ]);
             
             // 2. Call model function (as requested)
-            // Pass RequestID to the model method
-            $query = $customer->delete_transaction(['RequestID' => $requestId]);
+            // Pass RequestID to the model method. 
+            // We use the static method directly since $customer is a stdClass object now.
+            $query = Customer::delete_transaction(['RequestID' => $requestId]);
             
             if (!empty($query) && $query !== "Empty") {
                 DB::statement($query);
