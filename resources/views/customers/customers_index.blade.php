@@ -1,27 +1,16 @@
 {{--
-    Customer Management Page
-    
-    Path: resources/views/pages/dashboards/customers-list.blade.php
-    URL: /customers-list
-    
-    Updated to use REAL DATABASE DATA with transaction-based CRUD functions:
-    - save_transaction (Add Customer)
-    - edit_transaction (Edit Customer)
-    - delete_transaction (Delete Customer)
+    Customer List
 --}}
 
 @extends('layouts.master')
 
 @section('styles')
-{{-- Font Awesome for icons --}}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-{{-- Custom CSS for customer management --}}
 <link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
 @endsection
 
 @section('content')
 
-<!-- Start::page-header -->
 <div class="page-header-breadcrumb mb-3">
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-18 mb-0">Customer Management</h1>
@@ -32,9 +21,8 @@
         </ol>
     </div>
 </div>
-<!-- End::page-header -->
 
-<!-- Success/Error Messages -->
+{{-- Messages --}}
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     <i class="fas fa-check-circle"></i> {{ session('success') }}
@@ -49,10 +37,9 @@
 </div>
 @endif
 
-<!-- Customer Management Container -->
 <div class="customer-management-container">
     
-    {{-- Header with Action Buttons --}}
+    {{-- Header --}}
     <div class="header">
         <h1>Customer Management</h1>
         <div class="action-buttons">
@@ -63,7 +50,7 @@
         </div>
     </div>
 
-    {{-- Search & Filters Section --}}
+    {{-- Filters --}}
     <div class="search-filters-section">
         <div class="search-box">
             <input type="text" id="searchCustomers" placeholder="Search customers..." onkeyup="filterTable()">
@@ -88,7 +75,7 @@
         </div>
     </div>
 
-    {{-- Export Buttons --}}
+    {{-- Exports --}}
     <div class="export-buttons">
         <button onclick="window.location.href='{{ route('customers.export-csv') }}'">
             <i class="fas fa-download"></i> Export CSV
@@ -98,7 +85,7 @@
         </button>
     </div>
 
-    {{-- Customers Table with REAL DATABASE DATA --}}
+    {{-- Table --}}
     <div class="customers-table-wrapper">
         <table class="customers-table" id="customersTable">
             <thead>
@@ -114,7 +101,6 @@
                 </tr>
             </thead>
             <tbody>
-                {{-- Loop through REAL customers from database --}}
                 @forelse($customers as $customer)
                 <tr>
                     <td><input type="checkbox" class="customer-checkbox" value="{{ $customer->ID }}"></td>
@@ -133,14 +119,12 @@
                     <td>{{ $customer->CreatedOn ? $customer->CreatedOn->format('d/m/Y') : 'N/A' }}</td>
                     <td>
 
-                        {{-- View/Info Button --}}
                         <button class="action-btn btn-info"
                                 onclick="window.location.href='{{ route('customers.show', $customer->ID?? 0) }}'"
                                 title="View Details">
                             <i class="fas fa-clipboard-list"></i>
                         </button>
                         
-                        {{-- Delete Button (uses delete_transaction) --}}
                         <form action="{{ route('customers.delete_transaction', $customer->ID?? 0) }}" 
                               method="POST" 
                               style="display: inline;"
@@ -184,7 +168,7 @@
 
 @section('scripts')
 <script>
-    // Auto-hide success/error messages after 5 seconds
+    // Auto-hide alerts
     setTimeout(function() {
         const alerts = document.querySelectorAll('.alert');
         alerts.forEach(alert => {
@@ -193,12 +177,12 @@
         });
     }, 5000);
     
-    // Delete confirmation with customer name
+    // Confirm delete
     function confirmDelete(customerName) {
         return confirm(`Are you sure you want to archive the customer "${customerName}"?\n\nThis will set IsArchive = 1 and hide the customer from the active list.`);
     }
     
-    // Filter table function
+    // Frontend filter
     function filterTable() {
         const searchValue = document.getElementById('searchCustomers').value.toLowerCase();
         const searchRight = document.getElementById('searchRight').value.toLowerCase();
@@ -216,7 +200,7 @@
             const address = cells[3]?.textContent.toLowerCase() || '';
             const contact = cells[4]?.textContent.toLowerCase() || '';
             
-            // Check search match
+            // Check match
             const searchMatch = name.includes(searchValue) || 
                               name.includes(searchRight) ||
                               address.includes(searchValue) || 
@@ -224,12 +208,12 @@
                               contact.includes(searchValue) ||
                               contact.includes(searchRight);
             
-            // Show/hide row
+            // Show/hide
             row.style.display = searchMatch ? '' : 'none';
         }
     }
     
-    // Clear filters
+    // Clear
     function clearFilters() {
         document.getElementById('searchCustomers').value = '';
         document.getElementById('searchRight').value = '';
@@ -238,7 +222,7 @@
         filterTable();
     }
     
-    // Select all checkboxes
+    // Select all
     function toggleSelectAll() {
         const selectAll = document.getElementById('selectAll');
         const checkboxes = document.querySelectorAll('.customer-checkbox');

@@ -13,10 +13,9 @@ class Customer extends Model
     protected $table = 'temp_customer';
     protected $primaryKey = 'ID';
     
-    // Disable standard timestamps since we use CreatedOn/UpdatedOn
+    // Custom timestamps
     public $timestamps = false;
 
-    // Define custom timestamp columns
     const CREATED_AT = 'CreatedOn';
     const UPDATED_AT = 'UpdatedOn';
 
@@ -75,19 +74,18 @@ class Customer extends Model
 
     public static function getlistingdata($filters = [])
     {
-        // 1. Base Query with WHERE 1=1
+        // Base query
         $query = "SELECT * FROM crm_customer WHERE 1=1";
         $bindings = [];
 
-        // 2. Search Filter (Supports Name, Address, Contact)
+        // Search filter
         if (!empty($filters['search'])) {
             $search = '%' . $filters['search'] . '%';
             $query .= " AND (DisplayName LIKE ? OR BusinessName LIKE ? OR FirstName LIKE ? OR LastName LIKE ? OR Address LIKE ? OR Mobile LIKE ? OR Phone LIKE ?)";
-            // Bind search term 7 times for 7 columns
             $bindings = array_merge($bindings, [$search, $search, $search, $search, $search, $search, $search]);
         }
         
-        // 3. Date Filtering
+        // Date filter
         if (!empty($filters['start_date'])) {
             $query .= " AND DATE(CreatedOn) >= ?";
             $bindings[] = $filters['start_date'];
@@ -98,23 +96,18 @@ class Customer extends Model
             $bindings[] = $filters['end_date'];
         }
 
-        // 4. Exclude Archived Customers (Soft Delete Check)
-        // Assuming 'Status' column or 'IsArchive' is used. 
-        // Based on previous code, IsArchive is in temp_customer but crm_customer has Status.
-        // Let's assume Status != 2 (Archived) if that's the logic, or check IsArchive if it exists.
-        // Looking at your previous delete query: "SET uu.Status = u.Status" where u.Status was hardcoded to 2.
-        // So Status = 2 means Archived.
+        // Exclude archived
         $query .= " AND Status != 2";
 
-        // 5. Order By
+        // Order By
         $query .= " ORDER BY CreatedOn DESC";
         
         return DB::select($query, $bindings);
     }
 
-       public static function save_transaction($validated)
+    public static function save_transaction($validated)
     {
-        //purpose of the query (ask to sir shahid)
+        // Insert query
         $query = "INSERT INTO crm_customer ( AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn)
         SELECT  AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
         FROM temp_customer WHERE RequestID = '{$validated['RequestID']}';";
@@ -122,7 +115,7 @@ class Customer extends Model
         return $query;
     }
 
-     public static function edit_transaction($validated)
+    public static function edit_transaction($validated)
     {
         $query = "UPDATE crm_customer uu
         JOIN 
@@ -141,7 +134,7 @@ class Customer extends Model
         return $query;
     }
 
-     public static function delete_transaction($validated = [])
+    public static function delete_transaction($validated = [])
     {
          $reqId = $validated['RequestID'] ?? '';
          
@@ -162,7 +155,7 @@ class Customer extends Model
 
 
     /**
-     * Scope a query to only include active customers.
+     * Active scope
      */
     public function scopeActive($query)
     {
@@ -170,16 +163,14 @@ class Customer extends Model
     }
 
     /**
-     * Scope a query to include archived customers (or specifically find them).
-     * Since we don't use a global scope, this might just be semantic, 
-     * but for the restore function which calls `withArchived`, we can make it allow searching.
+     * With archived scope
      */
     public function scopeWithArchived($query)
     {
-        return $query; // or $query->orWhere('IsArchive', 1);
+        return $query; 
     }
     
-    // Accessor for full name if needed, though DisplayName is used.
+    // Name accessor
     public function getNameAttribute()
     {
         return $this->DisplayName ?? $this->BusinessName ?? trim($this->FirstName . ' ' . $this->LastName);

@@ -1,12 +1,5 @@
 {{--
-    Customer Master Form - Unified Create/Edit/Show Logic
-    
-    Path: resources/views/pages/dashboards/customers-form.blade.php
-    
-    Modes:
-    - Create: $mode = 'create'
-    - Edit: $mode = 'edit'
-    - Show: $mode = 'show'
+    Customer Form
 --}}
 
 @extends('layouts.master')
@@ -20,9 +13,7 @@
 @endphp
 
 @section('styles')
-{{-- Font Awesome for icons --}}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-{{-- Custom CSS matching your existing design --}}
 <style>
     .customer-form-container {
         background: #fff;
@@ -236,7 +227,6 @@
 
 @section('content')
 
-<!-- Start::page-header -->
 <div class="page-header-breadcrumb mb-3">
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-18 mb-0">{{ $pageTitle }}</h1>
@@ -249,9 +239,8 @@
         </div>
     </div>
 </div>
-<!-- End::page-header -->
 
-<!-- Display Success Message -->
+{{-- Messages --}}
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
@@ -259,7 +248,6 @@
 </div>
 @endif
 
-<!-- Display Error Message -->
 @if(session('error'))
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
     <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
@@ -267,7 +255,7 @@
 </div>
 @endif
 
-<!-- Customer Info Badge (Edit/Show only) -->
+{{-- Info Badge --}}
 @if(!$isCreate)
 <div class="customer-info-badge {{ $isReadonly ? 'show-mode' : '' }}">
     <div class="row align-items-center">
@@ -299,7 +287,6 @@
 </div>
 @endif
 
-<!-- Customer Form Container -->
 <div class="customer-form-container {{ $isReadonly ? 'show-mode' : '' }}">
     <div class="form-header">
         <h1>
@@ -324,7 +311,7 @@
         @endif
     @endif
 
-        {{-- SECTION 1: Basic Information --}}
+        {{-- Basic Info --}}
         <div class="form-section">
             <h3 class="form-section-title">
                 <i class="fas fa-user"></i> Basic Information
@@ -422,7 +409,7 @@
             </div>
         </div>
         
-        {{-- SECTION 2: Contact Information --}}
+        {{-- Contact Info --}}
         <div class="form-section">
             <h3 class="form-section-title">
                 <i class="fas fa-phone"></i> Contact Information
@@ -505,7 +492,7 @@
             </div>
         </div>
         
-        {{-- SECTION 3: Address Information --}}
+        {{-- Address Info --}}
         <div class="form-section">
             <h3 class="form-section-title">
                 <i class="fas fa-map-marker-alt"></i> Address Information
@@ -596,7 +583,7 @@
             </div>
         </div>
         
-        {{-- SECTION 4: Billing Address --}}
+        {{-- Billing Address --}}
         @if(!$isReadonly)
             <div class="form-section">
                 <h3 class="form-section-title">
@@ -681,7 +668,7 @@
             </div>
         @endif
         
-        {{-- SECTION 5: Financial Information --}}
+        {{-- Financial Info --}}
         <div class="form-section">
             <h3 class="form-section-title">
                 <i class="fas fa-calculator"></i> Financial & Tax Information
@@ -803,7 +790,7 @@
             </div>
         </div>
         
-        {{-- SECTION 6: Additional Information --}}
+        {{-- Additional Info --}}
         <div class="form-section">
             <h3 class="form-section-title">
                 <i class="fas fa-sticky-note"></i> Additional Information
@@ -833,7 +820,7 @@
                     <div class="mb-3">
                         <label for="Status" class="form-label required-field">Status</label>
                         <select name="Status" id="Status" class="form-select @error('Status') is-invalid @enderror" required>
-                            <option value="1" {{ old('Status', $customer->Status ?? '1') == '1' ? 'selected' : '' }}>Active</option>
+                            <option value="1" {{ old('Status', $customer->Status ?? '1') == 'selected' ? 'selected' : '' }}>Active</option>
                             <option value="0" {{ old('Status', $customer->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
                         </select>
                         @error('Status')
@@ -845,7 +832,7 @@
             @endif
         </div>
         
-        {{-- Form Actions --}}
+        {{-- Actions --}}
         <div class="action-buttons-bottom">
             @if($isReadonly)
                 <div class="last-updated-info">
@@ -890,10 +877,10 @@
 
 @section('scripts')
 <script>
-    // Only run form scripts if not in read-only mode
+    // Edit mode scripts
     @if(!$isReadonly)
     
-    // Auto-generate Display Name
+    // Auto Display Name
     function updateDisplayName() {
         const displayNameField = document.getElementById('DisplayName');
         if (!displayNameField.value || displayNameField.value === '') {
@@ -913,7 +900,7 @@
     document.getElementById('FirstName').addEventListener('blur', updateDisplayName);
     document.getElementById('LastName').addEventListener('blur', updateDisplayName);
     
-    // Toggle billing address fields
+    // Toggle Billing
     function toggleBillingFields() {
         const checkbox = document.getElementById('SameAsBilling');
         if (!checkbox) return; // Guard clause
@@ -957,18 +944,16 @@
         }
     }
     
-    // Initialize billing fields state on page load
     document.addEventListener('DOMContentLoaded', function() {
         toggleBillingFields();
     });
     
-    // Add event listener for checkbox change
     const sameAsBillingCheckbox = document.getElementById('SameAsBilling');
     if (sameAsBillingCheckbox) {
         sameAsBillingCheckbox.addEventListener('change', toggleBillingFields);
     }
     
-    // Scroll to first error if validation fails
+    // Scroll to error
     window.addEventListener('load', function() {
         const firstError = document.querySelector('.is-invalid');
         if (firstError) {
@@ -978,12 +963,10 @@
     });
 
     /**
-     * AUTO-SAVE / DRAFT FEATURE (LocalStorage)
-     * Persists form data across page refreshes (F5)
+     * Auto-save draft
      */
     const formId = 'customerForm';
     const formMode = '{{ $mode }}';
-    // Use customer ID for edits, or 'new' for create mode
     const customerId = '{{ $customer->ID ?? "new" }}';
     const storagePrefix = 'customer_draft_' + formMode + '_' + customerId + '_';
 
@@ -991,12 +974,9 @@
         const form = document.getElementById(formId);
         const inputs = form.querySelectorAll('input, textarea, select');
 
-        // 1. Restore data on load
-        // Only restore if there are NO validation errors (server-side old() takes precedence)
-        // If the user just refreshed (F5), there are no errors, so we restore.
+        // Restore
         if (!document.querySelector('.alert-danger')) {
             inputs.forEach(input => {
-                // Skip hidden inputs (like _token, _method) and passwords
                 if (input.type === 'hidden' || input.type === 'password') return;
                 
                 const key = storagePrefix + input.name;
@@ -1007,13 +987,11 @@
                         const shouldBeChecked = (storedValue === 'true');
                         if (input.checked !== shouldBeChecked) {
                             input.checked = shouldBeChecked;
-                            // Trigger change for dependencies (like billing address toggle)
                             input.dispatchEvent(new Event('change'));
                         }
                     } else {
                         if (input.value !== storedValue) {
                             input.value = storedValue;
-                            // Trigger input event for any listeners
                             input.dispatchEvent(new Event('input'));
                         }
                     }
@@ -1021,7 +999,7 @@
             });
         }
 
-        // 2. Save data on change
+        // Save
         inputs.forEach(input => {
             const saveHandler = function() {
                 if (this.type === 'hidden' || this.type === 'password') return;
@@ -1042,14 +1020,8 @@
             input.addEventListener('change', saveHandler);
         });
 
-        // 3. Clear data on submit
+        // Clear on submit
         form.addEventListener('submit', function() {
-            // We clear storage so the next visit starts fresh
-            // If submission fails, Laravel redirects back with input, 
-            // and our 'if (!document.querySelector('.alert-danger'))' check prevents
-            // overwriting the server's repopulated data with the (now deleted) local storage.
-            // Wait! If we delete it now, and submission fails, we rely ENTIRELY on Laravel old().
-            // That is correct behavior.
             inputs.forEach(input => {
                 localStorage.removeItem(storagePrefix + input.name);
             });

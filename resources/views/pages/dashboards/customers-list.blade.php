@@ -1,21 +1,11 @@
 {{--
-    Customer Management Page
-    
-    Path: resources/views/pages/dashboards/customers-list.blade.php
-    URL: /customers-list
-    
-    Updated to use REAL DATABASE DATA with transaction-based CRUD functions:
-    - save_transaction (Add Customer)
-    - edit_transaction (Edit Customer)
-    - delete_transaction (Delete Customer)
+    Customer List
 --}}
 
 @extends('layouts.master')
 
 @section('styles')
-{{-- Font Awesome for icons --}}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-{{-- Custom CSS for customer management --}}
 <link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
 <style>
     .search-filters-section {
@@ -124,7 +114,6 @@
 
 @section('content')
 
-<!-- Start::page-header -->
 <div class="page-header-breadcrumb mb-3">
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-18 mb-0">Customer Management</h1>
@@ -135,9 +124,8 @@
         </ol>
     </div>
 </div>
-<!-- End::page-header -->
 
-<!-- Success/Error Messages -->
+{{-- Messages --}}
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     <i class="fas fa-check-circle"></i> {{ session('success') }}
@@ -152,7 +140,7 @@
 </div>
 @endif
 
-{{-- Validation Errors --}}
+{{-- Errors --}}
 @if($errors->any())
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
     <i class="fas fa-exclamation-triangle"></i> 
@@ -163,10 +151,9 @@
 </div>
 @endif
 
-<!-- Customer Management Container -->
 <div class="customer-management-container">
     
-    {{-- Header with Action Buttons --}}
+    {{-- Header --}}
     <div class="header">
         <h1>Customer Management</h1>
         <div class="action-buttons">
@@ -177,7 +164,7 @@
         </div>
     </div>
 
-    {{-- Search & Filters Section --}}
+    {{-- Filters --}}
     <form action="{{ route('customers.index') }}" method="GET" class="search-filters-section">
         <div class="search-box">
             <div style="position: relative; width: 100%;">
@@ -185,7 +172,6 @@
                 <input type="text" name="search" id="searchCustomers" value="{{ request('search') }}" placeholder="Search customers..." onkeyup="filterTable()">
             </div>
             
-            {{-- Visible Search Button ATTACHED TO INPUT --}}
             <button type="submit" class="btn-search">
                 <i class="fas fa-search"></i> Search
             </button>
@@ -205,7 +191,7 @@
         <button type="button" onclick="window.location.href='{{ route('customers.index') }}'"><i class="fas fa-times"></i> Clear Filters</button>
     </form>
 
-    {{-- Export Buttons --}}
+    {{-- Exports --}}
     <div class="export-buttons">
         <button onclick="window.location.href='{{ route('customers.export-csv') }}'" class="btn-export-csv">
             <i class="fas fa-download"></i> Export CSV
@@ -215,7 +201,7 @@
         </button>
     </div>
 
-    {{-- Customers Table with REAL DATABASE DATA --}}
+    {{-- Table --}}
     <div class="customers-table-wrapper">
         <table class="customers-table" id="customersTable">
             <thead>
@@ -231,7 +217,6 @@
                 </tr>
             </thead>
             <tbody>
-                {{-- Loop through REAL customers from database --}}
                 @forelse($customers as $customer)
                 <tr>
                     <td><input type="checkbox" class="customer-checkbox" value="{{ $customer->ID }}"></td>
@@ -250,14 +235,12 @@
                     <td>{{ $customer->CreatedOn ? \Carbon\Carbon::parse($customer->CreatedOn)->format('d/m/Y') : 'N/A' }}</td>
                     <td>
 
-                        {{-- View/Info Button --}}
                         <button class="action-btn btn-info"
                                 onclick="window.location.href='{{ route('customers.show', $customer->ID ?? 0) }}'"
                                 title="View Details">
                             <i class="fas fa-clipboard-list"></i>
                         </button>
                         
-                        {{-- Delete Button (uses delete_transaction) --}}
                         <form action="{{ route('customers.delete_transaction', $customer->ID ?? 0) }}" 
                               method="POST" 
                               style="display: inline;"
@@ -275,7 +258,7 @@
                     <td colspan="8" class="text-center py-5">
                         <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
                         <p class="text-muted mb-2">No customers found.</p>
-                        {{-- Only show Add button if NO search/filter is active --}}
+                        {{-- Add button --}}
                         @if(!request('search') && !request('start_date') && !request('end_date'))
                         <button class="btn btn-primary" onclick="window.location.href='{{ route('customers.create') }}'">
                             <i class="fas fa-plus"></i> Add Your First Customer
@@ -306,7 +289,7 @@
 
 @section('scripts')
 <script>
-    // Auto-hide success/error messages after 5 seconds
+    // Auto-hide alerts
     setTimeout(function() {
         const alerts = document.querySelectorAll('.alert');
         alerts.forEach(alert => {
@@ -315,23 +298,14 @@
         });
     }, 5000);
     
-    // Delete confirmation with customer name
+    // Confirm delete
     function confirmDelete(customerName) {
         return confirm(`Are you sure you want to archive the customer "${customerName}"?\n\nThis will set IsArchive = 1 and hide the customer from the active list.`);
     }
     
-    // Filter table function
+    // Frontend filter
     function filterTable() {
-        // Backend search is now used, so this frontend filter might be redundant 
-        // if we rely fully on the search button. 
-        // But for "live" feel we can keep it, OR remove it if it conflicts.
-        // Given the requirement to use the search button, let's keep it simple:
-        // The backend filter works on submit.
-        // If you want purely backend, remove this function call from onkeyup.
-        // But the user might like the instant feedback for loaded rows.
-        
         const searchValue = document.getElementById('searchCustomers').value.toLowerCase();
-        // searchRight was removed
         const table = document.getElementById('customersTable');
         const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
         
@@ -351,22 +325,21 @@
                               address.includes(searchValue) || 
                               contact.includes(searchValue);
             
-            // Show/hide row
+            // Show/hide
             row.style.display = searchMatch ? '' : 'none';
         }
     }
     
-    // Clear filters
+    // Clear
     function clearFilters() {
         document.getElementById('searchCustomers').value = '';
-        // searchRight removed
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = '';
         // Reload page to clear backend filters
         window.location.href = '{{ route('customers.index') }}';
     }
     
-    // Select all checkboxes
+    // Select all
     function toggleSelectAll() {
         const selectAll = document.getElementById('selectAll');
         const checkboxes = document.querySelectorAll('.customer-checkbox');

@@ -15,25 +15,25 @@ class CustomerController extends Controller
      */
     public function index(Request $request)
     {
-        // Gather filters from request
+        // Filters
         $filters = [
             'search' => $request->input('search'),
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),
         ];
 
-        // Validation Rules
+        // Validation
         $rules = [];
         $messages = [];
 
-        // Date Validation
+        // Date rules
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $rules['start_date'] = 'date';
             $rules['end_date'] = 'date|after_or_equal:start_date';
             $messages['end_date.after_or_equal'] = 'End date must be after or equal to start date.';
         }
 
-        // Search Validation (Optional: prevent very short or special char searches if desired)
+        // Search validation
         if ($request->filled('search')) {
             $rules['search'] = 'string|max:100|regex:/^[a-zA-Z0-9\s\-\.\,\@]+$/';
             $messages['search.regex'] = 'Search term contains invalid characters.';
@@ -44,14 +44,14 @@ class CustomerController extends Controller
             $request->validate($rules, $messages);
         }
 
-        // Pass filters to model function
+        // Get filtered data
         $customers = Customer::getlistingdata($filters);
         
         return view('pages.dashboards.customers-list', compact('customers'));
     }
     
     /**
-     * Show the form for creating a new customer
+     * Create form
      */
     public function create()
     {
@@ -59,11 +59,11 @@ class CustomerController extends Controller
     }
     
     /**
-     * Store a newly created customer - CALLS MODEL save_transaction()
+     * Store customer
      */
     public function save_transaction(Request $request)
     {
-        // Trim and format inputs
+        // Format inputs
         $request->merge([
             'FirstName' => trim($request->FirstName ?? ''),
             'LastName' => trim($request->LastName ?? ''),
@@ -72,7 +72,7 @@ class CustomerController extends Controller
             'Phone' => $request->Phone ? preg_replace('/[^0-9+]/', '', $request->Phone) : null,
         ]);
         
-        // 1. Handle "Same as Billing" Logic
+        // Handle Billing Address
         if ($request->has('SameAsBilling') && $request->SameAsBilling == '1') {
             $request->merge([
                 'BillingAddress' => $request->Address,
@@ -83,29 +83,29 @@ class CustomerController extends Controller
             ]);
         }
         
-        // 2. Validate the Request
+        // Validate
         $validated = $request->validate([
-            // Basic Information
+            // Basic Info
             'Title' => 'required|string|in:Mr,Mrs,Miss,Ms,Dr,Prof,Engr',
             'FirstName' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
             'LastName' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
             'BusinessName' => ['nullable', 'string', 'max:200', 'regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
             'DisplayName' => 'nullable|string|max:200',
             
-            // Contact Information
+            // Contact Info
             'Email' => ['required', 'email', 'max:500', 'unique:crm_customer,Email'],
             'Mobile' => ['required', 'string', 'regex:/^(\+92|0)?[0-9]{10}$/', 'unique:crm_customer,Mobile'],
             'Phone' => ['nullable', 'string', 'regex:/^(\+92|0)?[0-9]{9,11}$/'],
             'Website' => ['nullable', 'url', 'max:200', 'regex:/^https?:\/\//'],
             
-            // Address Information
+            // Address Info
             'Address' => 'nullable|string|max:500',
             'City' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'County' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'PostalCode' => ['nullable', 'string', 'regex:/^[0-9]{5}$/'],
             'Country' => 'nullable|string|max:100',
             
-            // Billing Address (conditional validation)
+            // Billing Address
             'BillingAddress' => 'required_if:SameAsBilling,0|nullable|string|max:500',
             'BillingCity' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'BillingCounty' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
@@ -113,7 +113,7 @@ class CustomerController extends Controller
             'BillingCountry' => 'required_if:SameAsBilling,0|nullable|string|max:100',
             'SameAsBilling' => 'nullable|boolean',
             
-            // Financial & Tax Information
+            // Financial Info
             'NTN' => ['nullable', 'string', 'regex:/^[0-9]{7}$/', 'unique:crm_customer,NTN'],
             'SalesTaxNumber' => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]{5,50}$/', 'unique:crm_customer,SalesTaxNumber'],
             'IsFiler' => 'nullable|boolean',
@@ -121,11 +121,11 @@ class CustomerController extends Controller
             'CreditLimit' => 'required|numeric|min:0|max:999999999999.99',
             'PaymentTerms' => 'required|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
             
-            // Additional Information
+            // Additional Info
             'Notes' => 'nullable|string|max:500',
             'Status' => 'required|integer|in:0,1',
         ], [
-            // Custom Error Messages
+            // Messages
             'Title.required' => 'Please select a title.',
             'Title.in' => 'Invalid title selected.',
             'FirstName.required' => 'First name is required.',
@@ -179,20 +179,19 @@ class CustomerController extends Controller
         ]);
         
         try {
-            // 1. Generate the Secure UUID
+            // Generate UUID
             $requestId = (string) Str::uuid(); 
-
             $userId = auth()->id() ?? 1;
             $now = now()->toDateTimeString(); // SQL format: YYYY-MM-DD HH:MM:SS
             
             $displayName = $request->DisplayName ?: $request->BusinessName;
             $fullBillingAddress = $request->BillingAddress . ', ' . $request->BillingCity . ', ' . $request->BillingCountry;
 
-            // Calculate next ID (Fix for missing AUTO_INCREMENT)
+            // Calculate ID
             $maxId = DB::table('temp_customer')->max('ID');
             $nextId = $maxId ? $maxId + 1 : 1;
 
-            // 2. The Values Array (Associative) for easy insertion
+            // Prepare data
             $data = [
                 'ID' => $nextId,
                 'TID' => $nextId,
@@ -241,15 +240,14 @@ class CustomerController extends Controller
                 'RequestID' => $requestId
             ];
 
-            // 3. Drop into temp_customer table
+            // Insert into temp
             \Log::info('Inserting Customer Data', ['data' => $data]);
             DB::table('temp_customer')->insert($data);
 
-            // 4. Call model function (as requested, even if empty/dummy)
-            // Pass RequestID because model expects it
+            // Execute model transaction
             $query = Customer::save_transaction(['RequestID' => $requestId]);
             
-            // Execute the returned query if it's not empty
+            // Execute query
             if (!empty($query) && $query !== "Empty") {
                 DB::statement($query);
             }
@@ -268,21 +266,18 @@ class CustomerController extends Controller
     }
     
     /**
-     * Display the specified customer
+     * Show customer
      */
     public function show($id)
     {
-        // READ FROM crm_customer (Production Table)
+        // Read from crm_customer
         $customer = DB::table('crm_customer')->where('ID', $id)->first();
         
         if (!$customer) {
             abort(404, 'Customer not found in CRM');
         }
         
-        // Convert to Customer model instance if needed for view compatibility,
-        // or just pass the object since DB::table returns stdClass which views handle fine.
-        // However, the view might expect Eloquent accessors.
-        // Let's hydration a model instance for best compatibility.
+        // Hydrate model
         $customerModel = new Customer();
         $customerModel->setRawAttributes((array)$customer, true);
         $customerModel->exists = true;
@@ -291,18 +286,18 @@ class CustomerController extends Controller
     }
     
     /**
-     * Show the form for editing the specified customer
+     * Edit form
      */
     public function edit($id)
     {
-        // READ FROM crm_customer (Production Table)
+        // Read from crm_customer
         $customer = DB::table('crm_customer')->where('ID', $id)->first();
         
         if (!$customer) {
             abort(404, 'Customer not found in CRM');
         }
 
-        // Hydrate model for view compatibility
+        // Hydrate model
         $customerModel = new Customer();
         $customerModel->setRawAttributes((array)$customer, true);
         $customerModel->exists = true;
@@ -311,19 +306,18 @@ class CustomerController extends Controller
     }
     
     /**
-     * Update the specified customer - CALLS MODEL edit_transaction()
+     * Update customer
      */
     public function edit_transaction(Request $request, $id)
     {
-        // Get existing customer from crm_customer for preservation of original values
-        // We use DB table to get the raw data from production table
+        // Get existing
         $customer = DB::table('crm_customer')->where('ID', $id)->first();
         
         if (!$customer) {
             return redirect()->back()->with('error', 'Customer not found.');
         }
         
-        // Trim and format inputs
+        // Format inputs
         $request->merge([
             'FirstName' => trim($request->FirstName ?? ''),
             'LastName' => trim($request->LastName ?? ''),
@@ -332,7 +326,7 @@ class CustomerController extends Controller
             'Phone' => $request->Phone ? preg_replace('/[^0-9+]/', '', $request->Phone) : null,
         ]);
     
-        // 1. Handle "Same as Billing" Logic
+        // Handle Billing Address
         if ($request->has('SameAsBilling') && $request->SameAsBilling == '1') {
             $request->merge([
                 'BillingAddress' => $request->Address,
@@ -343,29 +337,29 @@ class CustomerController extends Controller
             ]);
         }
         
-        // 2. Validate the Request (with unique rule exceptions for current record)
+        // Validate
         $validated = $request->validate([
-            // Basic Information
+            // Basic Info
             'Title' => 'required|string|in:Mr,Mrs,Miss,Ms,Dr,Prof,Engr',
             'FirstName' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
             'LastName' => ['required', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
             'BusinessName' => ['nullable', 'string', 'max:200', 'regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
             'DisplayName' => 'nullable|string|max:200',
             
-            // Contact Information (exclude current record from unique check)
+            // Contact Info
             'Email' => ['required', 'email', 'max:500', Rule::unique('crm_customer', 'Email')->ignore($id, 'ID')],
             'Mobile' => ['required', 'string', 'regex:/^(\+92|0)?[0-9]{10}$/', Rule::unique('crm_customer', 'Mobile')->ignore($id, 'ID')],
             'Phone' => ['nullable', 'string', 'regex:/^(\+92|0)?[0-9]{9,11}$/'],
             'Website' => ['nullable', 'url', 'max:200', 'regex:/^https?:\/\//'],
             
-            // Address Information
+            // Address Info
             'Address' => 'nullable|string|max:500',
             'City' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'County' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'PostalCode' => ['nullable', 'string', 'regex:/^[0-9]{5}$/'],
             'Country' => 'nullable|string|max:100',
             
-            // Billing Address (conditional validation)
+            // Billing Address
             'BillingAddress' => 'required_if:SameAsBilling,0|nullable|string|max:500',
             'BillingCity' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'BillingCounty' => ['required_if:SameAsBilling,0', 'nullable', 'string', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
@@ -373,7 +367,7 @@ class CustomerController extends Controller
             'BillingCountry' => 'required_if:SameAsBilling,0|nullable|string|max:100',
             'SameAsBilling' => 'nullable|boolean',
             
-            // Financial & Tax Information (exclude current record from unique check)
+            // Financial Info
             'NTN' => ['nullable', 'string', 'regex:/^[0-9]{7}$/', Rule::unique('crm_customer', 'NTN')->ignore($id, 'ID')],
             'SalesTaxNumber' => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]{5,50}$/', Rule::unique('crm_customer', 'SalesTaxNumber')->ignore($id, 'ID')],
             'IsFiler' => 'nullable|boolean',
@@ -381,11 +375,11 @@ class CustomerController extends Controller
             'CreditLimit' => 'required|numeric|min:0|max:999999999999.99',
             'PaymentTerms' => 'required|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
             
-            // Additional Information
+            // Additional Info
             'Notes' => 'nullable|string|max:500',
             'Status' => 'required|integer|in:0,1',
         ], [
-            // Custom Error Messages
+            // Messages
             'Title.required' => 'Please select a title.',
             'Title.in' => 'Invalid title selected.',
             'FirstName.required' => 'First name is required.',
@@ -439,18 +433,18 @@ class CustomerController extends Controller
         ]);
         
         try {
-            // Generate UUID for tracking
+            // Generate UUID
             $requestId = (string) Str::uuid(); 
             $userId = auth()->id() ?? 1;
             $now = now()->toDateTimeString();
             
-            // Prepare computed values
+            // Prepare values
             $displayName = $request->DisplayName ?: $request->BusinessName;
             $fullBillingAddress = $request->BillingAddress . ', ' . 
                                  $request->BillingCity . ', ' . 
                                  $request->BillingCountry;
 
-            // 3. Prepare Data for Update (Associative Array)
+            // Prepare data
             $data = [
                 'TID' => $id, // Ensure TID matches ID on update
                 'IsArchive' => 0,
@@ -496,13 +490,13 @@ class CustomerController extends Controller
                 'RequestID' => $requestId
             ];
 
-            // 4. Update temp_customer table
+            // Update temp
             DB::table('temp_customer')->where('ID', $id)->update($data);
 
-            // 5. Call model function (as requested)
+            // Execute model transaction
             $query = Customer::edit_transaction(['RequestID' => $requestId]);
 
-            // Execute the returned query if it's not empty
+            // Execute query
             if (!empty($query) && $query !== "Empty") {
                  DB::statement($query);
             }
@@ -526,12 +520,12 @@ class CustomerController extends Controller
     }
     
     /**
-     * Archive/Delete the specified customer - CALLS MODEL delete_transaction()
+     * Archive customer
      */
     public function delete_transaction($id)
     {
         try {
-            // READ FROM crm_customer (Production Table)
+            // Read from crm_customer
             $customer = DB::table('crm_customer')->where('ID', $id)->first();
             
             if (!$customer) {
@@ -541,8 +535,7 @@ class CustomerController extends Controller
             $requestId = (string) Str::uuid();
             $userId = auth()->id() ?? 1;
             
-            // 1. Update temp_customer table directly (Archive)
-            // We MUST update RequestID so the model query can find it
+            // Update temp
             DB::table('temp_customer')
                 ->where('ID', $id)
                 ->update([
@@ -552,9 +545,7 @@ class CustomerController extends Controller
                     'RequestID' => $requestId 
                 ]);
             
-            // 2. Call model function (as requested)
-            // Pass RequestID to the model method. 
-            // We use the static method directly since $customer is a stdClass object now.
+            // Execute model transaction
             $query = Customer::delete_transaction(['RequestID' => $requestId]);
             
             if (!empty($query) && $query !== "Empty") {
@@ -573,7 +564,7 @@ class CustomerController extends Controller
     }
 
     /**
-     * Export customers to CSV
+     * Export CSV
      */
     public function exportCSV(Request $request)
     {
@@ -587,7 +578,7 @@ class CustomerController extends Controller
             "Expires" => "0"
         ];
 
-        // Get filtered data using the same model function
+        // Get filtered data
         $filters = [
             'search' => $request->input('search'),
             'start_date' => $request->input('start_date'),
@@ -599,10 +590,10 @@ class CustomerController extends Controller
         $callback = function() use ($customers) {
             $file = fopen('php://output', 'w');
             
-            // Add BOM for Excel compatibility
+            // Add BOM
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
             
-            // CSV Header
+            // Header
             fputcsv($file, [
                 'ID', 
                 'Account No',
@@ -618,7 +609,7 @@ class CustomerController extends Controller
             ]);
 
             foreach ($customers as $customer) {
-                // Determine name
+                // Name
                 $name = $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName);
                 
                 fputcsv($file, [
