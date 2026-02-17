@@ -296,9 +296,9 @@
                 <i class="fas fa-user-edit"></i> Edit Customer Details
             @else
                 <i class="fas fa-user-circle"></i> Customer Profile
-                <div class="mt-2" style="font-size: 14px; color: #666; font-weight: normal;">
+                {{-- <div class="mt-2" style="font-size: 14px; color: #666; font-weight: normal;">
                     <span class="badge bg-secondary"><i class="fas fa-fingerprint"></i> Req ID: {{ $customer->RequestID ?? 'N/A' }}</span>
-                </div>
+                </div> --}}
             @endif
         </h1>
     </div>
