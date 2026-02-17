@@ -132,12 +132,14 @@ class ProductModel extends Model
 
     public static function edit_transaction($validated)
     {
-        // 
+        $query = "edit_transaction";
+        return $query;
     }
 
     public static function delete_transaction($validated = [])
     {
-        // 
+       $query = "delete_transaction";
+        return $query;
     }
 
     /**

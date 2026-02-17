@@ -14,12 +14,14 @@
 
 @section('styles')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
 <style>
     .customer-form-container {
-        background: #fff;
+        background: var(--cm-bg-card);
         padding: 30px;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        color: var(--cm-text-main);
     }
     
     .form-header {
@@ -28,13 +30,13 @@
         align-items: center;
         margin-bottom: 30px;
         padding-bottom: 15px;
-        border-bottom: 2px solid #f0f0f0;
+        border-bottom: 2px solid var(--cm-border-color);
     }
     
     .form-header h1 {
         font-size: 24px;
         font-weight: 600;
-        color: #333;
+        color: var(--cm-text-main);
         margin: 0;
     }
     
@@ -58,10 +60,11 @@
     }
     
     .form-section {
-        background: #f8f9fa;
+        background: var(--cm-bg-body);
         border-radius: 8px;
         padding: 25px;
         margin-bottom: 20px;
+        border: 1px solid var(--cm-border-color);
     }
     
     .form-section-title {
@@ -96,7 +99,7 @@
         gap: 10px;
         margin-top: 30px;
         padding-top: 20px;
-        border-top: 2px solid #f0f0f0;
+        border-top: 2px solid var(--cm-border-color);
     }
     
     .btn-save, .btn-update {
@@ -160,14 +163,17 @@
         gap: 8px;
         cursor: pointer;
         margin-top: 10px;
+        color: var(--cm-text-main);
     }
     
     .form-control, .form-select {
-        border: 1px solid #ddd;
+        border: 1px solid var(--cm-border-color);
         border-radius: 5px;
         padding: 10px;
         font-size: 14px;
         width: 100%;
+        background-color: var(--cm-input-bg);
+        color: var(--cm-text-main);
     }
     
     .form-control:focus, .form-select:focus {
@@ -177,7 +183,7 @@
     }
     
     .last-updated-info {
-        color: #6c757d;
+        color: var(--cm-text-muted);
         font-size: 14px;
     }
     
@@ -206,7 +212,7 @@
     /* Read-only specific styles */
     .detail-label {
         font-weight: 600;
-        color: #6c757d;
+        color: var(--cm-text-muted);
         font-size: 13px;
         margin-bottom: 5px;
         display: block;
@@ -214,11 +220,11 @@
 
     .detail-value {
         font-size: 16px;
-        color: #333;
+        color: var(--cm-text-main);
         font-weight: 500;
         padding: 8px 12px;
-        background: #fff;
-        border: 1px solid #e9ecef;
+        background: var(--cm-input-bg);
+        border: 1px solid var(--cm-border-color);
         border-radius: 4px;
         min-height: 40px;
     }

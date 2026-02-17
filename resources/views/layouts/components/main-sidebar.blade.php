@@ -105,13 +105,8 @@
                                 <li class="slide">
                                     <a href="{{ url('products') }}" class="side-menu__item">Products</a>
                                 </li>
-
                                 <li class="slide">
-                                    <a href="{{ url('product-details') }}" class="side-menu__item">Product
-                                        Details</a>
-                                </li>
-                                <li class="slide">
-                                    <a href="{{ url('add-product') }}" class="side-menu__item">Add Product</a>
+                                    <a href="javascript:void(0);" class="side-menu__item">Invoices</a>
                                 </li>
                             </ul>
                         </li>

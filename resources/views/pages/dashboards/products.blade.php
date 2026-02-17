@@ -7,13 +7,15 @@
 
 @section('styles')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
 <style>
     /* ===== CONTAINER ===== */
     .product-management-container {
-        background: #fff;
+        background: var(--cm-bg-card);
         padding: 25px;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        color: var(--cm-text-main);
     }
 
     /* ===== TOP HEADER ===== */
@@ -29,7 +31,7 @@
     .management-header h2 {
         font-size: 20px;
         font-weight: 600;
-        color: #333;
+        color: var(--cm-text-main);
         margin: 0;
     }
 
@@ -82,10 +84,11 @@
 
     /* ===== FILTERS ===== */
     .filter-section {
-        background: #f8f9fa;
+        background: var(--cm-bg-body);
         border-radius: 8px;
         padding: 20px;
         margin-bottom: 20px;
+        border: 1px solid var(--cm-border-color);
     }
 
     .filter-row {
@@ -106,16 +109,22 @@
     .filter-group label {
         font-size: 12px;
         font-weight: 600;
-        color: #555;
+        color: var(--cm-text-muted);
     }
 
     .filter-group input,
     .filter-group select {
         padding: 9px 12px;
-        border: 1px solid #ddd;
+        border: 1px solid var(--cm-border-color);
         border-radius: 5px;
         font-size: 14px;
         width: 100%;
+        background-color: var(--cm-input-bg);
+        color: var(--cm-text-main);
+    }
+    
+    [data-theme-mode="dark"] .filter-group input[type="date"] {
+        color-scheme: dark;
     }
 
     .filter-group input:focus,
@@ -169,26 +178,26 @@
 
     .btn-export {
         padding: 7px 14px;
-        border: 1px solid #ddd;
+        border: 1px solid var(--cm-border-color);
         border-radius: 5px;
-        background: white;
+        background: var(--cm-input-bg);
         cursor: pointer;
         font-size: 13px;
         display: inline-flex;
         align-items: center;
         gap: 5px;
         text-decoration: none;
-        color: #333;
+        color: var(--cm-text-main);
         transition: all 0.2s;
     }
 
-    .btn-export:hover         { background: #f0f0f0; color: #333; }
+    .btn-export:hover         { background: var(--cm-bg-body); color: var(--cm-text-main); }
     .btn-export.csv           { border-color: #28a745; color: #28a745; }
     .btn-export.csv:hover     { background: #28a745; color: white; }
     .btn-export.print         { border-color: #6c757d; color: #6c757d; }
     .btn-export.print:hover   { background: #6c757d; color: white; }
 
-    .results-count { font-size: 14px; color: #666; }
+    .results-count { font-size: 14px; color: var(--cm-text-muted); }
 
     /* ===== TABLE ===== */
     .table-wrapper { overflow-x: auto; }
@@ -200,25 +209,25 @@
     }
 
     .products-table thead th {
-        background: #f8f9fa;
+        background: var(--cm-table-header-bg);
         padding: 12px 14px;
         text-align: left;
         font-weight: 600;
-        color: #444;
-        border-bottom: 2px solid #e9ecef;
+        color: var(--cm-text-main);
+        border-bottom: 2px solid var(--cm-border-color);
         white-space: nowrap;
     }
 
     .products-table tbody tr {
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--cm-border-color);
         transition: background 0.15s;
     }
 
-    .products-table tbody tr:hover { background: #f9fff9; }
+    .products-table tbody tr:hover { background: var(--cm-table-row-hover); }
 
     .products-table tbody td {
         padding: 12px 14px;
-        color: #555;
+        color: var(--cm-text-main);
         vertical-align: middle;
     }
 
@@ -274,11 +283,11 @@
     .empty-state {
         text-align: center;
         padding: 60px 20px;
-        color: #888;
+        color: var(--cm-text-muted);
     }
 
     .empty-state i    { font-size: 48px; margin-bottom: 15px; color: #ccc; }
-    .empty-state h4   { font-size: 18px; color: #555; margin-bottom: 8px; }
+    .empty-state h4   { font-size: 18px; color: var(--cm-text-main); margin-bottom: 8px; }
     .empty-state p    { font-size: 14px; }
 
     /* ===== PAGINATION ===== */
@@ -290,7 +299,7 @@
         flex-wrap: wrap;
         gap: 10px;
         font-size: 14px;
-        color: #666;
+        color: var(--cm-text-muted);
     }
 
     /* ===== LOW STOCK ALERT ===== */
@@ -514,13 +523,13 @@
                     <td>{{ $index + 1 }}</td>
 
                     <td>
-                        <span style="font-weight:600; color:#333;">{{ $product->Code ?? '-' }}</span>
+                        <span style="font-weight:600; color:var(--cm-text-main);">{{ $product->Code ?? '-' }}</span>
                     </td>
 
                     <td>
-                        <div style="font-weight:500; color:#222;">{{ $product->Name ?? '-' }}</div>
+                        <div style="font-weight:500; color:var(--cm-text-main);">{{ $product->Name ?? '-' }}</div>
                         @if(!empty($product->Type))
-                            <small style="color:#888;">{{ $product->Type }}</small>
+                            <small style="color:var(--cm-text-muted);">{{ $product->Type }}</small>
                         @endif
                     </td>
 
@@ -562,7 +571,7 @@
                         @endif
                     </td>
 
-                    <td style="color:#888; font-size:13px;">
+                    <td style="color:var(--cm-text-muted); font-size:13px;">
                         {{ isset($product->CreatedOn) ? \Carbon\Carbon::parse($product->CreatedOn)->format('d M Y') : '-' }}
                     </td>
 

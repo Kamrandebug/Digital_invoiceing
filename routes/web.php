@@ -18,14 +18,7 @@ Route::get('/dashboard', [DashboardsController::class, 'index2'])
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/index2', [DashboardsController::class, 'index2'])->name('index2');
-    Route::get('/product-details', [DashboardsController::class, 'product_details']);
-    Route::get('/cart', [DashboardsController::class, 'cart']);
-    Route::get('/checkout', [DashboardsController::class, 'checkout']);
     Route::get('/customers-list', [CustomerController::class, 'index'])->middleware('tenant');
-    // Route::view('/customers', 'customers')->name('customers'); // Commented out to allow CustomerController to handle /customers
-    Route::get('/orders', [DashboardsController::class, 'orders']);
-    Route::get('/orders-details', [DashboardsController::class, 'orders_details']);
-    Route::get('/add-product', [DashboardsController::class, 'add_product']);
 });
 
 Route::middleware('auth')->group(function () {
