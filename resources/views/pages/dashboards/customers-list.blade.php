@@ -5,9 +5,9 @@
 @extends('layouts.master')
 
 @section('styles')
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
-<style>
+<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">-->
+<!--<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">-->
+<!--<style>
     .search-filters-section {
         display: flex;
         align-items: flex-end; /* Bottom align everything so inputs match */
@@ -109,168 +109,217 @@
         height: 40px; /* Match height of filter bar */
         margin-bottom: 20px; /* Space below export buttons */
     }
+</style>-->
+<style>
+	.btn-margin{
+		margin-top: 20px;
+	}
 </style>
 @endsection
 
 @section('content')
-
 <div class="page-header-breadcrumb mb-3">
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-18 mb-0">Customer Management</h1>
         <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item"><a href="javascript:void(0);">Dashboards</a></li>
-            <li class="breadcrumb-item"><a href="javascript:void(0);">Ecommerce</a></li>
             <li class="breadcrumb-item active" aria-current="page">Customers List</li>
         </ol>
     </div>
 </div>
-
 {{-- Messages --}}
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
-    <i class="fas fa-check-circle"></i> {{ session('success') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	<i class="fas fa-check-circle"></i> {{ session('success') }}
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 @endif
 
 @if(session('error'))
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	<i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 @endif
 
 {{-- Errors --}}
 @if($errors->any())
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-triangle"></i> 
-    @foreach ($errors->all() as $error)
-        {{ $error }}
-    @endforeach
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	<i class="fas fa-exclamation-triangle"></i> 
+	@foreach ($errors->all() as $error)
+		{{ $error }}
+	@endforeach
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 @endif
+<div class="row">
+	<div class="col-xs-12">
+		<div class="card custom-card mb-1">
+			<div class="card-body p-2">
+				<div class="row">
+					<div class="col-md-9">
+						{{-- Filters --}}
+						<form action="{{ route('customers.index') }}" method="GET" class="">
+							<div class="row g-2">
+								<div class="col-md-4">
+									<div class="header-search d-md-block d-none">
+										<label>Search Customer</label>
+										<input type="text" class="header-search-bar form-control form-control-sm bg-white" name="search" id="searchCustomers" value="{{ request('search') }}" placeholder="Search customers..." onkeyup="filterTable()">
+										<a href="javascript:void(0);" class="header-search-icon border-0" style="top: 25px;">
+											<i class="bi bi-search fs-12"></i>
+										</a>
+									</div>
+								</div>
+								<div class="col-md-8">
+									<div class="row g-2">
+										<div class="col-md-4">
+											<label>Start Date</label>
+											<div><input type="date" class="form-control form-control-sm" name="start_date" id="startDate" value="{{ request('start_date') }}"></div>
+										</div>
+										<div class="col-md-4">
+											<label>End Date</label>
+											<input type="date" class="form-control form-control-sm" name="end_date" id="endDate" value="{{ request('end_date') }}">
+										</div>
+										<div class="col">
+											<button class="btn btn-sm btn-primary btn-margin" type="button" onclick="window.location.href='{{ route('customers.index') }}'"><i class="fas fa-times"></i> Clear Filters</button>
+										</div>
+									</div>
+								</div>
+						   </div>
 
-<div class="customer-management-container">
+							
+						</form>
+					</div>
+				</div>
+				
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="col-xs-12">
     
-    {{-- Header --}}
-    <div class="header">
-        <h1>Customer Management</h1>
-        <div class="action-buttons">
-            <button onclick="window.location.href='{{ route('customers.create') }}'">
-                <i class="fas fa-plus"></i> Add Customer
-            </button>
-            <button><i class="fas fa-file-upload"></i> Import</button>
-        </div>
-    </div>
-
-    {{-- Filters --}}
-    <form action="{{ route('customers.index') }}" method="GET" class="search-filters-section">
-        <div class="search-box">
-            <div style="position: relative; width: 100%;">
-                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #aaa;"></i>
-                <input type="text" name="search" id="searchCustomers" value="{{ request('search') }}" placeholder="Search customers..." onkeyup="filterTable()">
-            </div>
-            
-            <button type="submit" class="btn-search">
-                <i class="fas fa-search"></i> Search
-            </button>
-        </div>
-
-        <div class="date-filters">
-            <div>
-                <label>Start Date</label>
-                <input type="date" name="start_date" id="startDate" value="{{ request('start_date') }}">
-            </div>
-            <div>
-                <label>End Date</label>
-                <input type="date" name="end_date" id="endDate" value="{{ request('end_date') }}">
-            </div>
-        </div>
-
-        <button type="button" onclick="window.location.href='{{ route('customers.index') }}'"><i class="fas fa-times"></i> Clear Filters</button>
-    </form>
-
     {{-- Exports --}}
-    <div class="export-buttons">
-        <button onclick="window.location.href='{{ route('customers.export-csv') }}'" class="btn-export-csv">
-            <i class="fas fa-download"></i> Export CSV
-        </button>
-        <button onclick="window.print()" class="btn-print">
-            <i class="fas fa-print"></i> Print
-        </button>
-    </div>
+	<div class="card custom-card">
+		<div class="card-header justify-content-between">
+			<div class="card-title">
+				Customer List
+			</div>
+			<div class="d-flex">
+				<button type="button" class="btn btn-sm btn-primary btn-wave waves-light" onclick="window.location.href='{{ route('customers.create') }}'"><i class="ri-add-line fw-medium align-middle me-1"></i> Add Customer</button>
+				<div class="dropdown ms-2">
+					<button class="btn btn-icon btn-secondary-light btn-sm btn-wave waves-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+						<i class="ti ti-dots-vertical"></i>
+					</button>
+					<ul class="dropdown-menu">
+						<li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+						<li><a class="dropdown-item" href="#">Bulk Print</a></li>
+						<li><a class="dropdown-item" href="{{ route('customers.export-csv') }}">Export CSV</a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div class="card-body p-0">
+			{{-- Table --}}
+			<div class="table-responsive">
+				<table class="customers-table table text-nowrap" id="customersTable">
+					<thead>
+						<tr>
+							<th><input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+							<th>ID <i class="fas fa-sort"></i></th>
+							<th>Name <i class="fas fa-sort"></i></th>
+							<th>Address</th>
+							<th>Contact Number</th>
+							<th>Closing Balance <i class="fas fa-info-circle" title="Current balance"></i></th>
+							<th>Opening Balance Date <i class="fas fa-info-circle" title="Date of opening balance"></i></th>
+							<th>Action</th>
+						</tr>
+					</thead>
+					<tbody>
+						@forelse($customers as $customer)
+						<tr>
+							<td><input type="checkbox" class="customer-checkbox form-check-input" value="{{ $customer->ID }}"></td>
+							<td>{{ $customer->ID }}</td>
+							<td>
+								<strong>{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}</strong>
+								@if($customer->BusinessName)
+								<br><small class="text-muted">{{ $customer->BusinessName }}</small>
+								@endif
+							</td>
+							<td>{{ $customer->Address ?? 'N/A' }}</td>
+							<td>{{ $customer->Mobile ?? $customer->Phone ?? 'N/A' }}</td>
+							<td class="{{ $customer->PartyBalance > 0 ? 'balance-positive' : ($customer->PartyBalance < 0 ? 'balance-negative' : 'balance-zero') }}">
+								{{ number_format(abs($customer->PartyBalance), 2) }} PKR
+							</td>
+							<td>{{ $customer->CreatedOn ? \Carbon\Carbon::parse($customer->CreatedOn)->format('d/m/Y') : 'N/A' }}</td>
+							<td>
 
-    {{-- Table --}}
-    <div class="customers-table-wrapper">
-        <table class="customers-table" id="customersTable">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
-                    <th>ID <i class="fas fa-sort"></i></th>
-                    <th>Name <i class="fas fa-sort"></i></th>
-                    <th>Address</th>
-                    <th>Contact Number</th>
-                    <th>Closing Balance <i class="fas fa-info-circle" title="Current balance"></i></th>
-                    <th>Opening Balance Date <i class="fas fa-info-circle" title="Date of opening balance"></i></th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($customers as $customer)
-                <tr>
-                    <td><input type="checkbox" class="customer-checkbox" value="{{ $customer->ID }}"></td>
-                    <td>{{ $customer->ID }}</td>
-                    <td>
-                        <strong>{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}</strong>
-                        @if($customer->BusinessName)
-                        <br><small class="text-muted">{{ $customer->BusinessName }}</small>
-                        @endif
-                    </td>
-                    <td>{{ $customer->Address ?? 'N/A' }}</td>
-                    <td>{{ $customer->Mobile ?? $customer->Phone ?? 'N/A' }}</td>
-                    <td class="{{ $customer->PartyBalance > 0 ? 'balance-positive' : ($customer->PartyBalance < 0 ? 'balance-negative' : 'balance-zero') }}">
-                        {{ number_format(abs($customer->PartyBalance), 2) }} PKR
-                    </td>
-                    <td>{{ $customer->CreatedOn ? \Carbon\Carbon::parse($customer->CreatedOn)->format('d/m/Y') : 'N/A' }}</td>
-                    <td>
+								<button class="action-btn btn-info"
+										onclick="window.location.href='{{ route('customers.show', $customer->ID ?? 0) }}'"
+										title="View Details">
+									<i class="fas fa-clipboard-list"></i>
+								</button>
 
-                        <button class="action-btn btn-info"
-                                onclick="window.location.href='{{ route('customers.show', $customer->ID ?? 0) }}'"
-                                title="View Details">
-                            <i class="fas fa-clipboard-list"></i>
-                        </button>
-                        
-                        <form action="{{ route('customers.delete_transaction', $customer->ID ?? 0) }}" 
-                              method="POST" 
-                              style="display: inline;"
-                              onsubmit="return confirmDelete('{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="action-btn btn-delete" title="Archive Customer">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="8" class="text-center py-5">
-                        <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
-                        <p class="text-muted mb-2">No customers found.</p>
-                        {{-- Add button --}}
-                        @if(!request('search') && !request('start_date') && !request('end_date'))
-                        <button class="btn btn-primary" onclick="window.location.href='{{ route('customers.create') }}'">
-                            <i class="fas fa-plus"></i> Add Your First Customer
-                        </button>
-                        @else
-                        <p class="text-muted small">Try adjusting your search or filters.</p>
-                        @endif
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+								<form action="{{ route('customers.delete_transaction', $customer->ID ?? 0) }}" 
+									  method="POST" 
+									  style="display: inline;"
+									  onsubmit="return confirmDelete('{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}')">
+									@csrf
+									@method('DELETE')
+									<button type="submit" class="action-btn btn-delete" title="Archive Customer">
+										<i class="fas fa-trash"></i>
+									</button>
+								</form>
+							</td>
+						</tr>
+						@empty
+						<tr>
+							<td colspan="8" class="text-center py-5">
+								<i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
+								<p class="text-muted mb-2">No customers found.</p>
+								{{-- Add button --}}
+								@if(!request('search') && !request('start_date') && !request('end_date'))
+								<button class="btn btn-primary" onclick="window.location.href='{{ route('customers.create') }}'">
+									<i class="fas fa-plus"></i> Add Your First Customer
+								</button>
+								@else
+								<p class="text-muted small">Try adjusting your search or filters.</p>
+								@endif
+							</td>
+						</tr>
+						@endforelse
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div class="card-footer border-top-0">
+			<div class="ms-auto"> 
+				<nav aria-label="Page navigation" class="pagination-style-2">
+					<ul class="pagination mb-0 flex-wrap justify-content-end">
+						<li class="page-item disabled">
+							<a class="page-link" href="javascript:void(0);">
+								Prev
+							</a>
+						</li>
+						<li class="page-item"><a class="page-link" href="javascript:void(0);">1</a></li>
+						<li class="page-item active"><a class="page-link" href="javascript:void(0);">2</a></li>
+						<li class="page-item">
+							<a class="page-link" href="javascript:void(0);">
+								<i class="bi bi-three-dots"></i>
+							</a>
+						</li>
+						<li class="page-item"><a class="page-link" href="javascript:void(0);">17</a></li>
+						<li class="page-item">
+							<a class="page-link text-primary" href="javascript:void(0);">
+								next
+							</a>
+						</li>
+					</ul>
+				</nav>
+			</div> 
+		</div>
+	</div>
+    
     </div>
 
     {{-- Pagination --}}
