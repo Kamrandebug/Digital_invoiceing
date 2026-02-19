@@ -60,7 +60,7 @@
             <!-- End::content  -->
 
             <!-- Start::main-footer -->
-            @include('layouts.components.footer')
+<!--            @include('layouts.components.footer')-->
             <!-- End::main-footer -->
 
             <!-- Start::main-modal -->

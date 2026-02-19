@@ -120,11 +120,21 @@
 @section('content')
 <div class="page-header-breadcrumb mb-3">
     <div class="d-flex align-center justify-content-between flex-wrap">
-        <h1 class="page-title fw-medium fs-18 mb-0">Customer Management</h1>
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="javascript:void(0);">Dashboards</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Customers List</li>
-        </ol>
+        <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Customer Management</h1>
+        <div class="d-flex float-end">
+			<button type="button" class="btn btn-sm btn-primary btn-wave waves-light" data-bs-toggle="modal" data-bs-target="#add_customer_modal"><i class="ri-add-line fw-medium align-middle me-1"></i> Add Customer</button>
+<!--				<button type="button" class="btn btn-sm btn-primary btn-wave waves-light" onclick="window.location.href='{{ route('customers.create') }}'"><i class="ri-add-line fw-medium align-middle me-1"></i> Add Customer</button>-->
+			<div class="dropdown ms-2">
+				<button class="btn btn-icon btn-secondary-light btn-sm btn-wave waves-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+					<i class="ti ti-dots-vertical"></i>
+				</button>
+				<ul class="dropdown-menu">
+					<li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+					<li><a class="dropdown-item" href="#">Bulk Print</a></li>
+					<li><a class="dropdown-item" href="{{ route('customers.export-csv') }}">Export CSV</a></li>
+				</ul>
+			</div>
+		</div>
     </div>
 </div>
 {{-- Messages --}}
@@ -201,12 +211,13 @@
     
     {{-- Exports --}}
 	<div class="card custom-card">
+<!--
 		<div class="card-header justify-content-between">
 			<div class="card-title">
 				Customer List
 			</div>
 			<div class="d-flex">
-				<button type="button" class="btn btn-sm btn-primary btn-wave waves-light" onclick="window.location.href='{{ route('customers.create') }}'"><i class="ri-add-line fw-medium align-middle me-1"></i> Add Customer</button>
+				<button type="button" class="btn btn-sm btn-primary btn-wave waves-light" data-bs-toggle="modal" data-bs-target="#add_customer_modal"><i class="ri-add-line fw-medium align-middle me-1"></i> Add Customer</button>
 				<div class="dropdown ms-2">
 					<button class="btn btn-icon btn-secondary-light btn-sm btn-wave waves-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 						<i class="ti ti-dots-vertical"></i>
@@ -219,6 +230,7 @@
 				</div>
 			</div>
 		</div>
+-->
 		<div class="card-body p-0">
 			{{-- Table --}}
 			<div class="table-responsive">
@@ -332,6 +344,25 @@
         </div>
     </div>
 
+</div>
+
+<div class="modal fade" id="add_customer_modal" tabindex="-1" aria-labelledby="add_customer_modalLabel" aria-hidden="true" style="display: none;">
+	<div class="modal-dialog modal-fullscreen">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h6 class="modal-title" id="add_customer_modalLabel">Add Customer</h6>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"
+					aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				add code here
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal">Save</button>
+				<button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 @endsection
