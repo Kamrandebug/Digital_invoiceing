@@ -55,16 +55,12 @@
 
             <!-- Start::app-content -->
             <div class="main-content app-content">
-                <div class="container-fluid page-container main-body-container">
-
-                    @yield('content')
-                    
-                </div>
+                 @yield('content')				
             </div>
             <!-- End::content  -->
 
             <!-- Start::main-footer -->
-            @include('layouts.components.footer')
+<!--            @include('layouts.components.footer')-->
             <!-- End::main-footer -->
 
             <!-- Start::main-modal -->
