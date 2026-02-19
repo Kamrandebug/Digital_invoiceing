@@ -49,6 +49,7 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        /*
         // 🔥 CREATE TENANT DATABASE FROM CENTRAL SCHEMA
         try {
             $tenant = $this->tenantService->createTenant($user);
@@ -63,6 +64,7 @@ class RegisteredUserController extends Controller
                 'email' => 'Failed to create your account. Please try again.',
             ])->withInput();
         }
+        */
 
         event(new Registered($user));
 
