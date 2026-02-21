@@ -42,18 +42,18 @@ Route::middleware('auth')->get('/test-tenant', function () {
 Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->group(function () {
     // List customers
     Route::get('/', [CustomerController::class, 'index'])->name('index');
-    
+
     // Create customer
     Route::get('/create', [CustomerController::class, 'create'])->name('create');
     Route::post('/save', [CustomerController::class, 'save_transaction'])->name('save_transaction');
-    
+
     // Edit customer
     Route::get('/{id}/edit', [CustomerController::class, 'edit'])->name('edit');
     Route::put('/{id}/update', [CustomerController::class, 'edit_transaction'])->name('edit_transaction');
-    
+
     // Delete customer
     Route::delete('/{id}/delete', [CustomerController::class, 'delete_transaction'])->name('delete_transaction');
-    
+
     // Export
     Route::get('/export/csv', [CustomerController::class, 'exportCSV'])->name('export-csv');
 
@@ -83,4 +83,4 @@ Route::middleware(['auth', 'tenant'])->prefix('products')->name('products.')->gr
     Route::get('/{id}', [ProductController::class, 'show'])->name('show');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
