@@ -72,38 +72,33 @@ class Customer extends Model
         'RequestID',
     ];
 
-    public static function getlistingdata($filters = [])
-    {
-        // Base query
-        $query = "SELECT * FROM crm_customer WHERE 1=1";
-        $bindings = [];
+  public static function getlistingdata($filters = [])
+{
+    $query = DB::table('crm_customer')->where('Status', '!=', 2);
 
-        // Search filter
-        if (!empty($filters['search'])) {
-            $search = '%' . $filters['search'] . '%';
-            $query .= " AND (DisplayName LIKE ? OR BusinessName LIKE ? OR FirstName LIKE ? OR LastName LIKE ? OR Address LIKE ? OR Mobile LIKE ? OR Phone LIKE ?)";
-            $bindings = array_merge($bindings, [$search, $search, $search, $search, $search, $search, $search]);
-        }
-        
-        // Date filter
-        if (!empty($filters['start_date'])) {
-            $query .= " AND DATE(CreatedOn) >= ?";
-            $bindings[] = $filters['start_date'];
-        }
-        
-        if (!empty($filters['end_date'])) {
-            $query .= " AND DATE(CreatedOn) <= ?";
-            $bindings[] = $filters['end_date'];
-        }
-
-        // Exclude archived
-        $query .= " AND Status != 2";
-
-        // Order By
-        $query .= " ORDER BY CreatedOn DESC";
-        
-        return DB::select($query, $bindings);
+    if (!empty($filters['search'])) {
+        $search = $filters['search'];
+        $query->where(function($q) use ($search) {
+            $q->where('DisplayName',   'LIKE', "%{$search}%")
+              ->orWhere('BusinessName', 'LIKE', "%{$search}%")
+              ->orWhere('FirstName',    'LIKE', "%{$search}%")
+              ->orWhere('LastName',     'LIKE', "%{$search}%")
+              ->orWhere('Address',      'LIKE', "%{$search}%")
+              ->orWhere('Mobile',       'LIKE', "%{$search}%")
+              ->orWhere('Phone',        'LIKE', "%{$search}%");
+        });
     }
+
+    if (!empty($filters['start_date'])) {
+        $query->whereDate('CreatedOn', '>=', $filters['start_date']);
+    }
+
+    if (!empty($filters['end_date'])) {
+        $query->whereDate('CreatedOn', '<=', $filters['end_date']);
+    }
+
+    return $query->orderBy('CreatedOn', 'desc');
+}
 
     public static function save_transaction($validated)
     {

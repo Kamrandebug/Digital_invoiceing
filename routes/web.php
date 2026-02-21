@@ -57,6 +57,10 @@ Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->
     // Export
     Route::get('/export/csv', [CustomerController::class, 'exportCSV'])->name('export-csv');
 
+   // Customer Form Model Route
+    Route::get('/modal', [CustomerController::class, 'modal'])->name('modal');
+    Route::get('/{id}/modal', [CustomerController::class, 'modal'])->name('modal.id');
+
     // View customer
     Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
 });
