@@ -106,7 +106,7 @@
                                     <a href="{{ url('products') }}" class="side-menu__item">Products</a>
                                 </li>
                                 <li class="slide">
-                                    <a href="javascript:void(0);" class="side-menu__item">Invoices</a>
+                                    <a href="{{ url('invoice-list') }}" class="side-menu__item">Invoices</a>
                                 </li>
                             </ul>
                         </li>
