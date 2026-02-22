@@ -184,147 +184,143 @@
 
 <div class="{{ $isView ? 'show-mode' : '' }}">
 
-{{-- ════════════ SECTION 1 — Basic Information ════════════ --}}
-<div class="_cfp-section">
-    <div class="_cfp-section-title"><i class="fas fa-user"></i> Basic Information</div>
-    <div class="row g-3">
+<div class="row justify-content-center">
+	<div class="col-md-10">
+		<div class="row g-3">
+			{{-- Title --}}
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Title</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->Title ?? '-' }}</div>
+				@else
+					<select name="Title" class="form-select form-select-sm @error('Title') is-invalid @enderror" required>
+						<option value="">Select</option>
+						@foreach(['Mr','Mrs','Miss','Dr','Prof','Engr'] as $t)
+							<option value="{{ $t }}" {{ old('Title', $customer->Title ?? '') == $t ? 'selected' : '' }}>{{ $t }}</option>
+						@endforeach
+					</select>
+					@error('Title')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
 
-        {{-- Title --}}
-        <div class="col-md-2">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Title</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->Title ?? '-' }}</div>
-            @else
-                <select name="Title" class="form-select form-select-sm @error('Title') is-invalid @enderror" required>
-                    <option value="">Select</option>
-                    @foreach(['Mr','Mrs','Miss','Dr','Prof','Engr'] as $t)
-                        <option value="{{ $t }}" {{ old('Title', $customer->Title ?? '') == $t ? 'selected' : '' }}>{{ $t }}</option>
-                    @endforeach
-                </select>
-                @error('Title')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
+			{{-- First Name --}}
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">First Name</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->FirstName ?? '-' }}</div>
+				@else
+					<input type="text" name="FirstName" id="{{ $uid }}_FirstName"
+						   class="form-control form-control-sm @error('FirstName') is-invalid @enderror"
+						   value="{{ old('FirstName', $customer->FirstName ?? '') }}" placeholder="First name" required>
+					@error('FirstName')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
 
-        {{-- First Name --}}
-        <div class="col-md-5">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">First Name</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->FirstName ?? '-' }}</div>
-            @else
-                <input type="text" name="FirstName" id="{{ $uid }}_FirstName"
-                       class="form-control form-control-sm @error('FirstName') is-invalid @enderror"
-                       value="{{ old('FirstName', $customer->FirstName ?? '') }}" placeholder="First name" required>
-                @error('FirstName')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
+			{{-- Last Name --}}
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Last Name</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->LastName ?? '-' }}</div>
+				@else
+					<input type="text" name="LastName" id="{{ $uid }}_LastName"
+						   class="form-control form-control-sm @error('LastName') is-invalid @enderror"
+						   value="{{ old('LastName', $customer->LastName ?? '') }}" placeholder="Last name" required>
+					@error('LastName')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
 
-        {{-- Last Name --}}
-        <div class="col-md-5">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Last Name</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->LastName ?? '-' }}</div>
-            @else
-                <input type="text" name="LastName" id="{{ $uid }}_LastName"
-                       class="form-control form-control-sm @error('LastName') is-invalid @enderror"
-                       value="{{ old('LastName', $customer->LastName ?? '') }}" placeholder="Last name" required>
-                @error('LastName')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
+			{{-- Business Name --}}
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Business Name</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->BusinessName ?? '-' }}</div>
+				@else
+					<input type="text" name="BusinessName" id="{{ $uid }}_BusinessName"
+						   class="form-control form-control-sm @error('BusinessName') is-invalid @enderror"
+						   value="{{ old('BusinessName', $customer->BusinessName ?? '') }}" placeholder="Business name" required>
+					@error('BusinessName')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
 
-        {{-- Business Name --}}
-        <div class="col-md-6">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Business Name</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->BusinessName ?? '-' }}</div>
-            @else
-                <input type="text" name="BusinessName" id="{{ $uid }}_BusinessName"
-                       class="form-control form-control-sm @error('BusinessName') is-invalid @enderror"
-                       value="{{ old('BusinessName', $customer->BusinessName ?? '') }}" placeholder="Business name" required>
-                @error('BusinessName')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
+			{{-- Display Name --}}
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
+					Display Name @if(!$isReadonly)<small class="text-muted fw-normal">(Optional — auto-filled)</small>@endif
+				</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->DisplayName ?? '-' }}</div>
+				@else
+					<input type="text" name="DisplayName" id="{{ $uid }}_DisplayName"
+						   class="form-control form-control-sm @error('DisplayName') is-invalid @enderror"
+						   value="{{ old('DisplayName', $customer->DisplayName ?? '') }}" placeholder="Display name">
+					@error('DisplayName')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
+			
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Email</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->Email ?? '-' }}</div>
+				@else
+					<input type="email" name="Email"
+						   class="form-control form-control-sm @error('Email') is-invalid @enderror"
+						   value="{{ old('Email', $customer->Email ?? '') }}" placeholder="customer@example.com" required>
+					@error('Email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
 
-        {{-- Display Name --}}
-        <div class="col-md-6">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
-                Display Name @if(!$isReadonly)<small class="text-muted fw-normal">(Optional — auto-filled)</small>@endif
-            </label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->DisplayName ?? '-' }}</div>
-            @else
-                <input type="text" name="DisplayName" id="{{ $uid }}_DisplayName"
-                       class="form-control form-control-sm @error('DisplayName') is-invalid @enderror"
-                       value="{{ old('DisplayName', $customer->DisplayName ?? '') }}" placeholder="Display name">
-                @error('DisplayName')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Mobile</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->Mobile ?? '-' }}</div>
+				@else
+					<input type="text" name="Mobile"
+						   class="form-control form-control-sm @error('Mobile') is-invalid @enderror"
+						   value="{{ old('Mobile', $customer->Mobile ?? '') }}" placeholder="3001234567" required>
+					@error('Mobile')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
 
-    </div>
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
+					Phone @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
+				</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->Phone ?? '-' }}</div>
+				@else
+					<input type="text" name="Phone"
+						   class="form-control form-control-sm @error('Phone') is-invalid @enderror"
+						   value="{{ old('Phone', $customer->Phone ?? '') }}" placeholder="042 1234567">
+					@error('Phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
+
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
+					Website @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
+				</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">
+						@if(!empty($customer->Website))
+							<a href="{{ $customer->Website }}" target="_blank">{{ $customer->Website }}</a>
+						@else - @endif
+					</div>
+				@else
+					<input type="url" name="Website"
+						   class="form-control form-control-sm @error('Website') is-invalid @enderror"
+						   value="{{ old('Website', $customer->Website ?? '') }}" placeholder="https://www.example.com">
+					@error('Website')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
+			
+			
+
+		</div>
+	</div>
 </div>
+	
 
-{{-- ════════════ SECTION 2 — Contact Information ════════════ --}}
-<div class="_cfp-section">
-    <div class="_cfp-section-title"><i class="fas fa-phone"></i> Contact Information</div>
-    <div class="row g-3">
 
-        <div class="col-md-6">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Email</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->Email ?? '-' }}</div>
-            @else
-                <input type="email" name="Email"
-                       class="form-control form-control-sm @error('Email') is-invalid @enderror"
-                       value="{{ old('Email', $customer->Email ?? '') }}" placeholder="customer@example.com" required>
-                @error('Email')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-3">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Mobile</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->Mobile ?? '-' }}</div>
-            @else
-                <input type="text" name="Mobile"
-                       class="form-control form-control-sm @error('Mobile') is-invalid @enderror"
-                       value="{{ old('Mobile', $customer->Mobile ?? '') }}" placeholder="3001234567" required>
-                @error('Mobile')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-3">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
-                Phone @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
-            </label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->Phone ?? '-' }}</div>
-            @else
-                <input type="text" name="Phone"
-                       class="form-control form-control-sm @error('Phone') is-invalid @enderror"
-                       value="{{ old('Phone', $customer->Phone ?? '') }}" placeholder="042 1234567">
-                @error('Phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-12">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
-                Website @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
-            </label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">
-                    @if(!empty($customer->Website))
-                        <a href="{{ $customer->Website }}" target="_blank">{{ $customer->Website }}</a>
-                    @else - @endif
-                </div>
-            @else
-                <input type="url" name="Website"
-                       class="form-control form-control-sm @error('Website') is-invalid @enderror"
-                       value="{{ old('Website', $customer->Website ?? '') }}" placeholder="https://www.example.com">
-                @error('Website')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-    </div>
-</div>
 
 {{-- ════════════ SECTION 3 — Primary Address ════════════ --}}
 <div class="_cfp-section">
