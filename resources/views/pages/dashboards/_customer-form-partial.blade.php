@@ -185,7 +185,7 @@
 <div class="{{ $isView ? 'show-mode' : '' }}">
 
 <div class="row justify-content-center">
-	<div class="col-md-10">
+	<div class="col-md-12">
 		<div class="row g-2">
 			{{-- Title --}}
 			<div class="col-md-3">
