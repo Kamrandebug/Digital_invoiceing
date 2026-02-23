@@ -186,7 +186,7 @@
 
 <div class="row justify-content-center">
 	<div class="col-md-10">
-		<div class="row g-3">
+		<div class="row g-2">
 			{{-- Title --}}
 			<div class="col-md-3">
 				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Title</label>
@@ -313,7 +313,257 @@
 				@endif
 			</div>
 			
-			
+			<div class="col-md-12 mt-4">
+				<ul class="nav nav-tabs" id="myTab" role="tablist">
+				  <li class="nav-item" role="presentation">
+					<button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">Address</button>
+				  </li>
+				  <li class="nav-item" role="presentation">
+					<button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile-tab-pane" type="button" role="tab" aria-controls="profile-tab-pane" aria-selected="false">Financial & Tax Information</button>
+				  </li>
+				  <li class="nav-item" role="presentation">
+					<button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">Additional Information</button>
+				  </li>
+				</ul>
+				<div class="tab-content" id="myTabContent">
+				  <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+					<div class="row g-4">
+						<div class="col-md-6">
+							<div class="row g-2">
+								<div class="col-md-12">
+									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }} float-start">Street Address</label>
+									<div class="form-check float-end">
+										<input type="hidden" name="SameAsBilling" value="0">
+										<input class="form-check-input" type="checkbox" name="SameAsBilling" id="{{ $uid }}_SameAsBilling" value="1" {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
+										<label class="form-check-label" for="{{ $uid }}_SameAsBilling">Same as Primary Address</label>
+									</div>
+									@if($isReadonly)
+										<div class="_cfp-detail-value clearfix">{{ $customer->Address ?? '-' }}</div>
+									@else
+										<textarea name="Address" rows="2"
+												  class="form-control form-control-sm @error('Address') is-invalid @enderror"
+												  placeholder="Enter street address" required>{{ old('Address', $customer->Address ?? '') }}</textarea>
+										@error('Address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									@endif
+								</div>
+
+								<div class="col-md-3">
+									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">City</label>
+									@if($isReadonly)
+										<div class="_cfp-detail-value">{{ $customer->City ?? '-' }}</div>
+									@else
+										<input type="text" name="City"
+											   class="form-control form-control-sm @error('City') is-invalid @enderror"
+											   value="{{ old('City', $customer->City ?? '') }}" placeholder="City" required>
+										@error('City')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									@endif
+								</div>
+
+								<div class="col-md-3">
+									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">State / Province</label>
+									@if($isReadonly)
+										<div class="_cfp-detail-value">{{ $customer->County ?? '-' }}</div>
+									@else
+										<input type="text" name="County"
+											   class="form-control form-control-sm @error('County') is-invalid @enderror"
+											   value="{{ old('County', $customer->County ?? '') }}" placeholder="State/Province" required>
+										@error('County')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									@endif
+								</div>
+
+								<div class="col-md-3">
+									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Postal Code</label>
+									@if($isReadonly)
+										<div class="_cfp-detail-value">{{ $customer->PostalCode ?? '-' }}</div>
+									@else
+										<input type="text" name="PostalCode"
+											   class="form-control form-control-sm @error('PostalCode') is-invalid @enderror"
+											   value="{{ old('PostalCode', $customer->PostalCode ?? '') }}" placeholder="54000" required>
+										@error('PostalCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									@endif
+								</div>
+
+								<div class="col-md-3">
+									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Country</label>
+									@if($isReadonly)
+										<div class="_cfp-detail-value">{{ $customer->Country ?? '-' }}</div>
+									@else
+										<input type="text" name="Country"
+											   class="form-control form-control-sm @error('Country') is-invalid @enderror"
+											   value="{{ old('Country', $customer->Country ?? 'Pakistan') }}" placeholder="Pakistan" required>
+										@error('Country')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									@endif
+								</div>
+
+							</div>
+						</div>  
+						<div class="col-md-6">
+							
+							<div id="{{ $uid }}_billingFields" class="row g-2" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'display:none' : '' }}">
+
+								<div class="col-md-12">
+									<label class="form-label _cfp-required">Street Address</label>
+									<textarea name="BillingAddress" id="{{ $uid }}_BillingAddress" rows="2"
+											  class="form-control form-control-sm @error('BillingAddress') is-invalid @enderror"
+											  placeholder="Billing address" required>{{ old('BillingAddress', $customer->BillingAddress ?? '') }}</textarea>
+									@error('BillingAddress')<div class="invalid-feedback">{{ $message }}</div>@enderror
+								</div>
+
+								<div class="col-md-3">
+									<label class="form-label _cfp-required">City</label>
+									<input type="text" name="BillingCity" id="{{ $uid }}_BillingCity"
+										   class="form-control form-control-sm @error('BillingCity') is-invalid @enderror"
+										   value="{{ old('BillingCity', $customer->BillingCity ?? '') }}" placeholder="City" required>
+									@error('BillingCity')<div class="invalid-feedback">{{ $message }}</div>@enderror
+								</div>
+
+								<div class="col-md-3">
+									<label class="form-label _cfp-required">State / Province</label>
+									<input type="text" name="BillingCounty" id="{{ $uid }}_BillingCounty"
+										   class="form-control form-control-sm @error('BillingCounty') is-invalid @enderror"
+										   value="{{ old('BillingCounty', $customer->BillingCounty ?? '') }}" placeholder="State/Province" required>
+									@error('BillingCounty')<div class="invalid-feedback">{{ $message }}</div>@enderror
+								</div>
+
+								<div class="col-md-3">
+									<label class="form-label _cfp-required">Postal Code</label>
+									<input type="text" name="BillingPostalCode" id="{{ $uid }}_BillingPostalCode"
+										   class="form-control form-control-sm @error('BillingPostalCode') is-invalid @enderror"
+										   value="{{ old('BillingPostalCode', $customer->BillingPostalCode ?? '') }}" placeholder="54000" required>
+									@error('BillingPostalCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
+								</div>
+
+								<div class="col-md-3">
+									<label class="form-label _cfp-required">Country</label>
+									<input type="text" name="BillingCountry" id="{{ $uid }}_BillingCountry"
+										   class="form-control form-control-sm @error('BillingCountry') is-invalid @enderror"
+										   value="{{ old('BillingCountry', $customer->BillingCountry ?? 'Pakistan') }}" placeholder="Pakistan" required>
+									@error('BillingCountry')<div class="invalid-feedback">{{ $message }}</div>@enderror
+								</div>
+							</div>
+						</div>  
+					</div>
+				  </div>
+				  <div class="tab-pane fade" id="profile-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
+					<div class="row g-2">
+						<div class="col-md-4">
+							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">NTN Number</label>
+							@if($isReadonly)
+								<div class="_cfp-detail-value">{{ $customer->NTN ?? '-' }}</div>
+							@else
+								<input type="text" name="NTN"
+									   class="form-control form-control-sm @error('NTN') is-invalid @enderror"
+									   value="{{ old('NTN', $customer->NTN ?? '') }}" placeholder="Enter NTN" required>
+								@error('NTN')<div class="invalid-feedback">{{ $message }}</div>@enderror
+							@endif
+						</div>
+
+						<div class="col-md-4">
+							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
+								Sales Tax No. @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
+							</label>
+							@if($isReadonly)
+								<div class="_cfp-detail-value">{{ $customer->SalesTaxNumber ?? '-' }}</div>
+							@else
+								<input type="text" name="SalesTaxNumber"
+									   class="form-control form-control-sm @error('SalesTaxNumber') is-invalid @enderror"
+									   value="{{ old('SalesTaxNumber', $customer->SalesTaxNumber ?? '') }}" placeholder="Enter STN">
+								@error('SalesTaxNumber')<div class="invalid-feedback">{{ $message }}</div>@enderror
+							@endif
+						</div>
+
+						<div class="col-md-4">
+							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">CNIC</label>
+							@if($isReadonly)
+								<div class="_cfp-detail-value">{{ $customer->CNIC ?? '-' }}</div>
+							@else
+								<input type="text" name="CNIC"
+									   class="form-control form-control-sm @error('CNIC') is-invalid @enderror"
+									   value="{{ old('CNIC', $customer->CNIC ?? '') }}" placeholder="12345-1234567-1" required>
+								@error('CNIC')<div class="invalid-feedback">{{ $message }}</div>@enderror
+							@endif
+						</div>
+
+						<div class="col-md-4">
+							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Credit Limit (PKR)</label>
+							@if($isReadonly)
+								<div class="_cfp-detail-value">{{ number_format($customer->CreditLimit ?? 0, 2) }}</div>
+							@else
+								<input type="number" step="0.01" name="CreditLimit"
+									   class="form-control form-control-sm @error('CreditLimit') is-invalid @enderror"
+									   value="{{ old('CreditLimit', $customer->CreditLimit ?? '0.00') }}" placeholder="0.00" required>
+								@error('CreditLimit')<div class="invalid-feedback">{{ $message }}</div>@enderror
+							@endif
+						</div>
+
+						<div class="col-md-4">
+							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Payment Terms</label>
+							@if($isReadonly)
+								<div class="_cfp-detail-value">{{ $customer->PaymentTerms ?? '-' }}</div>
+							@else
+								<select name="PaymentTerms"
+										class="form-select form-select-sm @error('PaymentTerms') is-invalid @enderror" required>
+									<option value="">Select</option>
+									@foreach(['Cash','Net 15','Net 30','Net 45','Net 60','Due on Receipt','COD'] as $pt)
+										<option value="{{ $pt }}" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == $pt ? 'selected' : '' }}>{{ $pt }}</option>
+									@endforeach
+								</select>
+								@error('PaymentTerms')<div class="invalid-feedback">{{ $message }}</div>@enderror
+							@endif
+						</div>
+
+						<div class="col-md-4">
+							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Tax Filer Status</label>
+							@if($isReadonly)
+								<div class="_cfp-detail-value">
+									@if(!empty($customer->IsFiler))
+										<i class="fas fa-check-circle text-success"></i> Tax Filer
+									@else
+										<i class="fas fa-times-circle text-danger"></i> Non-Filer
+									@endif
+								</div>
+							@else
+								<div class="form-check mt-1">
+									<input type="hidden" name="IsFiler" value="0">
+									<input class="form-check-input" type="checkbox"
+										   name="IsFiler" id="{{ $uid }}_IsFiler" value="1"
+										   {{ old('IsFiler', $customer->IsFiler ?? '1') == '1' ? 'checked' : '' }}>
+									<label class="form-check-label" for="{{ $uid }}_IsFiler">Is Tax Filer?</label>
+								</div>
+							@endif
+						</div>
+
+					</div>
+				  </div>
+				  <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
+					<div class="row g-2">
+					<div class="col-md-12">
+						<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Notes</label>
+						@if($isReadonly)
+							<div class="_cfp-detail-value" style="min-height:70px;">{{ $customer->Notes ?? 'No additional notes.' }}</div>
+						@else
+							<textarea name="Notes" rows="3"
+									  class="form-control form-control-sm @error('Notes') is-invalid @enderror"
+									  placeholder="Any additional notes" required>{{ old('Notes', $customer->Notes ?? '') }}</textarea>
+							@error('Notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+						@endif
+					</div>
+
+					@if(!$isReadonly)
+					<div class="col-md-4">
+						<label class="form-label _cfp-required">Status</label>
+						<select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror" required>
+							<option value="1" {{ old('Status', $customer->Status ?? '1') != '0' ? 'selected' : '' }}>Active</option>
+							<option value="0" {{ old('Status', $customer->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
+						</select>
+						@error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+					</div>
+					@endif
+
+				</div>
+				  </div>
+				</div>
+			</div>
 
 		</div>
 	</div>
@@ -321,260 +571,6 @@
 	
 
 
-
-{{-- ════════════ SECTION 3 — Primary Address ════════════ --}}
-<div class="_cfp-section">
-    <div class="_cfp-section-title"><i class="fas fa-map-marker-alt"></i> Address Information</div>
-    <div class="row g-3">
-
-        <div class="col-md-12">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Street Address</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->Address ?? '-' }}</div>
-            @else
-                <textarea name="Address" rows="2"
-                          class="form-control form-control-sm @error('Address') is-invalid @enderror"
-                          placeholder="Enter street address" required>{{ old('Address', $customer->Address ?? '') }}</textarea>
-                @error('Address')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-4">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">City</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->City ?? '-' }}</div>
-            @else
-                <input type="text" name="City"
-                       class="form-control form-control-sm @error('City') is-invalid @enderror"
-                       value="{{ old('City', $customer->City ?? '') }}" placeholder="City" required>
-                @error('City')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-4">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">State / Province</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->County ?? '-' }}</div>
-            @else
-                <input type="text" name="County"
-                       class="form-control form-control-sm @error('County') is-invalid @enderror"
-                       value="{{ old('County', $customer->County ?? '') }}" placeholder="State/Province" required>
-                @error('County')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-2">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Postal Code</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->PostalCode ?? '-' }}</div>
-            @else
-                <input type="text" name="PostalCode"
-                       class="form-control form-control-sm @error('PostalCode') is-invalid @enderror"
-                       value="{{ old('PostalCode', $customer->PostalCode ?? '') }}" placeholder="54000" required>
-                @error('PostalCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-2">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Country</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->Country ?? '-' }}</div>
-            @else
-                <input type="text" name="Country"
-                       class="form-control form-control-sm @error('Country') is-invalid @enderror"
-                       value="{{ old('Country', $customer->Country ?? 'Pakistan') }}" placeholder="Pakistan" required>
-                @error('Country')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-    </div>
-</div>
-
-{{-- ════════════ SECTION 4 — Billing Address (edit/create only) ════════════ --}}
-@if(!$isReadonly)
-<div class="_cfp-section">
-    <div class="_cfp-section-title"><i class="fas fa-file-invoice"></i> Billing Address</div>
-
-    <div class="form-check mb-2">
-        <input type="hidden" name="SameAsBilling" value="0">
-        <input class="form-check-input" type="checkbox"
-               name="SameAsBilling" id="{{ $uid }}_SameAsBilling" value="1"
-               {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
-        <label class="form-check-label" for="{{ $uid }}_SameAsBilling">Same as Primary Address</label>
-    </div>
-
-    <div id="{{ $uid }}_billingFields"
-         class="row g-3"
-         style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'display:none' : '' }}">
-
-        <div class="col-md-12">
-            <label class="form-label _cfp-required">Billing Street Address</label>
-            <textarea name="BillingAddress" id="{{ $uid }}_BillingAddress" rows="2"
-                      class="form-control form-control-sm @error('BillingAddress') is-invalid @enderror"
-                      placeholder="Billing address" required>{{ old('BillingAddress', $customer->BillingAddress ?? '') }}</textarea>
-            @error('BillingAddress')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        </div>
-
-        <div class="col-md-4">
-            <label class="form-label _cfp-required">Billing City</label>
-            <input type="text" name="BillingCity" id="{{ $uid }}_BillingCity"
-                   class="form-control form-control-sm @error('BillingCity') is-invalid @enderror"
-                   value="{{ old('BillingCity', $customer->BillingCity ?? '') }}" placeholder="City" required>
-            @error('BillingCity')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        </div>
-
-        <div class="col-md-4">
-            <label class="form-label _cfp-required">Billing State / Province</label>
-            <input type="text" name="BillingCounty" id="{{ $uid }}_BillingCounty"
-                   class="form-control form-control-sm @error('BillingCounty') is-invalid @enderror"
-                   value="{{ old('BillingCounty', $customer->BillingCounty ?? '') }}" placeholder="State/Province" required>
-            @error('BillingCounty')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        </div>
-
-        <div class="col-md-2">
-            <label class="form-label _cfp-required">Billing Postal Code</label>
-            <input type="text" name="BillingPostalCode" id="{{ $uid }}_BillingPostalCode"
-                   class="form-control form-control-sm @error('BillingPostalCode') is-invalid @enderror"
-                   value="{{ old('BillingPostalCode', $customer->BillingPostalCode ?? '') }}" placeholder="54000" required>
-            @error('BillingPostalCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        </div>
-
-        <div class="col-md-2">
-            <label class="form-label _cfp-required">Billing Country</label>
-            <input type="text" name="BillingCountry" id="{{ $uid }}_BillingCountry"
-                   class="form-control form-control-sm @error('BillingCountry') is-invalid @enderror"
-                   value="{{ old('BillingCountry', $customer->BillingCountry ?? 'Pakistan') }}" placeholder="Pakistan" required>
-            @error('BillingCountry')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        </div>
-    </div>
-</div>
-@endif
-
-{{-- ════════════ SECTION 5 — Financial & Tax ════════════ --}}
-<div class="_cfp-section">
-    <div class="_cfp-section-title"><i class="fas fa-calculator"></i> Financial & Tax Information</div>
-    <div class="row g-3">
-
-        <div class="col-md-4">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">NTN Number</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->NTN ?? '-' }}</div>
-            @else
-                <input type="text" name="NTN"
-                       class="form-control form-control-sm @error('NTN') is-invalid @enderror"
-                       value="{{ old('NTN', $customer->NTN ?? '') }}" placeholder="Enter NTN" required>
-                @error('NTN')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-4">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
-                Sales Tax No. @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
-            </label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->SalesTaxNumber ?? '-' }}</div>
-            @else
-                <input type="text" name="SalesTaxNumber"
-                       class="form-control form-control-sm @error('SalesTaxNumber') is-invalid @enderror"
-                       value="{{ old('SalesTaxNumber', $customer->SalesTaxNumber ?? '') }}" placeholder="Enter STN">
-                @error('SalesTaxNumber')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-4">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">CNIC</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->CNIC ?? '-' }}</div>
-            @else
-                <input type="text" name="CNIC"
-                       class="form-control form-control-sm @error('CNIC') is-invalid @enderror"
-                       value="{{ old('CNIC', $customer->CNIC ?? '') }}" placeholder="12345-1234567-1" required>
-                @error('CNIC')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-4">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Credit Limit (PKR)</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ number_format($customer->CreditLimit ?? 0, 2) }}</div>
-            @else
-                <input type="number" step="0.01" name="CreditLimit"
-                       class="form-control form-control-sm @error('CreditLimit') is-invalid @enderror"
-                       value="{{ old('CreditLimit', $customer->CreditLimit ?? '0.00') }}" placeholder="0.00" required>
-                @error('CreditLimit')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-4">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Payment Terms</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">{{ $customer->PaymentTerms ?? '-' }}</div>
-            @else
-                <select name="PaymentTerms"
-                        class="form-select form-select-sm @error('PaymentTerms') is-invalid @enderror" required>
-                    <option value="">Select</option>
-                    @foreach(['Cash','Net 15','Net 30','Net 45','Net 60','Due on Receipt','COD'] as $pt)
-                        <option value="{{ $pt }}" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == $pt ? 'selected' : '' }}>{{ $pt }}</option>
-                    @endforeach
-                </select>
-                @error('PaymentTerms')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        <div class="col-md-4">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Tax Filer Status</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value">
-                    @if(!empty($customer->IsFiler))
-                        <i class="fas fa-check-circle text-success"></i> Tax Filer
-                    @else
-                        <i class="fas fa-times-circle text-danger"></i> Non-Filer
-                    @endif
-                </div>
-            @else
-                <div class="form-check mt-1">
-                    <input type="hidden" name="IsFiler" value="0">
-                    <input class="form-check-input" type="checkbox"
-                           name="IsFiler" id="{{ $uid }}_IsFiler" value="1"
-                           {{ old('IsFiler', $customer->IsFiler ?? '1') == '1' ? 'checked' : '' }}>
-                    <label class="form-check-label" for="{{ $uid }}_IsFiler">Is Tax Filer?</label>
-                </div>
-            @endif
-        </div>
-
-    </div>
-</div>
-
-{{-- ════════════ SECTION 6 — Additional Information ════════════ --}}
-<div class="_cfp-section">
-    <div class="_cfp-section-title"><i class="fas fa-sticky-note"></i> Additional Information</div>
-    <div class="row g-3">
-
-        <div class="col-md-12">
-            <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Notes</label>
-            @if($isReadonly)
-                <div class="_cfp-detail-value" style="min-height:70px;">{{ $customer->Notes ?? 'No additional notes.' }}</div>
-            @else
-                <textarea name="Notes" rows="3"
-                          class="form-control form-control-sm @error('Notes') is-invalid @enderror"
-                          placeholder="Any additional notes" required>{{ old('Notes', $customer->Notes ?? '') }}</textarea>
-                @error('Notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @endif
-        </div>
-
-        @if(!$isReadonly)
-        <div class="col-md-4">
-            <label class="form-label _cfp-required">Status</label>
-            <select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror" required>
-                <option value="1" {{ old('Status', $customer->Status ?? '1') != '0' ? 'selected' : '' }}>Active</option>
-                <option value="0" {{ old('Status', $customer->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
-            </select>
-            @error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        </div>
-        @endif
-
-    </div>
-</div>
 
 {{-- ════════════ ACTION BUTTONS ════════════ --}}
 @if(!$inModal)
