@@ -346,7 +346,7 @@
 </div>
 
 <div class="modal fade" id="customer_modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
 
             <div class="modal-header">
