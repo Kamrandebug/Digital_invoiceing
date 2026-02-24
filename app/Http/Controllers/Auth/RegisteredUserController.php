@@ -58,6 +58,9 @@ class RegisteredUserController extends Controller
             // Optional: Log success
             \Illuminate\Support\Facades\Log::info("Tenant created for user {$user->id}: {$tenant->database_name}");
         } catch (\Exception $e) {
+            // Log the error for debugging
+            \Illuminate\Support\Facades\Log::error('Tenant creation failed: ' . $e->getMessage());
+
             // If tenant creation fails, delete the user and show error
             $user->delete();
 

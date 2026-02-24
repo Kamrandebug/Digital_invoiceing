@@ -657,25 +657,51 @@
         if (!cb || !panel) return;
 
         const inputs = panel.querySelectorAll('input:not([type=hidden]), textarea');
+        
+        // Define map of Destination ID Suffix -> Source Name
+        const map = {
+            BillingAddress   : 'Address',
+            BillingCity      : 'City',
+            BillingCounty    : 'County',
+            BillingPostalCode: 'PostalCode',
+            BillingCountry   : 'Country',
+        };
+
         if (cb.checked) {
             panel.style.display = 'none';
             inputs.forEach(i => i.removeAttribute('required'));
-            // Copy primary address values across
-            const map = {
-                BillingAddress   : 'Address',
-                BillingCity      : 'City',
-                BillingCounty    : 'County',
-                BillingPostalCode: 'PostalCode',
-                BillingCountry   : 'Country',
-            };
-            Object.entries(map).forEach(([dst, src]) => {
-                const dstEl = document.getElementById(uid + '_' + dst);
-                const srcEl = document.querySelector('form#' + uid + '_form [name="' + src + '"]');
-                if (dstEl && srcEl) dstEl.value = srcEl.value;
-            });
+            // Sync values immediately
+            syncValues();
         } else {
             panel.style.display = '';
             inputs.forEach(i => i.setAttribute('required', 'required'));
+        }
+
+        function syncValues() {
+            Object.entries(map).forEach(([dst, src]) => {
+                const dstEl = document.getElementById(uid + '_' + dst);
+                const srcEl = document.querySelector('form#' + uid + '_form [name="' + src + '"]');
+                if (dstEl && srcEl) {
+                    dstEl.value = srcEl.value;
+                    // Trigger input event on destination to handle any dependent logic (like validation cleanup)
+                    dstEl.dispatchEvent(new Event('input')); 
+                }
+            });
+        }
+
+        // Attach real-time listeners to source fields if not already attached
+        // We use a flag on the form to prevent double-binding if this script runs multiple times
+        const form = document.getElementById(uid + '_form');
+        if (form && !form.dataset.syncAttached) {
+            Object.values(map).forEach(srcName => {
+                const srcEl = form.querySelector('[name="' + srcName + '"]');
+                if (srcEl) {
+                    srcEl.addEventListener('input', () => {
+                        if (cb.checked) syncValues();
+                    });
+                }
+            });
+            form.dataset.syncAttached = 'true';
         }
     }
     document.getElementById(uid + '_SameAsBilling')?.addEventListener('change', toggleBilling);
@@ -691,6 +717,15 @@
     const form   = document.getElementById(uid + '_form');
     const prefix = 'cfp_{{ $mode }}_{{ $customer->ID ?? "new" }}_';
     if (form) {
+        // ── NEW: Intercept Enter key submission in Modal ──
+        @if($inModal)
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); // Stop default browser POST
+            const saveBtn = document.getElementById('customer_modal_save_btn');
+            if (saveBtn) saveBtn.click(); // Trigger AJAX save
+        });
+        @endif
+
         const inputs = form.querySelectorAll('input:not([type=hidden]):not([type=password]), textarea, select');
         if (!document.querySelector('.is-invalid')) {
             inputs.forEach(inp => {

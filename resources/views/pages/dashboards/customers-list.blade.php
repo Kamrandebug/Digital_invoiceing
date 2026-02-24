@@ -470,6 +470,26 @@ function openCustomerModal(mode, customerId = null) {
     .then(html => {
         modalBody.innerHTML = html;
 
+        // ── EXECUTE SCRIPTS EMBEDDED IN AJAX CONTENT ──
+        // Browsers do not execute <script> tags inserted via innerHTML.
+        // We must manually extract and run them.
+        const scripts = modalBody.getElementsByTagName("script");
+        const scriptArray = Array.from(scripts); // Convert HTMLCollection to Array to avoid live collection issues during removal/re-insertion
+
+        scriptArray.forEach(oldScript => {
+            const newScript = document.createElement("script");
+            if (oldScript.src) {
+                newScript.src = oldScript.src;
+                newScript.async = false; // Ensure sequential execution if needed
+            } else {
+                newScript.textContent = oldScript.textContent;
+            }
+            // Append to body (or head) to force execution
+            document.body.appendChild(newScript);
+            // Optional: Remove the script tag from the body after execution to keep DOM clean
+            // document.body.removeChild(newScript); 
+        });
+
         // ── Wire Save Button → AJAX submit ──
         saveBtn.onclick = function () {
             const form = modalBody.querySelector('form');
