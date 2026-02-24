@@ -1,3 +1,4 @@
+config/database.php
 /.phpunit.cache
 /node_modules
 /public/build
@@ -21,3 +22,7 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+config/app.php
+bootstrap/app.php
+.env.example

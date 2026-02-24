@@ -39,7 +39,7 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
@@ -49,22 +49,26 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        /*
+
         // 🔥 CREATE TENANT DATABASE FROM CENTRAL SCHEMA
+        
         try {
             $tenant = $this->tenantService->createTenant($user);
-            
+
             // Optional: Log success
             \Illuminate\Support\Facades\Log::info("Tenant created for user {$user->id}: {$tenant->database_name}");
         } catch (\Exception $e) {
+            // Log the error for debugging
+            \Illuminate\Support\Facades\Log::error('Tenant creation failed: ' . $e->getMessage());
+
             // If tenant creation fails, delete the user and show error
             $user->delete();
-            
+
             return back()->withErrors([
                 'email' => 'Failed to create your account. Please try again.',
             ])->withInput();
         }
-        */
+        
 
         event(new Registered($user));
 

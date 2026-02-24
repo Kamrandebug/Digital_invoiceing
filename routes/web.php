@@ -42,20 +42,24 @@ Route::middleware('auth')->get('/test-tenant', function () {
 Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->group(function () {
     // List customers
     Route::get('/', [CustomerController::class, 'index'])->name('index');
-    
+
     // Create customer
     Route::get('/create', [CustomerController::class, 'create'])->name('create');
     Route::post('/save', [CustomerController::class, 'save_transaction'])->name('save_transaction');
-    
+
     // Edit customer
     Route::get('/{id}/edit', [CustomerController::class, 'edit'])->name('edit');
     Route::put('/{id}/update', [CustomerController::class, 'edit_transaction'])->name('edit_transaction');
-    
+
     // Delete customer
     Route::delete('/{id}/delete', [CustomerController::class, 'delete_transaction'])->name('delete_transaction');
-    
+
     // Export
     Route::get('/export/csv', [CustomerController::class, 'exportCSV'])->name('export-csv');
+
+   // Customer Form Model Route
+    Route::get('/modal', [CustomerController::class, 'modal'])->name('modal');
+    Route::get('/{id}/modal', [CustomerController::class, 'modal'])->name('modal.id');
 
     // View customer
     Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
@@ -83,4 +87,41 @@ Route::middleware(['auth', 'tenant'])->prefix('products')->name('products.')->gr
     Route::get('/{id}', [ProductController::class, 'show'])->name('show');
 });
 
-require __DIR__.'/auth.php';
+Route::middleware(['auth', 'tenant'])->group(function () {
+    Route::get('/invoice-list', function () {
+        // Create an empty paginator for the view
+        $invoices = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10);
+        return view('pages.dashboards.invoice-list', compact('invoices'));
+    });
+});
+
+Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->group(function () {
+    // List invoices
+    Route::get('/', function () {
+        $invoices = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10);
+        return view('pages.dashboards.invoice-list', compact('invoices'));
+    })->name('index');
+
+    // Create invoice
+    Route::get('/create', function() { return 'Create Invoice Placeholder'; })->name('create');
+    Route::post('/save', function() { return response()->json(['status'=>'error', 'message'=>'Backend not implemented']); })->name('save_transaction');
+
+    // Edit invoice
+    Route::get('/{id}/edit', function() { return 'Edit Invoice Placeholder'; })->name('edit');
+    Route::put('/{id}/update', function() { return response()->json(['status'=>'error', 'message'=>'Backend not implemented']); })->name('edit_transaction');
+
+    // Delete invoice
+    Route::delete('/{id}/delete', function() { return back()->with('error', 'Backend not implemented'); })->name('delete');
+
+    // Export
+    Route::get('/export/csv', function() { return back()->with('error', 'Backend not implemented'); })->name('export-csv');
+
+    // Invoice Form Modal Route
+    Route::get('/modal', function() { return '<div class="p-3">Modal content placeholder (Backend pending)</div>'; })->name('modal');
+    Route::get('/{id}/modal', function() { return '<div class="p-3">Modal content placeholder (Backend pending)</div>'; })->name('modal.id');
+
+    // View invoice
+    Route::get('/{id}', function() { return 'Show Invoice Placeholder'; })->name('show');
+});
+
+require __DIR__ . '/auth.php';

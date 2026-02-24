@@ -906,12 +906,38 @@
     document.getElementById('FirstName').addEventListener('blur', updateDisplayName);
     document.getElementById('LastName').addEventListener('blur', updateDisplayName);
     
-    // Toggle Billing
-    function toggleBillingFields() {
+    // Sync Billing Address Helper
+    window.syncBillingAddress = function() {
         const checkbox = document.getElementById('SameAsBilling');
-        if (!checkbox) return; // Guard clause
-        
+        if (!checkbox || !checkbox.checked) return;
+
+        // Map of Source ID -> Target ID
+        const fields = {
+            'Address': 'BillingAddress',
+            'City': 'BillingCity',
+            'County': 'BillingCounty',
+            'PostalCode': 'BillingPostalCode',
+            'Country': 'BillingCountry'
+        };
+
+        for (const [srcId, targetId] of Object.entries(fields)) {
+            const src = document.getElementById(srcId);
+            const target = document.getElementById(targetId);
+            if (src && target) {
+                target.value = src.value;
+                // Dispatch input event to trigger any auto-save or validation listeners
+                target.dispatchEvent(new Event('input')); 
+            }
+        }
+    };
+
+    // Toggle Billing
+    window.toggleBillingFields = function() {
+        const checkbox = document.getElementById('SameAsBilling');
         const billingFields = document.getElementById('billingAddressFields');
+        
+        if (!checkbox || !billingFields) return;
+        
         const billingInputs = billingFields.querySelectorAll('input, textarea');
         
         if (checkbox.checked) {
@@ -922,18 +948,8 @@
                 input.classList.remove('is-invalid');
             });
             
-            // Copy values from primary address to billing address
-            const addr = document.getElementById('Address').value;
-            const city = document.getElementById('City').value;
-            const county = document.getElementById('County').value;
-            const postal = document.getElementById('PostalCode').value;
-            const country = document.getElementById('Country').value;
-            
-            if(document.getElementById('BillingAddress')) document.getElementById('BillingAddress').value = addr;
-            if(document.getElementById('BillingCity')) document.getElementById('BillingCity').value = city;
-            if(document.getElementById('BillingCounty')) document.getElementById('BillingCounty').value = county;
-            if(document.getElementById('BillingPostalCode')) document.getElementById('BillingPostalCode').value = postal;
-            if(document.getElementById('BillingCountry')) document.getElementById('BillingCountry').value = country;
+            // Sync immediately
+            window.syncBillingAddress();
             
         } else {
             billingFields.style.display = 'block';
@@ -948,16 +964,26 @@
                 }
             });
         }
-    }
+    };
     
     document.addEventListener('DOMContentLoaded', function() {
-        toggleBillingFields();
+        // Initial state check
+        window.toggleBillingFields();
+
+        const checkbox = document.getElementById('SameAsBilling');
+        if (checkbox) {
+            checkbox.addEventListener('change', window.toggleBillingFields);
+        }
+
+        // Attach listeners to source fields for real-time sync
+        const sourceIds = ['Address', 'City', 'County', 'PostalCode', 'Country'];
+        sourceIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', window.syncBillingAddress);
+            }
+        });
     });
-    
-    const sameAsBillingCheckbox = document.getElementById('SameAsBilling');
-    if (sameAsBillingCheckbox) {
-        sameAsBillingCheckbox.addEventListener('change', toggleBillingFields);
-    }
     
     // Scroll to error
     window.addEventListener('load', function() {
