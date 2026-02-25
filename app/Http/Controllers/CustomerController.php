@@ -47,7 +47,7 @@ class CustomerController extends Controller
         // Get filtered data
         $customers = Customer::getlistingdata($filters)->paginate(15);
         
-        return view('pages.dashboards.customers-list', compact('customers'));
+        return view('pages.dashboards.Customer.customers-list', compact('customers'));
     }
     
     /**
@@ -55,7 +55,7 @@ class CustomerController extends Controller
      */
     public function create()
     {
-        return view('pages.dashboards.customers-form', ['mode' => 'create', 'customer' => new Customer()]);
+        return view('pages.dashboards.Customer.customers-form', ['mode' => 'create', 'customer' => new Customer()]);
     }
     
     /**
@@ -275,7 +275,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
         $customerModel->setRawAttributes((array)$customer, true);
         $customerModel->exists = true;
 
-        return view('pages.dashboards.customers-form', ['mode' => 'show', 'customer' => $customerModel]);
+        return view('pages.dashboards.Customer.customers-form', ['mode' => 'show', 'customer' => $customerModel]);
     }
     
     /**
@@ -295,7 +295,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
         $customerModel->setRawAttributes((array)$customer, true);
         $customerModel->exists = true;
 
-        return view('pages.dashboards.customers-form', ['mode' => 'edit', 'customer' => $customerModel]);
+        return view('pages.dashboards.Customer.customers-form', ['mode' => 'edit', 'customer' => $customerModel]);
     }
 
     /**
@@ -321,7 +321,7 @@ public function modal(Request $request, $id = null)
     }
 
     // Return ONLY the partial — no layout wrapping
-    return view('pages.dashboards._customer-form-partial', [
+    return view('pages.dashboards.Customer._customer-form-partial', [
         'mode'     => $mode,
         'customer' => $customer ?? new Customer(),
         'inModal'  => true,

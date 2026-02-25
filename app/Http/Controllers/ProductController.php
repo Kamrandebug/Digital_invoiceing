@@ -47,7 +47,7 @@ class ProductController extends Controller
         // Get filtered data
         $products = ProductModel::getlistingdata($filters);
 
-        return view('pages.dashboards.products', compact('products'));
+        return view('pages.dashboards.Product.products', compact('products'));
     }
 
     /**
@@ -55,7 +55,7 @@ class ProductController extends Controller
      */
     public function create()
     {
-        return view('pages.dashboards.products-form', ['mode' => 'create', 'product' => new ProductModel()]);
+        return view('pages.dashboards.Product.products-form', ['mode' => 'create', 'product' => new ProductModel()]);
     }
 
     /**
@@ -267,7 +267,7 @@ class ProductController extends Controller
         $productModel->setRawAttributes((array)$product, true);
         $productModel->exists = true;
 
-        return view('pages.dashboards.products-form', ['mode' => 'show', 'product' => $productModel]);
+        return view('pages.dashboards.Product.products-form', ['mode' => 'show', 'product' => $productModel]);
     }
 
     /**
@@ -287,7 +287,7 @@ class ProductController extends Controller
         $productModel->setRawAttributes((array)$product, true);
         $productModel->exists = true;
 
-        return view('pages.dashboards.products-form', ['mode' => 'edit', 'product' => $productModel]);
+        return view('pages.dashboards.Product.products-form', ['mode' => 'edit', 'product' => $productModel]);
     }
 
     /**

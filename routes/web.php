@@ -91,7 +91,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     Route::get('/invoice-list', function () {
         // Create an empty paginator for the view
         $invoices = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10);
-        return view('pages.dashboards.invoice-list', compact('invoices'));
+        return view('pages.dashboards.Invoice.invoice-list', compact('invoices'));
     });
 });
 
@@ -99,7 +99,7 @@ Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->gr
     // List invoices
     Route::get('/', function () {
         $invoices = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10);
-        return view('pages.dashboards.invoice-list', compact('invoices'));
+        return view('pages.dashboards.Invoice.invoice-list', compact('invoices'));
     })->name('index');
 
     // Create invoice
