@@ -438,7 +438,7 @@ function openCustomerModal(mode, customerId = null) {
     const saveLabel  = document.getElementById('customer_modal_save_label');
     const bsModal    = bootstrap.Modal.getOrCreateInstance(modalEl);
 
-    const titles = { create: 'Add New Customer', edit: 'Edit Customer', show: 'Customer Details' };
+    const titles = { create: 'Add Customer', edit: 'Edit Customer', show: 'Customer Details' };
     modalTitle.textContent = titles[mode] || 'Customer';
 
     if (mode === 'show') {
