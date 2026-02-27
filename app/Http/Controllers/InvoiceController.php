@@ -1,0 +1,513 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\InvoiceModel;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+class InvoiceController extends Controller
+{
+    // ══════════════════════════════════════════════════════════
+    //  INDEX — Listing from tbl_sales_invoice_header
+    // ══════════════════════════════════════════════════════════
+
+    public function index(Request $request)
+    {
+        $filters = [
+            'search'     => $request->input('search'),
+            'start_date' => $request->input('start_date'),
+            'end_date'   => $request->input('end_date'),
+        ];
+
+        $rules    = [];
+        $messages = [];
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $rules['start_date'] = 'date';
+            $rules['end_date']   = 'date|after_or_equal:start_date';
+            $messages['end_date.after_or_equal'] = 'End date must be after or equal to start date.';
+        }
+
+        if ($request->filled('search')) {
+            $rules['search']        = 'string|max:100';
+            $messages['search.max'] = 'Search term is too long.';
+        }
+
+        if (!empty($rules)) {
+            $request->validate($rules, $messages);
+        }
+
+        $invoices = InvoiceModel::getlistingdata($filters)->paginate(15);
+
+        return view('pages.dashboards.Invoice.invoice-list', compact('invoices'));
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  CREATE — Load form with dropdowns
+    // ══════════════════════════════════════════════════════════
+
+    public function create()
+    {
+        return view('pages.dashboards.Invoice._invoice-form-partial', [
+            'mode'      => 'create',
+            'invoice'   => null,
+            'items'     => collect(),
+            'customers' => InvoiceModel::Load_Customer(),
+            'products'  => InvoiceModel::Load_Product(),
+            'inModal'   => false,
+        ]);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  MODAL — AJAX load (create | edit | show)
+    // ══════════════════════════════════════════════════════════
+
+    public function modal(Request $request, $id = null)
+    {
+        $mode    = $request->query('mode', 'create');
+        $invoice = null;
+        $items   = collect();
+
+        if ($id && in_array($mode, ['edit', 'show'])) {
+
+            $invoice = DB::table('tbl_sales_invoice_header as h')
+                ->leftJoin('crm_customer as cust', 'h.CustomerID', '=', 'cust.ID')
+                ->select(
+                    'h.*',
+                    DB::raw("
+                        COALESCE(NULLIF(TRIM(cust.DisplayName),''),
+                            CONCAT(COALESCE(cust.FirstName,''),' ',COALESCE(cust.LastName,''))
+                        ) AS CustomerDisplayName
+                    ")
+                )
+                ->where('h.ID', $id)
+                ->where('h.Status', '!=', 2)
+                ->first();
+
+            if (!$invoice) {
+                return response('<div class="alert alert-danger m-3">Invoice not found.</div>', 404);
+            }
+
+            $items = DB::table('tbl_sales_invoice_detail as d')
+                ->leftJoin('crm_product as p', 'd.ProductID', '=', 'p.ID')
+                ->select('d.*', 'p.Name as ProductName')
+                ->where('d.InvoiceID', $id)
+                ->where('d.Status', '!=', 2)
+                ->get();
+        }
+
+        return view('pages.dashboards.Invoice._invoice-form-partial', [
+            'mode'      => $mode,
+            'invoice'   => $invoice,
+            'items'     => $items,
+            'customers' => InvoiceModel::Load_Customer(),
+            'products'  => InvoiceModel::Load_Product(),
+            'inModal'   => true,
+        ]);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  SHOW
+    // ══════════════════════════════════════════════════════════
+
+    public function show($id)
+    {
+        $invoice = DB::table('tbl_sales_invoice_header')
+            ->where('ID', $id)
+            ->where('Status', '!=', 2)
+            ->first();
+
+        if (!$invoice) {
+            abort(404, 'Invoice not found.');
+        }
+
+        $items = DB::table('tbl_sales_invoice_detail as d')
+            ->leftJoin('crm_product as p', 'd.ProductID', '=', 'p.ID')
+            ->select('d.*', 'p.Name as ProductName')
+            ->where('d.InvoiceID', $id)
+            ->where('d.Status', '!=', 2)
+            ->get();
+
+        return view('pages.dashboards.Invoice._invoice-form-partial', [
+            'mode'      => 'show',
+            'invoice'   => $invoice,
+            'items'     => $items,
+            'customers' => InvoiceModel::Load_Customer(),
+            'products'  => InvoiceModel::Load_Product(),
+            'inModal'   => false,
+        ]);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  EDIT — Load form with existing data
+    // ══════════════════════════════════════════════════════════
+
+    public function edit($id)
+    {
+        $invoice = DB::table('tbl_sales_invoice_header')
+            ->where('ID', $id)
+            ->where('Status', '!=', 2)
+            ->first();
+
+        if (!$invoice) {
+            abort(404, 'Invoice not found.');
+        }
+
+        $items = DB::table('tbl_sales_invoice_detail as d')
+            ->leftJoin('crm_product as p', 'd.ProductID', '=', 'p.ID')
+            ->select('d.*', 'p.Name as ProductName')
+            ->where('d.InvoiceID', $id)
+            ->where('d.Status', '!=', 2)
+            ->get();
+
+        return view('pages.dashboards.Invoice._invoice-form-partial', [
+            'mode'      => 'edit',
+            'invoice'   => $invoice,
+            'items'     => $items,
+            'customers' => InvoiceModel::Load_Customer(),
+            'products'  => InvoiceModel::Load_Product(),
+            'inModal'   => false,
+        ]);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  SAVE TRANSACTION — Create new invoice
+    // ══════════════════════════════════════════════════════════
+
+    public function save_transaction(Request $request)
+{
+    // ✅ Validate first
+    $request->validate([
+        'CustomerID'       => 'required|integer',
+        'InvoiceDate'      => 'required|date',
+        'DueDate'          => 'required|date|after_or_equal:InvoiceDate',
+        'items'            => 'required|array|min:1',
+        'items.*.Quantity' => 'required|numeric|min:0',
+        'items.*.Rate'     => 'required|numeric|min:0',
+    ], [
+        'CustomerID.required'    => 'Please select a customer.',
+        'InvoiceDate.required'   => 'Invoice date is required.',
+        'DueDate.required'       => 'Due date is required.',
+        'DueDate.after_or_equal' => 'Due date must be on or after invoice date.',
+        'items.required'         => 'At least one line item is required.',
+        'items.min'              => 'At least one line item is required.',
+    ]);
+
+    try {
+        $requestId = (string) Str::uuid();
+        $userId    = auth()->id() ?? 1;
+        $now       = now()->toDateTimeString();
+        $docNo     = $request->input('DocNo') ?: $this->generateDocNo();
+
+        // 1. Insert header → get HeaderID
+        $headerId = DB::table('tbl_sales_invoice_header')->insertGetId([
+            'DocNo'          => $docNo,
+            'Type'           => 'SI',
+            'CustomerID'     => $request->CustomerID,
+            'Address'        => $request->Address        ?? null,
+            'InvoiceDate'    => $request->InvoiceDate,
+            'DueDate'        => $request->DueDate,
+            'TermDays'       => $request->TermDays       ?? 0,
+            'Notes'          => $request->Notes          ?? null,
+            'SubTotal'       => $request->SubTotal       ?? 0,
+            'DiscountAmount' => $request->TotalDiscount  ?? 0,
+            'GSTAmount'      => $request->TotalGST       ?? 0,
+            'Total'          => $request->GrandTotal     ?? 0,
+            'Balance'        => $request->GrandTotal     ?? 0,
+            'Status'         => 1,
+            'CreatedBy'      => $userId,
+            'CreatedOn'      => $now,
+        ]);
+
+        // 2. Insert each line item into temp with RequestID
+        foreach ($request->items as $item) {
+            DB::table('tbl_temp_invoice_detail')->insert([
+                'InvoiceID'          => $headerId,
+                'CustomerID'         => $request->CustomerID,
+                'Address'            => $request->Address          ?? null,
+                'InvoiceDate'        => $request->InvoiceDate,
+                'DueDate'            => $request->DueDate,
+                'TermDays'           => $request->TermDays         ?? 0,
+                'DocNo'              => $docNo,
+                'ProductID'          => $item['ProductID']         ?? 0,
+                'Details'            => $item['Details']           ?? null,
+                'Quantity'           => $item['Quantity'],
+                'Rate'               => $item['Rate'],
+                'Amount'             => $item['Amount']            ?? 0,
+                'DiscountPercentage' => $item['DiscountPercentage'] ?? '0',
+                'DiscountAmount'     => $item['DiscountAmount']    ?? 0,
+                'GstPercentage'      => $item['GstPercentage']     ?? '0',
+                'GSTAmount'          => $item['GSTAmount']         ?? 0,
+                'Total'              => $item['Total']             ?? 0,
+                'Notes'              => $request->Notes            ?? null,
+                'DiscountAllowed'    => $request->DiscountAllowed  ?? '0',
+                'Type'               => 'SI',
+                'Status'             => 1,
+                'CreatedBy'          => $userId,
+                'CreatedOn'          => $now,
+                'UpdatedBy'          => $userId,
+                'UpdatedOn'          => $now,
+                'RequestID'          => $requestId,
+            ]);
+        }
+
+        // 3. Execute model transaction (moves temp → tbl_sales_invoice_detail)
+        $query = InvoiceModel::save_transaction([
+            'RequestID' => $requestId,
+            'HeaderID'  => $headerId,
+        ]);
+
+        if (!empty($query) && $query !== "") {
+            DB::statement($query);
+        }
+
+        // 4. Clean temp
+        // DB::table('tbl_temp_invoice_detail')->where('RequestID', $requestId)->delete();
+
+        if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json(['status' => 'success', 'message' => 'Invoice created successfully.']);
+        }
+        return redirect()->route('invoices.index')->with('success', 'Invoice created successfully.');
+
+    } catch (\Exception $e) {
+        \Log::error('Invoice save_transaction failed', ['error' => $e->getMessage()]);
+
+        if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json(['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+        return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInput();
+    }
+}
+    // ══════════════════════════════════════════════════════════
+    //  EDIT TRANSACTION — Update existing invoice
+    // ══════════════════════════════════════════════════════════
+
+  public function edit_transaction(Request $request, $id)
+{
+    // 1. Check invoice exists
+    $invoice = DB::table('tbl_sales_invoice_header')
+        ->where('ID', $id)
+        ->where('Status', '!=', 2)
+        ->first();
+
+    if (!$invoice) {
+        if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json(['status' => 'error', 'message' => 'Invoice not found.'], 404);
+        }
+        return redirect()->back()->with('error', 'Invoice not found.');
+    }
+
+    // 2. ✅ Validate (newly added)
+    $request->validate([
+        'CustomerID'       => 'required|integer',
+        'InvoiceDate'      => 'required|date',
+        'DueDate'          => 'required|date|after_or_equal:InvoiceDate',
+        'Status'           => 'required|in:1,2',
+        'items'            => 'required|array|min:1',
+        'items.*.Quantity' => 'required|numeric|min:0',
+        'items.*.Rate'     => 'required|numeric|min:0',
+    ]);
+
+    // 3. ✅ Only try block — the correct one (was lines 412-498)
+    try {
+        $requestId = (string) Str::uuid();
+        $userId    = auth()->id() ?? 1;
+        $now       = now()->toDateTimeString();
+        $docNo     = $request->input('DocNo') ?: $invoice->DocNo;
+
+        // Update header
+        DB::table('tbl_sales_invoice_header')->where('ID', $id)->update([
+            'DocNo'          => $docNo,
+            'CustomerID'     => $request->CustomerID,
+            'Address'        => $request->Address        ?? null,
+            'InvoiceDate'    => $request->InvoiceDate,
+            'DueDate'        => $request->DueDate,
+            'TermDays'       => $request->TermDays       ?? 0,
+            'Notes'          => $request->Notes          ?? null,
+            'SubTotal'       => $request->SubTotal       ?? 0,
+            'DiscountAmount' => $request->TotalDiscount  ?? 0,
+            'GSTAmount'      => $request->TotalGST       ?? 0,
+            'Total'          => $request->GrandTotal     ?? 0,
+            'Balance'        => $request->GrandTotal     ?? 0,
+            'Status'         => $request->Status,
+            'UpdatedBy'      => $userId,
+            'UpdatedOn'      => $now,
+        ]);
+
+        // Clear old temp rows
+        DB::table('tbl_temp_invoice_detail')->where('InvoiceID', $id)->delete();
+
+        // Insert new line items into temp
+        foreach ($request->items as $item) {
+            DB::table('tbl_temp_invoice_detail')->insert([
+                'InvoiceID'          => $id,
+                'CustomerID'         => $request->CustomerID,
+                'Address'            => $request->Address          ?? null,
+                'InvoiceDate'        => $request->InvoiceDate,
+                'DueDate'            => $request->DueDate,
+                'TermDays'           => $request->TermDays         ?? 0,
+                'DocNo'              => $docNo,
+                'ProductID'          => $item['ProductID']         ?? 0,
+                'Details'            => $item['Details']           ?? null,
+                'Quantity'           => $item['Quantity'],
+                'Rate'               => $item['Rate'],
+                'Amount'             => $item['Amount']            ?? 0,
+                'DiscountPercentage' => $item['DiscountPercentage'] ?? '0',
+                'DiscountAmount'     => $item['DiscountAmount']    ?? 0,
+                'GstPercentage'      => $item['GstPercentage']     ?? '0',
+                'GSTAmount'          => $item['GSTAmount']         ?? 0,
+                'Total'              => $item['Total']             ?? 0,
+                'Notes'              => $request->Notes            ?? null,
+                'DiscountAllowed'    => $request->DiscountAllowed  ?? '0',
+                'Type'               => 'SI',
+                'Status'             => 1,
+                'CreatedBy'          => $userId,
+                'CreatedOn'          => $now,
+                'UpdatedBy'          => $userId,
+                'UpdatedOn'          => $now,
+                'RequestID'          => $requestId,
+            ]);
+        }
+
+        // Call model SQL (your SQL goes here)
+        $query = InvoiceModel::edit_transaction([
+            'RequestID' => $requestId,
+            'HeaderID'  => $id,
+        ]);
+
+        if (!empty($query) && $query !== "") {
+            DB::statement($query);
+        }
+
+        if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json(['status' => 'success', 'message' => 'Invoice updated successfully.']);
+        }
+        return redirect()->route('invoices.index')->with('success', 'Invoice updated successfully.');
+
+    } catch (\Exception $e) {
+        \Log::error('Invoice edit_transaction failed', ['error' => $e->getMessage(), 'id' => $id]);
+
+        if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json(['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+        return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInput();
+    }
+}
+
+    // ══════════════════════════════════════════════════════════
+    //  DELETE TRANSACTION — Soft delete invoice
+    // ══════════════════════════════════════════════════════════
+
+    public function delete_transaction($id)
+    {
+        try {
+    $invoice = DB::table('tbl_sales_invoice_header')->where('ID', $id)->first();
+    if (!$invoice) return redirect()->back()->with('error', 'Invoice not found.');
+
+    $requestId = (string) Str::uuid();
+    $userId    = auth()->id() ?? 1;
+    $now       = now()->toDateTimeString();
+
+    // Push delete signal to Temp Table
+    DB::table('tbl_temp_invoice_detail')->insert([
+        'InvoiceID' => $id,
+        'DocNo'     => $invoice->DocNo,
+        'Quantity'  => 0, // Satisfy DB constraints
+        'Rate'      => 0,
+        'Status'    => 2, // 2 = Archive/Delete Status
+        'UpdatedBy' => $userId,
+        'UpdatedOn' => $now,
+        'RequestID' => $requestId,
+    ]);
+
+    $query = InvoiceModel::delete_transaction(['RequestID' => $requestId]);
+
+    if (!empty($query)) {
+        DB::unprepared($query);
+    }
+
+    return redirect()->route('invoices.index')->with('success', 'Invoice archived successfully.');
+
+}catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error archiving invoice: ' . $e->getMessage());
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  EXPORT CSV
+    // ══════════════════════════════════════════════════════════
+
+    public function exportCSV(Request $request)
+    {
+        $filename = 'invoices-export-' . date('Y-m-d-His') . '.csv';
+
+        $headers = [
+            'Content-type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename={$filename}",
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0',
+        ];
+
+        $invoices = InvoiceModel::getlistingdata([
+            'search'     => $request->input('search'),
+            'start_date' => $request->input('start_date'),
+            'end_date'   => $request->input('end_date'),
+        ])->get();
+
+        $callback = function () use ($invoices) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+
+            fputcsv($file, [
+                'Doc No', 'Customer', 'Invoice Date', 'Due Date',
+                'Sub Total', 'Total Discount', 'Total GST', 'Total Amount',
+                'Status', 'Created Date',
+            ]);
+
+            foreach ($invoices as $inv) {
+                fputcsv($file, [
+                    $inv->DocNo,
+                    $inv->CustomerDisplayName,
+                    $inv->InvoiceDate,
+                    $inv->DueDate,
+                    number_format($inv->SubTotal      ?? 0, 2),
+                    number_format($inv->TotalDiscount ?? 0, 2),
+                    number_format($inv->TotalGST      ?? 0, 2),
+                    number_format($inv->TotalAmount   ?? 0, 2),
+                    $inv->Status == 1 ? 'Active' : 'Archived',
+                    $inv->CreatedOn,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  PRIVATE HELPER — Auto-generate Doc No
+    // ══════════════════════════════════════════════════════════
+
+   private function generateDocNo(): string
+{
+    return DB::transaction(function () {
+
+        // Lock the last row so no other request can read it simultaneously
+        $last = DB::table('tbl_sales_invoice_header')
+            ->whereNotNull('DocNo')
+            ->orderByDesc('ID')
+            ->lockForUpdate()
+            ->value('DocNo');
+
+        $next = ($last && preg_match('/(\d+)$/', $last, $m))
+            ? (int) $m[1] + 1
+            : 1;
+
+        return 'INV-' . str_pad($next, 6, '0', STR_PAD_LEFT);
+    });
+}
+}

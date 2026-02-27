@@ -397,7 +397,7 @@
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->CategoryName ?? $product->Category ?? '-' }}</div>
                         @else
-                            <select name="Category" id="Category" class="form-select @error('Category') is-invalid @enderror" required>
+                            <select name="Category" id="Category" class="form-select @error('Category') is-invalid @enderror" >
                                 <option value="">Select Category</option>
                                 {{-- Populate dynamically from your categories table --}}
                                 {{-- @foreach($categories as $cat)
@@ -816,7 +816,7 @@
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->IncomeAccount ?? '-' }}</div>
                         @else
-                            <select name="IncomeAccount" id="IncomeAccount" class="form-select @error('IncomeAccount') is-invalid @enderror" required>
+                            <select name="IncomeAccount" id="IncomeAccount" class="form-select @error('IncomeAccount') is-invalid @enderror" >
                                 <option value="">Select Account</option>
                                 {{-- Populate dynamically --}}
                             </select>
@@ -833,7 +833,7 @@
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->StockAccount ?? '-' }}</div>
                         @else
-                            <select name="StockAccount" id="StockAccount" class="form-select @error('StockAccount') is-invalid @enderror" required>
+                            <select name="StockAccount" id="StockAccount" class="form-select @error('StockAccount') is-invalid @enderror" >
                                 <option value="">Select Account</option>
                                 {{-- Populate dynamically --}}
                             </select>
@@ -850,7 +850,7 @@
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->ExpenseAccount ?? '-' }}</div>
                         @else
-                            <select name="ExpenseAccount" id="ExpenseAccount" class="form-select @error('ExpenseAccount') is-invalid @enderror" required>
+                            <select name="ExpenseAccount" id="ExpenseAccount" class="form-select @error('ExpenseAccount') is-invalid @enderror">
                                 <option value="">Select Account</option>
                                 {{-- Populate dynamically --}}
                             </select>
