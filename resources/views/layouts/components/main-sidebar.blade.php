@@ -106,7 +106,7 @@
                                     <a href="{{ url('products') }}" class="side-menu__item">Products</a>
                                 </li>
                                 <li class="slide">
-                                    <a href="{{ url('invoice-list') }}" class="side-menu__item">Invoices</a>
+                                    <a href="{{ route('invoices.index') }}" class="side-menu__item">Invoices</a>
                                 </li>
                             </ul>
                         </li>
