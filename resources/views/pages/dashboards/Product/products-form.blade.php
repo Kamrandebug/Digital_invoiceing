@@ -41,12 +41,12 @@
     }
 
     .product-info-badge {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        background: linear-gradient(135deg, #6f42c1 0%, #9b59b6 100%);
         color: white;
         padding: 20px;
         border-radius: 8px;
         margin-bottom: 25px;
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.2);
     }
 
     .product-info-badge.show-mode {
@@ -70,7 +70,7 @@
         font-size: 18px;
         font-weight: 600;
         margin-bottom: 20px;
-        color: #28a745;
+        color: #6f42c1;
         display: flex;
         align-items: center;
         gap: 10px;
@@ -82,7 +82,7 @@
     }
 
     .form-section-title i {
-        color: #28a745;
+        color: #6f42c1;
     }
 
     .required-field::after {
@@ -102,7 +102,7 @@
     }
 
     .btn-save, .btn-update {
-        background: #28a745;
+        background: #6f42c1;
         color: white;
         padding: 12px 30px;
         border: none;
@@ -113,9 +113,9 @@
     }
 
     .btn-save:hover, .btn-update:hover {
-        background: #218838;
+        background: #5a32a3;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
     }
 
     .btn-cancel, .btn-back {
@@ -137,7 +137,7 @@
     }
 
     .btn-edit {
-        background: #28a745;
+        background: #6f42c1;
         color: white;
         padding: 12px 30px;
         border: none;
@@ -150,10 +150,10 @@
     }
 
     .btn-edit:hover {
-        background: #218838;
+        background: #5a32a3;
         color: white;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
     }
 
     .checkbox-label {
@@ -176,8 +176,8 @@
     }
 
     .form-control:focus, .form-select:focus {
-        border-color: #28a745;
-        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        border-color: #6f42c1;
+        box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
         outline: none;
     }
 
@@ -298,7 +298,7 @@
         </div>
         @if($isReadonly)
         <div class="col-md-2 text-end">
-            <a href="{{ route('products.edit', $product->ID ?? 0) }}" class="btn btn-light btn-sm fw-bold text-success shadow-sm">
+            <a href="{{ route('products.edit', $product->ID ?? 0) }}" class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
                 <i class="fas fa-edit"></i> Edit Product
             </a>
         </div>

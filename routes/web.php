@@ -64,6 +64,8 @@ Route::middleware(['auth', 'tenant'])->prefix('products')->name('products.')->gr
     Route::post('/save',           [ProductController::class, 'save_transaction'])  ->name('save_transaction');
 
     Route::get('/export/csv',      [ProductController::class, 'exportCSV'])         ->name('exportCSV');
+    Route::get('/modal',          [ProductController::class, 'modal'])             ->name('modal');
+    Route::get('/{id}/modal',     [ProductController::class, 'modal'])              ->name('modal.id');
 
     Route::get('/{id}/edit',       [ProductController::class, 'edit'])              ->name('edit');
     Route::put('/{id}/update',     [ProductController::class, 'edit_transaction'])  ->name('edit_transaction');

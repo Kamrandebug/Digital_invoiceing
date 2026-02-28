@@ -70,7 +70,8 @@ class ProductController extends Controller
         ]);
 
         // Validate
-        $validated = $request->validate([
+        try {
+            $validated = $request->validate([
             // Basic Info
             'Name'            => ['required', 'string', 'min:2', 'max:200'],
             'Code'            => ['required', 'string', 'max:50', 'unique:crm_product,Code'],
@@ -139,6 +140,16 @@ class ProductController extends Controller
             'Status.required'        => 'Status is required.',
             'Status.in'              => 'Invalid status value.',
         ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'status'  => 'error',
+                    'errors'  => $e->errors(),
+                    'message' => 'Please fix the highlighted fields.',
+                ], 422);
+            }
+            throw $e;
+        }
 
         try {
             // Generate UUID
@@ -238,16 +249,47 @@ class ProductController extends Controller
                 DB::statement($query);
             }
 
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json(['status' => 'success', 'message' => 'Product created successfully!']);
+            }
             return redirect()
                 ->route('products.index')
                 ->with('success', 'Product created successfully with Request ID: ' . $requestId);
 
         } catch (\Exception $e) {
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json(['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()], 500);
+            }
             return redirect()
                 ->back()
                 ->with('error', 'Error: ' . $e->getMessage())
                 ->withInput();
         }
+    }
+
+    /**
+     * Return product form partial for modal (create / edit / show).
+     */
+    public function modal(Request $request, $id = null)
+    {
+        $mode    = $request->query('mode', 'create');
+        $product = null;
+
+        if ($id && in_array($mode, ['edit', 'show'])) {
+            $row = DB::table('crm_product')->where('ID', $id)->first();
+            if (!$row) {
+                return response('<div class="alert alert-danger m-3">Product not found.</div>', 404);
+            }
+            $product = new ProductModel();
+            $product->setRawAttributes((array) $row, true);
+            $product->exists = true;
+        }
+
+        return view('pages.dashboards.Product._product-form-partial', [
+            'mode'    => $mode,
+            'product' => $product ?? new ProductModel(),
+            'inModal' => true,
+        ]);
     }
 
     /**
@@ -299,6 +341,9 @@ class ProductController extends Controller
         $product = DB::table('crm_product')->where('ID', $id)->first();
 
         if (!$product) {
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json(['status' => 'error', 'message' => 'Product not found.'], 404);
+            }
             return redirect()->back()->with('error', 'Product not found.');
         }
 
@@ -309,7 +354,8 @@ class ProductController extends Controller
         ]);
 
         // Validate
-        $validated = $request->validate([
+        try {
+            $validated = $request->validate([
             // Basic Info
             'Name'            => ['required', 'string', 'min:2', 'max:200'],
             'Code'            => ['required', 'string', 'max:50', Rule::unique('crm_product', 'Code')->ignore($id, 'ID')],
@@ -377,6 +423,16 @@ class ProductController extends Controller
             'Status.required'        => 'Status is required.',
             'Status.in'              => 'Invalid status value.',
         ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'status'  => 'error',
+                    'errors'  => $e->errors(),
+                    'message' => 'Please fix the highlighted fields.',
+                ], 422);
+            }
+            throw $e;
+        }
 
         try {
             // Generate UUID
@@ -441,6 +497,9 @@ class ProductController extends Controller
                 DB::statement($query);
             }
 
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json(['status' => 'success', 'message' => 'Product updated successfully!']);
+            }
             return redirect()
                 ->route('products.index')
                 ->with('success', 'Product updated successfully with Request ID: ' . $requestId);
@@ -451,7 +510,9 @@ class ProductController extends Controller
                 'product_id' => $id,
                 'trace'      => $e->getTraceAsString()
             ]);
-
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json(['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()], 500);
+            }
             return redirect()
                 ->back()
                 ->with('error', 'Error updating product: ' . $e->getMessage())
