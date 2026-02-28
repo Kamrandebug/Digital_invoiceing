@@ -76,7 +76,7 @@ class ProductController extends Controller
             'Name'            => ['required', 'string', 'min:2', 'max:200'],
             'Code'            => ['required', 'string', 'max:50', 'unique:crm_product,Code'],
             'Type'            => ['nullable', 'string', 'max:50'],
-            'Category'        => ['required', 'integer'],
+            'Category'        => ['nullable', 'integer'],
             'SaleInformation' => ['nullable', 'string', 'max:500'],
             'Image'           => ['nullable', 'string'],
 
@@ -104,9 +104,9 @@ class ProductController extends Controller
             'Unit'            => ['nullable', 'integer'],
 
             // Accounts
-            'IncomeAccount'   => ['required', 'integer'],
-            'StockAccount'    => ['required', 'integer'],
-            'ExpenseAccount'  => ['required', 'integer'],
+            'IncomeAccount'   => ['nullable', 'integer'],
+            'StockAccount'    => ['nullable', 'integer'],
+            'ExpenseAccount'  => ['nullable', 'integer'],
 
             // Flags
             'IsSelltoCustomer'=> ['nullable', 'boolean'],
@@ -171,7 +171,7 @@ class ProductController extends Controller
                 'Name'             => $request->Name,
                 'Image'            => $request->Image ?? '',
                 'Code'             => $request->Code,
-                'CategoryID'       => $request->Category,
+                'CategoryID'       => $request->Category ?? 0,
                 'CategoryName'     => null,
                 'ParentCategoryID' => null,
                 'ParentLevel1'     => 0,
@@ -360,7 +360,7 @@ class ProductController extends Controller
             'Name'            => ['required', 'string', 'min:2', 'max:200'],
             'Code'            => ['required', 'string', 'max:50', Rule::unique('crm_product', 'Code')->ignore($id, 'ID')],
             'Type'            => ['nullable', 'string', 'max:50'],
-            'Category'        => ['required', 'integer'],
+            'Category'        => ['nullable', 'integer'],
             'SaleInformation' => ['nullable', 'string', 'max:500'],
             'Image'           => ['nullable', 'string'],
 
@@ -388,9 +388,9 @@ class ProductController extends Controller
             'Unit'            => ['nullable', 'integer'],
 
             // Accounts
-            'IncomeAccount'   => ['required', 'integer'],
-            'StockAccount'    => ['required', 'integer'],
-            'ExpenseAccount'  => ['required', 'integer'],
+            'IncomeAccount'   => ['nullable', 'integer'],
+            'StockAccount'    => ['nullable', 'integer'],
+            'ExpenseAccount'  => ['nullable', 'integer'],
 
             // Flags
             'IsSelltoCustomer'=> ['nullable', 'boolean'],
@@ -449,7 +449,7 @@ class ProductController extends Controller
                 'Name'             => $request->Name,
                 'Image'            => $request->Image ?? $product->Image ?? '',
                 'Code'             => $request->Code,
-                'CategoryID'       => $request->Category,
+                'CategoryID'       => $request->Category ?? 0,
                 'SaleInformation'  => $request->SaleInformation ?? '',
                 'SalePrice'        => $request->SalePrice ?? 0,
                 'TaxCode'          => $request->TaxCode,

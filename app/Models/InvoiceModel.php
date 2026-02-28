@@ -65,34 +65,15 @@ class InvoiceModel extends Model
 
     public static function Load_Customer()
     {
-        $query = DB::select("
-                SELECT
-                    ID,
-                    COALESCE(NULLIF(TRIM(DisplayName),''),
-                        CONCAT(COALESCE(TRIM(FirstName),''), ' ', COALESCE(TRIM(LastName),''))) AS DisplayName,
-                    Address
-                FROM crm_customer
-                WHERE Status != 2
-                AND (IsArchive IS NULL OR IsArchive = 0)
-                ORDER BY DisplayName ASC
-");
-        return $query;
+         $query = "";
+        
+         return $query;
     }
 
     public static function Load_Product()
     {
-       $query = DB::select("
-        SELECT
-            ID,
-            Name     AS ProductName,
-            SalePrice,
-            TaxRate  AS GstPercentage
-        FROM crm_product
-        WHERE Status != 2
-        ORDER BY Name ASC
-");
-
-        return $query;
+         $query = "S";
+         return $query;
     }
 
    // ══════════════════════════════════════════════════════════
@@ -155,23 +136,52 @@ class InvoiceModel extends Model
     //  TRANSACTIONS
     // ══════════════════════════════════════════════════════════
 
-    public static function save_transaction($validated)
+// ══════════════════════════════════════════════════════════
+    //  TRANSACTIONS
+    // ══════════════════════════════════════════════════════════
+
+    public static function save_transaction($requestID)
     {
-        $query = "";
+        $query = "INSERT INTO tbl_sales_invoice_header (InvoiceID,DocNo,Type,CustomerID,Address,InvoiceDate,DueDate,BillNumber,Notes,TermDays,SubTotal,SubTotalBeforeDiscount,InvoiceTaxType,GSTId,GSTAmount,GSTBalance,DiscountAllowed,DiscountAmount,Total,Balance,Status,Filter1,Filter2,Filter3,Filter4,Field1,Field2,Field3,Field4,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,BulkBatchID,Arrears,IsShippingBelowGST,Template,ToLocationID,Tax_ScheduleID,RetailMargin,TOSale,VehicleRegNo)
+
+        SELECT 	InvoiceID,DocNo,Type,CustomerID,Address,InvoiceDate,DueDate,BillNumber,Notes,TermDays,0 AS SubTotal,0 AS SubTotalBeforeDiscount,0 AS InvoiceTaxType,GSTId,GSTAmount,0 AS GSTBalance,DiscountAllowed,DiscountAmount,Total,Balance,Status,Filter1,Filter2,Filter3,Filter4,Field1,Field2,Field3,Field4,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,NULL AS BulkBatchID,Arrears,IsShippingBelowGST,Template,ToLocationID,Tax_ScheduleID,RetailMargin,TOSale,VehicleRegNo
+    FROM 	tbl_temp_invoice_detail
+    WHERE 	RequestID = '$requestID'";
+    // -- GROUP BY RequestID
 
         return $query;
     }
 
-    public static function edit_transaction($validated)
+    public static function edit_transaction($requestID)
     {
-        $query = "";
+        $query = "UPDATE tbl_sales_invoice_header uu
+        JOIN 
+        (
+        SELECT  CustomerID, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+        FROM tbl_temp_invoice_detail WHERE RequestID = '{$requestID}'
+
+        ) u ON uu.ID = u.TID
+        SET
+        uu.CustomerID = u.CustomerID,
+        uu.UpdatedBy = u.UpdatedBy,
+        uu.UpdatedOn = u.UpdatedOn";
 
         return $query;
     }
 
-    public static function delete_transaction($validated = [])
+    public static function delete_transaction($requestID)
     {
-        $query = "";
+        $query = "UPDATE tbl_sales_invoice_header uu
+        JOIN 
+        (
+        SELECT  2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+        FROM tbl_temp_invoice_detail WHERE RequestID = '{$requestID}'
+
+        ) u ON uu.ID = u.TID
+        SET
+        uu.Status = u.Status,
+        uu.UpdatedBy = u.UpdatedBy,
+        uu.UpdatedOn = u.UpdatedOn";
 
         return $query;
     }

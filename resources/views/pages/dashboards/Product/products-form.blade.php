@@ -393,7 +393,7 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="Category" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Category</label>
+                        <label for="Category" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Category</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->CategoryName ?? $product->Category ?? '-' }}</div>
                         @else
@@ -812,7 +812,7 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="IncomeAccount" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Income Account</label>
+                        <label for="IncomeAccount" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Income Account</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->IncomeAccount ?? '-' }}</div>
                         @else
@@ -829,7 +829,7 @@
 
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="StockAccount" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Stock Account</label>
+                        <label for="StockAccount" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Stock Account</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->StockAccount ?? '-' }}</div>
                         @else
@@ -846,7 +846,7 @@
 
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="ExpenseAccount" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Expense Account</label>
+                        <label for="ExpenseAccount" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Expense Account</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->ExpenseAccount ?? '-' }}</div>
                         @else

@@ -95,7 +95,7 @@ class ProductModel extends Model
 
     public static function getlistingdata($filters = [])
 {
-    $query = "SELECT * FROM crm_product WHERE 1=1";
+    $query = "SELECT * FROM crm_product WHERE Status = 1";
     $bindings = [];
 
     // Search filter
@@ -126,19 +126,44 @@ class ProductModel extends Model
 }
     public static function save_transaction($validated)
     {
-        $query = "Save_transaction";
+        $query = "INSERT INTO crm_product (VoucherID,TYPE,NAME,Image,CODE,Category,SaleInformation,SalePrice,TaxCode,TaxRate,NFTaxRate,IncomeAccount,LowStockLevel,CurrentQuantity,DATE,StockAccount,ExpenseAccount,IsSelltoCustomer,STATUS,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,RequestID,StockStatus,Cost,OpeningQuantity,purchaseStatus,OpeningRate,OptionalField1,OptionalField2,OptionalField3,IsShipping,IsPurchasing,TPRate,TPMargin,Unit,TrialRate,Discount,Weight,PurchaseDiscount,TOSale,TOPurchase,RMSale,RMPurchase,TPSale,TPPurchase,PreferredSupplier,TaxSchID,IsRawMaterial)
+
+        SELECT VoucherID,TYPE,NAME,Image,CODE,1 AS CategoryID,SaleInformation,SalePrice,TaxCode,TaxRate,NFTaxRate,IncomeAccount,LowStockLevel,CurrentQuantity,DATE,StockAccount,ExpenseAccount,IsSelltoCustomer,STATUS,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,RequestID,StockStatus,Cost,OpeningQuantity,purchaseStatus,OpeningRate,OptionalField1,OptionalField2,OptionalField3,IsShipping,IsPurchasing,TPRate,TPMargin,Unit,TrialRate,Discount,Weight,PurchaseDiscount,TOSale,TOPurchase,RMSale,RMPurchase,TPSale,TPPurchase,PreferredSupplier,TaxSchID,IsRawMaterial
+        FROM temp_product 
+        WHERE RequestID = '{$validated['RequestID']}'";
         return $query;
     }
 
     public static function edit_transaction($validated)
     {
-        $query = "edit_transaction";
+        $query = "UPDATE crm_product uu
+        JOIN 
+        (
+        SELECT  Code, Name, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+        FROM temp_product WHERE RequestID = '{$validated['RequestID']}'
+
+        ) u ON uu.ID = u.TID
+        SET
+        uu.Code = u.Code,
+        uu.Name = u.Name,
+        uu.UpdatedBy = u.UpdatedBy,
+        uu.UpdatedOn = u.UpdatedOn";
         return $query;
     }
 
     public static function delete_transaction($validated = [])
     {
-       $query = "delete_transaction";
+       $query = " UPDATE crm_product uu 
+            JOIN 
+            ( 
+            SELECT  TID, 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn 
+            FROM temp_product WHERE RequestID = '{$validated['RequestID']}'
+            
+            ) u ON uu.ID = u.TID 
+            SET 
+            uu.Status = u.Status, 
+            uu.UpdatedBy = u.UpdatedBy, 
+            uu.UpdatedOn = u.UpdatedOn";
         return $query;
     }
 

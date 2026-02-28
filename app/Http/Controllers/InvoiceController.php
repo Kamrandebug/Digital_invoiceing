@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvoiceModel;
+use App\Models\Customer; // Added
+use App\Models\ProductModel; // Added
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -54,8 +56,8 @@ class InvoiceController extends Controller
             'mode'      => 'create',
             'invoice'   => null,
             'items'     => collect(),
-            'customers' => InvoiceModel::Load_Customer(),
-            'products'  => InvoiceModel::Load_Product(),
+            'customers' => Customer::where('Status', 1)->get(), // Direct fetch
+            'products'  => ProductModel::where('Status', 1)->get(), // Direct fetch
             'inModal'   => false,
         ]);
     }
@@ -102,8 +104,8 @@ class InvoiceController extends Controller
             'mode'      => $mode,
             'invoice'   => $invoice,
             'items'     => $items,
-            'customers' => InvoiceModel::Load_Customer(),
-            'products'  => InvoiceModel::Load_Product(),
+            'customers' => Customer::where('Status', 1)->get(), // Direct fetch
+            'products'  => ProductModel::where('Status', 1)->get(), // Direct fetch
             'inModal'   => true,
         ]);
     }
@@ -134,8 +136,8 @@ class InvoiceController extends Controller
             'mode'      => 'show',
             'invoice'   => $invoice,
             'items'     => $items,
-            'customers' => InvoiceModel::Load_Customer(),
-            'products'  => InvoiceModel::Load_Product(),
+            'customers' => Customer::where('Status', 1)->get(), // Direct fetch
+            'products'  => ProductModel::where('Status', 1)->get(), // Direct fetch
             'inModal'   => false,
         ]);
     }
@@ -166,8 +168,8 @@ class InvoiceController extends Controller
             'mode'      => 'edit',
             'invoice'   => $invoice,
             'items'     => $items,
-            'customers' => InvoiceModel::Load_Customer(),
-            'products'  => InvoiceModel::Load_Product(),
+            'customers' => Customer::where('Status', 1)->get(), // Direct fetch
+            'products'  => ProductModel::where('Status', 1)->get(), // Direct fetch
             'inModal'   => false,
         ]);
     }
@@ -201,30 +203,15 @@ class InvoiceController extends Controller
         $now       = now()->toDateTimeString();
         $docNo     = $request->input('DocNo') ?: $this->generateDocNo();
 
-        // 1. Insert header → get HeaderID
-        $headerId = DB::table('tbl_sales_invoice_header')->insertGetId([
-            'DocNo'          => $docNo,
-            'Type'           => 'SI',
-            'CustomerID'     => $request->CustomerID,
-            'Address'        => $request->Address        ?? null,
-            'InvoiceDate'    => $request->InvoiceDate,
-            'DueDate'        => $request->DueDate,
-            'TermDays'       => $request->TermDays       ?? 0,
-            'Notes'          => $request->Notes          ?? null,
-            'SubTotal'       => $request->SubTotal       ?? 0,
-            'DiscountAmount' => $request->TotalDiscount  ?? 0,
-            'GSTAmount'      => $request->TotalGST       ?? 0,
-            'Total'          => $request->GrandTotal     ?? 0,
-            'Balance'        => $request->GrandTotal     ?? 0,
-            'Status'         => 1,
-            'CreatedBy'      => $userId,
-            'CreatedOn'      => $now,
-        ]);
+        // 1. Calculate Next ID
+        $maxId = DB::table('tbl_sales_invoice_header')->max('ID');
+        $nextId = $maxId ? $maxId + 1 : 1;
 
-        // 2. Insert each line item into temp with RequestID
+        // 2. Insert each line item into temp with RequestID (Includes Header Info)
         foreach ($request->items as $item) {
             DB::table('tbl_temp_invoice_detail')->insert([
-                'InvoiceID'          => $headerId,
+                'InvoiceID'          => $nextId,
+                'TID'                => $nextId,
                 'CustomerID'         => $request->CustomerID,
                 'Address'            => $request->Address          ?? null,
                 'InvoiceDate'        => $request->InvoiceDate,
@@ -241,6 +228,7 @@ class InvoiceController extends Controller
                 'GstPercentage'      => $item['GstPercentage']     ?? '0',
                 'GSTAmount'          => $item['GSTAmount']         ?? 0,
                 'Total'              => $item['Total']             ?? 0,
+                // 'SubTotal'           => $request->SubTotal         ?? 0,
                 'Notes'              => $request->Notes            ?? null,
                 'DiscountAllowed'    => $request->DiscountAllowed  ?? '0',
                 'Type'               => 'SI',
@@ -254,13 +242,14 @@ class InvoiceController extends Controller
         }
 
         // 3. Execute model transaction (moves temp → tbl_sales_invoice_detail)
-        $query = InvoiceModel::save_transaction([
-            'RequestID' => $requestId,
-            'HeaderID'  => $headerId,
-        ]);
+        $query = InvoiceModel::save_transaction($requestId);
 
         if (!empty($query) && $query !== "") {
-            DB::statement($query);
+            // Check if the query contains multiple statements
+            // The query from InvoiceModel::save_transaction contains two INSERT statements separated by a semicolon.
+            // Laravel's DB::statement might fail with "Syntax error" if strict mode is on for certain drivers or if it tries to prepare multiple statements at once.
+            // Using DB::unprepared allows executing raw SQL string with multiple statements.
+            DB::unprepared($query);
         }
 
         // 4. Clean temp
@@ -317,32 +306,13 @@ class InvoiceController extends Controller
         $now       = now()->toDateTimeString();
         $docNo     = $request->input('DocNo') ?: $invoice->DocNo;
 
-        // Update header
-        DB::table('tbl_sales_invoice_header')->where('ID', $id)->update([
-            'DocNo'          => $docNo,
-            'CustomerID'     => $request->CustomerID,
-            'Address'        => $request->Address        ?? null,
-            'InvoiceDate'    => $request->InvoiceDate,
-            'DueDate'        => $request->DueDate,
-            'TermDays'       => $request->TermDays       ?? 0,
-            'Notes'          => $request->Notes          ?? null,
-            'SubTotal'       => $request->SubTotal       ?? 0,
-            'DiscountAmount' => $request->TotalDiscount  ?? 0,
-            'GSTAmount'      => $request->TotalGST       ?? 0,
-            'Total'          => $request->GrandTotal     ?? 0,
-            'Balance'        => $request->GrandTotal     ?? 0,
-            'Status'         => $request->Status,
-            'UpdatedBy'      => $userId,
-            'UpdatedOn'      => $now,
-        ]);
-
-        // Clear old temp rows
-        DB::table('tbl_temp_invoice_detail')->where('InvoiceID', $id)->delete();
-
-        // Insert new line items into temp
+        // 2. Insert new line items into temp (Wait, we should insert header updates too!)
+        // The Model's edit_transaction UPDATEs the header FROM the temp table.
+        // So we must populate the temp table with the NEW header values.
         foreach ($request->items as $item) {
             DB::table('tbl_temp_invoice_detail')->insert([
                 'InvoiceID'          => $id,
+                'TID'                => $id, // CRITICAL for Model Join
                 'CustomerID'         => $request->CustomerID,
                 'Address'            => $request->Address          ?? null,
                 'InvoiceDate'        => $request->InvoiceDate,
@@ -359,10 +329,11 @@ class InvoiceController extends Controller
                 'GstPercentage'      => $item['GstPercentage']     ?? '0',
                 'GSTAmount'          => $item['GSTAmount']         ?? 0,
                 'Total'              => $item['Total']             ?? 0,
+                'SubTotal'           => $request->SubTotal         ?? 0,
                 'Notes'              => $request->Notes            ?? null,
                 'DiscountAllowed'    => $request->DiscountAllowed  ?? '0',
                 'Type'               => 'SI',
-                'Status'             => 1,
+                'Status'             => $request->Status,
                 'CreatedBy'          => $userId,
                 'CreatedOn'          => $now,
                 'UpdatedBy'          => $userId,
@@ -371,11 +342,44 @@ class InvoiceController extends Controller
             ]);
         }
 
+        // 2a. Since Model::edit_transaction ONLY updates the header,
+        // we must manually handle the details replacement here in the controller
+        // OR rely on the model to do it (which it currently doesn't).
+        // Assuming we must fix the logic to work with the *current* model limitations:
+        
+        // Clear old details
+        DB::table('tbl_sales_invoice_detail')->where('InvoiceID', $id)->delete();
+
+        // Insert new details directly (mirroring what save_transaction does in Model)
+        foreach ($request->items as $item) {
+            DB::table('tbl_sales_invoice_detail')->insert([
+                'InvoiceID'          => $id,
+                'InvoiceDate'        => $request->InvoiceDate,
+                'CustomerID'         => $request->CustomerID,
+                'ProductID'          => $item['ProductID']         ?? 0,
+                'Details'            => $item['Details']           ?? null,
+                'Quantity'           => $item['Quantity'],
+                'Rate'               => $item['Rate'],
+                'Amount'             => $item['Amount']            ?? 0,
+                'DiscountPercentage' => $item['DiscountPercentage'] ?? '0',
+                'DiscountAmount'     => $item['DiscountAmount']    ?? 0,
+                'GstPercentage'      => $item['GstPercentage']     ?? '0',
+                'GSTAmount'          => $item['GSTAmount']         ?? 0,
+                'Type'               => 'SI',
+                'Status'             => 1,
+                'CreatedBy'          => $userId,
+                'CreatedOn'          => $now,
+                'UpdatedBy'          => $userId,
+                'UpdatedOn'          => $now,
+                'UMQuantity'         => 1,
+                'UMRate'             => 1,
+                'UMFactorRate'       => 1,
+                'Unit'               => $item['Unit'] ?? 0,
+            ]);
+        }
+
         // Call model SQL (your SQL goes here)
-        $query = InvoiceModel::edit_transaction([
-            'RequestID' => $requestId,
-            'HeaderID'  => $id,
-        ]);
+        $query = InvoiceModel::edit_transaction($requestId);
 
         if (!empty($query) && $query !== "") {
             DB::statement($query);
@@ -413,6 +417,7 @@ class InvoiceController extends Controller
     // Push delete signal to Temp Table
     DB::table('tbl_temp_invoice_detail')->insert([
         'InvoiceID' => $id,
+        'TID'       => $id, // Added TID for Model Join
         'DocNo'     => $invoice->DocNo,
         'Quantity'  => 0, // Satisfy DB constraints
         'Rate'      => 0,
@@ -422,7 +427,7 @@ class InvoiceController extends Controller
         'RequestID' => $requestId,
     ]);
 
-    $query = InvoiceModel::delete_transaction(['RequestID' => $requestId]);
+    $query = InvoiceModel::delete_transaction($requestId);
 
     if (!empty($query)) {
         DB::unprepared($query);
