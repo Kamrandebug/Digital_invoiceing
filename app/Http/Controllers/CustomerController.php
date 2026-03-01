@@ -478,7 +478,7 @@ try {
                 'BillingPostalCode' => $request->BillingPostalCode,
                 'FullBillingAddress' => $fullBillingAddress,
                 'NTN' => $request->NTN,
-                'SalesTtaxNumber' => $request->SalesTaxNumber ?? '',
+                'SalesTaxNumber' => $request->SalesTaxNumber ?? '',
                 'IsFiler' => $request->input('IsFiler', 0),
                 'Notes' => $request->Notes,
                 'PaymentTerms' => $request->input('PaymentTerms', $customer->PaymentTerms ?? 'Cash'),
