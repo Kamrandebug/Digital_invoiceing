@@ -60,6 +60,15 @@
 <form action="{{ $formAction }}" method="POST" id="product_modal_form" novalidate>
     @csrf
     @if($isEdit) @method('PUT') @endif
+    {{-- Hidden defaults for removed Account/Optional tabs --}}
+    <input type="hidden" name="Status" value="{{ old('Status', $product->Status ?? '1') }}">
+    <input type="hidden" name="IncomeAccount" value="{{ old('IncomeAccount', $product->IncomeAccount ?? '0') }}">
+    <input type="hidden" name="StockAccount" value="{{ old('StockAccount', $product->StockAccount ?? '0') }}">
+    <input type="hidden" name="ExpenseAccount" value="{{ old('ExpenseAccount', $product->ExpenseAccount ?? '0') }}">
+    <input type="hidden" name="PreferredSupplier" value="{{ old('PreferredSupplier', $product->PreferredSupplier ?? '0') }}">
+    <input type="hidden" name="OptionalField1" value="{{ old('OptionalField1', $product->OptionalField1 ?? '') }}">
+    <input type="hidden" name="OptionalField2" value="{{ old('OptionalField2', $product->OptionalField2 ?? '') }}">
+    <input type="hidden" name="OptionalField3" value="{{ old('OptionalField3', $product->OptionalField3 ?? '0') }}">
 @endif
 
 <div class="{{ $isReadonly ? 'show-mode' : '' }}">
@@ -70,8 +79,6 @@
                 <a class="nav-link" data-bs-toggle="tab" href="#{{ $uid }}_pricing" role="tab"><i class="fas fa-dollar-sign"></i> Pricing</a>
                 <a class="nav-link" data-bs-toggle="tab" href="#{{ $uid }}_tax" role="tab"><i class="fas fa-receipt"></i> Tax</a>
                 <a class="nav-link" data-bs-toggle="tab" href="#{{ $uid }}_stock" role="tab"><i class="fas fa-warehouse"></i> Stock</a>
-                <a class="nav-link" data-bs-toggle="tab" href="#{{ $uid }}_account" role="tab"><i class="fas fa-book"></i> Account</a>
-                <a class="nav-link" data-bs-toggle="tab" href="#{{ $uid }}_optional" role="tab"><i class="fas fa-sliders-h"></i> Optional</a>
             </nav>
         </div>
         <div class="col-md-9">
@@ -165,37 +172,6 @@
                         <div class="col-md-3"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Current Qty</label>@if($isReadonly)<div class="_pfp-detail-value">{{ $product->CurrentQuantity ?? 0 }}</div>@else<input type="number" step="0.000001" name="CurrentQuantity" class="form-control form-control-sm @error('CurrentQuantity') is-invalid @enderror" value="{{ old('CurrentQuantity', $product->CurrentQuantity ?? '0') }}">@error('CurrentQuantity')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
                         <div class="col-md-3"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Opening Qty</label>@if($isReadonly)<div class="_pfp-detail-value">{{ $product->OpeningQuantity ?? 0 }}</div>@else<input type="number" step="0.000001" name="OpeningQuantity" class="form-control form-control-sm @error('OpeningQuantity') is-invalid @enderror" value="{{ old('OpeningQuantity', $product->OpeningQuantity ?? '0') }}">@error('OpeningQuantity')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
                         <div class="col-md-3"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Opening Rate (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->OpeningRate ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="OpeningRate" class="form-control form-control-sm @error('OpeningRate') is-invalid @enderror" value="{{ old('OpeningRate', $product->OpeningRate ?? '0.00') }}">@error('OpeningRate')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                    </div>
-                </div>
-
-                {{-- Tab: Account --}}
-                <div class="tab-pane fade _pfp-tab-pane" id="{{ $uid }}_account" role="tabpanel">
-                    <h6 class="_pfp-section-title"><i class="fas fa-book"></i> Account</h6>
-                    <div class="row g-2">
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Income Account</label>@if($isReadonly)<div class="_pfp-detail-value">{{ $product->IncomeAccount ?? '-' }}</div>@else<select name="IncomeAccount" class="form-select form-select-sm @error('IncomeAccount') is-invalid @enderror"><option value="">Select</option></select>@error('IncomeAccount')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Stock Account</label>@if($isReadonly)<div class="_pfp-detail-value">{{ $product->StockAccount ?? '-' }}</div>@else<select name="StockAccount" class="form-select form-select-sm @error('StockAccount') is-invalid @enderror"><option value="">Select</option></select>@error('StockAccount')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Expense Account</label>@if($isReadonly)<div class="_pfp-detail-value">{{ $product->ExpenseAccount ?? '-' }}</div>@else<select name="ExpenseAccount" class="form-select form-select-sm @error('ExpenseAccount') is-invalid @enderror"><option value="">Select</option></select>@error('ExpenseAccount')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Preferred Supplier</label>@if($isReadonly)<div class="_pfp-detail-value">{{ $product->PreferredSupplier ?? '-' }}</div>@else<select name="PreferredSupplier" class="form-select form-select-sm @error('PreferredSupplier') is-invalid @enderror"><option value="0">Select Supplier</option></select>@error('PreferredSupplier')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                    </div>
-                </div>
-
-                {{-- Tab: Optional --}}
-                <div class="tab-pane fade _pfp-tab-pane" id="{{ $uid }}_optional" role="tabpanel">
-                    <h6 class="_pfp-section-title"><i class="fas fa-sliders-h"></i> Optional</h6>
-                    <div class="row g-2">
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Optional 1</label>@if($isReadonly)<div class="_pfp-detail-value">{{ $product->OptionalField1 ?? '-' }}</div>@else<input type="text" name="OptionalField1" class="form-control form-control-sm @error('OptionalField1') is-invalid @enderror" value="{{ old('OptionalField1', $product->OptionalField1 ?? '') }}">@error('OptionalField1')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Optional 2</label>@if($isReadonly)<div class="_pfp-detail-value">{{ $product->OptionalField2 ?? '-' }}</div>@else<input type="text" name="OptionalField2" class="form-control form-control-sm @error('OptionalField2') is-invalid @enderror" value="{{ old('OptionalField2', $product->OptionalField2 ?? '') }}">@error('OptionalField2')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Optional 3</label>@if($isReadonly)<div class="_pfp-detail-value">{{ $product->OptionalField3 ?? '-' }}</div>@else<input type="number" name="OptionalField3" class="form-control form-control-sm @error('OptionalField3') is-invalid @enderror" value="{{ old('OptionalField3', $product->OptionalField3 ?? '0') }}">@error('OptionalField3')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        @if(!$isReadonly)
-                        <div class="col-md-6">
-                            <label class="form-label _pfp-required">Status</label>
-                            <select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror" required>
-                                <option value="1" {{ old('Status', $product->Status ?? '1') == '1' ? 'selected' : '' }}>Active</option>
-                                <option value="0" {{ old('Status', $product->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
-                            </select>
-                            @error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-                        @endif
                     </div>
                 </div>
             </div>

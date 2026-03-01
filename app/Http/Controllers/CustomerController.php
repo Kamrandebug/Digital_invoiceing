@@ -110,8 +110,8 @@ try {
         'SalesTaxNumber'    => ['nullable','string','max:50','regex:/^[A-Z0-9\-]{5,50}$/','unique:crm_customer,SalesTaxNumber'],
         'IsFiler'           => 'nullable|boolean',
         'CNIC'              => ['required','string','regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/','unique:crm_customer,CNIC'],
-        'CreditLimit'       => 'required|numeric|min:0|max:999999999999.99',
-        'PaymentTerms'      => 'required|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
+        'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
+        'PaymentTerms'      => 'nullable|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
         'Notes'             => 'nullable|string|max:500',
         'Status'            => 'required|integer|in:0,1',
     ], [
@@ -151,10 +151,8 @@ try {
         'CNIC.required'                => 'CNIC is required.',
         'CNIC.regex'                   => 'CNIC must be in format: 12345-1234567-1',
         'CNIC.unique'                  => 'This CNIC is already registered.',
-        'CreditLimit.required'         => 'Credit limit is required.',
         'CreditLimit.numeric'          => 'Credit limit must be a valid number.',
         'CreditLimit.min'              => 'Credit limit cannot be negative.',
-        'PaymentTerms.required'        => 'Payment terms are required.',
         'PaymentTerms.in'              => 'Invalid payment terms selected.',
         'Status.required'              => 'Status is required.',
         'Status.in'                    => 'Invalid status value.',
@@ -212,10 +210,10 @@ try {
                 'BillingPostalCode' => $request->BillingPostalCode,
                 'FullBillingAddress' => $fullBillingAddress,
                 'NTN' => $request->NTN,
-                'SalesTtaxNumber' => $request->SalesTaxNumber ?? '',
+                'SalesTaxNumber' => $request->SalesTaxNumber ?? '',
                 'IsFiler' => $request->input('IsFiler', 0),
                 'Notes' => $request->Notes,
-                'PaymentTerms' => $request->PaymentTerms,
+                'PaymentTerms' => $request->input('PaymentTerms', 'Cash'),
                 'Status' => $request->Status,
                 'CreatedBy' => (int)$userId,
                 'CreatedOn' => $now,
@@ -223,7 +221,7 @@ try {
                 'UpdatedOn' => $now,
                 'SameAsBilling' => $request->input('SameAsBilling', 0),
                 'CNIC' => $request->CNIC,
-                'CreditLimit' => $request->CreditLimit,
+                'CreditLimit' => $request->input('CreditLimit', 0),
                 'FieldA' => null, 'FieldB' => null, 'FieldC' => null, 'FieldD' => null,
                 'Field1' => null, 'Field2' => null, 'Field3' => null, 'Field4' => null,
                 'Typei' => 0,
@@ -236,13 +234,8 @@ try {
             \Log::info('Inserting Customer Data', ['data' => $data]);
             DB::table('temp_customer')->insert($data);
 
-            // Execute model transaction
-            $query = Customer::save_transaction(['RequestID' => $requestId]);
-            
-            // Execute query
-            if (!empty($query) && $query !== "Empty") {
-                DB::statement($query);
-            }
+            // Execute model transaction (runs query inside model)
+            Customer::save_transaction(['RequestID' => $requestId]);
 
                 if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json(['status' => 'success', 'message' => 'Customer created successfully!']);
@@ -387,8 +380,8 @@ try {
         'SalesTaxNumber'    => ['nullable','string','max:50','regex:/^[A-Z0-9\-]{5,50}$/', Rule::unique('crm_customer', 'SalesTaxNumber')->ignore($id, 'ID')->whereNotNull('SalesTaxNumber')],
         'IsFiler'           => 'nullable|boolean',
         'CNIC'              => ['required','string','regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('crm_customer', 'CNIC')->ignore($id, 'ID')],
-        'CreditLimit'       => 'required|numeric|min:0|max:999999999999.99',
-        'PaymentTerms'      => 'required|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
+        'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
+        'PaymentTerms'      => 'nullable|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
         'Notes'             => 'nullable|string|max:500',
         'Status'            => 'required|integer|in:0,1',
     ], [
@@ -428,10 +421,8 @@ try {
         'CNIC.required'                => 'CNIC is required.',
         'CNIC.regex'                   => 'CNIC must be in format: 12345-1234567-1',
         'CNIC.unique'                  => 'This CNIC is already registered.',
-        'CreditLimit.required'         => 'Credit limit is required.',
         'CreditLimit.numeric'          => 'Credit limit must be a valid number.',
         'CreditLimit.min'              => 'Credit limit cannot be negative.',
-        'PaymentTerms.required'        => 'Payment terms are required.',
         'PaymentTerms.in'              => 'Invalid payment terms selected.',
         'Status.required'              => 'Status is required.',
         'Status.in'                    => 'Invalid status value.',
@@ -490,13 +481,13 @@ try {
                 'SalesTtaxNumber' => $request->SalesTaxNumber ?? '',
                 'IsFiler' => $request->input('IsFiler', 0),
                 'Notes' => $request->Notes,
-                'PaymentTerms' => $request->PaymentTerms,
+                'PaymentTerms' => $request->input('PaymentTerms', $customer->PaymentTerms ?? 'Cash'),
                 'Status' => $request->Status,
                 'UpdatedBy' => (int)$userId,
                 'UpdatedOn' => $now,
                 'SameAsBilling' => $request->input('SameAsBilling', 0),
                 'CNIC' => $request->CNIC,
-                'CreditLimit' => $request->CreditLimit,
+                'CreditLimit' => $request->input('CreditLimit', $customer->CreditLimit ?? 0),
                 'FieldA' => null, 'FieldB' => null, 'FieldC' => null, 'FieldD' => null,
                 'Field1' => null, 'Field2' => null, 'Field3' => null, 'Field4' => null,
                 'Typei' => 0,
@@ -508,13 +499,8 @@ try {
             // Update temp
             DB::table('temp_customer')->where('ID', $id)->update($data);
 
-            // Execute model transaction
-            $query = Customer::edit_transaction(['RequestID' => $requestId]);
-
-            // Execute query
-            if (!empty($query) && $query !== "Empty") {
-                 DB::statement($query);
-            }
+            // Execute model transaction (runs query inside model)
+            Customer::edit_transaction(['RequestID' => $requestId]);
 
            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
     return response()->json(['status' => 'success', 'message' => 'Customer created successfully!']);
@@ -561,12 +547,8 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
                     'RequestID' => $requestId 
                 ]);
             
-            // Execute model transaction
-            $query = Customer::delete_transaction(['RequestID' => $requestId]);
-            
-            if (!empty($query) && $query !== "Empty") {
-                DB::statement($query);
-            }
+            // Execute model transaction (runs query inside model)
+            Customer::delete_transaction(['RequestID' => $requestId]);
             
             return redirect()
                 ->route('customers.index')

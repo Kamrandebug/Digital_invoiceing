@@ -65,15 +65,23 @@ class InvoiceModel extends Model
 
     public static function Load_Customer()
     {
-         $query = "";
-        
-         return $query;
+        // Raw SQL string used to populate the Customer dropdown
+        $query = "SELECT ID, DisplayName, Address
+                  FROM crm_customer
+                  WHERE Status = 1";
+
+        return $query;
     }
 
     public static function Load_Product()
     {
-         $query = "S";
-         return $query;
+        // Raw SQL string used to populate the Product dropdown
+        // crm_product has TaxRate; alias as GstPercentage for invoice form.
+        $query = "SELECT ID, Name AS ProductName, SalePrice, TaxRate AS GstPercentage
+                  FROM crm_product
+                  WHERE Status = 1";
+
+        return $query;
     }
 
    // ══════════════════════════════════════════════════════════
@@ -136,53 +144,59 @@ class InvoiceModel extends Model
     //  TRANSACTIONS
     // ══════════════════════════════════════════════════════════
 
-// ══════════════════════════════════════════════════════════
-    //  TRANSACTIONS
-    // ══════════════════════════════════════════════════════════
-
+    /**
+     * Execute save: run multiple queries (header + detail) from tbl_temp_invoice_detail for the given RequestID.
+     * No return; add more DB::unprepared() calls here for any extra queries you need.
+     */
     public static function save_transaction($requestID)
     {
-        $query = "INSERT INTO tbl_sales_invoice_header (InvoiceID,DocNo,Type,CustomerID,Address,InvoiceDate,DueDate,BillNumber,Notes,TermDays,SubTotal,SubTotalBeforeDiscount,InvoiceTaxType,GSTId,GSTAmount,GSTBalance,DiscountAllowed,DiscountAmount,Total,Balance,Status,Filter1,Filter2,Filter3,Filter4,Field1,Field2,Field3,Field4,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,BulkBatchID,Arrears,IsShippingBelowGST,Template,ToLocationID,Tax_ScheduleID,RetailMargin,TOSale,VehicleRegNo)
+        // -- 1. Insert into tbl_sales_invoice_header
+        DB::unprepared("
+            INSERT INTO tbl_sales_invoice_header (InvoiceID,DocNo,Type,CustomerID,Address,InvoiceDate,DueDate,BillNumber,Notes,TermDays,SubTotal,SubTotalBeforeDiscount,InvoiceTaxType,GSTId,GSTAmount,GSTBalance,DiscountAllowed,DiscountAmount,Total,Balance,Status,Filter1,Filter2,Filter3,Filter4,Field1,Field2,Field3,Field4,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,BulkBatchID,Arrears,IsShippingBelowGST,Template,ToLocationID,Tax_ScheduleID,RetailMargin,TOSale,VehicleRegNo)
+            SELECT InvoiceID,DocNo,Type,CustomerID,Address,InvoiceDate,DueDate,BillNumber,Notes,TermDays,0 AS SubTotal,0 AS SubTotalBeforeDiscount,0 AS InvoiceTaxType,GSTId,GSTAmount,0 AS GSTBalance,DiscountAllowed,DiscountAmount,Total,Balance,Status,Filter1,Filter2,Filter3,Filter4,Field1,Field2,Field3,Field4,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,NULL AS BulkBatchID,Arrears,IsShippingBelowGST,Template,ToLocationID,Tax_ScheduleID,RetailMargin,TOSale,VehicleRegNo
+            FROM tbl_temp_invoice_detail
+            WHERE RequestID = '$requestID'
+            LIMIT 1
+        ");
 
-        SELECT 	InvoiceID,DocNo,Type,CustomerID,Address,InvoiceDate,DueDate,BillNumber,Notes,TermDays,0 AS SubTotal,0 AS SubTotalBeforeDiscount,0 AS InvoiceTaxType,GSTId,GSTAmount,0 AS GSTBalance,DiscountAllowed,DiscountAmount,Total,Balance,Status,Filter1,Filter2,Filter3,Filter4,Field1,Field2,Field3,Field4,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,NULL AS BulkBatchID,Arrears,IsShippingBelowGST,Template,ToLocationID,Tax_ScheduleID,RetailMargin,TOSale,VehicleRegNo
-    FROM 	tbl_temp_invoice_detail
-    WHERE 	RequestID = '$requestID'";
-    // -- GROUP BY RequestID
-
-        return $query;
+        // -- 2. Insert into tbl_sales_invoice_detail
+        DB::unprepared("
+            INSERT INTO tbl_sales_invoice_detail (InvoiceID,InvoiceDate,CustomerID,ProductID,Details,Quantity,Rate,Amount,DiscountPercentage,DiscountAmount,GstPercentage,GSTAmount,Type,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,UMQuantity,UMRate,UMFactorRate,Unit)
+            SELECT InvoiceID,InvoiceDate,CustomerID,ProductID,Details,Quantity,Rate,Amount,DiscountPercentage,DiscountAmount,GstPercentage,GSTAmount,Type,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,1 AS UMQuantity,1 AS UMRate,1 AS UMFactorRate,0 AS Unit
+            FROM tbl_temp_invoice_detail
+            WHERE RequestID = '$requestID'
+        ");
     }
 
     public static function edit_transaction($requestID)
     {
-        $query = "UPDATE tbl_sales_invoice_header uu
-        JOIN 
-        (
-        SELECT  CustomerID, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
-        FROM tbl_temp_invoice_detail WHERE RequestID = '{$requestID}'
-
-        ) u ON uu.ID = u.TID
-        SET
-        uu.CustomerID = u.CustomerID,
-        uu.UpdatedBy = u.UpdatedBy,
-        uu.UpdatedOn = u.UpdatedOn";
-
-        return $query;
+        DB::unprepared("
+            UPDATE tbl_sales_invoice_header uu
+            JOIN (
+                SELECT CustomerID, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+                FROM tbl_temp_invoice_detail
+                WHERE RequestID = '$requestID'
+            ) u ON uu.ID = u.TID
+            SET
+                uu.CustomerID = u.CustomerID,
+                uu.UpdatedBy = u.UpdatedBy,
+                uu.UpdatedOn = u.UpdatedOn
+        ");
     }
 
     public static function delete_transaction($requestID)
     {
-        $query = "UPDATE tbl_sales_invoice_header uu
-        JOIN 
-        (
-        SELECT  2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
-        FROM tbl_temp_invoice_detail WHERE RequestID = '{$requestID}'
-
-        ) u ON uu.ID = u.TID
-        SET
-        uu.Status = u.Status,
-        uu.UpdatedBy = u.UpdatedBy,
-        uu.UpdatedOn = u.UpdatedOn";
-
-        return $query;
+        DB::unprepared("
+            UPDATE tbl_sales_invoice_header uu
+            JOIN (
+                SELECT 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+                FROM tbl_temp_invoice_detail
+                WHERE RequestID = '$requestID'
+            ) u ON uu.ID = u.TID
+            SET
+                uu.Status = u.Status,
+                uu.UpdatedBy = u.UpdatedBy,
+                uu.UpdatedOn = u.UpdatedOn
+        ");
     }
 }

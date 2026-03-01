@@ -100,52 +100,60 @@ class Customer extends Model
     return $query->orderBy('CreatedOn', 'desc');
 }
 
+    /**
+     * Execute save: insert from temp_customer into crm_customer. No return; runs query inside.
+     */
     public static function save_transaction($validated)
     {
-        // Insert query
-        $query = "INSERT INTO crm_customer ( AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn)
-        SELECT  AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
-        FROM temp_customer WHERE RequestID = '{$validated['RequestID']}';";
-
-        return $query;
+        $requestID = $validated['RequestID'] ?? '';
+        DB::unprepared("
+            INSERT INTO crm_customer (AccountNo, Title, FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn)
+            SELECT AccountNo, Title, FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
+            FROM temp_customer
+            WHERE RequestID = '$requestID'
+        ");
     }
 
+    /**
+     * Execute edit: update crm_customer from temp_customer. No return; runs query inside.
+     */
     public static function edit_transaction($validated)
     {
-        $query = "UPDATE crm_customer uu
-        JOIN 
-        (
-        SELECT  AccountNo, Title,FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
-        FROM temp_customer WHERE RequestID = '{$validated['RequestID']}'
-
-        ) u ON uu.ID = u.TID
-        SET
-        uu.AccountNo = u.AccountNo,
-        uu.Title = u.Title,
-        uu.FirstName = u.FirstName,
-        uu.UpdatedBy = u.UpdatedBy,
-        uu.UpdatedOn = u.UpdatedOn";
-
-        return $query;
+        $requestID = $validated['RequestID'] ?? '';
+        DB::unprepared("
+            UPDATE crm_customer uu
+            JOIN (
+                SELECT AccountNo, Title, FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+                FROM temp_customer
+                WHERE RequestID = '$requestID'
+            ) u ON uu.ID = u.TID
+            SET
+                uu.AccountNo = u.AccountNo,
+                uu.Title = u.Title,
+                uu.FirstName = u.FirstName,
+                uu.UpdatedBy = u.UpdatedBy,
+                uu.UpdatedOn = u.UpdatedOn
+        ");
     }
 
+    /**
+     * Execute delete: soft-update crm_customer status from temp_customer. No return; runs query inside.
+     */
     public static function delete_transaction($validated = [])
     {
-         $reqId = $validated['RequestID'] ?? '';
-         
-         $query = "UPDATE crm_customer uu 
-            JOIN 
-            ( 
-            SELECT  TID, 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn 
-            FROM temp_customer WHERE RequestID = '{$reqId}'
-            
-            ) u ON uu.ID = u.TID 
-            SET 
-            uu.Status = u.Status, 
-            uu.UpdatedBy = u.UpdatedBy, 
-            uu.UpdatedOn = u.UpdatedOn";
-  
-         return $query;
+        $requestID = $validated['RequestID'] ?? '';
+        DB::unprepared("
+            UPDATE crm_customer uu
+            JOIN (
+                SELECT TID, 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
+                FROM temp_customer
+                WHERE RequestID = '$requestID'
+            ) u ON uu.ID = u.TID
+            SET
+                uu.Status = u.Status,
+                uu.UpdatedBy = u.UpdatedBy,
+                uu.UpdatedOn = u.UpdatedOn
+        ");
     }
 
 

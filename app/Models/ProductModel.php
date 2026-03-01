@@ -124,47 +124,59 @@ class ProductModel extends Model
 
     return DB::select($query, $bindings);
 }
+    /**
+     * Execute save: insert from temp_product into crm_product. No return; runs query inside.
+     */
     public static function save_transaction($validated)
     {
-        $query = "INSERT INTO crm_product (VoucherID,TYPE,NAME,Image,CODE,Category,SaleInformation,SalePrice,TaxCode,TaxRate,NFTaxRate,IncomeAccount,LowStockLevel,CurrentQuantity,DATE,StockAccount,ExpenseAccount,IsSelltoCustomer,STATUS,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,RequestID,StockStatus,Cost,OpeningQuantity,purchaseStatus,OpeningRate,OptionalField1,OptionalField2,OptionalField3,IsShipping,IsPurchasing,TPRate,TPMargin,Unit,TrialRate,Discount,Weight,PurchaseDiscount,TOSale,TOPurchase,RMSale,RMPurchase,TPSale,TPPurchase,PreferredSupplier,TaxSchID,IsRawMaterial)
-
-        SELECT VoucherID,TYPE,NAME,Image,CODE,1 AS CategoryID,SaleInformation,SalePrice,TaxCode,TaxRate,NFTaxRate,IncomeAccount,LowStockLevel,CurrentQuantity,DATE,StockAccount,ExpenseAccount,IsSelltoCustomer,STATUS,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,RequestID,StockStatus,Cost,OpeningQuantity,purchaseStatus,OpeningRate,OptionalField1,OptionalField2,OptionalField3,IsShipping,IsPurchasing,TPRate,TPMargin,Unit,TrialRate,Discount,Weight,PurchaseDiscount,TOSale,TOPurchase,RMSale,RMPurchase,TPSale,TPPurchase,PreferredSupplier,TaxSchID,IsRawMaterial
-        FROM temp_product 
-        WHERE RequestID = '{$validated['RequestID']}'";
-        return $query;
+        $requestID = $validated['RequestID'] ?? '';
+        DB::unprepared("
+            INSERT INTO crm_product (VoucherID,TYPE,NAME,Image,CODE,Category,SaleInformation,SalePrice,TaxCode,TaxRate,NFTaxRate,IncomeAccount,LowStockLevel,CurrentQuantity,DATE,StockAccount,ExpenseAccount,IsSelltoCustomer,STATUS,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,RequestID,StockStatus,Cost,OpeningQuantity,purchaseStatus,OpeningRate,OptionalField1,OptionalField2,OptionalField3,IsShipping,IsPurchasing,TPRate,TPMargin,Unit,TrialRate,Discount,Weight,PurchaseDiscount,TOSale,TOPurchase,RMSale,RMPurchase,TPSale,TPPurchase,PreferredSupplier,TaxSchID,IsRawMaterial)
+            SELECT VoucherID,TYPE,NAME,Image,CODE,1 AS CategoryID,SaleInformation,SalePrice,TaxCode,TaxRate,NFTaxRate,IncomeAccount,LowStockLevel,CurrentQuantity,DATE,StockAccount,ExpenseAccount,IsSelltoCustomer,STATUS,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,RequestID,StockStatus,Cost,OpeningQuantity,purchaseStatus,OpeningRate,OptionalField1,OptionalField2,OptionalField3,IsShipping,IsPurchasing,TPRate,TPMargin,Unit,TrialRate,Discount,Weight,PurchaseDiscount,TOSale,TOPurchase,RMSale,RMPurchase,TPSale,TPPurchase,PreferredSupplier,TaxSchID,IsRawMaterial
+            FROM temp_product
+            WHERE RequestID = '$requestID'
+        ");
     }
 
+    /**
+     * Execute edit: update crm_product from temp_product. No return; runs query inside.
+     */
     public static function edit_transaction($validated)
     {
-        $query = "UPDATE crm_product uu
-        JOIN 
-        (
-        SELECT  Code, Name, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
-        FROM temp_product WHERE RequestID = '{$validated['RequestID']}'
-
-        ) u ON uu.ID = u.TID
-        SET
-        uu.Code = u.Code,
-        uu.Name = u.Name,
-        uu.UpdatedBy = u.UpdatedBy,
-        uu.UpdatedOn = u.UpdatedOn";
-        return $query;
+        $requestID = $validated['RequestID'] ?? '';
+        DB::unprepared("
+            UPDATE crm_product uu
+            JOIN (
+                SELECT Code, Name, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+                FROM temp_product
+                WHERE RequestID = '$requestID'
+            ) u ON uu.ID = u.TID
+            SET
+                uu.Code = u.Code,
+                uu.Name = u.Name,
+                uu.UpdatedBy = u.UpdatedBy,
+                uu.UpdatedOn = u.UpdatedOn
+        ");
     }
 
+    /**
+     * Execute delete: soft-update crm_product status from temp_product. No return; runs query inside.
+     */
     public static function delete_transaction($validated = [])
     {
-       $query = " UPDATE crm_product uu 
-            JOIN 
-            ( 
-            SELECT  TID, 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn 
-            FROM temp_product WHERE RequestID = '{$validated['RequestID']}'
-            
-            ) u ON uu.ID = u.TID 
-            SET 
-            uu.Status = u.Status, 
-            uu.UpdatedBy = u.UpdatedBy, 
-            uu.UpdatedOn = u.UpdatedOn";
-        return $query;
+        $requestID = $validated['RequestID'] ?? '';
+        DB::unprepared("
+            UPDATE crm_product uu
+            JOIN (
+                SELECT TID, 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
+                FROM temp_product
+                WHERE RequestID = '$requestID'
+            ) u ON uu.ID = u.TID
+            SET
+                uu.Status = u.Status,
+                uu.UpdatedBy = u.UpdatedBy,
+                uu.UpdatedOn = u.UpdatedOn
+        ");
     }
 
     /**

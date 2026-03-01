@@ -241,13 +241,8 @@ class ProductController extends Controller
             \Log::info('Inserting Product Data', ['data' => $data]);
             DB::table('temp_product')->insert($data);
 
-            // Execute model transaction
-            $query = ProductModel::save_transaction(['RequestID' => $requestId]);
-
-            // Execute query
-            if (!empty($query) && $query !== "Empty") {
-                DB::statement($query);
-            }
+            // Execute model transaction (runs query inside model)
+            ProductModel::save_transaction(['RequestID' => $requestId]);
 
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json(['status' => 'success', 'message' => 'Product created successfully!']);
@@ -489,13 +484,8 @@ class ProductController extends Controller
             // Update temp
             DB::table('temp_product')->where('ID', $id)->update($data);
 
-            // Execute model transaction
-            $query = ProductModel::edit_transaction(['RequestID' => $requestId]);
-
-            // Execute query
-            if (!empty($query) && $query !== "Empty") {
-                DB::statement($query);
-            }
+            // Execute model transaction (runs query inside model)
+            ProductModel::edit_transaction(['RequestID' => $requestId]);
 
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json(['status' => 'success', 'message' => 'Product updated successfully!']);
@@ -546,12 +536,8 @@ class ProductController extends Controller
                     'RequestID' => $requestId,
                 ]);
 
-            // Execute model transaction
-            $query = ProductModel::delete_transaction(['RequestID' => $requestId]);
-
-            if (!empty($query) && $query !== "Empty") {
-                DB::statement($query);
-            }
+            // Execute model transaction (runs query inside model)
+            ProductModel::delete_transaction(['RequestID' => $requestId]);
 
             return redirect()
                 ->route('products.index')

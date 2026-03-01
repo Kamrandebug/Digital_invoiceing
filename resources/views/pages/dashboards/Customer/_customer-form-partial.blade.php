@@ -485,34 +485,6 @@
 						</div>
 
 						<div class="col-md-4">
-							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Credit Limit (PKR)</label>
-							@if($isReadonly)
-								<div class="_cfp-detail-value">{{ number_format($customer->CreditLimit ?? 0, 2) }}</div>
-							@else
-								<input type="number" step="0.01" name="CreditLimit"
-									   class="form-control form-control-sm @error('CreditLimit') is-invalid @enderror"
-									   value="{{ old('CreditLimit', $customer->CreditLimit ?? '0.00') }}" placeholder="0.00" required>
-								@error('CreditLimit')<div class="invalid-feedback">{{ $message }}</div>@enderror
-							@endif
-						</div>
-
-						<div class="col-md-4">
-							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Payment Terms</label>
-							@if($isReadonly)
-								<div class="_cfp-detail-value">{{ $customer->PaymentTerms ?? '-' }}</div>
-							@else
-								<select name="PaymentTerms"
-										class="form-select form-select-sm @error('PaymentTerms') is-invalid @enderror" required>
-									<option value="">Select</option>
-									@foreach(['Cash','Net 15','Net 30','Net 45','Net 60','Due on Receipt','COD'] as $pt)
-										<option value="{{ $pt }}" {{ old('PaymentTerms', $customer->PaymentTerms ?? '') == $pt ? 'selected' : '' }}>{{ $pt }}</option>
-									@endforeach
-								</select>
-								@error('PaymentTerms')<div class="invalid-feedback">{{ $message }}</div>@enderror
-							@endif
-						</div>
-
-						<div class="col-md-4">
 							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Tax Filer Status</label>
 							@if($isReadonly)
 								<div class="_cfp-detail-value">

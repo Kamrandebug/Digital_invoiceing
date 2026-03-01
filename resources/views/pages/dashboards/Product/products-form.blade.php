@@ -803,158 +803,17 @@
             </div>
         </div>
 
-        {{-- Account Info --}}
-        <div class="form-section">
-            <h3 class="form-section-title">
-                <i class="fas fa-book"></i> Account Information
-            </h3>
-
-            <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="IncomeAccount" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Income Account</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ $product->IncomeAccount ?? '-' }}</div>
-                        @else
-                            <select name="IncomeAccount" id="IncomeAccount" class="form-select @error('IncomeAccount') is-invalid @enderror" >
-                                <option value="">Select Account</option>
-                                {{-- Populate dynamically --}}
-                            </select>
-                            @error('IncomeAccount')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="StockAccount" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Stock Account</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ $product->StockAccount ?? '-' }}</div>
-                        @else
-                            <select name="StockAccount" id="StockAccount" class="form-select @error('StockAccount') is-invalid @enderror" >
-                                <option value="">Select Account</option>
-                                {{-- Populate dynamically --}}
-                            </select>
-                            @error('StockAccount')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="ExpenseAccount" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Expense Account</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ $product->ExpenseAccount ?? '-' }}</div>
-                        @else
-                            <select name="ExpenseAccount" id="ExpenseAccount" class="form-select @error('ExpenseAccount') is-invalid @enderror">
-                                <option value="">Select Account</option>
-                                {{-- Populate dynamically --}}
-                            </select>
-                            @error('ExpenseAccount')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="PreferredSupplier" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Preferred Supplier</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ $product->PreferredSupplier ?? '-' }}</div>
-                        @else
-                            <select name="PreferredSupplier" id="PreferredSupplier" class="form-select @error('PreferredSupplier') is-invalid @enderror">
-                                <option value="0">Select Supplier</option>
-                                {{-- Populate dynamically --}}
-                            </select>
-                            @error('PreferredSupplier')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Optional Fields --}}
-        <div class="form-section">
-            <h3 class="form-section-title">
-                <i class="fas fa-sliders-h"></i> Optional Information
-            </h3>
-
-            <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="OptionalField1" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Optional Field 1</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ $product->OptionalField1 ?? '-' }}</div>
-                        @else
-                            <input type="text" class="form-control @error('OptionalField1') is-invalid @enderror"
-                                   id="OptionalField1" name="OptionalField1"
-                                   value="{{ old('OptionalField1', $product->OptionalField1 ?? '') }}" placeholder="Optional Field 1">
-                            @error('OptionalField1')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="OptionalField2" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Optional Field 2</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ $product->OptionalField2 ?? '-' }}</div>
-                        @else
-                            <input type="text" class="form-control @error('OptionalField2') is-invalid @enderror"
-                                   id="OptionalField2" name="OptionalField2"
-                                   value="{{ old('OptionalField2', $product->OptionalField2 ?? '') }}" placeholder="Optional Field 2">
-                            @error('OptionalField2')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label for="OptionalField3" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Optional Field 3</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ $product->OptionalField3 ?? '-' }}</div>
-                        @else
-                            <input type="number" class="form-control @error('OptionalField3') is-invalid @enderror"
-                                   id="OptionalField3" name="OptionalField3"
-                                   value="{{ old('OptionalField3', $product->OptionalField3 ?? '0') }}" placeholder="0">
-                            @error('OptionalField3')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            @if(!$isReadonly)
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="Status" class="form-label required-field">Status</label>
-                        <select name="Status" id="Status" class="form-select @error('Status') is-invalid @enderror" required>
-                            <option value="1" {{ old('Status', $product->Status ?? '1') == '1' ? 'selected' : '' }}>Active</option>
-                            <option value="0" {{ old('Status', $product->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
-                        </select>
-                        @error('Status')
-                            <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
-            </div>
-            @endif
-        </div>
+        {{-- Hidden defaults for removed Account/Optional sections --}}
+        @if(!$isReadonly)
+        <input type="hidden" name="Status" value="{{ old('Status', $product->Status ?? '1') }}">
+        <input type="hidden" name="IncomeAccount" value="{{ old('IncomeAccount', $product->IncomeAccount ?? '0') }}">
+        <input type="hidden" name="StockAccount" value="{{ old('StockAccount', $product->StockAccount ?? '0') }}">
+        <input type="hidden" name="ExpenseAccount" value="{{ old('ExpenseAccount', $product->ExpenseAccount ?? '0') }}">
+        <input type="hidden" name="PreferredSupplier" value="{{ old('PreferredSupplier', $product->PreferredSupplier ?? '0') }}">
+        <input type="hidden" name="OptionalField1" value="{{ old('OptionalField1', $product->OptionalField1 ?? '') }}">
+        <input type="hidden" name="OptionalField2" value="{{ old('OptionalField2', $product->OptionalField2 ?? '') }}">
+        <input type="hidden" name="OptionalField3" value="{{ old('OptionalField3', $product->OptionalField3 ?? '0') }}">
+        @endif
 
         {{-- Actions --}}
         <div class="action-buttons-bottom">

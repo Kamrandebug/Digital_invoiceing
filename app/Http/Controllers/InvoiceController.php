@@ -52,12 +52,16 @@ class InvoiceController extends Controller
 
     public function create()
     {
+        // Use InvoiceModel helpers (raw SQL) to load dropdown data
+        $customerSql = InvoiceModel::Load_Customer();
+        $productSql  = InvoiceModel::Load_Product();
+
         return view('pages.dashboards.Invoice._invoice-form-partial', [
             'mode'      => 'create',
             'invoice'   => null,
             'items'     => collect(),
-            'customers' => Customer::where('Status', 1)->get(), // Direct fetch
-            'products'  => ProductModel::where('Status', 1)->get(), // Direct fetch
+            'customers' => DB::select($customerSql),
+            'products'  => DB::select($productSql),
             'inModal'   => false,
         ]);
     }
@@ -100,12 +104,16 @@ class InvoiceController extends Controller
                 ->get();
         }
 
+        // Use InvoiceModel helpers (raw SQL) to load dropdown data
+        $customerSql = InvoiceModel::Load_Customer();
+        $productSql  = InvoiceModel::Load_Product();
+
         return view('pages.dashboards.Invoice._invoice-form-partial', [
             'mode'      => $mode,
             'invoice'   => $invoice,
             'items'     => $items,
-            'customers' => Customer::where('Status', 1)->get(), // Direct fetch
-            'products'  => ProductModel::where('Status', 1)->get(), // Direct fetch
+            'customers' => DB::select($customerSql),
+            'products'  => DB::select($productSql),
             'inModal'   => true,
         ]);
     }
@@ -132,12 +140,15 @@ class InvoiceController extends Controller
             ->where('d.Status', '!=', 2)
             ->get();
 
+        $customerSql = InvoiceModel::Load_Customer();
+        $productSql  = InvoiceModel::Load_Product();
+
         return view('pages.dashboards.Invoice._invoice-form-partial', [
             'mode'      => 'show',
             'invoice'   => $invoice,
             'items'     => $items,
-            'customers' => Customer::where('Status', 1)->get(), // Direct fetch
-            'products'  => ProductModel::where('Status', 1)->get(), // Direct fetch
+            'customers' => DB::select($customerSql),
+            'products'  => DB::select($productSql),
             'inModal'   => false,
         ]);
     }
@@ -164,12 +175,15 @@ class InvoiceController extends Controller
             ->where('d.Status', '!=', 2)
             ->get();
 
+        $customerSql = InvoiceModel::Load_Customer();
+        $productSql  = InvoiceModel::Load_Product();
+
         return view('pages.dashboards.Invoice._invoice-form-partial', [
             'mode'      => 'edit',
             'invoice'   => $invoice,
             'items'     => $items,
-            'customers' => Customer::where('Status', 1)->get(), // Direct fetch
-            'products'  => ProductModel::where('Status', 1)->get(), // Direct fetch
+            'customers' => DB::select($customerSql),
+            'products'  => DB::select($productSql),
             'inModal'   => false,
         ]);
     }
@@ -241,16 +255,8 @@ class InvoiceController extends Controller
             ]);
         }
 
-        // 3. Execute model transaction (moves temp → tbl_sales_invoice_detail)
-        $query = InvoiceModel::save_transaction($requestId);
-
-        if (!empty($query) && $query !== "") {
-            // Check if the query contains multiple statements
-            // The query from InvoiceModel::save_transaction contains two INSERT statements separated by a semicolon.
-            // Laravel's DB::statement might fail with "Syntax error" if strict mode is on for certain drivers or if it tries to prepare multiple statements at once.
-            // Using DB::unprepared allows executing raw SQL string with multiple statements.
-            DB::unprepared($query);
-        }
+        // 3. Execute model transaction (inserts header + detail from temp; no return)
+        InvoiceModel::save_transaction($requestId);
 
         // 4. Clean temp
         // DB::table('tbl_temp_invoice_detail')->where('RequestID', $requestId)->delete();
@@ -378,12 +384,8 @@ class InvoiceController extends Controller
             ]);
         }
 
-        // Call model SQL (your SQL goes here)
-        $query = InvoiceModel::edit_transaction($requestId);
-
-        if (!empty($query) && $query !== "") {
-            DB::statement($query);
-        }
+        // Call model (executes update inside model)
+        InvoiceModel::edit_transaction($requestId);
 
         if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json(['status' => 'success', 'message' => 'Invoice updated successfully.']);
@@ -427,11 +429,7 @@ class InvoiceController extends Controller
         'RequestID' => $requestId,
     ]);
 
-    $query = InvoiceModel::delete_transaction($requestId);
-
-    if (!empty($query)) {
-        DB::unprepared($query);
-    }
+    InvoiceModel::delete_transaction($requestId);
 
     return redirect()->route('invoices.index')->with('success', 'Invoice archived successfully.');
 
