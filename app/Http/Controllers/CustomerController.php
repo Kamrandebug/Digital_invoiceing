@@ -450,9 +450,9 @@ try {
                                  $request->BillingCity . ', ' . 
                                  $request->BillingCountry;
 
-            // Prepare data
+            // Prepare data for temp_customer (edit flow needs a row with TID = $id and RequestID)
             $data = [
-                'TID' => $id, // Ensure TID matches ID on update
+                'TID' => $id,
                 'IsArchive' => 0,
                 'VoucherID' => $customer->VoucherID ?? 0,
                 'AccountNo' => $customer->AccountNo ?? '0',
@@ -483,6 +483,8 @@ try {
                 'Notes' => $request->Notes,
                 'PaymentTerms' => $request->input('PaymentTerms', $customer->PaymentTerms ?? 'Cash'),
                 'Status' => $request->Status,
+                'CreatedBy' => (int)($customer->CreatedBy ?? $userId),
+                'CreatedOn' => $customer->CreatedOn ?? $now,
                 'UpdatedBy' => (int)$userId,
                 'UpdatedOn' => $now,
                 'SameAsBilling' => $request->input('SameAsBilling', 0),
@@ -496,8 +498,11 @@ try {
                 'RequestID' => $requestId
             ];
 
-            // Update temp
-            DB::table('temp_customer')->where('ID', $id)->update($data);
+            // Insert into temp (edit: no row with ID=$id exists in temp; we must insert one so model can read it)
+            $nextTempId = DB::table('temp_customer')->max('ID');
+            $nextTempId = $nextTempId ? (int)$nextTempId + 1 : 1;
+            $data['ID'] = $nextTempId;
+            DB::table('temp_customer')->insert($data);
 
             // Execute model transaction (runs query inside model)
             Customer::edit_transaction(['RequestID' => $requestId]);
@@ -536,17 +541,25 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
             
             $requestId = (string) Str::uuid();
             $userId = auth()->id() ?? 1;
-            
-            // Update temp
-            DB::table('temp_customer')
-                ->where('ID', $id)
-                ->update([
-                    'IsArchive' => 1, 
-                    'UpdatedBy' => $userId,
-                    'UpdatedOn' => now()->toDateTimeString(),
-                    'RequestID' => $requestId 
-                ]);
-            
+            $now = now()->toDateTimeString();
+
+            // Insert a row into temp_customer so model's delete_transaction can read it (no row with ID=$id exists in temp)
+            $nextTempId = DB::table('temp_customer')->max('ID');
+            $nextTempId = $nextTempId ? (int)$nextTempId + 1 : 1;
+            DB::table('temp_customer')->insert([
+                'ID' => $nextTempId,
+                'TID' => $id,
+                'RequestID' => $requestId,
+                'AccountNo' => $customer->AccountNo ?? '0',
+                'Title' => $customer->Title ?? 'Mr',
+                'FirstName' => $customer->FirstName ?? '',
+                'Status' => 2,
+                'CreatedBy' => (int)($customer->CreatedBy ?? $userId),
+                'CreatedOn' => $customer->CreatedOn ?? $now,
+                'UpdatedBy' => (int)$userId,
+                'UpdatedOn' => $now,
+            ]);
+
             // Execute model transaction (runs query inside model)
             Customer::delete_transaction(['RequestID' => $requestId]);
             

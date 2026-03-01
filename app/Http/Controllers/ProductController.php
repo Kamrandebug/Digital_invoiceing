@@ -435,9 +435,9 @@ class ProductController extends Controller
             $userId    = auth()->id() ?? 1;
             $now       = now()->toDateTimeString();
 
-            // Prepare data
+            // Prepare data for temp_product (edit flow needs a row with TID = $id and RequestID)
             $data = [
-                'TID'              => $id, // Ensure TID matches ID on update
+                'TID'              => $id,
                 'VoucherID'        => $product->VoucherID ?? 0,
                 'ProductID'        => $id,
                 'Type'             => $request->Type,
@@ -445,18 +445,27 @@ class ProductController extends Controller
                 'Image'            => $request->Image ?? $product->Image ?? '',
                 'Code'             => $request->Code,
                 'CategoryID'       => $request->Category ?? 0,
+                'CategoryName'     => null,
+                'ParentCategoryID' => null,
+                'ParentLevel1'     => 0,
+                'ParentLevel2'     => 0,
+                'ParentLevel3'     => 0,
                 'SaleInformation'  => $request->SaleInformation ?? '',
                 'SalePrice'        => $request->SalePrice ?? 0,
                 'TaxCode'          => $request->TaxCode,
                 'TaxRate'          => $request->TaxRate ?? 0,
                 'NFTaxRate'        => $request->NFTaxRate ?? null,
+                'NFTaxCode'        => null,
+                'TaxRegion'        => null,
                 'IncomeAccount'    => $request->IncomeAccount ?? 0,
                 'LowStockLevel'    => $request->LowStockLevel ?? 0,
                 'CurrentQuantity'  => $request->CurrentQuantity ?? $product->CurrentQuantity ?? 0,
+                'Date'             => now()->toDateString(),
                 'StockAccount'     => $request->StockAccount ?? 0,
                 'ExpenseAccount'   => $request->ExpenseAccount ?? 0,
                 'IsSelltoCustomer' => $request->input('IsSelltoCustomer', 0),
                 'Status'           => $request->Status,
+                'StockStatus'      => $product->StockStatus ?? 1,
                 'Cost'             => $request->Cost ?? 0,
                 'OpeningQuantity'  => $request->OpeningQuantity ?? 0,
                 'purchaseStatus'   => $request->input('purchaseStatus', 0),
@@ -469,20 +478,43 @@ class ProductController extends Controller
                 'TPRate'           => $request->TPRate ?? 0,
                 'TPMargin'         => $request->TPMargin ?? 0,
                 'Unit'             => $request->Unit ?? 0,
+                'UnitName'         => null,
+                'UMUnitID'         => 0,
+                'UMUnitName'       => null,
+                'FactorRate'       => 0,
                 'TrialRate'        => $request->TrialRate ?? 0,
                 'Discount'         => $request->Discount ?? 0,
                 'Weight'           => $request->Weight ?? 0,
                 'PurchaseDiscount' => $request->PurchaseDiscount ?? 0,
+                'TOSale'           => 0,
+                'TOPurchase'       => 0,
+                'RMSale'           => 0,
+                'RMPurchase'       => 0,
+                'TPSale'           => 0,
+                'TPPurchase'       => 0,
+                'PreferredSupplierAccount' => null,
                 'PreferredSupplier'=> $request->PreferredSupplier ?? 0,
                 'TaxSchID'         => $request->TaxSchID ?? 4,
                 'IsRawMaterial'    => $request->input('IsRawMaterial', 0),
+                'BatchNo'          => '0',
+                'BatchExpiryDate'  => null,
+                'ToLocationID'     => null,
+                'Location'         => null,
+                'ErrMsg'           => null,
+                'ExcelRow'         => null,
+                'Flag'             => 0,
+                'CreatedBy'        => (int)($product->CreatedBy ?? $userId),
+                'CreatedOn'        => $product->CreatedOn ?? $now,
                 'UpdatedBy'        => (int)$userId,
                 'UpdatedOn'        => $now,
                 'RequestID'        => $requestId,
             ];
 
-            // Update temp
-            DB::table('temp_product')->where('ID', $id)->update($data);
+            // Insert into temp (edit: no row with ID=$id exists in temp; we must insert one so model can read it)
+            $nextTempId = DB::table('temp_product')->max('ID');
+            $nextTempId = $nextTempId ? (int)$nextTempId + 1 : 1;
+            $data['ID'] = $nextTempId;
+            DB::table('temp_product')->insert($data);
 
             // Execute model transaction (runs query inside model)
             ProductModel::edit_transaction(['RequestID' => $requestId]);
@@ -525,16 +557,23 @@ class ProductController extends Controller
 
             $requestId = (string) Str::uuid();
             $userId    = auth()->id() ?? 1;
+            $now       = now()->toDateTimeString();
 
-            // Update temp
-            DB::table('temp_product')
-                ->where('ID', $id)
-                ->update([
-                    'Status'    => 2,
-                    'UpdatedBy' => $userId,
-                    'UpdatedOn' => now()->toDateTimeString(),
-                    'RequestID' => $requestId,
-                ]);
+            // Insert a row into temp_product so model's delete_transaction can read it (no row with ID=$id exists in temp)
+            $nextTempId = DB::table('temp_product')->max('ID');
+            $nextTempId = $nextTempId ? (int)$nextTempId + 1 : 1;
+            DB::table('temp_product')->insert([
+                'ID'         => $nextTempId,
+                'TID'        => $id,
+                'RequestID'  => $requestId,
+                'Code'       => $product->Code ?? '',
+                'Name'       => $product->Name ?? '',
+                'Status'     => 2,
+                'CreatedBy'  => (int)($product->CreatedBy ?? $userId),
+                'CreatedOn'  => $product->CreatedOn ?? $now,
+                'UpdatedBy'  => (int)$userId,
+                'UpdatedOn'  => $now,
+            ]);
 
             // Execute model transaction (runs query inside model)
             ProductModel::delete_transaction(['RequestID' => $requestId]);

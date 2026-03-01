@@ -335,7 +335,7 @@ class InvoiceController extends Controller
                 'GstPercentage'      => $item['GstPercentage']     ?? '0',
                 'GSTAmount'          => $item['GSTAmount']         ?? 0,
                 'Total'              => $item['Total']             ?? 0,
-                'SubTotal'           => $request->SubTotal         ?? 0,
+                //'SubTotal'           => $request->SubTotal         ?? 0,
                 'Notes'              => $request->Notes            ?? null,
                 'DiscountAllowed'    => $request->DiscountAllowed  ?? '0',
                 'Type'               => 'SI',
@@ -416,17 +416,19 @@ class InvoiceController extends Controller
     $userId    = auth()->id() ?? 1;
     $now       = now()->toDateTimeString();
 
-    // Push delete signal to Temp Table
+    // Insert a row into tbl_temp_invoice_detail so model's delete_transaction can read it (same pattern as CustomerController)
     DB::table('tbl_temp_invoice_detail')->insert([
-        'InvoiceID' => $id,
-        'TID'       => $id, // Added TID for Model Join
-        'DocNo'     => $invoice->DocNo,
-        'Quantity'  => 0, // Satisfy DB constraints
-        'Rate'      => 0,
-        'Status'    => 2, // 2 = Archive/Delete Status
-        'UpdatedBy' => $userId,
-        'UpdatedOn' => $now,
-        'RequestID' => $requestId,
+        'InvoiceID'  => $id,
+        'TID'        => $id,
+        'DocNo'      => $invoice->DocNo ?? '',
+        'Quantity'   => 0,
+        'Rate'       => 0,
+        'Status'     => 2,
+        'CreatedBy'  => (int)($invoice->CreatedBy ?? $userId),
+        'CreatedOn'  => $invoice->CreatedOn ?? $now,
+        'UpdatedBy'  => $userId,
+        'UpdatedOn'  => $now,
+        'RequestID'  => $requestId,
     ]);
 
     InvoiceModel::delete_transaction($requestId);
