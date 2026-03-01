@@ -23,5 +23,4 @@ yarn-error.log
 /.zed
 
 config/app.php
-bootstrap/app.php
 .env.example
