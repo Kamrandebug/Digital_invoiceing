@@ -63,10 +63,12 @@ class ProductController extends Controller
      */
     public function save_transaction(Request $request)
     {
-        // Format inputs
+        // Format inputs (normalize empty Category/Unit for modal)
         $request->merge([
-            'Name' => trim($request->Name ?? ''),
-            'Code' => strtoupper(trim($request->Code ?? '')),
+            'Name'     => trim($request->Name ?? ''),
+            'Code'     => strtoupper(trim($request->Code ?? '')),
+            'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
+            'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
         ]);
 
         // Validate
@@ -97,7 +99,7 @@ class ProductController extends Controller
             'TaxSchID'        => ['nullable', 'integer'],
 
             // Stock
-            'LowStockLevel'   => ['required', 'numeric', 'min:0'],
+            'LowStockLevel'   => ['nullable', 'numeric', 'min:0'],
             'CurrentQuantity' => ['nullable', 'numeric', 'min:0'],
             'OpeningQuantity' => ['nullable', 'numeric', 'min:0'],
             'OpeningRate'     => ['nullable', 'numeric', 'min:0'],
@@ -133,7 +135,6 @@ class ProductController extends Controller
             'SalePrice.min'          => 'Sale price cannot be negative.',
             'Cost.numeric'           => 'Cost must be a valid number.',
             'TaxRate.required'       => 'Tax rate is required.',
-            'LowStockLevel.required' => 'Low stock level is required.',
             'IncomeAccount.required' => 'Income account is required.',
             'StockAccount.required'  => 'Stock account is required.',
             'ExpenseAccount.required'=> 'Expense account is required.',
@@ -342,10 +343,12 @@ class ProductController extends Controller
             return redirect()->back()->with('error', 'Product not found.');
         }
 
-        // Format inputs
+        // Format inputs (normalize empty Category/Unit for modal)
         $request->merge([
-            'Name' => trim($request->Name ?? ''),
-            'Code' => strtoupper(trim($request->Code ?? '')),
+            'Name'     => trim($request->Name ?? ''),
+            'Code'     => strtoupper(trim($request->Code ?? '')),
+            'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
+            'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
         ]);
 
         // Validate
@@ -376,7 +379,7 @@ class ProductController extends Controller
             'TaxSchID'        => ['nullable', 'integer'],
 
             // Stock
-            'LowStockLevel'   => ['required', 'numeric', 'min:0'],
+            'LowStockLevel'   => ['nullable', 'numeric', 'min:0'],
             'CurrentQuantity' => ['nullable', 'numeric', 'min:0'],
             'OpeningQuantity' => ['nullable', 'numeric', 'min:0'],
             'OpeningRate'     => ['nullable', 'numeric', 'min:0'],
@@ -411,7 +414,6 @@ class ProductController extends Controller
             'SalePrice.numeric'      => 'Sale price must be a valid number.',
             'SalePrice.min'          => 'Sale price cannot be negative.',
             'TaxRate.required'       => 'Tax rate is required.',
-            'LowStockLevel.required' => 'Low stock level is required.',
             'IncomeAccount.required' => 'Income account is required.',
             'StockAccount.required'  => 'Stock account is required.',
             'ExpenseAccount.required'=> 'Expense account is required.',
