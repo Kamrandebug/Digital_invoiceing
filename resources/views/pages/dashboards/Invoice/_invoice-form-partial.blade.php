@@ -60,7 +60,7 @@
                             <option value="{{ $cust->ID }}"
                                     data-address="{{ $cust->Address }}"
                                     {{ old('CustomerID', $invoice->CustomerID ?? '') == $cust->ID ? 'selected' : '' }}>
-                                {{ $cust->DisplayName }}
+                                {{ $cust->DisplayName ?: ($cust->BusinessName ?: $cust->FirstName) }}
                             </option>
                         @endforeach
                     </select>
@@ -185,7 +185,7 @@
                 <tr>
                     <th width="15%">Product / Services</th>
                     <th width="15%">Description</th>
-                    <th width="5%">Qty</th>
+                    <th width="10%">Qty</th>
                     <th width="8%">Rate</th>
                     <th width="8%">Amount</th>
                     <th width="8%">Disc %</th>
@@ -210,9 +210,9 @@
                                 @foreach($products as $prod)
                                     <option value="{{ $prod->ID }}"
                                             data-rate="{{ $prod->SalePrice ?? 0 }}"
-                                            data-gst="{{ $prod->GstPercentage ?? 0 }}"
+                                            data-gst="{{ $prod->TaxRate ?? 0 }}"
                                             {{ ($item->ProductID ?? 0) == $prod->ID ? 'selected' : '' }}>
-                                        {{ $prod->ProductName }}
+                                        {{ $prod->DisplayName ?? $prod->Name ?? $prod->Code }}
                                     </option>
                                 @endforeach
                             </select>
@@ -229,10 +229,10 @@
                         @if($isReadonly)
                             <span class="small">{{ $item->Quantity ?? 0 }}</span>
                         @else
-                            <div class="input-group border rounded flex-nowrap">
-                                <button type="button" class="btn btn-sm btn-icon btn-primary input-group-text flex-fill ifp-minus"><i class="ri-subtract-line"></i></button>
-                                <input type="number" name="items[{{ $idx }}][Quantity]" class="form-control form-control-sm border-0 text-center ifp-qty" value="{{ $item->Quantity ?? 1 }}" min="0" step="0.000001">
-                                <button type="button" class="btn btn-sm btn-icon btn-primary input-group-text flex-fill ifp-plus"><i class="ri-add-line"></i></button>
+                            <div class="input-group border rounded flex-nowrap" style="min-width: 120px;">
+                                <button type="button" class="btn btn-sm btn-icon btn-primary ifp-minus"><i class="ri-subtract-line"></i></button>
+                                <input type="number" name="items[{{ $idx }}][Quantity]" class="form-control form-control-sm border-0 text-center ifp-qty px-1" value="{{ $item->Quantity ?? 1 }}" min="0" step="0.000001">
+                                <button type="button" class="btn btn-sm btn-icon btn-primary ifp-plus"><i class="ri-add-line"></i></button>
                             </div>
                         @endif
                     </td>
@@ -302,18 +302,18 @@
                             @foreach($products as $prod)
                                 <option value="{{ $prod->ID }}"
                                         data-rate="{{ $prod->SalePrice ?? 0 }}"
-                                        data-gst="{{ $prod->GstPercentage ?? 0 }}">
-                                    {{ $prod->ProductName }}
+                                        data-gst="{{ $prod->TaxRate ?? 0 }}">
+                                    {{ $prod->DisplayName ?? $prod->Name ?? $prod->Code }}
                                 </option>
                             @endforeach
                         </select>
                     </td>
                     <td><textarea name="items[0][Details]" rows="1" class="form-control form-control-sm" placeholder="Enter Description"></textarea></td>
                     <td class="invoice-quantity-container">
-                        <div class="input-group border rounded flex-nowrap">
-                            <button type="button" class="btn btn-sm btn-icon btn-primary input-group-text flex-fill ifp-minus"><i class="ri-subtract-line"></i></button>
-                            <input type="number" name="items[0][Quantity]" class="form-control form-control-sm border-0 text-center ifp-qty" value="1" min="0" step="0.000001">
-                            <button type="button" class="btn btn-sm btn-icon btn-primary input-group-text flex-fill ifp-plus"><i class="ri-add-line"></i></button>
+                        <div class="input-group border rounded flex-nowrap" style="min-width: 120px;">
+                            <button type="button" class="btn btn-sm btn-icon btn-primary ifp-minus"><i class="ri-subtract-line"></i></button>
+                            <input type="number" name="items[0][Quantity]" class="form-control form-control-sm border-0 text-center ifp-qty px-1" value="1" min="0" step="0.000001">
+                            <button type="button" class="btn btn-sm btn-icon btn-primary ifp-plus"><i class="ri-add-line"></i></button>
                         </div>
                     </td>
                     <td><input type="number" step="0.000001" name="items[0][Rate]"               class="form-control form-control-sm ifp-rate"     value="0" min="0"></td>
@@ -464,8 +464,12 @@
 
     // ── Bind row events ──
     function bindRow(row) {
-        row.querySelectorAll('.ifp-qty,.ifp-rate,.ifp-disc-pct,.ifp-gst-pct').forEach(function(inp) {
-            inp.addEventListener('input', calcSummary);
+        // Recalculate summary on input change for any relevant field
+        row.querySelectorAll('.ifp-qty, .ifp-rate, .ifp-disc-pct, .ifp-gst-pct').forEach(function(inp) {
+            inp.addEventListener('input', function() {
+                calcRow(row);
+                calcSummary();
+            });
         });
 
         // +/- qty buttons
@@ -473,37 +477,55 @@
         const plusBtn  = row.querySelector('.ifp-plus');
         const qtyInp   = row.querySelector('.ifp-qty');
 
-        if (minusBtn) minusBtn.addEventListener('click', function() {
-            qtyInp.value = Math.max(0, n(qtyInp.value) - 1);
-            calcSummary();
-        });
-        if (plusBtn) plusBtn.addEventListener('click', function() {
-            qtyInp.value = n(qtyInp.value) + 1;
-            calcSummary();
-        });
+        if (minusBtn) {
+            minusBtn.addEventListener('click', function() {
+                let val = parseFloat(qtyInp.value) || 0;
+                if (val > 0) val--;
+                qtyInp.value = val;
+                // Trigger input event manually if needed, or just call calc directly
+                calcRow(row);
+                calcSummary();
+            });
+        }
+        if (plusBtn) {
+            plusBtn.addEventListener('click', function() {
+                let val = parseFloat(qtyInp.value) || 0;
+                val++;
+                qtyInp.value = val;
+                calcRow(row);
+                calcSummary();
+            });
+        }
 
         // Product select → auto-fill rate + GST
         const prodSel = row.querySelector('.ifp-product');
-        if (prodSel) prodSel.addEventListener('change', function() {
-            const opt   = this.options[this.selectedIndex];
-            const rateEl = row.querySelector('.ifp-rate');
-            const gstEl  = row.querySelector('.ifp-gst-pct');
-            if (rateEl) rateEl.value = opt.dataset.rate || 0;
-            if (gstEl)  gstEl.value  = opt.dataset.gst  || 0;
-            calcSummary();
-        });
+        if (prodSel) {
+            prodSel.addEventListener('change', function() {
+                const opt = this.options[this.selectedIndex];
+                const rateEl = row.querySelector('.ifp-rate');
+                const gstEl  = row.querySelector('.ifp-gst-pct');
+                
+                if (rateEl) rateEl.value = opt.getAttribute('data-rate') || 0;
+                if (gstEl)  gstEl.value  = opt.getAttribute('data-gst')  || 0;
+                
+                calcRow(row);
+                calcSummary();
+            });
+        }
 
         // Delete row
         const delBtn = row.querySelector('.ifp-del');
-        if (delBtn) delBtn.addEventListener('click', function() {
-            if (body.querySelectorAll('.ifp-row').length === 1) {
-                alert('At least one line item is required.');
-                return;
-            }
-            row.remove();
-            reIndex();
-            calcSummary();
-        });
+        if (delBtn) {
+            delBtn.addEventListener('click', function() {
+                if (body.querySelectorAll('.ifp-row').length <= 1) {
+                    alert('At least one line item is required.');
+                    return;
+                }
+                row.remove();
+                // reIndex(); // Optional if you handle indices on server-side differently, but good practice
+                calcSummary();
+            });
+        }
     }
 
     // ── Re-index row names after delete ──
@@ -520,17 +542,19 @@
     if (addBtn) addBtn.addEventListener('click', function() {
         const idx         = body.querySelectorAll('.ifp-row').length;
         const firstSel    = body.querySelector('.ifp-product');
-        const optionsHTML = firstSel ? firstSel.innerHTML : '';
+        let optionsHTML   = firstSel ? firstSel.innerHTML : '';
+        // Clear any 'selected' attribute from the cloned options so the new row starts empty/default
+        optionsHTML = optionsHTML.replace(/selected/gi, '');
 
         const tr = document.createElement('tr');
         tr.className = 'ifp-row';
         tr.innerHTML =
             '<td><select name="items[' + idx + '][ProductID]" class="form-select form-select-sm ifp-product">' + optionsHTML + '</select></td>' +
             '<td><textarea name="items[' + idx + '][Details]" rows="1" class="form-control form-control-sm" placeholder="Enter Description"></textarea></td>' +
-            '<td class="invoice-quantity-container"><div class="input-group border rounded flex-nowrap">' +
-                '<button type="button" class="btn btn-sm btn-icon btn-primary input-group-text flex-fill ifp-minus"><i class="ri-subtract-line"></i></button>' +
-                '<input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm border-0 text-center ifp-qty" value="1" min="0" step="0.000001">' +
-                '<button type="button" class="btn btn-sm btn-icon btn-primary input-group-text flex-fill ifp-plus"><i class="ri-add-line"></i></button>' +
+            '<td class="invoice-quantity-container"><div class="input-group border rounded flex-nowrap" style="min-width: 120px;">' +
+                '<button type="button" class="btn btn-sm btn-icon btn-primary ifp-minus"><i class="ri-subtract-line"></i></button>' +
+                '<input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm border-0 text-center ifp-qty px-1" value="1" min="0" step="0.000001">' +
+                '<button type="button" class="btn btn-sm btn-icon btn-primary ifp-plus"><i class="ri-add-line"></i></button>' +
             '</div></td>' +
             '<td><input type="number" step="0.000001" name="items[' + idx + '][Rate]"               class="form-control form-control-sm ifp-rate"     value="0" min="0"></td>' +
             '<td><input type="number" step="0.01"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount"   value="0" readonly></td>' +

@@ -699,6 +699,11 @@
         @endif
 
         const inputs = form.querySelectorAll('input:not([type=hidden]):not([type=password]), textarea, select');
+        
+        // ONLY restore from localStorage if NOT in 'create' mode (to ensure empty form on new add)
+        // OR if you really want drafts for create, you must ensure they are cleared on success.
+        // Given the user report, disabling restore for create is the safest fix.
+        @if(!$isCreate)
         if (!document.querySelector('.is-invalid')) {
             inputs.forEach(inp => {
                 const val = localStorage.getItem(prefix + inp.name);
@@ -709,6 +714,11 @@
                 } else { inp.value = val; }
             });
         }
+        @else
+        // In create mode, proactively CLEAR any stale draft data
+        inputs.forEach(inp => localStorage.removeItem(prefix + inp.name));
+        @endif
+
         inputs.forEach(inp => {
             const save = function () {
                 localStorage.setItem(prefix + this.name,

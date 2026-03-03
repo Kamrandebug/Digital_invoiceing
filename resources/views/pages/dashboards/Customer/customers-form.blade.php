@@ -883,6 +883,11 @@
 
 @section('scripts')
 <script>
+    // Clear localStorage if creating a new customer
+    @if($isCreate)
+        localStorage.removeItem('customer_form_draft');
+    @endif
+
     // Edit mode scripts
     @if(!$isReadonly)
     
