@@ -177,7 +177,7 @@
 
 {{-- ── Form open tag (skipped in view/readonly mode) ──────────── --}}
 @if(!$isReadonly)
-<form action="{{ $formAction }}" method="POST" id="{{ $uid }}_form" novalidate>
+<form action="{{ $formAction }}" method="POST" id="{{ $uid }}_form" novalidate autocomplete="off">
     @csrf
     @if($isEdit) @method('PUT') @endif
 @endif

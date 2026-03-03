@@ -76,7 +76,7 @@ class ProductController extends Controller
             $validated = $request->validate([
             // Basic Info
             'Name'            => ['required', 'string', 'min:2', 'max:200'],
-            'Code'            => ['required', 'string', 'max:50', 'unique:crm_product,Code'],
+            'Code'            => ['required', 'string', 'max:50', 'unique:tbl_product,Code'],
             'Type'            => ['nullable', 'string', 'max:50'],
             'Category'        => ['nullable', 'integer'],
             'SaleInformation' => ['nullable', 'string', 'max:500'],
@@ -85,43 +85,12 @@ class ProductController extends Controller
             // Pricing
             'SalePrice'       => ['required', 'numeric', 'min:0'],
             'Cost'            => ['nullable', 'numeric', 'min:0'],
-            'Discount'        => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'PurchaseDiscount'=> ['nullable', 'numeric', 'min:0', 'max:100'],
             'TPRate'          => ['nullable', 'numeric', 'min:0'],
-            'TPMargin'        => ['nullable', 'numeric', 'min:0'],
-            'TrialRate'       => ['nullable', 'numeric', 'min:0'],
             'Weight'          => ['nullable', 'numeric', 'min:0'],
 
-            // Tax
-            'TaxCode'         => ['nullable', 'string', 'max:20'],
-            'TaxRate'         => ['required', 'integer'],
-            'NFTaxRate'       => ['nullable', 'integer'],
-            'TaxSchID'        => ['nullable', 'integer'],
-
             // Stock
-            'LowStockLevel'   => ['nullable', 'numeric', 'min:0'],
             'CurrentQuantity' => ['nullable', 'numeric', 'min:0'],
-            'OpeningQuantity' => ['nullable', 'numeric', 'min:0'],
-            'OpeningRate'     => ['nullable', 'numeric', 'min:0'],
             'Unit'            => ['nullable', 'integer'],
-
-            // Accounts
-            'IncomeAccount'   => ['nullable', 'integer'],
-            'StockAccount'    => ['nullable', 'integer'],
-            'ExpenseAccount'  => ['nullable', 'integer'],
-
-            // Flags
-            'IsSelltoCustomer'=> ['nullable', 'boolean'],
-            'IsShipping'      => ['nullable', 'boolean'],
-            'IsPurchasing'    => ['nullable', 'boolean'],
-            'IsRawMaterial'   => ['nullable', 'boolean'],
-            'purchaseStatus'  => ['nullable', 'boolean'],
-
-            // Optional
-            'OptionalField1'  => ['nullable', 'string', 'max:100'],
-            'OptionalField2'  => ['nullable', 'string', 'max:100'],
-            'OptionalField3'  => ['nullable', 'integer'],
-            'PreferredSupplier' => ['nullable', 'integer'],
 
             'Status'          => ['required', 'integer', 'in:0,1'],
         ], [
@@ -134,10 +103,6 @@ class ProductController extends Controller
             'SalePrice.numeric'      => 'Sale price must be a valid number.',
             'SalePrice.min'          => 'Sale price cannot be negative.',
             'Cost.numeric'           => 'Cost must be a valid number.',
-            'TaxRate.required'       => 'Tax rate is required.',
-            'IncomeAccount.required' => 'Income account is required.',
-            'StockAccount.required'  => 'Stock account is required.',
-            'ExpenseAccount.required'=> 'Expense account is required.',
             'Status.required'        => 'Status is required.',
             'Status.in'              => 'Invalid status value.',
         ]);
@@ -158,84 +123,45 @@ class ProductController extends Controller
             $userId    = auth()->id() ?? 1;
             $now       = now()->toDateTimeString();
 
-            // Calculate ID
+            // Calculate next ID (we still set ID explicitly even though it's AUTO_INCREMENT)
             $maxId  = DB::table('temp_product')->max('ID');
             $nextId = $maxId ? $maxId + 1 : 1;
 
-            // Prepare data
+            // Prepare data for new temp_product structure
             $data = [
-                'ID'               => $nextId,
-                'TID'              => $nextId,
-                'VoucherID'        => 0,
-                'ProductID'        => null,
-                'Type'             => $request->Type,
-                'Name'             => $request->Name,
-                'Image'            => $request->Image ?? '',
-                'Code'             => $request->Code,
-                'CategoryID'       => $request->Category ?? 0,
-                'CategoryName'     => null,
-                'ParentCategoryID' => null,
-                'ParentLevel1'     => 0,
-                'ParentLevel2'     => 0,
-                'ParentLevel3'     => 0,
-                'SaleInformation'  => $request->SaleInformation ?? '',
-                'SalePrice'        => $request->SalePrice ?? 0,
-                'TaxCode'          => $request->TaxCode,
-                'TaxRate'          => $request->TaxRate ?? 0,
-                'NFTaxRate'        => $request->NFTaxRate ?? null,
-                'NFTaxCode'        => null,
-                'TaxRegion'        => null,
-                'IncomeAccount'    => $request->IncomeAccount ?? 0,
-                'LowStockLevel'    => $request->LowStockLevel ?? 0,
-                'CurrentQuantity'  => $request->CurrentQuantity ?? 0,
-                'Date'             => now()->toDateString(),
-                'StockAccount'     => $request->StockAccount ?? 0,
-                'ExpenseAccount'   => $request->ExpenseAccount ?? 0,
-                'IsSelltoCustomer' => $request->input('IsSelltoCustomer', 0),
-                'Status'           => $request->Status,
-                'StockStatus'      => 1, // Default: Stock In
-                'Cost'             => $request->Cost ?? 0,
-                'OpeningQuantity'  => $request->OpeningQuantity ?? 0,
-                'purchaseStatus'   => $request->input('purchaseStatus', 0),
-                'OpeningRate'      => $request->OpeningRate ?? 0,
-                'OptionalField1'   => $request->OptionalField1 ?? null,
-                'OptionalField2'   => $request->OptionalField2 ?? null,
-                'OptionalField3'   => $request->OptionalField3 ?? 0,
-                'IsShipping'       => $request->input('IsShipping', 0),
-                'IsPurchasing'     => $request->input('IsPurchasing', 0),
-                'TPRate'           => $request->TPRate ?? 0,
-                'TPMargin'         => $request->TPMargin ?? 0,
-                'Unit'             => $request->Unit ?? 0,
-                'UnitName'         => null,
-                'UMUnitID'         => 0,
-                'UMUnitName'       => null,
-                'FactorRate'       => 0,
-                'TrialRate'        => $request->TrialRate ?? 0,
-                'Discount'         => $request->Discount ?? 0,
-                'Weight'           => $request->Weight ?? 0,
-                'PurchaseDiscount' => $request->PurchaseDiscount ?? 0,
-                'TOSale'           => 0,
-                'TOPurchase'       => 0,
-                'RMSale'           => 0,
-                'RMPurchase'       => 0,
-                'TPSale'           => 0,
-                'TPPurchase'       => 0,
-                'PreferredSupplierAccount' => null,
-                'PreferredSupplier'=> $request->PreferredSupplier ?? 0,
-                'TaxSchID'         => $request->TaxSchID ?? 4,
-                'IsRawMaterial'    => $request->input('IsRawMaterial', 0),
-                'BatchNo'          => '0',
-                'BatchExpiryDate'  => null,
-                'ToLocationID'     => null,
-                'Location'         => null,
-                'ErrMsg'           => null,
-                'ExcelRow'         => null,
-                'Flag'             => 0,
-                'CreatedBy'        => (int)$userId,
-                'CreatedOn'        => $now,
-                'UpdatedBy'        => (int)$userId,
-                'UpdatedOn'        => $now,
-                'RequestID'        => $requestId,
+                'ID'              => $nextId,
+                'TID'             => $nextId,
+                'VoucherID'       => 0,
+                'ProductID'       => null,
+                'Name'            => $request->Name,
+                'Code'            => $request->Code,
+                'Type'            => $request->Type,
+                'CategoryID'      => $request->Category ?? null,
+                'CategoryName'    => null,
+                'CurrentQuantity' => $request->CurrentQuantity ?? 0,
+                'Unit'            => $request->Unit ?? 0,
+                'UnitName'        => null,
+                'SalePrice'       => $request->SalePrice ?? 0,
+                'Cost'            => $request->Cost ?? 0,
+                'TPRate'          => $request->TPRate ?? 0,
+                'Weight'          => $request->Weight ?? 0,
+                'Image'           => $request->Image ?? null,
+                'HsCode'          => $request->HsCode ?? null,
+                'UOM'             => $request->UOM ?? null,
+                'SaleType'        => $request->SaleType ?: null,
+                'SaleTypeToRate'  => $request->SaleTypeToRate ?: null,
+                'SroSchedule'     => $request->SROSchedule ?: null,
+                'SroItem'         => $request->SROItem ?: null,
+                'SaleInformation' => $request->SaleInformation ?? null,
+                'Status'          => $request->Status ?? 1,
+                'CreatedBy'       => (int)$userId,
+                'CreatedOn'       => $now,
+                'UpdatedBy'       => (int)$userId,
+                'UpdatedOn'       => $now,
+                'ErrMsg'          => null,
+                'ExcelRow'        => null,
+                'Flag'            => 0,
+                'RequestID'       => $requestId,
             ];
 
             // Insert into temp
@@ -279,6 +205,13 @@ class ProductController extends Controller
             $product = new ProductModel();
             $product->setRawAttributes((array) $row, true);
             $product->exists = true;
+
+            // Map CRM columns to modal-friendly properties for selects
+            $product->UOM             = $product->UomID           ?? null;
+            $product->SaleType        = $product->SaleTypeID      ?? null;
+            $product->SaleTypeToRate  = $product->SaleTypeToRateID ?? null;
+            $product->SROSchedule     = $product->SroScheduleID   ?? null;
+            $product->SROItem         = $product->SroItemID       ?? null;
         }
 
         return view('pages.dashboards.Product._product-form-partial', [
@@ -356,7 +289,7 @@ class ProductController extends Controller
             $validated = $request->validate([
             // Basic Info
             'Name'            => ['required', 'string', 'min:2', 'max:200'],
-            'Code'            => ['required', 'string', 'max:50', Rule::unique('crm_product', 'Code')->ignore($id, 'ID')],
+            'Code'            => ['required', 'string', 'max:50', Rule::unique('tbl_product', 'Code')->ignore($id, 'ID')],
             'Type'            => ['nullable', 'string', 'max:50'],
             'Category'        => ['nullable', 'integer'],
             'SaleInformation' => ['nullable', 'string', 'max:500'],
@@ -365,43 +298,12 @@ class ProductController extends Controller
             // Pricing
             'SalePrice'       => ['required', 'numeric', 'min:0'],
             'Cost'            => ['nullable', 'numeric', 'min:0'],
-            'Discount'        => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'PurchaseDiscount'=> ['nullable', 'numeric', 'min:0', 'max:100'],
             'TPRate'          => ['nullable', 'numeric', 'min:0'],
-            'TPMargin'        => ['nullable', 'numeric', 'min:0'],
-            'TrialRate'       => ['nullable', 'numeric', 'min:0'],
             'Weight'          => ['nullable', 'numeric', 'min:0'],
 
-            // Tax
-            'TaxCode'         => ['nullable', 'string', 'max:20'],
-            'TaxRate'         => ['required', 'integer'],
-            'NFTaxRate'       => ['nullable', 'integer'],
-            'TaxSchID'        => ['nullable', 'integer'],
-
             // Stock
-            'LowStockLevel'   => ['nullable', 'numeric', 'min:0'],
             'CurrentQuantity' => ['nullable', 'numeric', 'min:0'],
-            'OpeningQuantity' => ['nullable', 'numeric', 'min:0'],
-            'OpeningRate'     => ['nullable', 'numeric', 'min:0'],
             'Unit'            => ['nullable', 'integer'],
-
-            // Accounts
-            'IncomeAccount'   => ['nullable', 'integer'],
-            'StockAccount'    => ['nullable', 'integer'],
-            'ExpenseAccount'  => ['nullable', 'integer'],
-
-            // Flags
-            'IsSelltoCustomer'=> ['nullable', 'boolean'],
-            'IsShipping'      => ['nullable', 'boolean'],
-            'IsPurchasing'    => ['nullable', 'boolean'],
-            'IsRawMaterial'   => ['nullable', 'boolean'],
-            'purchaseStatus'  => ['nullable', 'boolean'],
-
-            // Optional
-            'OptionalField1'  => ['nullable', 'string', 'max:100'],
-            'OptionalField2'  => ['nullable', 'string', 'max:100'],
-            'OptionalField3'  => ['nullable', 'integer'],
-            'PreferredSupplier' => ['nullable', 'integer'],
 
             'Status'          => ['required', 'integer', 'in:0,1'],
         ], [
@@ -413,10 +315,6 @@ class ProductController extends Controller
             'SalePrice.required'     => 'Sale price is required.',
             'SalePrice.numeric'      => 'Sale price must be a valid number.',
             'SalePrice.min'          => 'Sale price cannot be negative.',
-            'TaxRate.required'       => 'Tax rate is required.',
-            'IncomeAccount.required' => 'Income account is required.',
-            'StockAccount.required'  => 'Stock account is required.',
-            'ExpenseAccount.required'=> 'Expense account is required.',
             'Status.required'        => 'Status is required.',
             'Status.in'              => 'Invalid status value.',
         ]);
@@ -437,79 +335,40 @@ class ProductController extends Controller
             $userId    = auth()->id() ?? 1;
             $now       = now()->toDateTimeString();
 
-            // Prepare data for temp_product (edit flow needs a row with TID = $id and RequestID)
+            // Prepare data for new temp_product structure (edit flow needs a row with TID = $id and RequestID)
             $data = [
-                'TID'              => $id,
-                'VoucherID'        => $product->VoucherID ?? 0,
-                'ProductID'        => $id,
-                'Type'             => $request->Type,
-                'Name'             => $request->Name,
-                'Image'            => $request->Image ?? $product->Image ?? '',
-                'Code'             => $request->Code,
-                'CategoryID'       => $request->Category ?? 0,
-                'CategoryName'     => null,
-                'ParentCategoryID' => null,
-                'ParentLevel1'     => 0,
-                'ParentLevel2'     => 0,
-                'ParentLevel3'     => 0,
-                'SaleInformation'  => $request->SaleInformation ?? '',
-                'SalePrice'        => $request->SalePrice ?? 0,
-                'TaxCode'          => $request->TaxCode,
-                'TaxRate'          => $request->TaxRate ?? 0,
-                'NFTaxRate'        => $request->NFTaxRate ?? null,
-                'NFTaxCode'        => null,
-                'TaxRegion'        => null,
-                'IncomeAccount'    => $request->IncomeAccount ?? 0,
-                'LowStockLevel'    => $request->LowStockLevel ?? 0,
-                'CurrentQuantity'  => $request->CurrentQuantity ?? $product->CurrentQuantity ?? 0,
-                'Date'             => now()->toDateString(),
-                'StockAccount'     => $request->StockAccount ?? 0,
-                'ExpenseAccount'   => $request->ExpenseAccount ?? 0,
-                'IsSelltoCustomer' => $request->input('IsSelltoCustomer', 0),
-                'Status'           => $request->Status,
-                'StockStatus'      => $product->StockStatus ?? 1,
-                'Cost'             => $request->Cost ?? 0,
-                'OpeningQuantity'  => $request->OpeningQuantity ?? 0,
-                'purchaseStatus'   => $request->input('purchaseStatus', 0),
-                'OpeningRate'      => $request->OpeningRate ?? 0,
-                'OptionalField1'   => $request->OptionalField1 ?? null,
-                'OptionalField2'   => $request->OptionalField2 ?? null,
-                'OptionalField3'   => $request->OptionalField3 ?? 0,
-                'IsShipping'       => $request->input('IsShipping', 0),
-                'IsPurchasing'     => $request->input('IsPurchasing', 0),
-                'TPRate'           => $request->TPRate ?? 0,
-                'TPMargin'         => $request->TPMargin ?? 0,
-                'Unit'             => $request->Unit ?? 0,
-                'UnitName'         => null,
-                'UMUnitID'         => 0,
-                'UMUnitName'       => null,
-                'FactorRate'       => 0,
-                'TrialRate'        => $request->TrialRate ?? 0,
-                'Discount'         => $request->Discount ?? 0,
-                'Weight'           => $request->Weight ?? 0,
-                'PurchaseDiscount' => $request->PurchaseDiscount ?? 0,
-                'TOSale'           => 0,
-                'TOPurchase'       => 0,
-                'RMSale'           => 0,
-                'RMPurchase'       => 0,
-                'TPSale'           => 0,
-                'TPPurchase'       => 0,
-                'PreferredSupplierAccount' => null,
-                'PreferredSupplier'=> $request->PreferredSupplier ?? 0,
-                'TaxSchID'         => $request->TaxSchID ?? 4,
-                'IsRawMaterial'    => $request->input('IsRawMaterial', 0),
-                'BatchNo'          => '0',
-                'BatchExpiryDate'  => null,
-                'ToLocationID'     => null,
-                'Location'         => null,
-                'ErrMsg'           => null,
-                'ExcelRow'         => null,
-                'Flag'             => 0,
-                'CreatedBy'        => (int)($product->CreatedBy ?? $userId),
-                'CreatedOn'        => $product->CreatedOn ?? $now,
-                'UpdatedBy'        => (int)$userId,
-                'UpdatedOn'        => $now,
-                'RequestID'        => $requestId,
+                'TID'             => $id,
+                'VoucherID'       => $product->VoucherID ?? 0,
+                'ProductID'       => $id,
+                'Name'            => $request->Name,
+                'Code'            => $request->Code,
+                'Type'            => $request->Type,
+                'CategoryID'      => $request->Category ?? null,
+                'CategoryName'    => null,
+                'CurrentQuantity' => $request->CurrentQuantity ?? $product->CurrentQuantity ?? 0,
+                'Unit'            => $request->Unit ?? 0,
+                'UnitName'        => null,
+                'SalePrice'       => $request->SalePrice ?? 0,
+                'Cost'            => $request->Cost ?? 0,
+                'TPRate'          => $request->TPRate ?? 0,
+                'Weight'          => $request->Weight ?? 0,
+                'Image'           => $request->Image ?? $product->Image ?? null,
+                'HsCode'          => $request->HsCode ?? $product->HsCode ?? null,
+                'UOM'             => $request->UOM ?? $product->UOM ?? null,
+                'SaleType'        => $request->SaleType ?: ($product->SaleType ?? null),
+                'SaleTypeToRate'  => $request->SaleTypeToRate ?: ($product->SaleTypeToRate ?? null),
+                'SroSchedule'     => $request->SROSchedule ?: ($product->SroSchedule ?? null),
+                'SroItem'         => $request->SROItem ?: ($product->SroItem ?? null),
+                'SaleInformation' => $request->SaleInformation ?? $product->SaleInformation ?? null,
+                'Status'          => $request->Status ?? ($product->Status ?? 1),
+                'CreatedBy'       => (int)($product->CreatedBy ?? $userId),
+                'CreatedOn'       => $product->CreatedOn ?? $now,
+                'UpdatedBy'       => (int)$userId,
+                'UpdatedOn'       => $now,
+                'ErrMsg'          => null,
+                'ExcelRow'        => null,
+                'Flag'            => 0,
+                'RequestID'       => $requestId,
             ];
 
             // Insert into temp (edit: no row with ID=$id exists in temp; we must insert one so model can read it)
@@ -588,6 +447,421 @@ class ProductController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Error deleting product: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * AJAX: Load HS Code metadata (UOM list + description) from core_digital_invoicing.
+     *
+     * We don't assume exact column names; instead we discover them via information_schema
+     * so it works even if columns are e.g. HSCODE / HS_CODE / UOM_CODE / ITEM_DESC, etc.
+     */
+    public function hsCodeInfo(Request $request)
+    {
+        $code = trim((string) $request->query('code', ''));
+
+        if ($code === '') {
+            return response()->json([
+                'status'      => 'error',
+                'uoms'        => [],
+                'description' => null,
+                'message'     => 'HS Code is required.',
+            ], 422);
+        }
+
+        try {
+            $schema        = 'core_digital_invoicing';
+            $uomBaseTable  = 'fbr_hscode_uom';
+            $descBaseTable = 'fbr_item_desc_code';
+            $uomTable      = $schema . '.' . $uomBaseTable;
+            $descTable     = $schema . '.' . $descBaseTable;
+
+            // Discover column names dynamically from information_schema
+            $uomColumns = DB::table('information_schema.columns')
+                ->where('table_schema', $schema)
+                ->where('table_name', $uomBaseTable)
+                ->pluck('column_name');
+
+            $uomCodeCol = null;
+            $uomValCol  = null;
+            $uomIdCol   = null;
+
+            foreach ($uomColumns as $col) {
+                $lc = strtolower($col);
+                // HS code column
+                if ($uomCodeCol === null && (strpos($lc, 'hscode') !== false || strpos($lc, 'hs_code') !== false || strpos($lc, 'hs code') !== false)) {
+                    $uomCodeCol = $col;
+                }
+                // For UOM dropdown we show the *description* field from fbr_hscode_uom
+                if ($uomValCol === null && (strpos($lc, 'desc') !== false || strpos($lc, 'description') !== false)) {
+                    $uomValCol = $col;
+                }
+                // And we want the value to be the UOM ID (e.g. uoM_ID / uom_id)
+                if ($uomIdCol === null && (strpos($lc, 'uom') !== false && strpos($lc, 'id') !== false)) {
+                    $uomIdCol = $col;
+                }
+            }
+
+            // Fallbacks if detection failed
+            if ($uomIdCol === null) {
+                $uomIdCol = 'uoM_ID'; // per your naming
+            }
+
+            $descColumns = DB::table('information_schema.columns')
+                ->where('table_schema', $schema)
+                ->where('table_name', $descBaseTable)
+                ->pluck('column_name');
+
+            $descCodeCol = null;
+            $descValCol  = null;
+
+            foreach ($descColumns as $col) {
+                $lc = strtolower($col);
+                if ($descCodeCol === null && (strpos($lc, 'hscode') !== false || strpos($lc, 'hs_code') !== false || strpos($lc, 'hs code') !== false)) {
+                    $descCodeCol = $col;
+                }
+                if ($descValCol === null && (strpos($lc, 'desc') !== false || strpos($lc, 'description') !== false || strpos($lc, 'item') !== false)) {
+                    $descValCol = $col;
+                }
+            }
+
+            $uoms        = [];
+            $description = null;
+
+            if ($uomCodeCol && $uomValCol && $uomIdCol) {
+                $rows = DB::table(DB::raw($uomTable))
+                    ->where($uomCodeCol, $code)
+                    ->select([$uomIdCol . ' as id', $uomValCol . ' as text'])
+                    ->get();
+
+                $uoms = $rows
+                    ->map(function ($row) {
+                        return [
+                            'id'   => $row->id,
+                            'text' => $row->text,
+                        ];
+                    })
+                    ->unique('id')
+                    ->values()
+                    ->all();
+            }
+
+            if ($descCodeCol && $descValCol) {
+                $description = DB::table(DB::raw($descTable))
+                    ->where($descCodeCol, $code)
+                    ->value($descValCol);
+            }
+
+            return response()->json([
+                'status'      => 'success',
+                'uoms'        => $uoms,
+                'description' => $description ?? '',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('HS Code lookup failed', [
+                'code'  => $code,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status'      => 'error',
+                'uoms'        => [],
+                'description' => null,
+                'message'     => 'Server error while loading HS Code information.',
+            ], 500);
+        }
+    }
+
+    /**
+     * AJAX: Load Sale Types (transaction types) from core_digital_invoicing.fbr_trans_type_code.
+     *
+     * Returns a list of { id, text } where:
+     *  - id   = transactioN_TYPE_ID (or closest match discovered from schema)
+     *  - text = transactioN_DESC (or closest match discovered from schema)
+     */
+    public function saleTypes(Request $request)
+    {
+        try {
+            $schema    = 'core_digital_invoicing';
+            $baseTable = 'fbr_trans_type_code';
+            $fullTable = $schema . '.' . $baseTable;
+
+            // Discover column names dynamically from information_schema
+            $columns = DB::table('information_schema.columns')
+                ->where('table_schema', $schema)
+                ->where('table_name', $baseTable)
+                ->pluck('column_name');
+
+            $idCol   = null;
+            $descCol = null;
+
+            foreach ($columns as $col) {
+                $lc = strtolower($col);
+
+                if ($idCol === null && (strpos($lc, 'type') !== false && strpos($lc, 'id') !== false)) {
+                    $idCol = $col;
+                }
+
+                if ($descCol === null && strpos($lc, 'desc') !== false) {
+                    $descCol = $col;
+                }
+            }
+
+            // Fallback to explicit names if discovery fails
+            if ($idCol === null) {
+                $idCol = 'transactioN_TYPE_ID';
+            }
+            if ($descCol === null) {
+                $descCol = 'transactioN_DESC';
+            }
+
+            $items = DB::table(DB::raw($fullTable))
+                ->select([$idCol . ' as id', $descCol . ' as text'])
+                ->orderBy($descCol)
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'items'  => $items,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Sale Types lookup failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Server error while loading sale types.',
+                'items'   => [],
+            ], 500);
+        }
+    }
+
+    /**
+     * AJAX: Load Sale Type To Rate options from core_digital_invoicing.fbr_sale_type_to_rate.
+     * Filtered by transactioN_TYPE_ID (from Sale Type dropdown). Returns ratE_ID as value, ratE_DESC as display.
+     */
+    public function saleTypeToRates(Request $request)
+    {
+        $transactionTypeId = trim((string) $request->query('transaction_type_id', ''));
+
+        if ($transactionTypeId === '') {
+            return response()->json([
+                'status' => 'success',
+                'items'  => [],
+            ]);
+        }
+
+        try {
+            $schema    = 'core_digital_invoicing';
+            $baseTable = 'fbr_sale_type_to_rate';
+            $fullTable = $schema . '.' . $baseTable;
+
+            $columns = DB::table('information_schema.columns')
+                ->where('table_schema', $schema)
+                ->where('table_name', $baseTable)
+                ->pluck('column_name');
+
+            $typeIdCol = null;
+            $rateIdCol = null;
+            $rateDescCol = null;
+
+            foreach ($columns as $col) {
+                $lc = strtolower($col);
+                if ($typeIdCol === null && (strpos($lc, 'type') !== false && strpos($lc, 'id') !== false)) {
+                    $typeIdCol = $col;
+                }
+                if ($rateIdCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'id') !== false)) {
+                    $rateIdCol = $col;
+                }
+                if ($rateDescCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'desc') !== false)) {
+                    $rateDescCol = $col;
+                }
+            }
+
+            if ($typeIdCol === null) {
+                $typeIdCol = 'transactioN_TYPE_ID';
+            }
+            if ($rateIdCol === null) {
+                $rateIdCol = 'ratE_ID';
+            }
+            if ($rateDescCol === null) {
+                $rateDescCol = 'ratE_DESC';
+            }
+
+            $items = DB::table(DB::raw($fullTable))
+                ->where($typeIdCol, $transactionTypeId)
+                ->select([$rateIdCol . ' as id', $rateDescCol . ' as text'])
+                ->orderBy($rateDescCol)
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'items'  => $items,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Sale Type To Rate lookup failed', [
+                'transaction_type_id' => $transactionTypeId,
+                'error'               => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Server error while loading sale type to rate.',
+                'items'   => [],
+            ], 500);
+        }
+    }
+
+    /**
+     * AJAX: Load SRO Schedule options from core_digital_invoicing.fbr_sro_schedule.
+     * Filtered by ratE_ID (from Sale Type To Rate dropdown). Returns srO_ID as value, srO_DESC as display.
+     */
+    public function sroSchedules(Request $request)
+    {
+        $rateId = trim((string) $request->query('rate_id', ''));
+
+        if ($rateId === '') {
+            return response()->json([
+                'status' => 'success',
+                'items'  => [],
+            ]);
+        }
+
+        try {
+            $schema    = 'core_digital_invoicing';
+            $baseTable = 'fbr_sro_schedule';
+            $fullTable = $schema . '.' . $baseTable;
+
+            $columns = DB::table('information_schema.columns')
+                ->where('table_schema', $schema)
+                ->where('table_name', $baseTable)
+                ->pluck('column_name');
+
+            $rateIdCol  = null;
+            $sroIdCol   = null;
+            $sroDescCol = null;
+
+            foreach ($columns as $col) {
+                $lc = strtolower($col);
+                if ($rateIdCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'id') !== false)) {
+                    $rateIdCol = $col;
+                }
+                if ($sroIdCol === null && (strpos($lc, 'sro') !== false && strpos($lc, 'id') !== false)) {
+                    $sroIdCol = $col;
+                }
+                if ($sroDescCol === null && (strpos($lc, 'sro') !== false && strpos($lc, 'desc') !== false)) {
+                    $sroDescCol = $col;
+                }
+            }
+
+            if ($rateIdCol === null) {
+                $rateIdCol = 'ratE_ID';
+            }
+            if ($sroIdCol === null) {
+                $sroIdCol = 'srO_ID';
+            }
+            if ($sroDescCol === null) {
+                $sroDescCol = 'srO_DESC';
+            }
+
+            $items = DB::table(DB::raw($fullTable))
+                ->where($rateIdCol, $rateId)
+                ->select([$sroIdCol . ' as id', $sroDescCol . ' as text'])
+                ->orderBy($sroDescCol)
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'items'  => $items,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('SRO Schedule lookup failed', [
+                'rate_id' => $rateId,
+                'error'   => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Server error while loading SRO schedule.',
+                'items'   => [],
+            ], 500);
+        }
+    }
+
+    /**
+     * AJAX: Load SRO Item options from core_digital_invoicing.fbr_sro_item.
+     * Filtered by srO_ID (from SRO Schedule dropdown). Returns srO_ITEM_ID as value, srO_ITEM_DESC as display.
+     */
+    public function sroItems(Request $request)
+    {
+        $sroId = trim((string) $request->query('sro_id', ''));
+
+        if ($sroId === '') {
+            return response()->json([
+                'status' => 'success',
+                'items'  => [],
+            ]);
+        }
+
+        try {
+            $schema    = 'core_digital_invoicing';
+            $baseTable = 'fbr_sro_item';
+            $fullTable = $schema . '.' . $baseTable;
+
+            $columns = DB::table('information_schema.columns')
+                ->where('table_schema', $schema)
+                ->where('table_name', $baseTable)
+                ->pluck('column_name');
+
+            $sroIdCol     = null;
+            $sroItemIdCol = null;
+            $sroItemDescCol = null;
+
+            foreach ($columns as $col) {
+                $lc = strtolower($col);
+                if ($sroIdCol === null && (strpos($lc, 'sro') !== false && strpos($lc, 'id') !== false && strpos($lc, 'item') === false)) {
+                    $sroIdCol = $col;
+                }
+                if ($sroItemIdCol === null && (strpos($lc, 'sro') !== false && strpos($lc, 'item') !== false && strpos($lc, 'id') !== false)) {
+                    $sroItemIdCol = $col;
+                }
+                if ($sroItemDescCol === null && (strpos($lc, 'sro') !== false && strpos($lc, 'item') !== false && strpos($lc, 'desc') !== false)) {
+                    $sroItemDescCol = $col;
+                }
+            }
+
+            if ($sroIdCol === null) {
+                $sroIdCol = 'srO_ID';
+            }
+            if ($sroItemIdCol === null) {
+                $sroItemIdCol = 'srO_ITEM_ID';
+            }
+            if ($sroItemDescCol === null) {
+                $sroItemDescCol = 'srO_ITEM_DESC';
+            }
+
+            $items = DB::table(DB::raw($fullTable))
+                ->where($sroIdCol, $sroId)
+                ->select([$sroItemIdCol . ' as id', $sroItemDescCol . ' as text'])
+                ->orderBy($sroItemDescCol)
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'items'  => $items,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('SRO Item lookup failed', [
+                'sro_id' => $sroId,
+                'error'  => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Server error while loading SRO item.',
+                'items'   => [],
+            ], 500);
         }
     }
 
