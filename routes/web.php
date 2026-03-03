@@ -62,6 +62,11 @@ Route::middleware(['auth', 'tenant'])->prefix('products')->name('products.')->gr
     Route::get('/',                [ProductController::class, 'index'])             ->name('index');
     Route::get('/create',          [ProductController::class, 'create'])            ->name('create');
     Route::post('/save',           [ProductController::class, 'save_transaction'])  ->name('save_transaction');
+    Route::get('/hscode-info',         [ProductController::class, 'hsCodeInfo'])        ->name('hscode-info');
+    Route::get('/sale-types',          [ProductController::class, 'saleTypes'])         ->name('sale-types');
+    Route::get('/sale-type-to-rates',  [ProductController::class, 'saleTypeToRates'])    ->name('sale-type-to-rates');
+    Route::get('/sro-schedules',      [ProductController::class, 'sroSchedules'])         ->name('sro-schedules');
+    Route::get('/sro-items',         [ProductController::class, 'sroItems'])            ->name('sro-items');
 
     Route::get('/export/csv',      [ProductController::class, 'exportCSV'])         ->name('exportCSV');
     Route::get('/modal',          [ProductController::class, 'modal'])             ->name('modal');

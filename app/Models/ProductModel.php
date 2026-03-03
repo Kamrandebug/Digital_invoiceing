@@ -95,7 +95,7 @@ class ProductModel extends Model
 
     public static function getlistingdata($filters = [])
 {
-    $query = "SELECT * FROM crm_product WHERE Status = 1";
+    $query = "SELECT * FROM tbl_product WHERE Status = 1";
     $bindings = [];
 
     // Search filter
@@ -125,48 +125,66 @@ class ProductModel extends Model
     return DB::select($query, $bindings);
 }
     /**
-     * Execute save: insert from temp_product into crm_product. No return; runs query inside.
+     * Execute save: insert from temp_product into tbl_product. No return; runs query inside.
      */
     public static function save_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
         DB::unprepared("
-            INSERT INTO crm_product (VoucherID,TYPE,NAME,Image,CODE,Category,SaleInformation,SalePrice,TaxCode,TaxRate,NFTaxRate,IncomeAccount,LowStockLevel,CurrentQuantity,DATE,StockAccount,ExpenseAccount,IsSelltoCustomer,STATUS,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,RequestID,StockStatus,Cost,OpeningQuantity,purchaseStatus,OpeningRate,OptionalField1,OptionalField2,OptionalField3,IsShipping,IsPurchasing,TPRate,TPMargin,Unit,TrialRate,Discount,Weight,PurchaseDiscount,TOSale,TOPurchase,RMSale,RMPurchase,TPSale,TPPurchase,PreferredSupplier,TaxSchID,IsRawMaterial)
-            SELECT VoucherID,TYPE,NAME,Image,CODE,1 AS CategoryID,SaleInformation,SalePrice,TaxCode,TaxRate,NFTaxRate,IncomeAccount,LowStockLevel,CurrentQuantity,DATE,StockAccount,ExpenseAccount,IsSelltoCustomer,STATUS,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,RequestID,StockStatus,Cost,OpeningQuantity,purchaseStatus,OpeningRate,OptionalField1,OptionalField2,OptionalField3,IsShipping,IsPurchasing,TPRate,TPMargin,Unit,TrialRate,Discount,Weight,PurchaseDiscount,TOSale,TOPurchase,RMSale,RMPurchase,TPSale,TPPurchase,PreferredSupplier,TaxSchID,IsRawMaterial
+            INSERT INTO tbl_product (VoucherID,`Name`,`Code`,`Type`,CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,HsCode,UomID,SaleTypeID,SaleTypeToRateID,SroScheduleID,SroItemID,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID)          
+            SELECT VoucherID,`Name`,`Code`,`Type`,1 AS CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,HsCode,UOM,SaleType,SaleTypeToRate,SroSchedule,SroItem,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
             FROM temp_product
             WHERE RequestID = '$requestID'
         ");
     }
 
     /**
-     * Execute edit: update crm_product from temp_product. No return; runs query inside.
+     * Execute edit: update tbl_product from temp_product. No return; runs query inside.
      */
     public static function edit_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
         DB::unprepared("
-            UPDATE crm_product uu
+            UPDATE tbl_product uu
             JOIN (
-                SELECT Code, Name, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+                SELECT  TID,VoucherID,`Name`,`Code`,`Type`,CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,HsCode,UOM,SaleType,
+                        SaleTypeToRate,SroSchedule,SroItem,SaleInformation,`Status`,UpdatedBy,UpdatedOn,RequestID
                 FROM temp_product
                 WHERE RequestID = '$requestID'
             ) u ON uu.ID = u.TID
             SET
-                uu.Code = u.Code,
-                uu.Name = u.Name,
-                uu.UpdatedBy = u.UpdatedBy,
-                uu.UpdatedOn = u.UpdatedOn
+                uu.Name             = u.Name,
+                uu.Code             = u.Code,
+                uu.Type             = u.Type,
+                uu.CategoryID       = u.CategoryID,
+                uu.CurrentQuantity  = u.CurrentQuantity,
+                uu.Unit             = u.Unit,
+                uu.SalePrice        = u.SalePrice,
+                uu.Cost             = u.Cost,
+                uu.TPRate           = u.TPRate,
+                uu.Weight           = u.Weight,
+                uu.Image            = u.Image,
+                uu.HsCode           = u.HsCode,
+                uu.UomID            = u.UOM,
+                uu.SaleTypeID       = u.SaleType,
+                uu.SaleTypeToRateID = u.SaleTypeToRate,
+                uu.SroScheduleID    = u.SroSchedule,
+                uu.SroItemID        = u.SroItem,
+                uu.SaleInformation  = u.SaleInformation,
+                uu.`Status`         = u.`Status`,
+                uu.UpdatedBy        = u.UpdatedBy,
+                uu.UpdatedOn        = u.UpdatedOn
         ");
     }
 
     /**
-     * Execute delete: soft-update crm_product status from temp_product. No return; runs query inside.
+     * Execute delete: soft-update tbl_product status from temp_product. No return; runs query inside.
      */
     public static function delete_transaction($validated = [])
     {
         $requestID = $validated['RequestID'] ?? '';
         DB::unprepared("
-            UPDATE crm_product uu
+            UPDATE tbl_product uu
             JOIN (
                 SELECT TID, 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
                 FROM temp_product

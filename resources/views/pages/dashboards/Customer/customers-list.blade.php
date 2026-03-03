@@ -258,8 +258,7 @@
 							<th>Name <i class="fas fa-sort"></i></th>
 							<th>Address</th>
 							<th>Contact Number</th>
-							<th>Closing Balance <i class="fas fa-info-circle" title="Current balance"></i></th>
-							<th>Opening Balance Date <i class="fas fa-info-circle" title="Date of opening balance"></i></th>
+                            <th>Status</th>
 							<th>Action</th>
 						</tr>
 					</thead>
@@ -276,10 +275,13 @@
 							</td>
 							<td>{{ $customer->Address ?? 'N/A' }}</td>
 							<td>{{ $customer->Mobile ?? $customer->Phone ?? 'N/A' }}</td>
-							<td class="{{ $customer->PartyBalance > 0 ? 'balance-positive' : ($customer->PartyBalance < 0 ? 'balance-negative' : 'balance-zero') }}">
-								{{ number_format(abs($customer->PartyBalance), 2) }} PKR
-							</td>
-							<td>{{ $customer->CreatedOn ? \Carbon\Carbon::parse($customer->CreatedOn)->format('d/m/Y') : 'N/A' }}</td>
+                            <td>
+                                @if(($customer->Status ?? 1) == 1)
+                                    <span class="badge bg-success">Active</span>
+                                @else
+                                    <span class="badge bg-danger">Inactive</span>
+                                @endif
+                            </td>
 							<td>
     {{-- VIEW --}}
     <button class="action-btn btn-info"
@@ -310,7 +312,7 @@
 						</tr>
 						@empty
 						<tr>
-							<td colspan="8" class="text-center py-5">
+							<td colspan="7" class="text-center py-5">
 								<i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
 								<p class="text-muted mb-2">No customers found.</p>
 								{{-- Add button --}}

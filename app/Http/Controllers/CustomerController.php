@@ -91,8 +91,8 @@ try {
         'LastName'          => ['required','string','min:2','max:100','regex:/^[a-zA-Z\s\'-]+$/'],
         'BusinessName'      => ['nullable','string','max:200','regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
         'DisplayName'       => 'nullable|string|max:200',
-        'Email'             => ['required','email','max:500','unique:crm_customer,Email'],
-        'Mobile'            => ['required','string','regex:/^(\+92|0)?[0-9]{10}$/','unique:crm_customer,Mobile'],
+        'Email'             => ['required','email','max:500','unique:tbl_customer,Email'],
+        'Mobile'            => ['required','string','regex:/^(\+92|0)?[0-9]{10}$/','unique:tbl_customer,Mobile'],
         'Phone'             => ['nullable','string','regex:/^(\+92|0)?[0-9]{9,11}$/'],
         'Website'           => ['nullable','url','max:200','regex:/^https?:\/\//'],
         'Address'           => 'nullable|string|max:500',
@@ -106,12 +106,11 @@ try {
         'BillingPostalCode' => ['required_if:SameAsBilling,0','nullable','string','regex:/^[0-9]{5}$/'],
         'BillingCountry'    => 'required_if:SameAsBilling,0|nullable|string|max:100',
         'SameAsBilling'     => 'nullable|boolean',
-        'NTN'               => ['nullable','string','regex:/^[0-9]{7}$/','unique:crm_customer,NTN'],
-        'SalesTaxNumber'    => ['nullable','string','max:50','regex:/^[A-Z0-9\-]{5,50}$/','unique:crm_customer,SalesTaxNumber'],
+        'NTN'               => ['nullable','string','regex:/^[0-9]{7}$/','unique:tbl_customer,NTN'],
+        'SalesTaxNumber'    => ['nullable','string','max:50','regex:/^[A-Z0-9\-]{5,50}$/','unique:tbl_customer,SalesTaxNumber'],
         'IsFiler'           => 'nullable|boolean',
-        'CNIC'              => ['required','string','regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/','unique:crm_customer,CNIC'],
+        'CNIC'              => ['required','string','regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/','unique:tbl_customer,CNIC'],
         'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
-        'PaymentTerms'      => 'nullable|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
         'Notes'             => 'nullable|string|max:500',
         'Status'            => 'required|integer|in:0,1',
     ], [
@@ -153,7 +152,6 @@ try {
         'CNIC.unique'                  => 'This CNIC is already registered.',
         'CreditLimit.numeric'          => 'Credit limit must be a valid number.',
         'CreditLimit.min'              => 'Credit limit cannot be negative.',
-        'PaymentTerms.in'              => 'Invalid payment terms selected.',
         'Status.required'              => 'Status is required.',
         'Status.in'                    => 'Invalid status value.',
     ]);
@@ -181,53 +179,47 @@ try {
             $maxId = DB::table('temp_customer')->max('ID');
             $nextId = $maxId ? $maxId + 1 : 1;
 
-            // Prepare data
+            // Prepare data strictly matching new temp_customer structure
             $data = [
-                'ID' => $nextId,
-                'TID' => $nextId,
-                'IsArchive' => 0,
-                'VoucherID' => 0,
-                'AccountNo' => 'CUST-' . str_pad($nextId, 6, '0', STR_PAD_LEFT), // Generate Unique AccountNo
-                'Title' => $request->Title,
-                'FirstName' => $request->FirstName,
-                'LastName' => $request->LastName,
-                'Email' => $request->Email,
-                'BusinessName' => $request->BusinessName,
-                'PartyBalance' => 0.00,
-                'Mobile' => $request->Mobile,
-                'Phone' => $request->Phone ?? '',
-                'DisplayName' => $displayName,
-                'Website' => $request->Website ?? '',
-                'Address' => $request->Address,
-                'City' => $request->City,
-                'Country' => $request->Country,
-                'County' => $request->County,
-                'PostalCode' => $request->PostalCode,
-                'BillingAddress' => $request->BillingAddress,
-                'BillingCity' => $request->BillingCity,
-                'BillingCountry' => $request->BillingCountry,
-                'BillingCounty' => $request->BillingCounty,
+                'ID'                => $nextId,
+                'TID'               => $nextId,
+                'IsArchive'         => 0,
+                'VoucherID'         => 0,
+                'AccountNo'         => 'CUST-' . str_pad($nextId, 6, '0', STR_PAD_LEFT), // Generate Unique AccountNo
+                'Title'             => $request->Title,
+                'FirstName'         => $request->FirstName,
+                'LastName'          => $request->LastName,
+                'BusinessName'      => $request->BusinessName,
+                'DisplayName'       => $displayName,
+                'Email'             => $request->Email,
+                'Mobile'            => $request->Mobile,
+                'Phone'             => $request->Phone ?? '',
+                'Website'           => $request->Website ?? '',
+                'Address'           => $request->Address,
+                'PartyBalance'      => 0.00,
+                'City'              => $request->City,
+                'County'            => $request->County,
+                'PostalCode'        => $request->PostalCode,
+                'Country'           => $request->Country,
+                'SameAsBilling'     => $request->input('SameAsBilling', 0),
+                'BillingAddress'    => $request->BillingAddress,
+                'BillingCity'       => $request->BillingCity,
+                'BillingCounty'     => $request->BillingCounty,
+                'BillingCountry'    => $request->BillingCountry,
                 'BillingPostalCode' => $request->BillingPostalCode,
-                'FullBillingAddress' => $fullBillingAddress,
-                'NTN' => $request->NTN,
-                'SalesTaxNumber' => $request->SalesTaxNumber ?? '',
-                'IsFiler' => $request->input('IsFiler', 0),
-                'Notes' => $request->Notes,
-                'PaymentTerms' => $request->input('PaymentTerms', 'Cash'),
-                'Status' => $request->Status,
-                'CreatedBy' => (int)$userId,
-                'CreatedOn' => $now,
-                'UpdatedBy' => (int)$userId,
-                'UpdatedOn' => $now,
-                'SameAsBilling' => $request->input('SameAsBilling', 0),
-                'CNIC' => $request->CNIC,
-                'CreditLimit' => $request->input('CreditLimit', 0),
-                'FieldA' => null, 'FieldB' => null, 'FieldC' => null, 'FieldD' => null,
-                'Field1' => null, 'Field2' => null, 'Field3' => null, 'Field4' => null,
-                'Typei' => 0,
-                'Type' => 1,
-                'IsDashboard' => 0,
-                'RequestID' => $requestId
+                'FullBillingAddress'=> $fullBillingAddress,
+                'NTN'               => $request->NTN,
+                'SalesTaxNumber'    => $request->SalesTaxNumber ?? '',
+                'CNIC'              => $request->CNIC,
+                'IsFiler'           => $request->input('IsFiler', 0),
+                'Notes'             => $request->Notes,
+                'Status'            => $request->Status,
+                'CreatedBy'         => (int)$userId,
+                'CreatedOn'         => $now,
+                'UpdatedBy'         => (int)$userId,
+                'UpdatedOn'         => $now,
+                'IsDashboard'       => 0,
+                'RequestID'         => $requestId,
             ];
 
             // Insert into temp
@@ -256,8 +248,8 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
      */
     public function show($id)
     {
-        // Read from crm_customer
-        $customer = DB::table('crm_customer')->where('ID', $id)->first();
+        // Read from tbl_customer
+        $customer = DB::table('tbl_customer')->where('ID', $id)->first();
         
         if (!$customer) {
             abort(404, 'Customer not found in CRM');
@@ -276,8 +268,8 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
      */
     public function edit($id)
     {
-        // Read from crm_customer
-        $customer = DB::table('crm_customer')->where('ID', $id)->first();
+        // Read from tbl_customer
+        $customer = DB::table('tbl_customer')->where('ID', $id)->first();
         
         if (!$customer) {
             abort(404, 'Customer not found in CRM');
@@ -300,7 +292,7 @@ public function modal(Request $request, $id = null)
     $customer = null;
 
     if ($id && in_array($mode, ['edit', 'show'])) {
-        $customer = DB::table('crm_customer')->where('ID', $id)->first();
+        $customer = DB::table('tbl_customer')->where('ID', $id)->first();
 
         if (!$customer) {
             return response('<div class="alert alert-danger m-3">Customer not found.</div>', 404);
@@ -327,7 +319,7 @@ public function modal(Request $request, $id = null)
     public function edit_transaction(Request $request, $id)
     {
         // Get existing
-        $customer = DB::table('crm_customer')->where('ID', $id)->first();
+        $customer = DB::table('tbl_customer')->where('ID', $id)->first();
         
         if (!$customer) {
             return redirect()->back()->with('error', 'Customer not found.');
@@ -361,8 +353,8 @@ try {
         'LastName'          => ['required','string','min:2','max:100','regex:/^[a-zA-Z\s\'-]+$/'],
         'BusinessName'      => ['nullable','string','max:200','regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
         'DisplayName'       => 'nullable|string|max:200',
-        'Email'             => ['required','email','max:500', Rule::unique('crm_customer', 'Email')->ignore($id, 'ID')],
-        'Mobile'            => ['required','string','regex:/^(\+92|0)?[0-9]{10}$/', Rule::unique('crm_customer', 'Mobile')->ignore($id, 'ID')],
+        'Email'             => ['required','email','max:500', Rule::unique('tbl_customer', 'Email')->ignore($id, 'ID')],
+        'Mobile'            => ['required','string','regex:/^(\+92|0)?[0-9]{10}$/', Rule::unique('tbl_customer', 'Mobile')->ignore($id, 'ID')],
         'Phone'             => ['nullable','string','regex:/^(\+92|0)?[0-9]{9,11}$/'],
         'Website'           => ['nullable','url','max:200','regex:/^https?:\/\//'],
         'Address'           => 'nullable|string|max:500',
@@ -376,10 +368,10 @@ try {
         'BillingPostalCode' => ['required_if:SameAsBilling,0','nullable','string','regex:/^[0-9]{5}$/'],
         'BillingCountry'    => 'required_if:SameAsBilling,0|nullable|string|max:100',
         'SameAsBilling'     => 'nullable|boolean',
-        'NTN'               => ['nullable','string','regex:/^[0-9]{7}$/', Rule::unique('crm_customer', 'NTN')->ignore($id, 'ID')->whereNotNull('NTN')],
-        'SalesTaxNumber'    => ['nullable','string','max:50','regex:/^[A-Z0-9\-]{5,50}$/', Rule::unique('crm_customer', 'SalesTaxNumber')->ignore($id, 'ID')->whereNotNull('SalesTaxNumber')],
+        'NTN'               => ['nullable','string','regex:/^[0-9]{7}$/', Rule::unique('tbl_customer', 'NTN')->ignore($id, 'ID')->whereNotNull('NTN')],
+        'SalesTaxNumber'    => ['nullable','string','max:50','regex:/^[A-Z0-9\-]{5,50}$/', Rule::unique('tbl_customer', 'SalesTaxNumber')->ignore($id, 'ID')->whereNotNull('SalesTaxNumber')],
         'IsFiler'           => 'nullable|boolean',
-        'CNIC'              => ['required','string','regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('crm_customer', 'CNIC')->ignore($id, 'ID')],
+        'CNIC'              => ['required','string','regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('tbl_customer', 'CNIC')->ignore($id, 'ID')],
         'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
         'PaymentTerms'      => 'nullable|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
         'Notes'             => 'nullable|string|max:500',
@@ -452,50 +444,44 @@ try {
 
             // Prepare data for temp_customer (edit flow needs a row with TID = $id and RequestID)
             $data = [
-                'TID' => $id,
-                'IsArchive' => 0,
-                'VoucherID' => $customer->VoucherID ?? 0,
-                'AccountNo' => $customer->AccountNo ?? '0',
-                'Title' => $request->Title,
-                'FirstName' => $request->FirstName,
-                'LastName' => $request->LastName,
-                'Email' => $request->Email,
-                'BusinessName' => $request->BusinessName,
-                'PartyBalance' => $customer->PartyBalance ?? 0.00,
-                'Mobile' => $request->Mobile,
-                'Phone' => $request->Phone ?? '',
-                'DisplayName' => $displayName,
-                'Website' => $request->Website ?? '',
-                'Address' => $request->Address,
-                'City' => $request->City,
-                'Country' => $request->Country,
-                'County' => $request->County,
-                'PostalCode' => $request->PostalCode,
-                'BillingAddress' => $request->BillingAddress,
-                'BillingCity' => $request->BillingCity,
-                'BillingCountry' => $request->BillingCountry,
-                'BillingCounty' => $request->BillingCounty,
+                'TID'               => $id,
+                'IsArchive'         => 0,
+                'VoucherID'         => $customer->VoucherID ?? 0,
+                'AccountNo'         => $customer->AccountNo ?? '0',
+                'Title'             => $request->Title,
+                'FirstName'         => $request->FirstName,
+                'LastName'          => $request->LastName,
+                'BusinessName'      => $request->BusinessName,
+                'DisplayName'       => $displayName,
+                'Email'             => $request->Email,
+                'Mobile'            => $request->Mobile,
+                'Phone'             => $request->Phone ?? '',
+                'Website'           => $request->Website ?? '',
+                'Address'           => $request->Address,
+                'PartyBalance'      => $customer->PartyBalance ?? 0.00,
+                'City'              => $request->City,
+                'County'            => $request->County,
+                'PostalCode'        => $request->PostalCode,
+                'Country'           => $request->Country,
+                'SameAsBilling'     => $request->input('SameAsBilling', 0),
+                'BillingAddress'    => $request->BillingAddress,
+                'BillingCity'       => $request->BillingCity,
+                'BillingCounty'     => $request->BillingCounty,
+                'BillingCountry'    => $request->BillingCountry,
                 'BillingPostalCode' => $request->BillingPostalCode,
-                'FullBillingAddress' => $fullBillingAddress,
-                'NTN' => $request->NTN,
-                'SalesTaxNumber' => $request->SalesTaxNumber ?? '',
-                'IsFiler' => $request->input('IsFiler', 0),
-                'Notes' => $request->Notes,
-                'PaymentTerms' => $request->input('PaymentTerms', $customer->PaymentTerms ?? 'Cash'),
-                'Status' => $request->Status,
-                'CreatedBy' => (int)($customer->CreatedBy ?? $userId),
-                'CreatedOn' => $customer->CreatedOn ?? $now,
-                'UpdatedBy' => (int)$userId,
-                'UpdatedOn' => $now,
-                'SameAsBilling' => $request->input('SameAsBilling', 0),
-                'CNIC' => $request->CNIC,
-                'CreditLimit' => $request->input('CreditLimit', $customer->CreditLimit ?? 0),
-                'FieldA' => null, 'FieldB' => null, 'FieldC' => null, 'FieldD' => null,
-                'Field1' => null, 'Field2' => null, 'Field3' => null, 'Field4' => null,
-                'Typei' => 0,
-                'Type' => 1,
-                'IsDashboard' => 0,
-                'RequestID' => $requestId
+                'FullBillingAddress'=> $fullBillingAddress,
+                'NTN'               => $request->NTN,
+                'SalesTaxNumber'    => $request->SalesTaxNumber ?? '',
+                'CNIC'              => $request->CNIC,
+                'IsFiler'           => $request->input('IsFiler', 0),
+                'Notes'             => $request->Notes,
+                'Status'            => $request->Status,
+                'CreatedBy'         => (int)($customer->CreatedBy ?? $userId),
+                'CreatedOn'         => $customer->CreatedOn ?? $now,
+                'UpdatedBy'         => (int)$userId,
+                'UpdatedOn'         => $now,
+                'IsDashboard'       => 0,
+                'RequestID'         => $requestId,
             ];
 
             // Insert into temp (edit: no row with ID=$id exists in temp; we must insert one so model can read it)
@@ -532,8 +518,8 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
     public function delete_transaction($id)
     {
         try {
-            // Read from crm_customer
-            $customer = DB::table('crm_customer')->where('ID', $id)->first();
+            // Read from tbl_customer
+            $customer = DB::table('tbl_customer')->where('ID', $id)->first();
             
             if (!$customer) {
                 return redirect()->back()->with('error', 'Customer not found.');

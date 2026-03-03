@@ -75,15 +75,6 @@
 </div>
 @endif
 
-@php $lowStockCount = collect($products)->where('StockStatus', 0)->count(); @endphp
-@if($lowStockCount > 0)
-<div class="alert alert-warning alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-triangle me-2"></i>
-    <strong>{{ $lowStockCount }} product(s)</strong> are running low on stock.
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-@endif
-
 <div class="row">
     <div class="col-xs-12">
         <div class="card custom-card mb-1">
@@ -150,9 +141,6 @@
                             <th>Sale Price</th>
                             <th>Cost</th>
                             <th>Current Qty</th>
-                            <th>Low Stock</th>
-                            <th>Tax Rate</th>
-                            <th>Stock Status</th>
                             <th>Status</th>
                             <th>Created On</th>
                             <th>Action</th>
@@ -172,24 +160,9 @@
                             <td>{{ $product->Type ?? '-' }}</td>
                             <td>
                                 <strong>PKR {{ number_format($product->SalePrice ?? 0, 2) }}</strong>
-                                @if(($product->Discount ?? 0) > 0)
-                                    <br><small class="text-muted">{{ $product->Discount }}% off</small>
-                                @endif
                             </td>
                             <td>PKR {{ number_format($product->Cost ?? 0, 2) }}</td>
                             <td><strong>{{ $product->CurrentQuantity ?? 0 }}</strong></td>
-                            <td>{{ $product->LowStockLevel ?? 0 }}</td>
-                            <td>{{ $product->TaxRate ?? 0 }}%</td>
-                            <td>
-                                @php $ss = $product->StockStatus ?? 1; @endphp
-                                @if($ss == 1)
-                                    <span class="stock-badge stock-in">In Stock</span>
-                                @elseif($ss == 0)
-                                    <span class="stock-badge stock-low">Low Stock</span>
-                                @else
-                                    <span class="stock-badge stock-out">Out of Stock</span>
-                                @endif
-                            </td>
                             <td>
                                 @if(($product->Status ?? 1) == 1)
                                     <span class="status-badge status-active">Active</span>
@@ -224,7 +197,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="13" class="text-center py-5">
+                            <td colspan="10" class="text-center py-5">
                                 <i class="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
                                 <p class="text-muted mb-2">No products found.</p>
                                 @if(request('search') || request('start_date') || request('end_date'))

@@ -74,7 +74,7 @@ class Customer extends Model
 
   public static function getlistingdata($filters = [])
 {
-    $query = DB::table('crm_customer')->where('Status', '!=', 2);
+$query = DB::table('tbl_customer')->where('Status', '!=', 2);
 
     if (!empty($filters['search'])) {
         $search = $filters['search'];
@@ -101,29 +101,31 @@ class Customer extends Model
 }
 
     /**
-     * Execute save: insert from temp_customer into crm_customer. No return; runs query inside.
+     * Execute save: insert from temp_customer into tbl_customer. No return; runs query inside.
      */
     public static function save_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
         DB::unprepared("
-            INSERT INTO crm_customer (AccountNo, Title, FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn)
-            SELECT AccountNo, Title, FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
+            INSERT INTO tbl_customer (AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,Notes,`Status`,CreatedBy,CreatedOn)
+            SELECT AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,Notes,`Status`,CreatedBy,CreatedOn
             FROM temp_customer
             WHERE RequestID = '$requestID'
         ");
     }
 
     /**
-     * Execute edit: update crm_customer from temp_customer. No return; runs query inside.
+     * Execute edit: update tbl_customer from temp_customer. No return; runs query inside.
      */
     public static function edit_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
         DB::unprepared("
-            UPDATE crm_customer uu
+            UPDATE tbl_customer uu
             JOIN (
-                SELECT AccountNo, Title, FirstName, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
+                SELECT TID,AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,SameAsBilling,
+			BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,
+			NTN,SalesTaxNumber,CNIC,IsFiler,Notes,`Status`,UpdatedBy,UpdatedOn
                 FROM temp_customer
                 WHERE RequestID = '$requestID'
             ) u ON uu.ID = u.TID
@@ -131,19 +133,22 @@ class Customer extends Model
                 uu.AccountNo = u.AccountNo,
                 uu.Title = u.Title,
                 uu.FirstName = u.FirstName,
+                uu.LastName = u.LastName,
+                uu.AccountNo = u.AccountNo,
+                uu.Status = u.Status,
                 uu.UpdatedBy = u.UpdatedBy,
                 uu.UpdatedOn = u.UpdatedOn
         ");
     }
 
     /**
-     * Execute delete: soft-update crm_customer status from temp_customer. No return; runs query inside.
+     * Execute delete: soft-update tbl_customer status from temp_customer. No return; runs query inside.
      */
     public static function delete_transaction($validated = [])
     {
         $requestID = $validated['RequestID'] ?? '';
         DB::unprepared("
-            UPDATE crm_customer uu
+            UPDATE tbl_customer uu
             JOIN (
                 SELECT TID, 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
                 FROM temp_customer
