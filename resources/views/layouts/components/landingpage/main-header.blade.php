@@ -1,66 +1,60 @@
-<header class="app-header glass-panel border-bottom-0" id="header" style="transition: all 0.4s ease;">
 
-    <!-- Start::main-header-container -->
-    <div class="main-header-container container-fluid">
+        <header class="app-header" id="header">
 
-        <!-- Start::header-content-left -->
-        <div class="header-content-left">
+            <!-- Start::main-header-container -->
+            <div class="main-header-container container-fluid">
 
-            <!-- Start::header-element -->
-            <div class="header-element">
-                <div class="horizontal-logo">
-                    <a href="{{ url('/') }}" class="header-logo">
-                        <img src="{{ asset('build/assets/images/custom/logo.png') }}" alt="logo" class="desktop-logo"
-                            style="height: 45px; width: auto;">
-                        <img src="{{ asset('build/assets/images/custom/logo.png') }}" alt="logo" class="toggle-logo"
-                            style="height: 45px; width: auto;">
-                        <img src="{{ asset('build/assets/images/custom/logo.png') }}" alt="logo"
-                            class="desktop-dark" style="height: 45px; width: auto;">
-                        <img src="{{ asset('build/assets/images/custom/logo.png') }}" alt="logo" class="toggle-dark"
-                            style="height: 45px; width: auto;">
-                    </a>
+                <!-- Start::header-content-left -->
+                <div class="header-content-left">
+
+                    <!-- Start::header-element -->
+                    <div class="header-element">
+                        <div class="horizontal-logo">
+                            <a href="{{url('index')}}" class="header-logo">
+                                <img src="{{asset('build/assets/images/brand-logos/toggle-logo.png')}}" alt="logo" class="toggle-logo">
+                                <img src="{{asset('build/assets/images/brand-logos/toggle-dark.png')}}" alt="logo" class="toggle-dark">
+                            </a>
+                        </div>
+                    </div>
+                    <!-- End::header-element -->
+
+                    <!-- Start::header-element -->
+                    <div class="header-element">
+                        <!-- Start::header-link -->
+                        <a href="javascript:void(0);" class="sidemenu-toggle header-link" data-bs-toggle="sidebar">
+                            <span class="open-toggle">
+                                <i class="ri-menu-3-line fs-20"></i>
+                            </span>
+                        </a>
+                        <!-- End::header-link -->
+                    </div>
+                    <!-- End::header-element -->
+
                 </div>
-            </div>
-            <!-- End::header-element -->
+                <!-- End::header-content-left -->
 
-            <!-- Start::header-element -->
-            <div class="header-element">
-                <!-- Start::header-link -->
-                <a href="javascript:void(0);" class="sidemenu-toggle header-link" data-bs-toggle="sidebar">
-                    <span class="open-toggle">
-                        <i class="ri-menu-3-line fs-20"></i>
-                    </span>
-                </a>
-                <!-- End::header-link -->
-            </div>
-            <!-- End::header-element -->
+                <!-- Start::header-content-right -->
+                <div class="header-content-right">
 
-        </div>
-        <!-- End::header-content-left -->
+                    <!-- Start::header-element -->
+                    <div class="header-element align-items-center">
+                        <!-- Start::header-link|switcher-icon -->
+                        <div class="btn-list d-lg-none d-block">
+                            <a href="{{url('sign-up-basic')}}" class="btn btn-primary-light">
+                                Sign Up
+                            </a>
+                            <button class="btn btn-icon btn-success switcher-icon" data-bs-toggle="offcanvas" data-bs-target="#switcher-canvas">
+                                <i class="ri-settings-3-line"></i>
+                            </button>
+                        </div>
+                        <!-- End::header-link|switcher-icon -->
+                    </div>
+                    <!-- End::header-element -->
 
-        <!-- Start::header-content-right -->
-        <div class="header-content-right">
-
-            <!-- Start::header-element -->
-            <div class="header-element align-items-center">
-                <!-- Start::header-link|switcher-icon -->
-                <div class="btn-list d-lg-none d-block">
-                    <a href="{{ url('sign-up-basic') }}" class="btn btn-primary-light">
-                        Sign Up
-                    </a>
-                    <button class="btn btn-icon btn-success switcher-icon" data-bs-toggle="offcanvas"
-                        data-bs-target="#switcher-canvas">
-                        <i class="ri-settings-3-line"></i>
-                    </button>
                 </div>
-                <!-- End::header-link|switcher-icon -->
+                <!-- End::header-content-right -->
+
             </div>
-            <!-- End::header-element -->
+            <!-- End::main-header-container -->
 
-        </div>
-        <!-- End::header-content-right -->
-
-    </div>
-    <!-- End::main-header-container -->
-
-</header>
+        </header>
