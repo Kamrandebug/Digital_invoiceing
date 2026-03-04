@@ -103,9 +103,6 @@
                                     <a href="{{ url('customers-list') }}" class="side-menu__item">Customers</a>
                                 </li>
                                 <li class="slide">
-                                    <a href="{{ route('business.index') }}" class="side-menu__item">Business Info</a>
-                                </li>
-                                <li class="slide">
                                     <a href="{{ url('products') }}" class="side-menu__item">Products</a>
                                 </li>
                                 <li class="slide">
