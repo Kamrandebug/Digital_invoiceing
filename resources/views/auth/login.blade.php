@@ -136,6 +136,7 @@ a {
         </div>
 
         <form method="POST" action="{{ route('login') }}">
+            @csrf
 
             <div class="form-floating mb-3">
                 <input class="form-control" id="email" type="email" name="email" :value="old('email')" required autofocus autocomplete="username">
