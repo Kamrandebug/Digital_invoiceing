@@ -1,0 +1,1 @@
+(function(){flatpickr("#addignedDate",{enableTime:!0,dateFormat:"Y-m-d H:i"}),flatpickr("#targetDate",{enableTime:!0,dateFormat:"Y-m-d H:i"}),new Choices("#choices-multiple-remove-button",{allowHTML:!0,removeItemButton:!0}),dragula([document.getElementById("todo-drag")],{moves:function(t,a,e){return e.classList.contains("todo-handle")}})})();

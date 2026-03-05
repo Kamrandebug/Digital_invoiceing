@@ -1,0 +1,768 @@
+{
+  "resources/assets/js/add-products.js": {
+    "file": "assets/add-products-Bb-kcflF.js",
+    "name": "add-products",
+    "src": "resources/assets/js/add-products.js",
+    "isEntry": true
+  },
+  "resources/assets/js/alerts.js": {
+    "file": "assets/alerts-H7mFLeuK.js",
+    "name": "alerts",
+    "src": "resources/assets/js/alerts.js",
+    "isEntry": true
+  },
+  "resources/assets/js/analytics-dashboard.js": {
+    "file": "assets/analytics-dashboard-D_e3nxjZ.js",
+    "name": "analytics-dashboard",
+    "src": "resources/assets/js/analytics-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apex-github-data.js": {
+    "file": "assets/apex-github-data-l0sNRNKZ.js",
+    "name": "apex-github-data",
+    "src": "resources/assets/js/apex-github-data.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-area.js": {
+    "file": "assets/apexcharts-area-CASdUS4t.js",
+    "name": "apexcharts-area",
+    "src": "resources/assets/js/apexcharts-area.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-bar.js": {
+    "file": "assets/apexcharts-bar-DFQLt19F.js",
+    "name": "apexcharts-bar",
+    "src": "resources/assets/js/apexcharts-bar.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-boxplot.js": {
+    "file": "assets/apexcharts-boxplot-DwoROELy.js",
+    "name": "apexcharts-boxplot",
+    "src": "resources/assets/js/apexcharts-boxplot.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-bubble.js": {
+    "file": "assets/apexcharts-bubble-DHXf1B6k.js",
+    "name": "apexcharts-bubble",
+    "src": "resources/assets/js/apexcharts-bubble.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-candlestick-seriesdata.js": {
+    "file": "assets/apexcharts-candlestick-seriesdata-l0sNRNKZ.js",
+    "name": "apexcharts-candlestick-seriesdata",
+    "src": "resources/assets/js/apexcharts-candlestick-seriesdata.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-candlestick.js": {
+    "file": "assets/apexcharts-candlestick-BsG1esLh.js",
+    "name": "apexcharts-candlestick",
+    "src": "resources/assets/js/apexcharts-candlestick.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-column.js": {
+    "file": "assets/apexcharts-column-iB4uGu9Z.js",
+    "name": "apexcharts-column",
+    "src": "resources/assets/js/apexcharts-column.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-dayjs.js": {
+    "file": "assets/apexcharts-dayjs-i-LW_FVc.js",
+    "name": "apexcharts-dayjs",
+    "src": "resources/assets/js/apexcharts-dayjs.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-funnel.js": {
+    "file": "assets/apexcharts-funnel-C7YNKR74.js",
+    "name": "apexcharts-funnel",
+    "src": "resources/assets/js/apexcharts-funnel.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-heatmap.js": {
+    "file": "assets/apexcharts-heatmap-CU3EyEFs.js",
+    "name": "apexcharts-heatmap",
+    "src": "resources/assets/js/apexcharts-heatmap.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-irregulardata.js": {
+    "file": "assets/apexcharts-irregulardata-l0sNRNKZ.js",
+    "name": "apexcharts-irregulardata",
+    "src": "resources/assets/js/apexcharts-irregulardata.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-line.js": {
+    "file": "assets/apexcharts-line-DekI3owz.js",
+    "name": "apexcharts-line",
+    "src": "resources/assets/js/apexcharts-line.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-mixed.js": {
+    "file": "assets/apexcharts-mixed-B0G5jQnt.js",
+    "name": "apexcharts-mixed",
+    "src": "resources/assets/js/apexcharts-mixed.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-pie.js": {
+    "file": "assets/apexcharts-pie-BJ8W5gWz.js",
+    "name": "apexcharts-pie",
+    "src": "resources/assets/js/apexcharts-pie.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-polararea.js": {
+    "file": "assets/apexcharts-polararea-DyBs5ahp.js",
+    "name": "apexcharts-polararea",
+    "src": "resources/assets/js/apexcharts-polararea.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-radar.js": {
+    "file": "assets/apexcharts-radar-DkO13QTf.js",
+    "name": "apexcharts-radar",
+    "src": "resources/assets/js/apexcharts-radar.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-radialbar.js": {
+    "file": "assets/apexcharts-radialbar-DwzR0Zzq.js",
+    "name": "apexcharts-radialbar",
+    "src": "resources/assets/js/apexcharts-radialbar.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-rangearea.js": {
+    "file": "assets/apexcharts-rangearea-B7z2ynZi.js",
+    "name": "apexcharts-rangearea",
+    "src": "resources/assets/js/apexcharts-rangearea.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-scatter.js": {
+    "file": "assets/apexcharts-scatter-ChgYCWA3.js",
+    "name": "apexcharts-scatter",
+    "src": "resources/assets/js/apexcharts-scatter.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-stock-prices.js": {
+    "file": "assets/apexcharts-stock-prices-l0sNRNKZ.js",
+    "name": "apexcharts-stock-prices",
+    "src": "resources/assets/js/apexcharts-stock-prices.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-timeline.js": {
+    "file": "assets/apexcharts-timeline-C54nPJoB.js",
+    "name": "apexcharts-timeline",
+    "src": "resources/assets/js/apexcharts-timeline.js",
+    "isEntry": true
+  },
+  "resources/assets/js/apexcharts-treemap.js": {
+    "file": "assets/apexcharts-treemap-BNdxoTdn.js",
+    "name": "apexcharts-treemap",
+    "src": "resources/assets/js/apexcharts-treemap.js",
+    "isEntry": true
+  },
+  "resources/assets/js/authentication-main.js": {
+    "file": "assets/authentication-main-DlWNf3V7.js",
+    "name": "authentication-main",
+    "src": "resources/assets/js/authentication-main.js",
+    "isEntry": true
+  },
+  "resources/assets/js/blog-create.js": {
+    "file": "assets/blog-create-DL4Zzd2H.js",
+    "name": "blog-create",
+    "src": "resources/assets/js/blog-create.js",
+    "isEntry": true
+  },
+  "resources/assets/js/blog-details.js": {
+    "file": "assets/blog-details-DtUXYgJL.js",
+    "name": "blog-details",
+    "src": "resources/assets/js/blog-details.js",
+    "isEntry": true
+  },
+  "resources/assets/js/canada.js": {
+    "file": "assets/canada-Btz07hSk.js",
+    "name": "canada",
+    "src": "resources/assets/js/canada.js",
+    "isEntry": true
+  },
+  "resources/assets/js/chartjs-charts.js": {
+    "file": "assets/chartjs-charts-Dw0PPJ8_.js",
+    "name": "chartjs-charts",
+    "src": "resources/assets/js/chartjs-charts.js",
+    "isEntry": true
+  },
+  "resources/assets/js/chat.js": {
+    "file": "assets/chat-B8emXkwx.js",
+    "name": "chat",
+    "src": "resources/assets/js/chat.js",
+    "isEntry": true
+  },
+  "resources/assets/js/choices.js": {
+    "file": "assets/choices-C9-079do.js",
+    "name": "choices",
+    "src": "resources/assets/js/choices.js",
+    "isEntry": true
+  },
+  "resources/assets/js/color-picker.js": {
+    "file": "assets/color-picker-B05fsUy8.js",
+    "name": "color-picker",
+    "src": "resources/assets/js/color-picker.js",
+    "isEntry": true
+  },
+  "resources/assets/js/coming-soon.js": {
+    "file": "assets/coming-soon-BNjwYPoI.js",
+    "name": "coming-soon",
+    "src": "resources/assets/js/coming-soon.js",
+    "isEntry": true
+  },
+  "resources/assets/js/courses-dashboard.js": {
+    "file": "assets/courses-dashboard-DBtxAAXb.js",
+    "name": "courses-dashboard",
+    "src": "resources/assets/js/courses-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/create-invoice.js": {
+    "file": "assets/create-invoice-CxUd3V33.js",
+    "name": "create-invoice",
+    "src": "resources/assets/js/create-invoice.js",
+    "isEntry": true
+  },
+  "resources/assets/js/create-project.js": {
+    "file": "assets/create-project-DVRMtv_0.js",
+    "name": "create-project",
+    "src": "resources/assets/js/create-project.js",
+    "isEntry": true
+  },
+  "resources/assets/js/crm-companies.js": {
+    "file": "assets/crm-companies-koHjH2ml.js",
+    "name": "crm-companies",
+    "src": "resources/assets/js/crm-companies.js",
+    "isEntry": true
+  },
+  "resources/assets/js/crm-contacts.js": {
+    "file": "assets/crm-contacts-CiS8ZgsG.js",
+    "name": "crm-contacts",
+    "src": "resources/assets/js/crm-contacts.js",
+    "isEntry": true
+  },
+  "resources/assets/js/crm-dashboard.js": {
+    "file": "assets/crm-dashboard-BPPlWk26.js",
+    "name": "crm-dashboard",
+    "src": "resources/assets/js/crm-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/crm-deals.js": {
+    "file": "assets/crm-deals-Gxm-JTUK.js",
+    "name": "crm-deals",
+    "src": "resources/assets/js/crm-deals.js",
+    "isEntry": true
+  },
+  "resources/assets/js/crm-leads.js": {
+    "file": "assets/crm-leads-DoZCIMnd.js",
+    "name": "crm-leads",
+    "src": "resources/assets/js/crm-leads.js",
+    "isEntry": true
+  },
+  "resources/assets/js/crypto-buy_sell.js": {
+    "file": "assets/crypto-buy_sell-DtyDVy5t.js",
+    "name": "crypto-buy_sell",
+    "src": "resources/assets/js/crypto-buy_sell.js",
+    "isEntry": true
+  },
+  "resources/assets/js/crypto-currency-exchange.js": {
+    "file": "assets/crypto-currency-exchange-vRAX4D9P.js",
+    "name": "crypto-currency-exchange",
+    "src": "resources/assets/js/crypto-currency-exchange.js",
+    "isEntry": true
+  },
+  "resources/assets/js/crypto-dashboard.js": {
+    "file": "assets/crypto-dashboard-DYruiR4h.js",
+    "name": "crypto-dashboard",
+    "src": "resources/assets/js/crypto-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/crypto-marketcap.js": {
+    "file": "assets/crypto-marketcap-DkgP90gv.js",
+    "name": "crypto-marketcap",
+    "src": "resources/assets/js/crypto-marketcap.js",
+    "isEntry": true
+  },
+  "resources/assets/js/custom-switcher.js": {
+    "file": "assets/custom-switcher-D53C3_If.js",
+    "name": "custom-switcher",
+    "src": "resources/assets/js/custom-switcher.js",
+    "isEntry": true
+  },
+  "resources/assets/js/custom.js": {
+    "file": "assets/custom-B-UavADZ.js",
+    "name": "custom",
+    "src": "resources/assets/js/custom.js",
+    "isEntry": true
+  },
+  "resources/assets/js/customers-list.js": {
+    "file": "assets/customers-list-Czja3oLG.js",
+    "name": "customers-list",
+    "src": "resources/assets/js/customers-list.js",
+    "isEntry": true
+  },
+  "resources/assets/js/dataseries.js": {
+    "file": "assets/dataseries-l0sNRNKZ.js",
+    "name": "dataseries",
+    "src": "resources/assets/js/dataseries.js",
+    "isEntry": true
+  },
+  "resources/assets/js/datatables.js": {
+    "file": "assets/datatables-_3Z3Rdpk.js",
+    "name": "datatables",
+    "src": "resources/assets/js/datatables.js",
+    "isEntry": true
+  },
+  "resources/assets/js/date&time_pickers.js": {
+    "file": "assets/date_time_pickers-CCal6qif.js",
+    "name": "date_time_pickers",
+    "src": "resources/assets/js/date&time_pickers.js",
+    "isEntry": true
+  },
+  "resources/assets/js/defaultmenu.js": {
+    "file": "assets/defaultmenu-DLO3umBv.js",
+    "name": "defaultmenu",
+    "src": "resources/assets/js/defaultmenu.js",
+    "isEntry": true
+  },
+  "resources/assets/js/draggable-cards.js": {
+    "file": "assets/draggable-cards-CoEby9Hy.js",
+    "name": "draggable-cards",
+    "src": "resources/assets/js/draggable-cards.js",
+    "isEntry": true
+  },
+  "resources/assets/js/echarts.js": {
+    "file": "assets/echarts-DnxeFo4Q.js",
+    "name": "echarts",
+    "src": "resources/assets/js/echarts.js",
+    "isEntry": true
+  },
+  "resources/assets/js/ecommerce-dashboard.js": {
+    "file": "assets/ecommerce-dashboard-C3ObIPaT.js",
+    "name": "ecommerce-dashboard",
+    "src": "resources/assets/js/ecommerce-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/file-manager.js": {
+    "file": "assets/file-manager-CbkmZ_I6.js",
+    "name": "file-manager",
+    "src": "resources/assets/js/file-manager.js",
+    "isEntry": true
+  },
+  "resources/assets/js/fileupload.js": {
+    "file": "assets/fileupload-DSJ_d_h8.js",
+    "name": "fileupload",
+    "src": "resources/assets/js/fileupload.js",
+    "isEntry": true
+  },
+  "resources/assets/js/form-advanced.js": {
+    "file": "assets/form-advanced-BW6Vop62.js",
+    "name": "form-advanced",
+    "src": "resources/assets/js/form-advanced.js",
+    "isEntry": true
+  },
+  "resources/assets/js/form-input-mask.js": {
+    "file": "assets/form-input-mask-C2vwn1ve.js",
+    "name": "form-input-mask",
+    "src": "resources/assets/js/form-input-mask.js",
+    "isEntry": true
+  },
+  "resources/assets/js/form-wizard-init.js": {
+    "file": "assets/form-wizard-init-iKT7VXTT.js",
+    "name": "form-wizard-init",
+    "src": "resources/assets/js/form-wizard-init.js",
+    "isEntry": true
+  },
+  "resources/assets/js/form-wizard.js": {
+    "file": "assets/form-wizard-l0sNRNKZ.js",
+    "name": "form-wizard",
+    "src": "resources/assets/js/form-wizard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/fullcalendar.js": {
+    "file": "assets/fullcalendar-DmOSF1sQ.js",
+    "name": "fullcalendar",
+    "src": "resources/assets/js/fullcalendar.js",
+    "isEntry": true
+  },
+  "resources/assets/js/gallery.js": {
+    "file": "assets/gallery-idOG1FFT.js",
+    "name": "gallery",
+    "src": "resources/assets/js/gallery.js",
+    "isEntry": true
+  },
+  "resources/assets/js/google-maps.js": {
+    "file": "assets/google-maps-CWeSKnHX.js",
+    "name": "google-maps",
+    "src": "resources/assets/js/google-maps.js",
+    "isEntry": true
+  },
+  "resources/assets/js/grid.js": {
+    "file": "assets/grid-hyvvXI_-.js",
+    "name": "grid",
+    "src": "resources/assets/js/grid.js",
+    "isEntry": true
+  },
+  "resources/assets/js/hrm-dashboard.js": {
+    "file": "assets/hrm-dashboard-Yh5gON4E.js",
+    "name": "hrm-dashboard",
+    "src": "resources/assets/js/hrm-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/invoice-list.js": {
+    "file": "assets/invoice-list-ePXOWTnS.js",
+    "name": "invoice-list",
+    "src": "resources/assets/js/invoice-list.js",
+    "isEntry": true
+  },
+  "resources/assets/js/job-candidate-details.js": {
+    "file": "assets/job-candidate-details-BdTscCbE.js",
+    "name": "job-candidate-details",
+    "src": "resources/assets/js/job-candidate-details.js",
+    "isEntry": true
+  },
+  "resources/assets/js/job-details.js": {
+    "file": "assets/job-details-D8N8Zmcl.js",
+    "name": "job-details",
+    "src": "resources/assets/js/job-details.js",
+    "isEntry": true
+  },
+  "resources/assets/js/job-list.js": {
+    "file": "assets/job-list-E0I8mIU0.js",
+    "name": "job-list",
+    "src": "resources/assets/js/job-list.js",
+    "isEntry": true
+  },
+  "resources/assets/js/job-search-candidate.js": {
+    "file": "assets/job-search-candidate-D2MxCG9p.js",
+    "name": "job-search-candidate",
+    "src": "resources/assets/js/job-search-candidate.js",
+    "isEntry": true
+  },
+  "resources/assets/js/job-search.js": {
+    "file": "assets/job-search-D2MxCG9p.js",
+    "name": "job-search",
+    "src": "resources/assets/js/job-search.js",
+    "isEntry": true
+  },
+  "resources/assets/js/jobs-dashboard.js": {
+    "file": "assets/jobs-dashboard-QIdqy9v0.js",
+    "name": "jobs-dashboard",
+    "src": "resources/assets/js/jobs-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/jobs-post.js": {
+    "file": "assets/jobs-post-mtfovlzS.js",
+    "name": "jobs-post",
+    "src": "resources/assets/js/jobs-post.js",
+    "isEntry": true
+  },
+  "resources/assets/js/jsvectormap.js": {
+    "file": "assets/jsvectormap-DDtYPlKt.js",
+    "name": "jsvectormap",
+    "src": "resources/assets/js/jsvectormap.js",
+    "isEntry": true
+  },
+  "resources/assets/js/landing.js": {
+    "file": "assets/landing-COsLeHQZ.js",
+    "name": "landing",
+    "src": "resources/assets/js/landing.js",
+    "isEntry": true
+  },
+  "resources/assets/js/leaflet.js": {
+    "file": "assets/leaflet-DxHQwzIi.js",
+    "name": "leaflet",
+    "src": "resources/assets/js/leaflet.js",
+    "isEntry": true
+  },
+  "resources/assets/js/mail-settings.js": {
+    "file": "assets/mail-settings-SgE4UEYO.js",
+    "name": "mail-settings",
+    "src": "resources/assets/js/mail-settings.js",
+    "isEntry": true
+  },
+  "resources/assets/js/mail.js": {
+    "file": "assets/mail-CoCVTSkf.js",
+    "name": "mail",
+    "src": "resources/assets/js/mail.js",
+    "isEntry": true
+  },
+  "resources/assets/js/main.js": {
+    "file": "assets/main-DmkUtMJ7.js",
+    "name": "main",
+    "src": "resources/assets/js/main.js",
+    "isEntry": true
+  },
+  "resources/assets/js/media-player.js": {
+    "file": "assets/media-player-COEJ5XkB.js",
+    "name": "media-player",
+    "src": "resources/assets/js/media-player.js",
+    "isEntry": true
+  },
+  "resources/assets/js/medical-dashboard.js": {
+    "file": "assets/medical-dashboard--XMlplNq.js",
+    "name": "medical-dashboard",
+    "src": "resources/assets/js/medical-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/modal.js": {
+    "file": "assets/modal-D1ojdTAx.js",
+    "name": "modal",
+    "src": "resources/assets/js/modal.js",
+    "isEntry": true
+  },
+  "resources/assets/js/nft-create.js": {
+    "file": "assets/nft-create-BGhLRf7s.js",
+    "name": "nft-create",
+    "src": "resources/assets/js/nft-create.js",
+    "isEntry": true
+  },
+  "resources/assets/js/nft-dashboard.js": {
+    "file": "assets/nft-dashboard-CFDJS_C0.js",
+    "name": "nft-dashboard",
+    "src": "resources/assets/js/nft-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/nft-details.js": {
+    "file": "assets/nft-details-Cm1lfG4S.js",
+    "name": "nft-details",
+    "src": "resources/assets/js/nft-details.js",
+    "isEntry": true
+  },
+  "resources/assets/js/nouislider.js": {
+    "file": "assets/nouislider-Cwz_ib-j.js",
+    "name": "nouislider",
+    "src": "resources/assets/js/nouislider.js",
+    "isEntry": true
+  },
+  "resources/assets/js/orders.js": {
+    "file": "assets/orders-MyIAUG6b.js",
+    "name": "orders",
+    "src": "resources/assets/js/orders.js",
+    "isEntry": true
+  },
+  "resources/assets/js/pos-dashboard.js": {
+    "file": "assets/pos-dashboard-BGQEM75M.js",
+    "name": "pos-dashboard",
+    "src": "resources/assets/js/pos-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/prism-custom.js": {
+    "file": "assets/prism-custom-DndhZ9SR.js",
+    "name": "prism-custom",
+    "src": "resources/assets/js/prism-custom.js",
+    "isEntry": true
+  },
+  "resources/assets/js/product-details.js": {
+    "file": "assets/product-details-DIOPk4Wx.js",
+    "name": "product-details",
+    "src": "resources/assets/js/product-details.js",
+    "isEntry": true
+  },
+  "resources/assets/js/products.js": {
+    "file": "assets/products-CDTG4n1Y.js",
+    "name": "products",
+    "src": "resources/assets/js/products.js",
+    "isEntry": true
+  },
+  "resources/assets/js/profile.js": {
+    "file": "assets/profile-CI-S9cLh.js",
+    "name": "profile",
+    "src": "resources/assets/js/profile.js",
+    "isEntry": true
+  },
+  "resources/assets/js/project-overview.js": {
+    "file": "assets/project-overview-ByQNapUa.js",
+    "name": "project-overview",
+    "src": "resources/assets/js/project-overview.js",
+    "isEntry": true
+  },
+  "resources/assets/js/projects-dashboard.js": {
+    "file": "assets/projects-dashboard-Bi7oGjEi.js",
+    "name": "projects-dashboard",
+    "src": "resources/assets/js/projects-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/quill-editor.js": {
+    "file": "assets/quill-editor-CO0YyqDS.js",
+    "name": "quill-editor",
+    "src": "resources/assets/js/quill-editor.js",
+    "isEntry": true
+  },
+  "resources/assets/js/ratings.js": {
+    "file": "assets/ratings-D5E9KfF3.js",
+    "name": "ratings",
+    "src": "resources/assets/js/ratings.js",
+    "isEntry": true
+  },
+  "resources/assets/js/reviews.js": {
+    "file": "assets/reviews-CRbhf55D.js",
+    "name": "reviews",
+    "src": "resources/assets/js/reviews.js",
+    "isEntry": true
+  },
+  "resources/assets/js/russia.js": {
+    "file": "assets/russia-C3XucoMP.js",
+    "name": "russia",
+    "src": "resources/assets/js/russia.js",
+    "isEntry": true
+  },
+  "resources/assets/js/sales-dashboard.js": {
+    "file": "assets/sales-dashboard-zN6VO2mo.js",
+    "name": "sales-dashboard",
+    "src": "resources/assets/js/sales-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/school-dashboard.js": {
+    "file": "assets/school-dashboard-C3NnHC6g.js",
+    "name": "school-dashboard",
+    "src": "resources/assets/js/school-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/search-results.js": {
+    "file": "assets/search-results-FmQP_68M.js",
+    "name": "search-results",
+    "src": "resources/assets/js/search-results.js",
+    "isEntry": true
+  },
+  "resources/assets/js/select2.js": {
+    "file": "assets/select2-CglUGGa5.js",
+    "name": "select2",
+    "src": "resources/assets/js/select2.js",
+    "isEntry": true
+  },
+  "resources/assets/js/show-password.js": {
+    "file": "assets/show-password-l0sNRNKZ.js",
+    "name": "show-password",
+    "src": "resources/assets/js/show-password.js",
+    "isEntry": true
+  },
+  "resources/assets/js/simplebar.js": {
+    "file": "assets/simplebar-B35Aj-bA.js",
+    "name": "simplebar",
+    "src": "resources/assets/js/simplebar.js",
+    "isEntry": true
+  },
+  "resources/assets/js/social-media-dashboard.js": {
+    "file": "assets/social-media-dashboard-DG2D9dWr.js",
+    "name": "social-media-dashboard",
+    "src": "resources/assets/js/social-media-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/sortable.js": {
+    "file": "assets/sortable-CsY5BoPQ.js",
+    "name": "sortable",
+    "src": "resources/assets/js/sortable.js",
+    "isEntry": true
+  },
+  "resources/assets/js/spain.js": {
+    "file": "assets/spain-CdBIHB66.js",
+    "name": "spain",
+    "src": "resources/assets/js/spain.js",
+    "isEntry": true
+  },
+  "resources/assets/js/sticky.js": {
+    "file": "assets/sticky-iyP9-pex.js",
+    "name": "sticky",
+    "src": "resources/assets/js/sticky.js",
+    "isEntry": true
+  },
+  "resources/assets/js/stocks-dashboard.js": {
+    "file": "assets/stocks-dashboard-CQGA88Cn.js",
+    "name": "stocks-dashboard",
+    "src": "resources/assets/js/stocks-dashboard.js",
+    "isEntry": true
+  },
+  "resources/assets/js/sweet-alerts.js": {
+    "file": "assets/sweet-alerts-4UsBmaBu.js",
+    "name": "sweet-alerts",
+    "src": "resources/assets/js/sweet-alerts.js",
+    "isEntry": true
+  },
+  "resources/assets/js/swiper.js": {
+    "file": "assets/swiper-CaqqKXS0.js",
+    "name": "swiper",
+    "src": "resources/assets/js/swiper.js",
+    "isEntry": true
+  },
+  "resources/assets/js/tagify.js": {
+    "file": "assets/tagify-B7A5Iz0J.js",
+    "name": "tagify",
+    "src": "resources/assets/js/tagify.js",
+    "isEntry": true
+  },
+  "resources/assets/js/task-kanban-board.js": {
+    "file": "assets/task-kanban-board-wFFEPaCr.js",
+    "name": "task-kanban-board",
+    "src": "resources/assets/js/task-kanban-board.js",
+    "isEntry": true
+  },
+  "resources/assets/js/task-list.js": {
+    "file": "assets/task-list-W2KtnQLR.js",
+    "name": "task-list",
+    "src": "resources/assets/js/task-list.js",
+    "isEntry": true
+  },
+  "resources/assets/js/team.js": {
+    "file": "assets/team-DjdTuGFJ.js",
+    "name": "team",
+    "src": "resources/assets/js/team.js",
+    "isEntry": true
+  },
+  "resources/assets/js/toasts.js": {
+    "file": "assets/toasts-CVHTjzn1.js",
+    "name": "toasts",
+    "src": "resources/assets/js/toasts.js",
+    "isEntry": true
+  },
+  "resources/assets/js/todolist.js": {
+    "file": "assets/todolist-CntgZgZl.js",
+    "name": "todolist",
+    "src": "resources/assets/js/todolist.js",
+    "isEntry": true
+  },
+  "resources/assets/js/tour.js": {
+    "file": "assets/tour-Bim_GGsV.js",
+    "name": "tour",
+    "src": "resources/assets/js/tour.js",
+    "isEntry": true
+  },
+  "resources/assets/js/two-step-verification.js": {
+    "file": "assets/two-step-verification-l0sNRNKZ.js",
+    "name": "two-step-verification",
+    "src": "resources/assets/js/two-step-verification.js",
+    "isEntry": true
+  },
+  "resources/assets/js/us-merc-en.js": {
+    "file": "assets/us-merc-en-V0CEs0pf.js",
+    "name": "us-merc-en",
+    "src": "resources/assets/js/us-merc-en.js",
+    "isEntry": true
+  },
+  "resources/assets/js/validation.js": {
+    "file": "assets/validation-BPkCWuX6.js",
+    "name": "validation",
+    "src": "resources/assets/js/validation.js",
+    "isEntry": true
+  },
+  "resources/assets/js/widgets.js": {
+    "file": "assets/widgets-82ubfbOD.js",
+    "name": "widgets",
+    "src": "resources/assets/js/widgets.js",
+    "isEntry": true
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-CyCix4Bg.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-Df5fKiT1.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/sass/app.scss": {
+    "file": "assets/app-CVJBa3Gl.css",
+    "src": "resources/sass/app.scss",
+    "isEntry": true
+  }
+}
