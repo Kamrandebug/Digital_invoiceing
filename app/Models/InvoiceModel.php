@@ -67,7 +67,7 @@ class InvoiceModel extends Model
     {
         // Raw SQL string used to populate the Customer dropdown
         $query = "SELECT ID, DisplayName, Address
-                  FROM crm_customer
+                  FROM tbl_customer
                   WHERE Status = 1";
 
         return $query;
@@ -75,10 +75,9 @@ class InvoiceModel extends Model
 
     public static function Load_Product()
     {
-        // Raw SQL string used to populate the Product dropdown
-        // crm_product has TaxRate; alias as GstPercentage for invoice form.
-        $query = "SELECT ID, Name AS ProductName, SalePrice, TaxRate AS GstPercentage
-                  FROM crm_product
+        // Product dropdown for invoice. GstPercentage defaults to 0 (tbl_product may not have TaxRate column).
+        $query = "SELECT ID, Name AS ProductName, SalePrice, 0 AS GstPercentage
+                  FROM tbl_product
                   WHERE Status = 1";
 
         return $query;
@@ -92,7 +91,7 @@ class InvoiceModel extends Model
     {
         // 1. Point directly to tbl_sales_invoice_header (aliased as 'h')
         $query = DB::table('tbl_sales_invoice_header as h')
-            ->leftJoin('crm_customer as cust', 'h.CustomerID', '=', 'cust.ID')
+            ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
             ->select(
                 'h.ID          as HeaderID', 
                 'h.DocNo',
