@@ -61,11 +61,9 @@ use App\Http\Controllers\BusinessInfoController;
 
 Route::middleware(['auth', 'tenant'])->prefix('business')->name('business.')->group(function () {
     Route::get('/',               [BusinessInfoController::class, 'index'])->name('index');
-    Route::post('/save',          [BusinessInfoController::class, 'save_transaction'])->name('save_transaction');
     Route::get('/modal',          [BusinessInfoController::class, 'modal'])->name('modal');
     Route::get('/{id}/modal',     [BusinessInfoController::class, 'modal'])->name('modal.id');
     Route::put('/{id}/update',    [BusinessInfoController::class, 'edit_transaction'])->name('edit_transaction');
-    Route::delete('/{id}/delete', [BusinessInfoController::class, 'delete_transaction'])->name('delete_transaction');
 });
 
 // ── Products ──────────────────────────────────────────────────

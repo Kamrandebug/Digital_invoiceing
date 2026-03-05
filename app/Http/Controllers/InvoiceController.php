@@ -79,7 +79,7 @@ class InvoiceController extends Controller
         if ($id && in_array($mode, ['edit', 'show'])) {
 
             $invoice = DB::table('tbl_sales_invoice_header as h')
-                ->leftJoin('crm_customer as cust', 'h.CustomerID', '=', 'cust.ID')
+                ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
                 ->select(
                     'h.*',
                     DB::raw("
@@ -97,7 +97,7 @@ class InvoiceController extends Controller
             }
 
             $items = DB::table('tbl_sales_invoice_detail as d')
-                ->leftJoin('crm_product as p', 'd.ProductID', '=', 'p.ID')
+                ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
                 ->select('d.*', 'p.Name as ProductName')
                 ->where('d.InvoiceID', $id)
                 ->where('d.Status', '!=', 2)
@@ -134,7 +134,7 @@ class InvoiceController extends Controller
         }
 
         $items = DB::table('tbl_sales_invoice_detail as d')
-            ->leftJoin('crm_product as p', 'd.ProductID', '=', 'p.ID')
+            ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
             ->select('d.*', 'p.Name as ProductName')
             ->where('d.InvoiceID', $id)
             ->where('d.Status', '!=', 2)
@@ -169,7 +169,7 @@ class InvoiceController extends Controller
         }
 
         $items = DB::table('tbl_sales_invoice_detail as d')
-            ->leftJoin('crm_product as p', 'd.ProductID', '=', 'p.ID')
+            ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
             ->select('d.*', 'p.Name as ProductName')
             ->where('d.InvoiceID', $id)
             ->where('d.Status', '!=', 2)

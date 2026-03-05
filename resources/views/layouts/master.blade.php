@@ -65,6 +65,7 @@
 
             <!-- Start::main-modal -->
             @include('layouts.components.modal')
+            @include('layouts.components.business-modal')
             <!-- End::main-modal -->
 
             @yield('modals')  

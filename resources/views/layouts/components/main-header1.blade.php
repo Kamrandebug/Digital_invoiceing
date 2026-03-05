@@ -560,6 +560,9 @@
 												<a class="dropdown-item d-flex align-items-center" href="{{url('profile')}}"><i class="ti ti-user-circle me-2 fs-18"></i>View Profile</a>
 											</li>
 											<li>
+												<a class="dropdown-item d-flex align-items-center" href="javascript:void(0);" onclick="openBusinessModal('edit', 1);"><i class="ti ti-building-store me-2 fs-18"></i>Business Info</a>
+											</li>
+											<li>
 												<a class="dropdown-item d-flex align-items-center" href="{{url('mail-settings')}}"><i class="ti ti-settings-cog me-2 fs-18"></i>Account Settings</a>
 											</li>
 										</ul>        

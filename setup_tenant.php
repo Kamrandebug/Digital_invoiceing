@@ -22,10 +22,10 @@ try {
     // Create central DB if not exists (using landlord connection to execute CREATE DATABASE)
     DB::connection('landlord')->statement("CREATE DATABASE IF NOT EXISTS `$centralDbName`");
     
-    // Check if crm_customer exists in central
-    $tables = DB::connection('central')->select("SHOW TABLES LIKE 'crm_customer'");
+    // Check if tbl_customer exists in central
+    $tables = DB::connection('central')->select("SHOW TABLES LIKE 'tbl_customer'");
     if (count($tables) == 0) {
-        echo "crm_customer missing in central. Running migrations...\n";
+        echo "tbl_customer missing in central. Running migrations...\n";
         Artisan::call('migrate', [
             '--database' => 'central',
             '--path' => 'database/migrations/central',
@@ -33,7 +33,7 @@ try {
         ]);
         echo Artisan::output();
     } else {
-        echo "crm_customer exists in central.\n";
+        echo "tbl_customer exists in central.\n";
     }
 } catch (\Exception $e) {
     echo "Error with Central Database: " . $e->getMessage() . "\n";
@@ -58,9 +58,9 @@ if ($user->tenant) {
         DB::purge('tenant');
         DB::reconnect('tenant');
         
-        $tables = DB::connection('tenant')->select("SHOW TABLES LIKE 'crm_customer'");
+        $tables = DB::connection('tenant')->select("SHOW TABLES LIKE 'tbl_customer'");
         if (count($tables) == 0) {
-            echo "crm_customer missing in tenant DB. Copying from central...\n";
+            echo "tbl_customer missing in tenant DB. Copying from central...\n";
             // Manually trigger copy since tenant record exists but DB might be partial
             $service = new TenantProvisioningService();
             // Reflection to access protected method or just re-run creation logic?
@@ -68,7 +68,7 @@ if ($user->tenant) {
             $service->migrateTenant($user->tenant);
             echo "Schema copied.\n";
         } else {
-            echo "crm_customer exists in tenant DB.\n";
+            echo "tbl_customer exists in tenant DB.\n";
         }
     } catch (\Exception $e) {
         echo "Error fixing tenant DB: " . $e->getMessage() . "\n";

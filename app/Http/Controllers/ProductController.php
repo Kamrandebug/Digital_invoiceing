@@ -198,7 +198,7 @@ class ProductController extends Controller
         $product = null;
 
         if ($id && in_array($mode, ['edit', 'show'])) {
-            $row = DB::table('crm_product')->where('ID', $id)->first();
+            $row = DB::table('tbl_product')->where('ID', $id)->first();
             if (!$row) {
                 return response('<div class="alert alert-danger m-3">Product not found.</div>', 404);
             }
@@ -226,8 +226,8 @@ class ProductController extends Controller
      */
     public function show($id)
     {
-        // Read from crm_product
-        $product = DB::table('crm_product')->where('ID', $id)->first();
+        // Read from tbl_product
+        $product = DB::table('tbl_product')->where('ID', $id)->first();
 
         if (!$product) {
             abort(404, 'Product not found in CRM');
@@ -246,8 +246,8 @@ class ProductController extends Controller
      */
     public function edit($id)
     {
-        // Read from crm_product
-        $product = DB::table('crm_product')->where('ID', $id)->first();
+        // Read from tbl_product
+        $product = DB::table('tbl_product')->where('ID', $id)->first();
 
         if (!$product) {
             abort(404, 'Product not found in CRM');
@@ -267,7 +267,7 @@ class ProductController extends Controller
     public function edit_transaction(Request $request, $id)
     {
         // Get existing
-        $product = DB::table('crm_product')->where('ID', $id)->first();
+        $product = DB::table('tbl_product')->where('ID', $id)->first();
 
         if (!$product) {
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -409,8 +409,8 @@ class ProductController extends Controller
     public function delete_transaction($id)
     {
         try {
-            // Read from crm_product
-            $product = DB::table('crm_product')->where('ID', $id)->first();
+            // Read from tbl_product
+            $product = DB::table('tbl_product')->where('ID', $id)->first();
 
             if (!$product) {
                 return redirect()->back()->with('error', 'Product not found.');

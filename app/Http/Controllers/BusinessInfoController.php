@@ -11,20 +11,11 @@ use Illuminate\Validation\Rule;
 class BusinessInfoController extends Controller
 {
     /**
-     * List Business Info records.
+     * No dedicated Business page: open modal from any page. Redirect /business to previous page.
      */
     public function index(Request $request)
     {
-        $filters = [
-            'search'     => $request->input('search'),
-            'start_date' => $request->input('start_date'),
-            'end_date'   => $request->input('end_date'),
-        ];
-
-        $query = BusinessInfo::getlistingdata($filters);
-        $businesses = $query->paginate(20);
-
-        return view('pages.dashboards.Business.business-list', compact('businesses'));
+        return redirect()->back();
     }
 
     /**
