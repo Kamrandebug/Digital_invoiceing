@@ -9,7 +9,7 @@ body{
 
 @media (min-width: 992px) {
     .app-content {
-        margin-block-start: 2.25rem !important;
+/*        margin-block-start: 2.25rem !important;*/
     }
 }
 
