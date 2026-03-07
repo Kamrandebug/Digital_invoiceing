@@ -225,7 +225,7 @@ class InvoiceController extends Controller
         // 2. Insert each line item into temp with RequestID (Includes Header Info)
         $docNo2 = $request->input('DocNo2');
         $docNo3 = $request->input('DocNo3');
-        foreach ($request->items as $item) {
+            foreach ($request->items as $item) {
             DB::table('tbl_temp_invoice_detail')->insert([
                 'InvoiceID'          => $nextId,
                 'TID'                => $nextId,
@@ -239,6 +239,13 @@ class InvoiceController extends Controller
                 'DocNo3'             => $docNo3 !== null ? (string) $docNo3 : '',
                 'ProductID'          => $item['ProductID']         ?? 0,
                 'Details'            => $item['Details']           ?? null,
+                'ProductDescription' => $item['Details']           ?? null,
+                'HsCode'             => $item['HsCode']            ?? null,
+                'UomID'              => $item['UomID']             ?? null,
+                'SaleTypeID'         => $item['SaleTypeID']         ?? null,
+                'SaleTypeToRateID'   => $item['SaleTypeToRateID']  ?? null,
+                'SroScheduleID'      => $item['SroScheduleID']     ?? null,
+                'SroItemID'          => $item['SroItemID']         ?? null,
                 'Quantity'           => $item['Quantity'],
                 'Rate'               => $item['Rate'],
                 'Amount'             => $item['Amount']            ?? 0,
@@ -335,6 +342,13 @@ class InvoiceController extends Controller
                 'DocNo3'             => $docNo3 !== null ? (string) $docNo3 : '',
                 'ProductID'          => $item['ProductID']         ?? 0,
                 'Details'            => $item['Details']           ?? null,
+                'ProductDescription' => $item['Details']           ?? null,
+                'HsCode'             => $item['HsCode']            ?? null,
+                'UomID'              => $item['UomID']             ?? null,
+                'SaleTypeID'         => $item['SaleTypeID']         ?? null,
+                'SaleTypeToRateID'   => $item['SaleTypeToRateID']  ?? null,
+                'SroScheduleID'      => $item['SroScheduleID']     ?? null,
+                'SroItemID'          => $item['SroItemID']         ?? null,
                 'Quantity'           => $item['Quantity'],
                 'Rate'               => $item['Rate'],
                 'Amount'             => $item['Amount']            ?? 0,
@@ -372,6 +386,12 @@ class InvoiceController extends Controller
                 'CustomerID'         => $request->CustomerID,
                 'ProductID'          => $item['ProductID']         ?? 0,
                 'Details'            => $item['Details']           ?? null,
+                'HsCode'             => $item['HsCode']            ?? null,
+                'UomID'              => $item['UomID']             ?? null,
+                'SaleTypeID'         => $item['SaleTypeID']         ?? null,
+                'SaleTypeToRateID'   => $item['SaleTypeToRateID']  ?? null,
+                'SroScheduleID'      => $item['SroScheduleID']     ?? null,
+                'SroItemID'          => $item['SroItemID']         ?? null,
                 'Quantity'           => $item['Quantity'],
                 'Rate'               => $item['Rate'],
                 'Amount'             => $item['Amount']            ?? 0,
