@@ -1,0 +1,1 @@
+(function(){new Dropzone(".dropzone",{maxFiles:1,addRemoveLinks:!0,dictRemoveFile:"Remove"});var o=GLightbox({selector:".glightbox"});o.on("slide_changed",({prev:i,current:e})=>{console.log("Prev slide",i),console.log("Current slide",e);const{slideIndex:l,slideNode:d,slideConfig:n,player:s}=e})})();
