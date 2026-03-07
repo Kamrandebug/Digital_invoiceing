@@ -213,11 +213,6 @@ class ProductModel extends Model
         return $query;
     }
 
-    // Name accessor
-    public function getNameAttribute()
-    {
-        return $this->Name ?? $this->Code;
-    }
 
     protected $casts = [
         'CreatedOn'        => 'datetime',
