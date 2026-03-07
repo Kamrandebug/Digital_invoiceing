@@ -79,7 +79,7 @@
 
         <div class="text-center mt-4">
             <small class="text-muted">Have an account already? 
-                <a href="{{ url('register') }}" class="text-primary fw-semibold">Create one</a>
+                <a href="{{ url('login') }}" class="text-primary fw-semibold">Create one</a>
             </small>
         </div>
 
