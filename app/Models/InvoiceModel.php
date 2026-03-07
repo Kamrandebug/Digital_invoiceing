@@ -66,7 +66,7 @@ class InvoiceModel extends Model
     public static function Load_Customer()
     {
         // Raw SQL string used to populate the Customer dropdown
-        $query = "SELECT ID, DisplayName, Address
+        $query = "SELECT ID, DisplayName, FirstName, BusinessName
                   FROM tbl_customer
                   WHERE Status = 1";
 
@@ -75,12 +75,53 @@ class InvoiceModel extends Model
 
     public static function Load_Product()
     {
-        // Product dropdown for invoice. GstPercentage defaults to 0 (tbl_product may not have TaxRate column).
-        $query = "SELECT ID, Name AS ProductName, SalePrice, 0 AS GstPercentage
+        // Product dropdown for invoice: include tax/FBR fields for auto-fill on line item.
+        $query = "SELECT ID, Name AS ProductName, SalePrice, 0 AS GstPercentage,
+                  HsCode, SaleInformation, UomID, SaleTypeID, SaleTypeToRateID, SroScheduleID, SroItemID
                   FROM tbl_product
                   WHERE Status = 1";
 
         return $query;
+    }
+
+    /**
+     * Load Invoice Types from core_digital_invoicing.fbr_doc_type_code.
+     * Returns docTypeId as value, docDescription as display.
+     */
+    public static function Load_InvoiceTypes()
+    {
+        try {
+            $schema    = 'core_digital_invoicing';
+            $baseTable = 'fbr_doc_type_code';
+            $fullTable = $schema . '.' . $baseTable;
+
+            $columns = DB::table('information_schema.columns')
+                ->where('table_schema', $schema)
+                ->where('table_name', $baseTable)
+                ->pluck('column_name');
+
+            $idCol   = null;
+            $descCol = null;
+            foreach ($columns as $col) {
+                $lc = strtolower($col);
+                if ($idCol === null && (strpos($lc, 'type') !== false && strpos($lc, 'id') !== false)) {
+                    $idCol = $col;
+                }
+                if ($descCol === null && strpos($lc, 'desc') !== false) {
+                    $descCol = $col;
+                }
+            }
+            $idCol   = $idCol ?: 'docTypeId';
+            $descCol = $descCol ?: 'docDescription';
+
+            return DB::table(DB::raw($fullTable))
+                ->select([$idCol . ' as docTypeId', $descCol . ' as docDescription'])
+                ->orderBy($descCol)
+                ->get();
+        } catch (\Throwable $e) {
+            \Log::warning('Load_InvoiceTypes failed: ' . $e->getMessage());
+            return collect();
+        }
     }
 
    // ══════════════════════════════════════════════════════════
@@ -151,8 +192,8 @@ class InvoiceModel extends Model
     {
         // -- 1. Insert into tbl_sales_invoice_header
         DB::unprepared("
-            INSERT INTO tbl_sales_invoice_header (InvoiceID,DocNo,Type,CustomerID,Address,InvoiceDate,DueDate,BillNumber,Notes,TermDays,SubTotal,SubTotalBeforeDiscount,InvoiceTaxType,GSTId,GSTAmount,GSTBalance,DiscountAllowed,DiscountAmount,Total,Balance,Status,Filter1,Filter2,Filter3,Filter4,Field1,Field2,Field3,Field4,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,BulkBatchID,Arrears,IsShippingBelowGST,Template,ToLocationID,Tax_ScheduleID,RetailMargin,TOSale,VehicleRegNo)
-            SELECT InvoiceID,DocNo,Type,CustomerID,Address,InvoiceDate,DueDate,BillNumber,Notes,TermDays,0 AS SubTotal,0 AS SubTotalBeforeDiscount,0 AS InvoiceTaxType,GSTId,GSTAmount,0 AS GSTBalance,DiscountAllowed,DiscountAmount,Total,Balance,Status,Filter1,Filter2,Filter3,Filter4,Field1,Field2,Field3,Field4,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,NULL AS BulkBatchID,Arrears,IsShippingBelowGST,Template,ToLocationID,Tax_ScheduleID,RetailMargin,TOSale,VehicleRegNo
+            INSERT INTO tbl_sales_invoice_header (InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT InvoiceID,1 AS InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,''AS BuyerNTNCNIC,''AS BuyerBusinessName,''AS BuyerProvince,''AS BuyerAddress,''AS InvoiceRefNo,''AS BuyerRegistrationType,''AS ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
             FROM tbl_temp_invoice_detail
             WHERE RequestID = '$requestID'
             LIMIT 1
@@ -160,10 +201,14 @@ class InvoiceModel extends Model
 
         // -- 2. Insert into tbl_sales_invoice_detail
         DB::unprepared("
-            INSERT INTO tbl_sales_invoice_detail (InvoiceID,InvoiceDate,CustomerID,ProductID,Details,Quantity,Rate,Amount,DiscountPercentage,DiscountAmount,GstPercentage,GSTAmount,Type,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,UMQuantity,UMRate,UMFactorRate,Unit)
-            SELECT InvoiceID,InvoiceDate,CustomerID,ProductID,Details,Quantity,Rate,Amount,DiscountPercentage,DiscountAmount,GstPercentage,GSTAmount,Type,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn,1 AS UMQuantity,1 AS UMRate,1 AS UMFactorRate,0 AS Unit
-            FROM tbl_temp_invoice_detail
-            WHERE RequestID = '$requestID'
+            INSERT INTO `tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,'' AS Uom_Desc,
+                SaleTypeID,'' AS SaleTypeDesc,SaleTypeToRateID,'' AS SaleTypeToRateDesc,SroScheduleID,'' AS SroScheduleDesc,
+                SroItemID,'' AS SroItemSerialNo,
+                TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,
+                CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
+            FROM `tbl_temp_invoice_detail` t
+            WHERE t.RequestID = '$requestID'
         ");
     }
 

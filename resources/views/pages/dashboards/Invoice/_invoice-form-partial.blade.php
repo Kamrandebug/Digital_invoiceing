@@ -23,7 +23,6 @@
 <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-3 flex-wrap">
     <span><strong>Doc#:</strong> {{ $invoice->DocNo ?? 'N/A' }}</span>
     <span><strong>Date:</strong> {{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : 'N/A' }}</span>
-    <span><strong>Due:</strong> {{ $invoice->DueDate ? \Carbon\Carbon::parse($invoice->DueDate)->format('d M Y') : 'N/A' }}</span>
     <span>
         <strong>Status:</strong>
         <span class="badge {{ $invoice->Status == 1 ? 'bg-success' : 'bg-danger' }}">
@@ -40,159 +39,165 @@
 @endif
 
 <div class="row g-2">
-
-    {{-- ══ Column 1 — Customer + Address ══ --}}
-    <div class="col-md-4">
-        <div class="row g-2">
-
-            {{-- Customer --}}
-            <div class="col-md-12">
-                <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
-                @if($isReadonly)
-                    <div class="form-control form-control-sm bg-light">{{ $invoice->CustomerDisplayName ?? '-' }}</div>
-                @else
-                    <select name="CustomerID"
-                            id="{{ $uid }}_CustomerID"
-                            class="form-select form-select-sm @error('CustomerID') is-invalid @enderror"
-                            required>
-                        <option value="">— Select Customer —</option>
-                        @foreach($customers as $cust)
-                            <option value="{{ $cust->ID }}"
-                                    data-address="{{ $cust->Address }}"
-                                    {{ old('CustomerID', $invoice->CustomerID ?? '') == $cust->ID ? 'selected' : '' }}>
-                                {{ $cust->DisplayName ?: ($cust->BusinessName ?: $cust->FirstName) }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('CustomerID')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                @endif
-            </div>
-
-            {{-- Address --}}
-            <div class="col-md-12">
-                <label class="form-label fw-semibold">Address</label>
-                @if($isReadonly)
-                    <div class="form-control form-control-sm bg-light" style="min-height:70px;white-space:pre-line;">{{ $invoice->Address ?? '-' }}</div>
-                @else
-                    <textarea name="Address"
-                              id="{{ $uid }}_Address"
-                              rows="3"
-                              class="form-control form-control-sm @error('Address') is-invalid @enderror"
-                              placeholder="Auto-filled on customer select">{{ old('Address', $invoice->Address ?? '') }}</textarea>
-                    @error('Address')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                @endif
-            </div>
-
-        </div>
+    {{-- Row 1: 4 columns — InvoiceType | Customer | Date | Status --}}
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Invoice Type</label>
+        @if($isReadonly)
+            @php
+                $invTypes = $invoiceTypes ?? collect();
+                $invTypeVal = $invoice->InvoiceType ?? '';
+                $sel = $invTypes->first(function($x) use ($invTypeVal) { return (string)($x->docTypeId ?? '') === (string)$invTypeVal; });
+            @endphp
+            <div class="form-control form-control-sm bg-light">{{ $sel ? ($sel->docDescription ?? $invoice->InvoiceType) : ($invoice->InvoiceType ?? '-') }}</div>
+        @else
+            @php
+                $invTypeSelected = old('InvoiceType', $invoice->InvoiceType ?? null);
+                if ($invTypeSelected === null && $isCreate) {
+                    $saleInv = collect($invoiceTypes ?? [])->first(function($x) {
+                        return strcasecmp(trim($x->docDescription ?? ''), 'Sale Invoice') === 0;
+                    });
+                    $invTypeSelected = $saleInv ? $saleInv->docTypeId : '';
+                }
+                $invTypeSelected = $invTypeSelected ?? '';
+            @endphp
+            <select name="InvoiceType"
+                    id="{{ $uid }}_InvoiceType"
+                    class="form-select form-select-sm @error('InvoiceType') is-invalid @enderror">
+                <option value="">— Select —</option>
+                @foreach($invoiceTypes ?? [] as $it)
+                    <option value="{{ $it->docTypeId }}" {{ (string)$invTypeSelected === (string)$it->docTypeId ? 'selected' : '' }}>
+                        {{ $it->docDescription ?? $it->docTypeId }}
+                    </option>
+                @endforeach
+            </select>
+            @error('InvoiceType')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @endif
     </div>
-
-    {{-- ══ Column 2 — Date / TermDays / DueDate ══ --}}
-    <div class="col-md-2">
-        <div class="row g-2">
-
-            {{-- Invoice Date --}}
-            <div class="col-md-12">
-                <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
-                @if($isReadonly)
-                    <div class="form-control form-control-sm bg-light">{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : '-' }}</div>
-                @else
-                    <input type="date"
-                           name="InvoiceDate"
-                           id="{{ $uid }}_InvoiceDate"
-                           class="form-control form-control-sm @error('InvoiceDate') is-invalid @enderror"
-                           value="{{ old('InvoiceDate', $invoice->InvoiceDate ?? date('Y-m-d')) }}"
-                           required>
-                    @error('InvoiceDate')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                @endif
-            </div>
-
-            {{-- Term Days --}}
-            <div class="col-md-12">
-                <label class="form-label fw-semibold">Term Days</label>
-                @if($isReadonly)
-                    <div class="form-control form-control-sm bg-light">{{ $invoice->TermDays ?? '0' }}</div>
-                @else
-                    <input type="number"
-                           name="TermDays"
-                           id="{{ $uid }}_TermDays"
-                           class="form-control form-control-sm @error('TermDays') is-invalid @enderror"
-                           value="{{ old('TermDays', $invoice->TermDays ?? 0) }}"
-                           min="0"
-                           placeholder="0">
-                    @error('TermDays')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                @endif
-            </div>
-
-            {{-- Due Date --}}
-            <div class="col-md-12">
-                <label class="form-label fw-semibold">Due Date <span class="text-danger">*</span></label>
-                @if($isReadonly)
-                    <div class="form-control form-control-sm bg-light">{{ $invoice->DueDate ? \Carbon\Carbon::parse($invoice->DueDate)->format('d M Y') : '-' }}</div>
-                @else
-                    <input type="date"
-                           name="DueDate"
-                           id="{{ $uid }}_DueDate"
-                           class="form-control form-control-sm @error('DueDate') is-invalid @enderror"
-                           value="{{ old('DueDate', $invoice->DueDate ?? '') }}"
-                           required>
-                    @error('DueDate')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                @endif
-            </div>
-
-        </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
+        @if($isReadonly)
+            <div class="form-control form-control-sm bg-light">{{ $invoice->CustomerDisplayName ?? '-' }}</div>
+        @else
+            <select name="CustomerID"
+                    id="{{ $uid }}_CustomerID"
+                    class="form-select form-select-sm @error('CustomerID') is-invalid @enderror"
+                    required>
+                <option value="">— Select Customer —</option>
+                @foreach($customers as $cust)
+                    <option value="{{ $cust->ID }}" {{ old('CustomerID', $invoice->CustomerID ?? '') == $cust->ID ? 'selected' : '' }}>
+                        {{ trim($cust->DisplayName ?? '') ?: trim($cust->BusinessName ?? '') ?: trim($cust->FirstName ?? '') ?: ('Customer #' . $cust->ID) }}
+                    </option>
+                @endforeach
+            </select>
+            @error('CustomerID')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @endif
     </div>
-
-    {{-- ══ Column 3 — Doc No + Status ══ --}}
-    <div class="col-md-2">
-        <div class="row g-2">
-
-            {{-- Doc No --}}
-            <div class="col-md-12">
-                <label class="form-label fw-semibold">Doc No.</label>
-                @if($isReadonly)
-                    <div class="form-control form-control-sm bg-light">{{ $invoice->DocNo ?? '-' }}</div>
-                @else
-                    <input type="text"
-                           name="DocNo"
-                           class="form-control form-control-sm @error('DocNo') is-invalid @enderror"
-                           value="{{ old('DocNo', $invoice->DocNo ?? '') }}"
-                           placeholder="Auto-generated">
-                    @error('DocNo')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                @endif
-            </div>
-
-            {{-- Status (edit only) --}}
-            @if($isEdit)
-            <div class="col-md-12">
-                <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
-                <select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror" required>
-                    <option value="1" {{ old('Status', $invoice->Status ?? 1) == 1 ? 'selected' : '' }}>Active</option>
-                    <option value="2" {{ old('Status', $invoice->Status ?? 1) == 2 ? 'selected' : '' }}>Archive</option>
-                </select>
-                @error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
-            @elseif($isCreate)
-                <input type="hidden" name="Status" value="1">
-            @endif
-
-        </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+        @if($isReadonly)
+            <div class="form-control form-control-sm bg-light">{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : '-' }}</div>
+        @else
+            <input type="date"
+                   name="InvoiceDate"
+                   id="{{ $uid }}_InvoiceDate"
+                   class="form-control form-control-sm @error('InvoiceDate') is-invalid @enderror"
+                   value="{{ old('InvoiceDate', $invoice->InvoiceDate ?? date('Y-m-d')) }}"
+                   required>
+            @error('InvoiceDate')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @endif
     </div>
+    <div class="col-md-3">
+        @if($isEdit)
+        <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+        <select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror" required>
+            <option value="1" {{ old('Status', $invoice->Status ?? 1) == 1 ? 'selected' : '' }}>Active</option>
+            <option value="2" {{ old('Status', $invoice->Status ?? 1) == 2 ? 'selected' : '' }}>Archive</option>
+        </select>
+        @error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @elseif($isCreate)
+        <input type="hidden" name="Status" value="1">
+        @endif
+    </div>
+</div>
+
+<div class="row g-2 mt-1">
+    {{-- Row 2: 4 columns — Doc No, Doc No2, Doc No3, (empty) --}}
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Doc No.</label>
+        @if($isReadonly)
+            <div class="form-control form-control-sm bg-light">{{ $invoice->DocNo ?? '-' }}</div>
+        @else
+            <input type="text"
+                   name="DocNo"
+                   class="form-control form-control-sm @error('DocNo') is-invalid @enderror"
+                   value="{{ old('DocNo', $invoice->DocNo ?? '') }}"
+                   placeholder="Auto-generated">
+            @error('DocNo')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @endif
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Doc No2</label>
+        @if($isReadonly)
+            <div class="form-control form-control-sm bg-light">{{ $invoice->DocNo2 ?? '-' }}</div>
+        @else
+            <input type="text"
+                   name="DocNo2"
+                   class="form-control form-control-sm @error('DocNo2') is-invalid @enderror"
+                   value="{{ old('DocNo2', $invoice->DocNo2 ?? '') }}"
+                   placeholder="Optional">
+            @error('DocNo2')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @endif
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Doc No3</label>
+        @if($isReadonly)
+            <div class="form-control form-control-sm bg-light">{{ $invoice->DocNo3 ?? '-' }}</div>
+        @else
+            <input type="text"
+                   name="DocNo3"
+                   class="form-control form-control-sm @error('DocNo3') is-invalid @enderror"
+                   value="{{ old('DocNo3', $invoice->DocNo3 ?? '') }}"
+                   placeholder="Optional">
+            @error('DocNo3')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @endif
+    </div>
+    <div class="col-md-3">
+        {{-- Fourth column (empty) for 4-column layout --}}
+    </div>
+</div>
 
     {{-- ══ Line Items Table ══ --}}
+    <style>
+        /* Compact spacing for invoice detail table only; enough padding so content is not cut off */
+        .table-inv th,
+        .table-inv td { padding: 0.25rem 0.4rem !important; vertical-align: middle; }
+        .table-inv th.ifp-col-desc,
+        .table-inv td.ifp-col-desc { min-width: 220px; width: 20%; }
+        .table-inv .form-control,
+        .table-inv .form-select { padding: 0.25rem 0.4rem; margin: 0; min-height: 1.75rem; font-size: 0.8125rem; box-sizing: border-box; min-width: 3.5rem; }
+        .table-inv textarea.form-control { padding: 0.25rem 0.4rem; margin: 0; min-height: 1.75rem; }
+        .table-inv td.ifp-col-desc textarea.form-control { min-width: 200px; width: 100%; }
+        .table-inv .btn-icon { padding: 0.2rem 0.35rem; margin: 0; }
+    </style>
     <div class="col-xl-12">
         <table class="table nowrap text-nowrap table-borderless border mt-3 table-inv">
             <thead>
                 <tr>
-                    <th width="15%">Product / Services</th>
-                    <th width="15%">Description</th>
-                    <th width="10%">Qty</th>
-                    <th width="8%">Rate</th>
-                    <th width="8%">Amount</th>
-                    <th width="8%">Disc %</th>
-                    <th width="8%">Disc Amount</th>
-                    <th width="8%">GST Rate</th>
-                    <th width="8%">GST Amount</th>
-                    <th width="8%">Net</th>
+                    <th>Product / Services</th>
+                    <th class="ifp-col-desc">Description</th>
+                    <th>UOM</th>
+                    <th>Sale Type</th>
+                    <th>Sale Type To Rate</th>
+                    <th>SRO Schedule</th>
+                    <th>SRO Item</th>
+                    <th>Qty</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                    <th>Disc %</th>
+                    <th>Disc Amount</th>
+                    <th>GST Rate</th>
+                    <th>GST Amount</th>
+                    <th>Net</th>
                     @if(!$isReadonly)<th></th>@endif
                 </tr>
             </thead>
@@ -210,30 +215,79 @@
                                 @foreach($products as $prod)
                                     <option value="{{ $prod->ID }}"
                                             data-rate="{{ $prod->SalePrice ?? 0 }}"
-                                            data-gst="{{ $prod->TaxRate ?? 0 }}"
+                                            data-gst="{{ $prod->GstPercentage ?? 0 }}"
+                                            data-hscode="{{ $prod->HsCode ?? '' }}"
+                                            data-sale-information="{{ $prod->SaleInformation ?? '' }}"
+                                            data-uom-id="{{ $prod->UomID ?? '' }}"
+                                            data-sale-type-id="{{ $prod->SaleTypeID ?? '' }}"
+                                            data-sale-type-to-rate-id="{{ $prod->SaleTypeToRateID ?? '' }}"
+                                            data-sro-schedule-id="{{ $prod->SroScheduleID ?? '' }}"
+                                            data-sro-item-id="{{ $prod->SroItemID ?? '' }}"
                                             {{ ($item->ProductID ?? 0) == $prod->ID ? 'selected' : '' }}>
-                                        {{ $prod->DisplayName ?? $prod->Name ?? $prod->Code }}
+                                        {{ $prod->ProductName ?? $prod->Name ?? $prod->Code ?? ('Product #' . $prod->ID) }}
                                     </option>
                                 @endforeach
                             </select>
                         @endif
                     </td>
-                    <td>
+                    <td class="ifp-col-desc">
                         @if($isReadonly)
                             <span class="small">{{ $item->Details ?? '-' }}</span>
                         @else
-                            <textarea name="items[{{ $idx }}][Details]" rows="1" class="form-control form-control-sm" placeholder="Enter Description">{{ $item->Details ?? '' }}</textarea>
+                            <input type="hidden" name="items[{{ $idx }}][HsCode]" class="ifp-hscode" value="{{ $item->HsCode ?? '' }}">
+                            <textarea name="items[{{ $idx }}][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description">{{ $item->Details ?? '' }}</textarea>
                         @endif
                     </td>
-                    <td class="invoice-quantity-container">
+                    <td>
+                        @if($isReadonly)
+                            <span class="small">{{ $item->UomName ?? $item->UomID ?? '-' }}</span>
+                        @else
+                            <select name="items[{{ $idx }}][UomID]" class="form-select form-select-sm ifp-uom" data-selected="{{ $item->UomID ?? '' }}">
+                                <option value="">Select UOM</option>
+                            </select>
+                        @endif
+                    </td>
+                    <td>
+                        @if($isReadonly)
+                            <span class="small">{{ $item->SaleTypeName ?? $item->SaleTypeID ?? '-' }}</span>
+                        @else
+                            <select name="items[{{ $idx }}][SaleTypeID]" class="form-select form-select-sm ifp-sale-type" data-selected="{{ $item->SaleTypeID ?? '' }}">
+                                <option value="">Loading...</option>
+                            </select>
+                        @endif
+                    </td>
+                    <td>
+                        @if($isReadonly)
+                            <span class="small">{{ $item->SaleTypeToRateName ?? $item->SaleTypeToRateID ?? '-' }}</span>
+                        @else
+                            <select name="items[{{ $idx }}][SaleTypeToRateID]" class="form-select form-select-sm ifp-sale-type-to-rate" data-selected="{{ $item->SaleTypeToRateID ?? '' }}">
+                                <option value="">Select Sale Type first</option>
+                            </select>
+                        @endif
+                    </td>
+                    <td>
+                        @if($isReadonly)
+                            <span class="small">{{ $item->SroScheduleName ?? $item->SroScheduleID ?? '-' }}</span>
+                        @else
+                            <select name="items[{{ $idx }}][SroScheduleID]" class="form-select form-select-sm ifp-sro-schedule" data-selected="{{ $item->SroScheduleID ?? '' }}">
+                                <option value="">Select Sale Type To Rate first</option>
+                            </select>
+                        @endif
+                    </td>
+                    <td>
+                        @if($isReadonly)
+                            <span class="small">{{ $item->SroItemName ?? $item->SroItemID ?? '-' }}</span>
+                        @else
+                            <select name="items[{{ $idx }}][SroItemID]" class="form-select form-select-sm ifp-sro-item" data-selected="{{ $item->SroItemID ?? '' }}">
+                                <option value="">Select SRO Schedule first</option>
+                            </select>
+                        @endif
+                    </td>
+                    <td>
                         @if($isReadonly)
                             <span class="small">{{ $item->Quantity ?? 0 }}</span>
                         @else
-                            <div class="input-group border rounded flex-nowrap" style="min-width: 120px;">
-                                <button type="button" class="btn btn-sm btn-icon btn-primary ifp-minus"><i class="ri-subtract-line"></i></button>
-                                <input type="number" name="items[{{ $idx }}][Quantity]" class="form-control form-control-sm border-0 text-center ifp-qty px-1" value="{{ $item->Quantity ?? 1 }}" min="0" step="0.000001">
-                                <button type="button" class="btn btn-sm btn-icon btn-primary ifp-plus"><i class="ri-add-line"></i></button>
-                            </div>
+                            <input type="number" name="items[{{ $idx }}][Quantity]" class="form-control form-control-sm ifp-qty" value="{{ $item->Quantity ?? 1 }}" min="0" step="0.000001">
                         @endif
                     </td>
                     <td>
@@ -302,20 +356,26 @@
                             @foreach($products as $prod)
                                 <option value="{{ $prod->ID }}"
                                         data-rate="{{ $prod->SalePrice ?? 0 }}"
-                                        data-gst="{{ $prod->TaxRate ?? 0 }}">
-                                    {{ $prod->DisplayName ?? $prod->Name ?? $prod->Code }}
+                                        data-gst="{{ $prod->GstPercentage ?? 0 }}"
+                                        data-hscode="{{ $prod->HsCode ?? '' }}"
+                                        data-sale-information="{{ $prod->SaleInformation ?? '' }}"
+                                        data-uom-id="{{ $prod->UomID ?? '' }}"
+                                        data-sale-type-id="{{ $prod->SaleTypeID ?? '' }}"
+                                        data-sale-type-to-rate-id="{{ $prod->SaleTypeToRateID ?? '' }}"
+                                        data-sro-schedule-id="{{ $prod->SroScheduleID ?? '' }}"
+                                        data-sro-item-id="{{ $prod->SroItemID ?? '' }}">
+                                    {{ $prod->ProductName ?? $prod->Name ?? $prod->Code ?? ('Product #' . $prod->ID) }}
                                 </option>
                             @endforeach
                         </select>
                     </td>
-                    <td><textarea name="items[0][Details]" rows="1" class="form-control form-control-sm" placeholder="Enter Description"></textarea></td>
-                    <td class="invoice-quantity-container">
-                        <div class="input-group border rounded flex-nowrap" style="min-width: 120px;">
-                            <button type="button" class="btn btn-sm btn-icon btn-primary ifp-minus"><i class="ri-subtract-line"></i></button>
-                            <input type="number" name="items[0][Quantity]" class="form-control form-control-sm border-0 text-center ifp-qty px-1" value="1" min="0" step="0.000001">
-                            <button type="button" class="btn btn-sm btn-icon btn-primary ifp-plus"><i class="ri-add-line"></i></button>
-                        </div>
-                    </td>
+                    <td class="ifp-col-desc"><input type="hidden" name="items[0][HsCode]" class="ifp-hscode" value=""><textarea name="items[0][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description"></textarea></td>
+                    <td><select name="items[0][UomID]" class="form-select form-select-sm ifp-uom" data-selected=""><option value="">Select UOM</option></select></td>
+                    <td><select name="items[0][SaleTypeID]" class="form-select form-select-sm ifp-sale-type" data-selected=""><option value="">Loading...</option></select></td>
+                    <td><select name="items[0][SaleTypeToRateID]" class="form-select form-select-sm ifp-sale-type-to-rate" data-selected=""><option value="">Select Sale Type first</option></select></td>
+                    <td><select name="items[0][SroScheduleID]" class="form-select form-select-sm ifp-sro-schedule" data-selected=""><option value="">Select Sale Type To Rate first</option></select></td>
+                    <td><select name="items[0][SroItemID]" class="form-select form-select-sm ifp-sro-item" data-selected=""><option value="">Select SRO Schedule first</option></select></td>
+                    <td><input type="number" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>
                     <td><input type="number" step="0.000001" name="items[0][Rate]"               class="form-control form-control-sm ifp-rate"     value="0" min="0"></td>
                     <td><input type="number" step="0.01"     name="items[0][Amount]"             class="form-control form-control-sm ifp-amount"   value="0" readonly></td>
                     <td><input type="number" step="0.01"     name="items[0][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>
@@ -326,7 +386,7 @@
                     <td><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del"><i class="ri-delete-bin-5-line"></i></button></td>
                 </tr>
             @else
-                <tr><td colspan="10" class="text-center text-muted py-3"><i>No line items found.</i></td></tr>
+                <tr><td colspan="15" class="text-center text-muted py-3"><i>No line items found.</i></td></tr>
             @endif
 
             </tbody>
@@ -415,6 +475,12 @@
     const body = document.getElementById(uid + '_body');
     if (!body) return;
 
+    const INV_HSCODE_URL       = "{{ route('products.hscode-info') }}";
+    const INV_SALE_TYPES_URL   = "{{ route('products.sale-types') }}";
+    const INV_SALE_TYPE_RATES  = "{{ route('products.sale-type-to-rates') }}";
+    const INV_SRO_SCHEDULES    = "{{ route('products.sro-schedules') }}";
+    const INV_SRO_ITEMS        = "{{ route('products.sro-items') }}";
+
     function n(v) { return parseFloat(v) || 0; }
 
     // ── Row calculation ──
@@ -472,42 +538,44 @@
             });
         });
 
-        // +/- qty buttons
-        const minusBtn = row.querySelector('.ifp-minus');
-        const plusBtn  = row.querySelector('.ifp-plus');
-        const qtyInp   = row.querySelector('.ifp-qty');
-
-        if (minusBtn) {
-            minusBtn.addEventListener('click', function() {
-                let val = parseFloat(qtyInp.value) || 0;
-                if (val > 0) val--;
-                qtyInp.value = val;
-                // Trigger input event manually if needed, or just call calc directly
-                calcRow(row);
-                calcSummary();
-            });
-        }
-        if (plusBtn) {
-            plusBtn.addEventListener('click', function() {
-                let val = parseFloat(qtyInp.value) || 0;
-                val++;
-                qtyInp.value = val;
-                calcRow(row);
-                calcSummary();
-            });
-        }
-
-        // Product select → auto-fill rate + GST
+        // Product select → auto-fill rate, GST, and product fields (HsCode, Description, UOM, Sale Type cascade)
         const prodSel = row.querySelector('.ifp-product');
         if (prodSel) {
             prodSel.addEventListener('change', function() {
                 const opt = this.options[this.selectedIndex];
                 const rateEl = row.querySelector('.ifp-rate');
                 const gstEl  = row.querySelector('.ifp-gst-pct');
-                
                 if (rateEl) rateEl.value = opt.getAttribute('data-rate') || 0;
                 if (gstEl)  gstEl.value  = opt.getAttribute('data-gst')  || 0;
-                
+
+                const hsCode = opt.getAttribute('data-hscode') || '';
+                const saleInfo = opt.getAttribute('data-sale-information') || '';
+                const uomId = opt.getAttribute('data-uom-id') || '';
+                const saleTypeId = opt.getAttribute('data-sale-type-id') || '';
+                const saleTypeToRateId = opt.getAttribute('data-sale-type-to-rate-id') || '';
+                const sroScheduleId = opt.getAttribute('data-sro-schedule-id') || '';
+                const sroItemId = opt.getAttribute('data-sro-item-id') || '';
+
+                const hsInp = row.querySelector('.ifp-hscode');
+                const detailsTa = row.querySelector('textarea[name*="[Details]"]');
+                const uomSel = row.querySelector('.ifp-uom');
+                const saleTypeSel = row.querySelector('.ifp-sale-type');
+                const saleTypeToRateSel = row.querySelector('.ifp-sale-type-to-rate');
+                const sroScheduleSel = row.querySelector('.ifp-sro-schedule');
+                const sroItemSel = row.querySelector('.ifp-sro-item');
+
+                if (hsInp) hsInp.value = hsCode;
+                if (detailsTa) detailsTa.value = saleInfo;
+                if (uomSel) {
+                    uomSel.setAttribute('data-selected', uomId);
+                    fetchHsCodeInfoForRow(row);
+                }
+                if (saleTypeSel) saleTypeSel.setAttribute('data-selected', saleTypeId);
+                if (saleTypeToRateSel) saleTypeToRateSel.setAttribute('data-selected', saleTypeToRateId);
+                if (sroScheduleSel) sroScheduleSel.setAttribute('data-selected', sroScheduleId);
+                if (sroItemSel) sroItemSel.setAttribute('data-selected', sroItemId);
+                loadSaleTypesForRow(row);
+
                 calcRow(row);
                 calcSummary();
             });
@@ -537,6 +605,202 @@
         });
     }
 
+    // ── Tax dropdowns (per row): HS Code → UOM; Sale Type → Sale Type To Rate → SRO Schedule → SRO Item ──
+    function clearUomForRow(row) {
+        var sel = row.querySelector('.ifp-uom');
+        if (!sel) return;
+        sel.innerHTML = '';
+        var opt = document.createElement('option');
+        opt.value = ''; opt.textContent = 'Select UOM';
+        sel.appendChild(opt);
+    }
+
+    function fetchHsCodeInfoForRow(row) {
+        var hsInp = row.querySelector('.ifp-hscode');
+        var uomSel = row.querySelector('.ifp-uom');
+        var code = (hsInp && hsInp.value) ? hsInp.value.trim() : '';
+        if (uomSel) clearUomForRow(row);
+        if (!code) return;
+        fetch(INV_HSCODE_URL + '?code=' + encodeURIComponent(code), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data || data.status !== 'success' || !uomSel) return;
+                var selected = uomSel.getAttribute('data-selected') || '';
+                clearUomForRow(row);
+                if (Array.isArray(data.uoms) && data.uoms.length) {
+                    data.uoms.forEach(function(item) {
+                        var opt = document.createElement('option');
+                        opt.value = item.id; opt.textContent = item.text;
+                        if (selected && String(selected) === String(item.id)) opt.selected = true;
+                        uomSel.appendChild(opt);
+                    });
+                }
+            })
+            .catch(function() {});
+    }
+
+    function loadSaleTypesForRow(row) {
+        var sel = row.querySelector('.ifp-sale-type');
+        if (!sel) return;
+        var selected = sel.getAttribute('data-selected') || '';
+        sel.innerHTML = '';
+        var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select Sale Type'; sel.appendChild(ph);
+        fetch(INV_SALE_TYPES_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                data.items.forEach(function(item) {
+                    var opt = document.createElement('option');
+                    opt.value = item.id; opt.textContent = item.text;
+                    if (selected && String(selected) === String(item.id)) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+                var v = sel.value;
+                if (v) loadSaleTypeToRatesForRow(row, v);
+            })
+            .catch(function() {});
+    }
+
+    function loadSaleTypeToRatesForRow(row, transactionTypeId) {
+        var sel = row.querySelector('.ifp-sale-type-to-rate');
+        if (!sel) return;
+        var selected = sel.getAttribute('data-selected') || '';
+        sel.innerHTML = '';
+        var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select Sale Type To Rate'; sel.appendChild(ph);
+        if (!transactionTypeId) return;
+        fetch(INV_SALE_TYPE_RATES + '?transaction_type_id=' + encodeURIComponent(transactionTypeId), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                data.items.forEach(function(item) {
+                    var opt = document.createElement('option');
+                    opt.value = item.id; opt.textContent = item.text;
+                    var rp = (item.rate_pct !== undefined && item.rate_pct !== null && item.rate_pct !== '') ? String(item.rate_pct) : '';
+                    if (rp) opt.setAttribute('data-rate-pct', rp);
+                    if (selected && String(selected) === String(item.id)) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+                var v = sel.value;
+                if (v) {
+                    var opt = sel.options[sel.selectedIndex];
+                    if (opt && opt.getAttribute('data-rate-pct')) {
+                        var gstEl = row.querySelector('.ifp-gst-pct');
+                        if (gstEl) { gstEl.value = opt.getAttribute('data-rate-pct'); calcRow(row); calcSummary(); }
+                    }
+                    loadSroSchedulesForRow(row, v);
+                }
+            })
+            .catch(function() {});
+    }
+
+    function loadSroSchedulesForRow(row, rateId) {
+        var sel = row.querySelector('.ifp-sro-schedule');
+        if (!sel) return;
+        var selected = sel.getAttribute('data-selected') || '';
+        sel.innerHTML = '';
+        var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select SRO Schedule'; sel.appendChild(ph);
+        if (!rateId) return;
+        fetch(INV_SRO_SCHEDULES + '?rate_id=' + encodeURIComponent(rateId), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                data.items.forEach(function(item) {
+                    var opt = document.createElement('option');
+                    opt.value = item.id; opt.textContent = item.text;
+                    if (selected && String(selected) === String(item.id)) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+                var v = sel.value;
+                if (v) loadSroItemsForRow(row, v);
+            })
+            .catch(function() {});
+    }
+
+    function loadSroItemsForRow(row, sroId) {
+        var sel = row.querySelector('.ifp-sro-item');
+        if (!sel) return;
+        var selected = sel.getAttribute('data-selected') || '';
+        sel.innerHTML = '';
+        var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select SRO Item'; sel.appendChild(ph);
+        if (!sroId) return;
+        fetch(INV_SRO_ITEMS + '?sro_id=' + encodeURIComponent(sroId), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                data.items.forEach(function(item) {
+                    var opt = document.createElement('option');
+                    opt.value = item.id; opt.textContent = item.text;
+                    if (selected && String(selected) === String(item.id)) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            })
+            .catch(function() {});
+    }
+
+    function bindRowTaxDropdowns(row) {
+        var hsInp = row.querySelector('.ifp-hscode');
+        var uomSel = row.querySelector('.ifp-uom');
+        var saleTypeSel = row.querySelector('.ifp-sale-type');
+        var saleTypeToRateSel = row.querySelector('.ifp-sale-type-to-rate');
+        var sroScheduleSel = row.querySelector('.ifp-sro-schedule');
+        var sroItemSel = row.querySelector('.ifp-sro-item');
+
+        if (hsInp && uomSel && hsInp.value && String(hsInp.value).trim() !== '') {
+            fetchHsCodeInfoForRow(row);
+        }
+
+        if (saleTypeSel) {
+            saleTypeSel.addEventListener('change', function() {
+                var v = saleTypeSel.value || '';
+                if (saleTypeToRateSel) {
+                    saleTypeToRateSel.setAttribute('data-selected', '');
+                    saleTypeToRateSel.innerHTML = '';
+                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type first'; saleTypeToRateSel.appendChild(o);
+                }
+                if (sroScheduleSel) {
+                    sroScheduleSel.innerHTML = '';
+                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type To Rate first'; sroScheduleSel.appendChild(o);
+                }
+                if (sroItemSel) {
+                    sroItemSel.innerHTML = '';
+                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select SRO Schedule first'; sroItemSel.appendChild(o);
+                }
+                loadSaleTypeToRatesForRow(row, v);
+            });
+        }
+        if (saleTypeToRateSel) {
+            saleTypeToRateSel.addEventListener('change', function() {
+                var v = saleTypeToRateSel.value || '';
+                var gstEl = row.querySelector('.ifp-gst-pct');
+                if (v) {
+                    var opt = saleTypeToRateSel.options[saleTypeToRateSel.selectedIndex];
+                    if (opt && opt.getAttribute('data-rate-pct') && gstEl) {
+                        gstEl.value = opt.getAttribute('data-rate-pct');
+                        calcRow(row);
+                        calcSummary();
+                    }
+                } else if (gstEl) gstEl.value = '0';
+                if (sroScheduleSel) {
+                    sroScheduleSel.setAttribute('data-selected', '');
+                    sroScheduleSel.innerHTML = '';
+                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type To Rate first'; sroScheduleSel.appendChild(o);
+                }
+                if (sroItemSel) {
+                    sroItemSel.innerHTML = '';
+                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select SRO Schedule first'; sroItemSel.appendChild(o);
+                }
+                loadSroSchedulesForRow(row, v);
+            });
+        }
+        if (sroScheduleSel) {
+            sroScheduleSel.addEventListener('change', function() {
+                var v = sroScheduleSel.value || '';
+                if (sroItemSel) sroItemSel.setAttribute('data-selected', '');
+                loadSroItemsForRow(row, v);
+            });
+        }
+    }
+
     // ── Add Row ──
     const addBtn = document.getElementById(uid + '_addRow');
     if (addBtn) addBtn.addEventListener('click', function() {
@@ -550,12 +814,13 @@
         tr.className = 'ifp-row';
         tr.innerHTML =
             '<td><select name="items[' + idx + '][ProductID]" class="form-select form-select-sm ifp-product">' + optionsHTML + '</select></td>' +
-            '<td><textarea name="items[' + idx + '][Details]" rows="1" class="form-control form-control-sm" placeholder="Enter Description"></textarea></td>' +
-            '<td class="invoice-quantity-container"><div class="input-group border rounded flex-nowrap" style="min-width: 120px;">' +
-                '<button type="button" class="btn btn-sm btn-icon btn-primary ifp-minus"><i class="ri-subtract-line"></i></button>' +
-                '<input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm border-0 text-center ifp-qty px-1" value="1" min="0" step="0.000001">' +
-                '<button type="button" class="btn btn-sm btn-icon btn-primary ifp-plus"><i class="ri-add-line"></i></button>' +
-            '</div></td>' +
+            '<td class="ifp-col-desc"><input type="hidden" name="items[' + idx + '][HsCode]" class="ifp-hscode" value=""><textarea name="items[' + idx + '][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description"></textarea></td>' +
+            '<td><select name="items[' + idx + '][UomID]" class="form-select form-select-sm ifp-uom" data-selected=""><option value="">Select UOM</option></select></td>' +
+            '<td><select name="items[' + idx + '][SaleTypeID]" class="form-select form-select-sm ifp-sale-type" data-selected=""><option value="">Loading...</option></select></td>' +
+            '<td><select name="items[' + idx + '][SaleTypeToRateID]" class="form-select form-select-sm ifp-sale-type-to-rate" data-selected=""><option value="">Select Sale Type first</option></select></td>' +
+            '<td><select name="items[' + idx + '][SroScheduleID]" class="form-select form-select-sm ifp-sro-schedule" data-selected=""><option value="">Select Sale Type To Rate first</option></select></td>' +
+            '<td><select name="items[' + idx + '][SroItemID]" class="form-select form-select-sm ifp-sro-item" data-selected=""><option value="">Select SRO Schedule first</option></select></td>' +
+            '<td><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
             '<td><input type="number" step="0.000001" name="items[' + idx + '][Rate]"               class="form-control form-control-sm ifp-rate"     value="0" min="0"></td>' +
             '<td><input type="number" step="0.01"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount"   value="0" readonly></td>' +
             '<td><input type="number" step="0.01"     name="items[' + idx + '][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>' +
@@ -567,28 +832,8 @@
 
         body.appendChild(tr);
         bindRow(tr);
-    });
-
-    // ── Due Date auto-calc from InvoiceDate + TermDays ──
-    const dateEl = document.getElementById(uid + '_InvoiceDate');
-    const termEl = document.getElementById(uid + '_TermDays');
-    const dueEl  = document.getElementById(uid + '_DueDate');
-
-    function calcDueDate() {
-        if (!dateEl || !dateEl.value || !termEl || !dueEl) return;
-        const d = new Date(dateEl.value);
-        d.setDate(d.getDate() + (parseInt(termEl.value) || 0));
-        dueEl.value = d.toISOString().split('T')[0];
-    }
-    if (dateEl) dateEl.addEventListener('change', calcDueDate);
-    if (termEl) termEl.addEventListener('input',  calcDueDate);
-
-    // ── Customer → auto-fill Address ──
-    const custSel = document.getElementById(uid + '_CustomerID');
-    if (custSel) custSel.addEventListener('change', function() {
-        const opt    = this.options[this.selectedIndex];
-        const addrEl = document.getElementById(uid + '_Address');
-        if (addrEl) addrEl.value = opt.dataset.address || '';
+        bindRowTaxDropdowns(tr);
+        loadSaleTypesForRow(tr);
     });
 
     // ── Modal: intercept form submit → trigger save btn ──
@@ -604,7 +849,11 @@
     @endif
 
     // ── Bind existing rows + initial calc ──
-    body.querySelectorAll('.ifp-row').forEach(bindRow);
+    body.querySelectorAll('.ifp-row').forEach(function(row) {
+        bindRow(row);
+        bindRowTaxDropdowns(row);
+        loadSaleTypesForRow(row);
+    });
     calcSummary();
 
 })();

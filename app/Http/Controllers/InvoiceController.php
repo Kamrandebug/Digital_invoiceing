@@ -57,12 +57,13 @@ class InvoiceController extends Controller
         $productSql  = InvoiceModel::Load_Product();
 
         return view('pages.dashboards.Invoice._invoice-form-partial', [
-            'mode'      => 'create',
-            'invoice'   => null,
-            'items'     => collect(),
-            'customers' => DB::select($customerSql),
-            'products'  => DB::select($productSql),
-            'inModal'   => false,
+            'mode'         => 'create',
+            'invoice'      => null,
+            'items'        => collect(),
+            'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
+            'customers'    => DB::select($customerSql),
+            'products'     => DB::select($productSql),
+            'inModal'      => false,
         ]);
     }
 
@@ -109,12 +110,13 @@ class InvoiceController extends Controller
         $productSql  = InvoiceModel::Load_Product();
 
         return view('pages.dashboards.Invoice._invoice-form-partial', [
-            'mode'      => $mode,
-            'invoice'   => $invoice,
-            'items'     => $items,
-            'customers' => DB::select($customerSql),
-            'products'  => DB::select($productSql),
-            'inModal'   => true,
+            'mode'         => $mode,
+            'invoice'      => $invoice,
+            'items'        => $items,
+            'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
+            'customers'    => DB::select($customerSql),
+            'products'     => DB::select($productSql),
+            'inModal'      => true,
         ]);
     }
 
@@ -144,12 +146,13 @@ class InvoiceController extends Controller
         $productSql  = InvoiceModel::Load_Product();
 
         return view('pages.dashboards.Invoice._invoice-form-partial', [
-            'mode'      => 'show',
-            'invoice'   => $invoice,
-            'items'     => $items,
-            'customers' => DB::select($customerSql),
-            'products'  => DB::select($productSql),
-            'inModal'   => false,
+            'mode'         => 'show',
+            'invoice'      => $invoice,
+            'items'        => $items,
+            'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
+            'customers'    => DB::select($customerSql),
+            'products'     => DB::select($productSql),
+            'inModal'      => false,
         ]);
     }
 
@@ -179,12 +182,13 @@ class InvoiceController extends Controller
         $productSql  = InvoiceModel::Load_Product();
 
         return view('pages.dashboards.Invoice._invoice-form-partial', [
-            'mode'      => 'edit',
-            'invoice'   => $invoice,
-            'items'     => $items,
-            'customers' => DB::select($customerSql),
-            'products'  => DB::select($productSql),
-            'inModal'   => false,
+            'mode'         => 'edit',
+            'invoice'      => $invoice,
+            'items'        => $items,
+            'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
+            'customers'    => DB::select($customerSql),
+            'products'     => DB::select($productSql),
+            'inModal'      => false,
         ]);
     }
 
@@ -198,15 +202,12 @@ class InvoiceController extends Controller
     $request->validate([
         'CustomerID'       => 'required|integer',
         'InvoiceDate'      => 'required|date',
-        'DueDate'          => 'required|date|after_or_equal:InvoiceDate',
         'items'            => 'required|array|min:1',
         'items.*.Quantity' => 'required|numeric|min:0',
         'items.*.Rate'     => 'required|numeric|min:0',
     ], [
         'CustomerID.required'    => 'Please select a customer.',
         'InvoiceDate.required'   => 'Invoice date is required.',
-        'DueDate.required'       => 'Due date is required.',
-        'DueDate.after_or_equal' => 'Due date must be on or after invoice date.',
         'items.required'         => 'At least one line item is required.',
         'items.min'              => 'At least one line item is required.',
     ]);
@@ -222,16 +223,20 @@ class InvoiceController extends Controller
         $nextId = $maxId ? $maxId + 1 : 1;
 
         // 2. Insert each line item into temp with RequestID (Includes Header Info)
+        $docNo2 = $request->input('DocNo2');
+        $docNo3 = $request->input('DocNo3');
         foreach ($request->items as $item) {
             DB::table('tbl_temp_invoice_detail')->insert([
                 'InvoiceID'          => $nextId,
                 'TID'                => $nextId,
-                'CustomerID'         => $request->CustomerID,
-                'Address'            => $request->Address          ?? null,
+                'CustomerID'         => (int) $request->CustomerID,
                 'InvoiceDate'        => $request->InvoiceDate,
-                'DueDate'            => $request->DueDate,
-                'TermDays'           => $request->TermDays         ?? 0,
-                'DocNo'              => $docNo,
+                'DueDate'            => $request->InvoiceDate,
+                'TermDays'           => 0,
+                'InvoiceType'        => $request->input('InvoiceType'),
+                'DocNo'              => (string) ($docNo ?? ''),
+                'DocNo2'             => $docNo2 !== null ? (string) $docNo2 : '',
+                'DocNo3'             => $docNo3 !== null ? (string) $docNo3 : '',
                 'ProductID'          => $item['ProductID']         ?? 0,
                 'Details'            => $item['Details']           ?? null,
                 'Quantity'           => $item['Quantity'],
@@ -298,7 +303,6 @@ class InvoiceController extends Controller
     $request->validate([
         'CustomerID'       => 'required|integer',
         'InvoiceDate'      => 'required|date',
-        'DueDate'          => 'required|date|after_or_equal:InvoiceDate',
         'Status'           => 'required|in:1,2',
         'items'            => 'required|array|min:1',
         'items.*.Quantity' => 'required|numeric|min:0',
@@ -315,16 +319,20 @@ class InvoiceController extends Controller
         // 2. Insert new line items into temp (Wait, we should insert header updates too!)
         // The Model's edit_transaction UPDATEs the header FROM the temp table.
         // So we must populate the temp table with the NEW header values.
+        $docNo2 = $request->input('DocNo2');
+        $docNo3 = $request->input('DocNo3');
         foreach ($request->items as $item) {
             DB::table('tbl_temp_invoice_detail')->insert([
                 'InvoiceID'          => $id,
                 'TID'                => $id, // CRITICAL for Model Join
-                'CustomerID'         => $request->CustomerID,
-                'Address'            => $request->Address          ?? null,
+                'CustomerID'         => (int) $request->CustomerID,
                 'InvoiceDate'        => $request->InvoiceDate,
-                'DueDate'            => $request->DueDate,
-                'TermDays'           => $request->TermDays         ?? 0,
-                'DocNo'              => $docNo,
+                'DueDate'            => $request->InvoiceDate,
+                'TermDays'           => 0,
+                'InvoiceType'        => $request->input('InvoiceType'),
+                'DocNo'              => (string) ($docNo ?? ''),
+                'DocNo2'             => $docNo2 !== null ? (string) $docNo2 : '',
+                'DocNo3'             => $docNo3 !== null ? (string) $docNo3 : '',
                 'ProductID'          => $item['ProductID']         ?? 0,
                 'Details'            => $item['Details']           ?? null,
                 'Quantity'           => $item['Quantity'],

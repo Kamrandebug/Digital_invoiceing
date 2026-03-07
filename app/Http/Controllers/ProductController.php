@@ -665,6 +665,7 @@ class ProductController extends Controller
             $typeIdCol = null;
             $rateIdCol = null;
             $rateDescCol = null;
+            $ratePctCol = null;
 
             foreach ($columns as $col) {
                 $lc = strtolower($col);
@@ -676,6 +677,9 @@ class ProductController extends Controller
                 }
                 if ($rateDescCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'desc') !== false)) {
                     $rateDescCol = $col;
+                }
+                if ($ratePctCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'id') === false && strpos($lc, 'desc') === false)) {
+                    $ratePctCol = $col;
                 }
             }
 
@@ -689,11 +693,33 @@ class ProductController extends Controller
                 $rateDescCol = 'ratE_DESC';
             }
 
-            $items = DB::table(DB::raw($fullTable))
+            $selectCols = [$rateIdCol . ' as id', $rateDescCol . ' as text'];
+            if ($ratePctCol !== null) {
+                $selectCols[] = $ratePctCol . ' as rate_pct';
+            }
+
+            $rows = DB::table(DB::raw($fullTable))
                 ->where($typeIdCol, $transactionTypeId)
-                ->select([$rateIdCol . ' as id', $rateDescCol . ' as text'])
+                ->select($selectCols)
                 ->orderBy($rateDescCol)
                 ->get();
+
+            $items = $rows->map(function ($row) use ($rateDescCol) {
+                $ratePct = null;
+                if (isset($row->rate_pct) && (is_numeric($row->rate_pct) || preg_match('/^\d+(\.\d+)?/', (string) $row->rate_pct, $m))) {
+                    $ratePct = is_numeric($row->rate_pct) ? (float) $row->rate_pct : (float) $m[0];
+                }
+                if ($ratePct === null && !empty($row->text)) {
+                    if (preg_match('/^(\d+(?:\.\d+)?)\s*%?/', trim((string) $row->text), $m)) {
+                        $ratePct = (float) $m[1];
+                    }
+                }
+                return [
+                    'id'       => $row->id,
+                    'text'     => $row->text,
+                    'rate_pct' => $ratePct !== null ? $ratePct : '',
+                ];
+            });
 
             return response()->json([
                 'status' => 'success',
