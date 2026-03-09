@@ -3,9 +3,7 @@
 @extends('layouts.master')
 
 @section('styles')
-<style>
-    .btn-margin { margin-top: 20px; }
-</style>
+
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 @endsection
 
@@ -134,12 +132,10 @@
                         <tr>
                             {{-- HeaderID is the unique key from getlistingdata() --}}
                             <td>
-                                <input type="checkbox"
-                                       class="invoice-checkbox form-check-input"
-                                       value="{{ $invoice->HeaderID }}">
+                                <input type="checkbox" class="invoice-checkbox form-check-input" value="{{ $invoice->HeaderID }}" />
                             </td>
 
-                            <td><strong>{{ $invoice->DocNo ?? 'N/A' }}</strong></td>
+                            <td>{{ $invoice->DocNo ?? 'N/A' }}</td>
 
                             <td>
                                 {{ $invoice->InvoiceDate
@@ -153,7 +149,7 @@
                                     : '-' }}
                             </td>
 
-                            <td><strong>{{ $invoice->CustomerDisplayName ?? 'N/A' }}</strong></td>
+                            <td>{{ $invoice->CustomerDisplayName ?? 'N/A' }}</td>
 
                             <td>{{ number_format($invoice->TotalAmount ?? 0, 2) }} PKR</td>
 
@@ -165,17 +161,42 @@
                             </td>
 
                             <td>
-                                {{-- VIEW --}}
-                                <button class="action-btn btn-info"
-                                        onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})"
-                                        title="View Details">
-                                    <i class="fas fa-clipboard-list"></i>
+								
+								<div class="action-wrapper">
+									<div class="btn-group">
+									  <button class="btn btn-success btn-sm" onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})">
+										<i class="fas fa-eye"></i> View
+									  </button>
+									  <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+										<span class="sr-only">Toggle Dropdown</span>
+									  </button>
+									  <ul class="dropdown-menu">
+										
+										<button class="dropdown-item"
+												onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})">
+											<i class="fas fa-edit"></i> Edit
+										</button>
+
+										<form action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
+											  method="POST" onsubmit="return confirmDelete('{{ $invoice->DocNo }}')">
+											@csrf
+											@method('DELETE')
+											<button class="dropdown-item">
+												<i class="fas fa-trash"></i> Delete
+											</button>
+										</form>
+									  </ul>
+									</div>
+								</div>
+
+								
+                               <?php /*?> {{-- VIEW --}}
+                                <button class="btn btn-sm action-btn btn-info" onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})" title="View Details">
+                                    <i class="fas fa-eye"></i>
                                 </button>
 
                                 {{-- EDIT --}}
-                                <button class="action-btn btn-warning"
-                                        onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})"
-                                        title="Edit Invoice">
+                                <button class="btn btn-sm action-btn btn-warning" onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})" title="Edit Invoice">
                                     <i class="fas fa-edit"></i>
                                 </button>
 
@@ -186,10 +207,10 @@
                                       onsubmit="return confirmDelete('{{ $invoice->DocNo }}')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="action-btn btn-delete" title="Archive Invoice">
+                                    <button type="submit" class="btn btn-sm action-btn btn-delete btn-danger" title="Archive Invoice">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </form>
+                                </form><?php */?>
                             </td>
                         </tr>
                         @empty
@@ -268,6 +289,41 @@
 <script src="{{ asset('build/assets/select2.js') }}"></script>
 
 <script>
+//	document.addEventListener('DOMContentLoaded', function () {
+//    // Toggle dropdown on button click
+//    document.querySelectorAll('.action-toggle').forEach(btn => {
+//        btn.addEventListener('click', function (e) {
+//            e.stopPropagation();
+//            
+//            const wrapper = this.parentElement;
+//            const dropdown = wrapper.querySelector('.slide-dropdown');
+//            
+//            // Close all other dropdowns first
+//            document.querySelectorAll('.slide-dropdown.active').forEach(d => {
+//                if (d !== dropdown) {
+//                    d.classList.remove('active');
+//                    d.parentElement.querySelector('.action-toggle').classList.remove('active');
+//                }
+//            });
+//            
+//            // Toggle current dropdown
+//            dropdown.classList.toggle('active');
+//            this.classList.toggle('active');
+//        });
+//    });
+//
+//    // Close dropdown when clicking outside
+//    document.addEventListener('click', function (e) {
+//        document.querySelectorAll('.slide-dropdown.active').forEach(dropdown => {
+//            const wrapper = dropdown.parentElement;
+//            
+//            if (!wrapper.contains(e.target)) {
+//                dropdown.classList.remove('active');
+//                wrapper.querySelector('.action-toggle').classList.remove('active');
+//            }
+//        });
+//    });
+//});
     // ── Auto-hide flash alerts ────────────────────────────────
     setTimeout(function () {
         document.querySelectorAll('.alert').forEach(function(a) {

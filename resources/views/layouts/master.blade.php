@@ -12,7 +12,7 @@
         <meta name="keywords" content="laravel, laravel admin panel, laravel dashboard, bootstrap dashboard, bootstrap admin panel, vite laravel, admin dashboard, admin panel in laravel, admin dashboard ui, laravel admin, admin panel template, laravel framework, dashboard, admin dashboard template, laravel template.">
     
         <!-- Title-->
-        <title> Vyzor - Laravel Bootstrap 5 Premium Admin & Dashboard Template </title>
+        <title> Digital Invoicing </title>
         
         <!-- Favicon -->
         <link rel="icon" href="{{asset('build/assets/images/brand-logos/favicon.ico')}}" type="image/x-icon">
