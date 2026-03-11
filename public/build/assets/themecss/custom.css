@@ -114,6 +114,10 @@ label{
 				background: var(--bs-gray-300);
                 color: var(--bs-black);
 			}
+			
+			th:first-child{
+				padding-left: 15px !important;
+			}
 		}
 	}
 	
@@ -123,6 +127,10 @@ label{
 				font-size: 12px !important;
 				font-weight: normal;
 				padding: 0.3rem !important;
+			}
+			
+			td:first-child{
+				padding-left: 15px !important;
 			}
 		}
 	}
@@ -157,6 +165,13 @@ label{
 			border-bottom: 0px !important;
 		}
 	}
+}
+
+.action-col{
+	min-width:100px !important; 
+	max-width:100px !important; 
+	width:100px !important;
+	text-align: center;
 }
 
 .dropdown-item{
@@ -439,6 +454,51 @@ label{
 .app-sidebar .side-menu__label {
     font-size: 12px !important;
  }
+
+.app-sidebar .slide {
+    padding: 0 7px !important;
+}
+
+.app-sidebar .side-menu__item {
+    padding: 9px 10px !important;
+}
+
+@media (min-width: 992px) {
+    .app-header {
+        padding-inline-start: 13rem !important;
+    }
+	.app-content {
+        margin-inline-start: 13rem !important;
+    }
+	[data-vertical-style=overlay][data-toggled=icon-overlay-close]:not([data-icon-overlay=open]) .app-sidebar {
+        width: 5rem !important;
+    }
+	[data-vertical-style=overlay][data-toggled=icon-overlay-close]:not([data-icon-overlay=open]) .app-sidebar .main-sidebar-header {
+        width: 5rem !important;
+    }
+	    [data-vertical-style=overlay][data-toggled=icon-overlay-close] .app-content {
+        margin-inline-start: 5rem !important;
+    }
+	[data-vertical-style=overlay][data-toggled=icon-overlay-close] .app-header {
+        padding-inline-start: 5rem !important;
+    }
+}
+
+.app-sidebar {
+	width: 13rem !important;
+}
+
+.app-sidebar .main-sidebar-header {
+	width: 13rem !important;
+}
+
+
+
+
+
+
+
+
 
 
 

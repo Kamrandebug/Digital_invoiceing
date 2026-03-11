@@ -127,7 +127,7 @@
                             <th>Current Qty</th>
                             <th>Status</th>
                             <th>Created On</th>
-                            <th>Action</th>
+                            <th class="action-col">Action</th>
                         </tr>
                     </thead>
                     <tbody>

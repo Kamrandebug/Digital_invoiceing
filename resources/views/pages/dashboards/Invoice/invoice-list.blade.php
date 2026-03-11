@@ -124,7 +124,7 @@
                             <th width="25%">Customer</th>
                             <th>Total Amount</th>
                             <th>Status</th>
-                            <th style="min-width:100px !important; max-width:100px !important; width:100px !important;">Action</th>
+                            <th class="action-col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
