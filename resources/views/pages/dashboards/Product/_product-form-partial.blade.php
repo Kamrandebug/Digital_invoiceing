@@ -15,29 +15,9 @@
 @endphp
 
 @once
-<style>
-    ._pfp-tabs-row { min-height: 380px; }
-    ._pfp-nav { border-right: 1px solid var(--cm-border-color, #dee2e6); padding-right: 0; }
-    ._pfp-nav .nav-link {
-        border: none; border-radius: 6px; margin-bottom: 4px;
-        color: var(--cm-text-main); font-weight: 500; padding: 10px 14px;
-        display: flex; align-items: center; gap: 8px;
-    }
-    ._pfp-nav .nav-link:hover { background: var(--cm-bg-body, #f8f9fa); color: #6f42c1; }
-    ._pfp-nav .nav-link.active { background: #6f42c1; color: #fff; }
-    ._pfp-tab-pane { padding: 16px 0; }
-    ._pfp-section-title { font-size: 14px; font-weight: 600; color: #6f42c1; margin-bottom: 12px; }
-    .show-mode ._pfp-section-title { color: #17a2b8; }
-    ._pfp-info-badge { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; color: #fff; font-size: 13px; }
-    ._pfp-info-badge.edit-mode { background: linear-gradient(135deg, #6f42c1, #9b59b6); }
-    ._pfp-info-badge.show-mode { background: linear-gradient(135deg, #17a2b8, #36b9cc); }
-    ._pfp-detail-label { font-weight: 600; font-size: 12px; color: #6c757d; margin-bottom: 4px; }
-    ._pfp-detail-value { font-size: 14px; padding: 7px 11px; background: var(--cm-input-bg); border: 1px solid var(--cm-border-color); border-radius: 4px; min-height: 36px; }
-    ._pfp-required::after { content: " *"; color: #dc3545; }
-    ._pfp-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 8px; }
-</style>
-@endonce
 
+@endonce
+<link rel="stylesheet" href="{{asset('build/assets/themecss/custom.css')}}">
 @if(!$isCreate && $product)
 <div class="_pfp-info-badge {{ $isReadonly ? 'show-mode' : 'edit-mode' }}">
     <div class="row align-items-center g-2">

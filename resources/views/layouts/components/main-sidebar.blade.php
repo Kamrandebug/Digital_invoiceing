@@ -30,7 +30,31 @@
                 <!-- End::slide__category -->
 
                 <!-- Start::slide -->
-                <li class="slide has-sub">
+				<li class="slide">
+                    <a href="javascript:void(0)" class="side-menu__item">
+                        <i class="ri-pie-chart-line menu-icon"></i>
+                        <span class="side-menu__label">Dashboard</span>
+                    </a>
+                </li>
+				<li class="slide">
+					<a href="{{ url('customers-list') }}" class="side-menu__item">
+						<i class="ri-group-line menu-icon"></i>
+                        <span class="side-menu__label">Customers</span>
+					</a>
+				</li>
+				<li class="slide">
+					<a href="{{ url('products') }}" class="side-menu__item">
+						<i class="ri-box-3-line menu-icon"></i>
+                        <span class="side-menu__label">Products</span>
+					</a>
+				</li>
+				<li class="slide">
+					<a href="{{ route('invoices.index') }}" class="side-menu__item">
+						<i class="ri-receipt-line menu-icon"></i>
+                        <span class="side-menu__label">Invoices</span>
+					</a>
+				</li>
+               <?php /*?> <li class="slide has-sub">
                     <a href="javascript:void(0);" class="side-menu__item">
                         <svg xmlns="http://www.w3.org/2000/svg" class="side-menu__icon" viewBox="0 0 256 256">
                             <rect width="256" height="256" fill="none" />
@@ -111,7 +135,7 @@
                             </ul>
                         </li>
                     </ul>
-                </li>
+                </li><?php */?>
                 <!-- End::slide -->
 
                 <!-- Logout -->

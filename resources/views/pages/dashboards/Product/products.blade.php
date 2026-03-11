@@ -7,25 +7,7 @@
 
 @section('styles')
 <link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
-<style>
-    .btn-margin { margin-top: 20px; }
-    .balance-positive { color: #28a745; }
-    .balance-negative { color: #dc3545; }
-    .balance-zero { color: var(--cm-text-muted); }
-    .stock-badge {
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        display: inline-block;
-    }
-    .stock-in  { background: #d4edda; color: #155724; }
-    .stock-low { background: #fff3cd; color: #856404; }
-    .stock-out { background: #f8d7da; color: #721c24; }
-    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
-    .status-active   { background: #d4edda; color: #155724; }
-    .status-inactive { background: #f8d7da; color: #721c24; }
-</style>
+
 @endsection
 
 @section('content')
@@ -109,10 +91,12 @@
                                                 name="end_date" value="{{ request('end_date') }}">
                                         </div>
                                         <div class="col">
+<!--
                                             <button class="btn btn-sm btn-primary btn-margin" type="submit">
                                                 <i class="fas fa-search"></i> Search
                                             </button>
-                                            <a href="{{ route('products.index') }}" class="btn btn-sm btn-light btn-margin">
+-->
+                                            <a href="{{ route('products.index') }}" class="btn btn-sm btn-primary btn-margin">
                                                 <i class="fas fa-times"></i> Clear Filters
                                             </a>
                                         </div>
@@ -131,7 +115,7 @@
     <div class="card custom-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table text-nowrap" id="productsTable">
+                <table class="table text-nowrap listing-table" id="productsTable">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -150,7 +134,7 @@
                         @forelse($products as $index => $product)
                         <tr>
                             <td>{{ $index + 1 }}</td>
-                            <td><strong>{{ $product->Code ?? '-' }}</strong></td>
+                            <td>{{ $product->Code ?? '-' }}</td>
                             <td>
                                 <div>{{ $product->Name ?? '-' }}</div>
                                 @if(!empty($product->Type))
@@ -158,11 +142,9 @@
                                 @endif
                             </td>
                             <td>{{ $product->Type ?? '-' }}</td>
-                            <td>
-                                <strong>PKR {{ number_format($product->SalePrice ?? 0, 2) }}</strong>
-                            </td>
+                            <td>PKR {{ number_format($product->SalePrice ?? 0, 2) }}</td>
                             <td>PKR {{ number_format($product->Cost ?? 0, 2) }}</td>
-                            <td><strong>{{ $product->CurrentQuantity ?? 0 }}</strong></td>
+                            <td>{{ $product->CurrentQuantity ?? 0 }}</td>
                             <td>
                                 @if(($product->Status ?? 1) == 1)
                                     <span class="status-badge status-active">Active</span>
@@ -174,7 +156,38 @@
                                 {{ isset($product->CreatedOn) ? \Carbon\Carbon::parse($product->CreatedOn)->format('d M Y') : '-' }}
                             </td>
                             <td>
-                                <button type="button" class="action-btn btn-info" title="View"
+								<div class="btn-group btn-listing">
+									  <button class="btn btn-outline-primary btn-list-left" onclick="openProductModal('show', {{ $product->ID }})">
+										<i class="fas fa-eye"></i> View
+									  </button>
+									  <button type="button" class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+										<span class="sr-only">Toggle Dropdown</span>
+									  </button>
+									  <ul class="dropdown-menu">
+										
+										<button class="dropdown-item"
+												onclick="openProductModal('edit', {{ $product->ID }})">
+											<i class="fas fa-edit"></i> Edit
+										</button>
+										  
+										<button class="dropdown-item" title="Archive"
+											onclick="confirmDelete({{ $product->ID }}, '{{ addslashes($product->Name ?? '') }}')">
+											<i class="fas fa-trash"></i> Delete
+										</button>
+
+										<form id="delete-form-{{ $product->ID }}"
+											  action="{{ route('products.delete_transaction', $product->ID) }}"
+											  method="POST" style="display:none;">
+											@csrf
+											@method('DELETE')
+										</form>
+										  
+									  </ul>
+									</div>
+								
+								
+								
+                                <?php /*?><button type="button" class="action-btn btn-info" title="View"
                                     onclick="openProductModal('show', {{ $product->ID }})">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -192,7 +205,7 @@
                                       method="POST" style="display:none;">
                                     @csrf
                                     @method('DELETE')
-                                </form>
+                                </form><?php */?>
                             </td>
                         </tr>
                         @empty

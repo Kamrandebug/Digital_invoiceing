@@ -114,17 +114,17 @@
     <div class="card custom-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="invoices-table table text-nowrap" id="invoicesTable">
+                <table class="invoices-table table text-nowrap listing-table" id="invoicesTable">
                     <thead>
                         <tr>
                             <th><input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
                             <th>Doc No. <i class="fas fa-sort"></i></th>
                             <th>Invoice Date <i class="fas fa-sort"></i></th>
                             <th>Due Date</th>
-                            <th>Customer</th>
+                            <th width="25%">Customer</th>
                             <th>Total Amount</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th style="min-width:100px !important; max-width:100px !important; width:100px !important;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -155,7 +155,7 @@
 
                             <td>
                                 {{-- Status is an integer: 1 = Active, 2 = Archived --}}
-                                <span class="badge {{ $invoice->Status == 1 ? 'bg-success' : 'bg-danger' }}">
+                                <span class="status-badge  {{ $invoice->Status == 1 ? 'status-active' : 'status-inactive' }}">
                                     {{ $invoice->Status == 1 ? 'Active' : 'Archived' }}
                                 </span>
                             </td>
@@ -163,11 +163,11 @@
                             <td>
 								
 								<div class="action-wrapper">
-									<div class="btn-group">
-									  <button class="btn btn-success btn-sm" onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})">
+									<div class="btn-group btn-listing">
+									  <button class="btn btn-outline-primary btn-list-left" onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
-									  <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									  <button type="button" class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 										<span class="sr-only">Toggle Dropdown</span>
 									  </button>
 									  <ul class="dropdown-menu">
