@@ -153,6 +153,8 @@ class InvoiceModel extends Model
                 'h.DiscountAmount as TotalDiscount',
                 'h.GSTAmount      as TotalGST',
                 'h.Total          as TotalAmount',
+                'h.FbrTransactionID',
+                'h.FbrResponseJson',
                 'h.CreatedOn',
                 DB::raw("
                     COALESCE(NULLIF(TRIM(cust.DisplayName),''),
@@ -203,7 +205,7 @@ class InvoiceModel extends Model
             SELECT InvoiceID,1 AS InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,''AS BuyerNTNCNIC,''AS BuyerBusinessName,''AS BuyerProvince,''AS BuyerAddress,''AS InvoiceRefNo,''AS BuyerRegistrationType,''AS ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
             FROM tbl_temp_invoice_detail
             WHERE RequestID = '$requestID'
-            LIMIT 1
+            Group BY RequestID
         ");
 
         // -- 2. Insert into tbl_sales_invoice_detail

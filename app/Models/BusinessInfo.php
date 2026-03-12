@@ -60,6 +60,7 @@ class BusinessInfo extends Model
                 AccountNo, Title, FirstName, LastName, BusinessName,
                 Email, Mobile, Phone, Website, Address,
                 NTN, SalesTaxNumber, CNIC, IsFiler, Notes,
+                Sandbox_access_token, iris_access_token,
                 Status, IsDashboard, IsArchive,
                 CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
             )
@@ -67,11 +68,16 @@ class BusinessInfo extends Model
                 AccountNo, Title, FirstName, LastName, BusinessName,
                 Email, Mobile, Phone, Website, Address,
                 NTN, SalesTaxNumber, CNIC, IsFiler, Notes,
+                Sandbox_access_token, iris_access_token,
                 Status, IsDashboard, IsArchive,
                 CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
             FROM temp_business_info
             WHERE RequestID = '$requestID'
         ");
+
+        if ($requestID !== '') {
+            DB::table('temp_business_info')->where('RequestID', $requestID)->delete();
+        }
     }
 
     /**
@@ -88,6 +94,7 @@ class BusinessInfo extends Model
                     AccountNo, Title, FirstName, LastName, BusinessName,
                     Email, Mobile, Phone, Website, Address,
                     NTN, SalesTaxNumber, CNIC, IsFiler, Notes,
+                    Sandbox_access_token, iris_access_token,
                     Status, IsDashboard, IsArchive,
                     UpdatedBy, UpdatedOn
                 FROM temp_business_info
@@ -109,12 +116,18 @@ class BusinessInfo extends Model
                 bi.CNIC           = u.CNIC,
                 bi.IsFiler        = u.IsFiler,
                 bi.Notes          = u.Notes,
+                bi.Sandbox_access_token = u.Sandbox_access_token,
+                bi.iris_access_token    = u.iris_access_token,
                 bi.Status         = u.Status,
                 bi.IsDashboard    = u.IsDashboard,
                 bi.IsArchive      = u.IsArchive,
                 bi.UpdatedBy      = u.UpdatedBy,
                 bi.UpdatedOn      = u.UpdatedOn
         ");
+
+        if ($requestID !== '') {
+            DB::table('temp_business_info')->where('RequestID', $requestID)->delete();
+        }
     }
 
     /**
