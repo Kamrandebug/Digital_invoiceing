@@ -256,6 +256,10 @@
 												onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})">
 											<i class="fas fa-edit"></i> Edit
 										</button>
+										<button class="dropdown-item" type="button"
+												onclick="openPrintModal({{ $invoice->HeaderID }}, '{{ $invoice->DocNo ?? 'Invoice' }}')">
+											<i class="fas fa-print"></i> Print
+										</button>
 
 										<form action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
 											  method="POST" onsubmit="return confirmDelete('{{ $invoice->DocNo }}')">
@@ -356,6 +360,46 @@
                 </button>
             </div>
 
+        </div>
+    </div>
+</div>
+
+{{-- Print Invoice Modal — PDF/print preview with orientation --}}
+<div class="modal fade" id="invoice_print_modal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold">
+                    <i class="fas fa-print me-2"></i> Print Invoice — <span id="invoice_print_docno"></span>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3 no-print">
+                    <label class="mb-0 fw-medium">Orientation:</label>
+                    <select id="invoice_print_orientation" class="form-select form-select-sm" style="width: auto;">
+                        <option value="portrait">Portrait</option>
+                        <option value="landscape">Landscape</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-primary" id="invoice_print_apply_orientation">
+                        <i class="fas fa-sync-alt me-1"></i> Apply
+                    </button>
+                    <button type="button" class="btn btn-sm btn-success ms-2" id="invoice_print_do_print">
+                        <i class="fas fa-print me-1"></i> Print / Save as PDF
+                    </button>
+                </div>
+                <div class="border rounded bg-light" style="min-height: 400px;">
+                    <iframe id="invoice_print_frame" name="invoice_print_frame"
+                            style="width:100%; height:75vh; border:0; display:block;"
+                            title="Invoice print preview"></iframe>
+                </div>
+            </div>
+            <div class="modal-footer no-print">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Close
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -656,6 +700,49 @@ saveBtn.onclick = function () {
             firstField.focus();
         }
     }
+
+    // ── Print modal ───────────────────────────────────────────
+    var _printModalInvoiceId = null;
+
+    function openPrintModal(invoiceId, docNo) {
+        _printModalInvoiceId = invoiceId;
+        document.getElementById('invoice_print_docno').textContent = docNo || ('#' + invoiceId);
+        document.getElementById('invoice_print_orientation').value = 'portrait';
+        setPrintFrameSrc('portrait');
+        var modalEl = document.getElementById('invoice_print_modal');
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    function setPrintFrameSrc(orientation) {
+        if (!_printModalInvoiceId) return;
+        var baseUrl = '{{ url("invoices") }}/' + _printModalInvoiceId + '/print-view';
+        var url = baseUrl + '?orientation=' + encodeURIComponent(orientation) + '&_=' + Date.now();
+        var frame = document.getElementById('invoice_print_frame');
+        frame.src = url;
+    }
+
+    document.getElementById('invoice_print_apply_orientation').addEventListener('click', function () {
+        var orient = document.getElementById('invoice_print_orientation').value;
+        setPrintFrameSrc(orient);
+    });
+
+    document.getElementById('invoice_print_orientation').addEventListener('change', function () {
+        var orient = this.value;
+        setPrintFrameSrc(orient);
+    });
+
+    document.getElementById('invoice_print_do_print').addEventListener('click', function () {
+        var frame = document.getElementById('invoice_print_frame');
+        if (frame && frame.contentWindow) {
+            try {
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+            } catch (e) {
+                showToast('error', 'Could not open print dialog. Try printing from the browser (Ctrl+P).');
+            }
+        }
+    });
 
     // ── FBR Response popup ────────────────────────────────────
     function openFbrResponseModal(resp) {

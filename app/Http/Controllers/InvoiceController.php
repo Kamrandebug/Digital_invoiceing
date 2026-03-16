@@ -121,6 +121,49 @@ class InvoiceController extends Controller
     }
 
     // ══════════════════════════════════════════════════════════
+    //  PRINT VIEW — HTML for print/PDF in modal (orientation support)
+    // ══════════════════════════════════════════════════════════
+
+    public function printView(Request $request, $id)
+    {
+        $invoice = DB::table('tbl_sales_invoice_header as h')
+            ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
+            ->select(
+                'h.*',
+                DB::raw("
+                    COALESCE(NULLIF(TRIM(cust.DisplayName),''),
+                        CONCAT(COALESCE(cust.FirstName,''),' ',COALESCE(cust.LastName,''))
+                    ) AS CustomerDisplayName
+                ")
+            )
+            ->where('h.ID', $id)
+            ->where('h.Status', '!=', 2)
+            ->first();
+
+        if (!$invoice) {
+            abort(404, 'Invoice not found.');
+        }
+
+        $items = DB::table('tbl_sales_invoice_detail as d')
+            ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
+            ->select('d.*', 'p.Name as ProductName')
+            ->where('d.InvoiceID', $id)
+            ->where('d.Status', '!=', 2)
+            ->get();
+
+        $orientation = $request->query('orientation', 'portrait');
+        if (!in_array($orientation, ['portrait', 'landscape'], true)) {
+            $orientation = 'portrait';
+        }
+
+        return view('pages.dashboards.Invoice.invoice-print', [
+            'invoice'     => $invoice,
+            'items'       => $items,
+            'orientation' => $orientation,
+        ]);
+    }
+
+    // ══════════════════════════════════════════════════════════
     //  SHOW
     // ══════════════════════════════════════════════════════════
 

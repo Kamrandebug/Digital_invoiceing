@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardsController;
+use App\Http\Controllers\TenantListController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\InvoiceController;
@@ -16,6 +17,12 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardsController::class, 'index2'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+// ── Tenants (list + select; no tenant middleware) ────────────
+Route::middleware('auth')->prefix('tenants')->name('tenants.')->group(function () {
+    Route::get('/', [TenantListController::class, 'index'])->name('index');
+    Route::get('/{id}/select', [TenantListController::class, 'select'])->name('select');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/index2', [DashboardsController::class, 'index2'])->name('index2');
@@ -103,6 +110,7 @@ Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->gr
     Route::post('/{id}/update',        [InvoiceController::class, 'edit_transaction'])    ->name('edit_transaction');
     Route::delete('/{id}/delete',      [InvoiceController::class, 'delete_transaction'])  ->name('delete_transaction');
     Route::get('/{id}/modal',          [InvoiceController::class, 'modal'])               ->name('modal.id');
+    Route::get('/{id}/print-view',      [InvoiceController::class, 'printView'])           ->name('print-view');
     Route::get('/{id}',                [InvoiceController::class, 'show'])                ->name('show');
 });
 
