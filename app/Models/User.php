@@ -13,6 +13,11 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
+     * Always use the central (landlord) database — never the per-tenant default connection.
+     */
+    protected $connection = 'landlord';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

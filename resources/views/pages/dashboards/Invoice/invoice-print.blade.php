@@ -42,6 +42,30 @@
         .totals td { text-align: right; padding: 4px 0; }
         .totals tr.grand th, .totals tr.grand td { font-size: 14px; font-weight: bold; border-top: 2px solid #333; padding-top: 8px; }
         .notes { margin-top: 20px; padding: 8px; background: #f9f9f9; border-radius: 4px; font-size: 11px; white-space: pre-line; }
+        .fbr-qr-wrap { margin-top: 18px; display: flex; justify-content: flex-end; }
+        .fbr-qr-box {
+            width: 280px;
+            border: 1px solid #d8e2f0;
+            background: #f7fbff;
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+        }
+        .fbr-qr-title { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+        .fbr-qr-image {
+            width: 110px;
+            height: 110px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            padding: 4px;
+        }
+        .fbr-qr-txid {
+            margin-top: 6px;
+            font-size: 10px;
+            word-break: break-all;
+            color: #374151;
+        }
+        .fbr-qr-note { margin-top: 4px; font-size: 10px; color: #6b7280; }
     </style>
 </head>
 <body class="orientation-{{ $orientation }}">
@@ -104,6 +128,22 @@
                 <tr><th>GST</th><td>{{ number_format($invoice->TotalGST ?? 0, 2) }} PKR</td></tr>
                 <tr class="grand"><th>Total</th><td>{{ number_format($invoice->TotalAmount ?? $invoice->Total ?? 0, 2) }} PKR</td></tr>
             </table>
+        </div>
+
+        @php
+            $fbrTxId = trim((string) ($invoice->FbrTransactionID ?? ''));
+            $qrSource = $fbrTxId !== '' ? 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . urlencode($fbrTxId) : '';
+        @endphp
+        <div class="fbr-qr-wrap">
+            <div class="fbr-qr-box">
+                <div class="fbr-qr-title">FBR Digital Invoice QR</div>
+                @if($fbrTxId !== '')
+                    <img src="{{ $qrSource }}" alt="FBR QR Code" class="fbr-qr-image">
+                    <div class="fbr-qr-txid">Transaction ID: {{ $fbrTxId }}</div>
+                @else
+                    <div class="fbr-qr-note">QR not available (invoice not posted to FBR yet).</div>
+                @endif
+            </div>
         </div>
 
         @if(!empty(trim($invoice->Notes ?? '')))

@@ -46,6 +46,18 @@ class InvoiceController extends Controller
         return view('pages.dashboards.Invoice.invoice-list', compact('invoices'));
     }
 
+    /**
+     * POST invoice payload to FBR and store transaction id + full JSON response on the header row.
+     */
+    public function postToFbr(int $id)
+    {
+        $result = InvoiceModel::post_to_fbr($id);
+
+        return redirect()
+            ->route('invoices.index')
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
     // ══════════════════════════════════════════════════════════
     //  CREATE — Load form with dropdowns
     // ══════════════════════════════════════════════════════════

@@ -182,6 +182,13 @@
                     </thead>
                     <tbody>
                         @forelse($invoices as $invoice)
+                        @php
+                            $fbrTxId = trim((string) ($invoice->FbrTransactionID ?? ''));
+                            $fbrRespRaw = trim((string) ($invoice->FbrResponseJson ?? ''));
+                            $fbrRespForCheck = strtolower($fbrRespRaw);
+                            $fbrIsValid = $fbrRespForCheck !== '' && str_contains($fbrRespForCheck, 'valid');
+                            $fbrLocked = $fbrTxId !== '' && $fbrIsValid;
+                        @endphp
                         <tr>
                             {{-- HeaderID is the unique key from getlistingdata() --}}
                             <td>
@@ -251,16 +258,28 @@
 										<span class="sr-only">Toggle Dropdown</span>
 									  </button>
 									  <ul class="dropdown-menu">
-										
+										@if(!$fbrLocked)
 										<button class="dropdown-item"
 												onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})">
 											<i class="fas fa-edit"></i> Edit
 										</button>
+										@endif
 										<button class="dropdown-item" type="button"
 												onclick="openPrintModal({{ $invoice->HeaderID }}, '{{ $invoice->DocNo ?? 'Invoice' }}')">
 											<i class="fas fa-print"></i> Print
 										</button>
 
+										@if(empty(trim((string) ($invoice->FbrTransactionID ?? ''))))
+										<form action="{{ route('invoices.post-fbr', $invoice->HeaderID) }}" method="POST"
+											  onsubmit="return confirm('Post this invoice to FBR?');">
+											@csrf
+											<button type="submit" class="dropdown-item">
+												<i class="fas fa-paper-plane"></i> Post to FBR
+											</button>
+										</form>
+										@endif
+
+										@if(!$fbrLocked)
 										<form action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
 											  method="POST" onsubmit="return confirmDelete('{{ $invoice->DocNo }}')">
 											@csrf
@@ -269,6 +288,7 @@
 												<i class="fas fa-trash"></i> Delete
 											</button>
 										</form>
+										@endif
 									  </ul>
 									</div>
 								</div>
@@ -417,6 +437,26 @@
                 <button type="button" class="btn-close ms-2" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body pt-3">
+                <div id="fbr_response_summary" class="mb-3 d-none">
+                    <div class="card border-0 shadow-sm mb-0" style="background:#f8fbff;">
+                        <div class="card-body p-3">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label class="form-label mb-1 fw-semibold text-muted small">Code</label>
+                                    <input type="text" id="fbr_summary_code" class="form-control form-control-sm" readonly>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label mb-1 fw-semibold text-muted small">Message</label>
+                                    <input type="text" id="fbr_summary_message" class="form-control form-control-sm" readonly>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label mb-1 fw-semibold text-muted small">Description</label>
+                                    <textarea id="fbr_summary_description" class="form-control form-control-sm" rows="2" readonly></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="text-muted small">
                         <i class="fas fa-code me-1"></i>
@@ -746,6 +786,16 @@ saveBtn.onclick = function () {
 
     // ── FBR Response popup ────────────────────────────────────
     function openFbrResponseModal(resp) {
+        var summaryWrap = document.getElementById('fbr_response_summary');
+        var summaryCode = document.getElementById('fbr_summary_code');
+        var summaryMessage = document.getElementById('fbr_summary_message');
+        var summaryDescription = document.getElementById('fbr_summary_description');
+
+        if (summaryWrap) summaryWrap.classList.add('d-none');
+        if (summaryCode) summaryCode.value = '';
+        if (summaryMessage) summaryMessage.value = '';
+        if (summaryDescription) summaryDescription.value = '';
+
         var bodyEl = document.getElementById('fbr_response_modal_body');
         if (bodyEl) {
             var text = resp || '-';
@@ -776,6 +826,20 @@ saveBtn.onclick = function () {
             if (text.startsWith('{') || text.startsWith('[')) {
                 try {
                     var parsed = JSON.parse(text);
+
+                    // Nice summary block (when response has fault/message/description style payload)
+                    var fault = parsed && typeof parsed === 'object' ? (parsed.fault || parsed.error || parsed) : null;
+                    var code = fault && (fault.code ?? fault.statusCode ?? fault.status ?? '');
+                    var message = fault && (fault.message ?? parsed.message ?? '');
+                    var description = fault && (fault.description ?? parsed.description ?? parsed.detail ?? '');
+
+                    if ((code || message || description) && summaryWrap) {
+                        summaryWrap.classList.remove('d-none');
+                        if (summaryCode) summaryCode.value = code || '-';
+                        if (summaryMessage) summaryMessage.value = message || '-';
+                        if (summaryDescription) summaryDescription.value = description || '-';
+                    }
+
                     text = JSON.stringify(parsed, null, 2);
                 } catch (e) {
                     // leave as raw text if not valid JSON

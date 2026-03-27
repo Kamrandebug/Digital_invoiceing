@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    /*
+    | FBR Digital Invoicing — POST URL only. Bearer token comes from tbl_business_info.Sandbox_access_token.
+    */
+    'fbr' => [
+        'post_url' => 'https://gw.fbr.gov.pk/di_data/v1/di/postinvoicedata_sb',
+    ],
+
 ];
