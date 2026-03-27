@@ -3,6 +3,16 @@
 @extends('layouts.master')
 
 @section('styles')
+<style>
+    .fbr-summary-card.fbr-summary--invalid {
+        background: #fff8f8 !important;
+        border-color: #f5c2c7 !important;
+    }
+    .fbr-summary-card.fbr-summary--valid {
+        background: #f4fff8 !important;
+        border-color: #badbcc !important;
+    }
+</style>
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.0/dist/css/bootstrap-datepicker3.min.css" rel="stylesheet">
@@ -438,20 +448,24 @@
             </div>
             <div class="modal-body pt-3">
                 <div id="fbr_response_summary" class="mb-3 d-none">
-                    <div class="card border-0 shadow-sm mb-0" style="background:#f8fbff;">
+                    <div id="fbr_summary_card" class="card border shadow-sm mb-0 fbr-summary-card" style="background:#f8fbff;">
                         <div class="card-body p-3">
+                            <div id="fbr_summary_strip" class="d-none align-items-center gap-2 mb-3 pb-2 border-bottom">
+                                <span id="fbr_summary_badge_status" class="badge rounded-pill"></span>
+                                <span id="fbr_summary_badge_code" class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"></span>
+                            </div>
                             <div class="row g-2">
                                 <div class="col-md-3">
-                                    <label class="form-label mb-1 fw-semibold text-muted small">Code</label>
+                                    <label id="fbr_label_code" class="form-label mb-1 fw-semibold text-muted small">Code</label>
                                     <input type="text" id="fbr_summary_code" class="form-control form-control-sm" readonly>
                                 </div>
                                 <div class="col-md-9">
-                                    <label class="form-label mb-1 fw-semibold text-muted small">Message</label>
+                                    <label id="fbr_label_message" class="form-label mb-1 fw-semibold text-muted small">Message</label>
                                     <input type="text" id="fbr_summary_message" class="form-control form-control-sm" readonly>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label mb-1 fw-semibold text-muted small">Description</label>
-                                    <textarea id="fbr_summary_description" class="form-control form-control-sm" rows="2" readonly></textarea>
+                                    <label id="fbr_label_description" class="form-label mb-1 fw-semibold text-muted small">Description</label>
+                                    <textarea id="fbr_summary_description" class="form-control form-control-sm" rows="3" readonly></textarea>
                                 </div>
                             </div>
                         </div>
@@ -787,11 +801,36 @@ saveBtn.onclick = function () {
     // ── FBR Response popup ────────────────────────────────────
     function openFbrResponseModal(resp) {
         var summaryWrap = document.getElementById('fbr_response_summary');
+        var summaryCard = document.getElementById('fbr_summary_card');
+        var summaryStrip = document.getElementById('fbr_summary_strip');
+        var badgeStatus = document.getElementById('fbr_summary_badge_status');
+        var badgeCode = document.getElementById('fbr_summary_badge_code');
+        var labelCode = document.getElementById('fbr_label_code');
+        var labelMessage = document.getElementById('fbr_label_message');
+        var labelDesc = document.getElementById('fbr_label_description');
         var summaryCode = document.getElementById('fbr_summary_code');
         var summaryMessage = document.getElementById('fbr_summary_message');
         var summaryDescription = document.getElementById('fbr_summary_description');
 
         if (summaryWrap) summaryWrap.classList.add('d-none');
+        if (summaryCard) {
+            summaryCard.classList.remove('fbr-summary--invalid', 'fbr-summary--valid');
+        }
+        if (summaryStrip) {
+            summaryStrip.classList.add('d-none');
+            summaryStrip.classList.remove('d-flex');
+        }
+        if (badgeStatus) {
+            badgeStatus.textContent = '';
+            badgeStatus.className = 'badge rounded-pill';
+        }
+        if (badgeCode) {
+            badgeCode.textContent = '';
+            badgeCode.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
+        }
+        if (labelCode) labelCode.textContent = 'Code';
+        if (labelMessage) labelMessage.textContent = 'Message';
+        if (labelDesc) labelDesc.textContent = 'Description';
         if (summaryCode) summaryCode.value = '';
         if (summaryMessage) summaryMessage.value = '';
         if (summaryDescription) summaryDescription.value = '';
@@ -827,17 +866,76 @@ saveBtn.onclick = function () {
                 try {
                     var parsed = JSON.parse(text);
 
-                    // Nice summary block (when response has fault/message/description style payload)
-                    var fault = parsed && typeof parsed === 'object' ? (parsed.fault || parsed.error || parsed) : null;
-                    var code = fault && (fault.code ?? fault.statusCode ?? fault.status ?? '');
-                    var message = fault && (fault.message ?? parsed.message ?? '');
-                    var description = fault && (fault.description ?? parsed.description ?? parsed.detail ?? '');
+                    if (parsed && typeof parsed === 'object' && summaryWrap) {
+                        var vr = parsed.validationResponse;
+                        var fault = parsed.fault;
 
-                    if ((code || message || description) && summaryWrap) {
-                        summaryWrap.classList.remove('d-none');
-                        if (summaryCode) summaryCode.value = code || '-';
-                        if (summaryMessage) summaryMessage.value = message || '-';
-                        if (summaryDescription) summaryDescription.value = description || '-';
+                        if (fault && typeof fault === 'object') {
+                            var code = fault.code ?? fault.statusCode ?? '';
+                            var message = fault.message ?? parsed.message ?? '';
+                            var description = fault.description ?? parsed.description ?? parsed.detail ?? '';
+                            if (code || message || description) {
+                                summaryWrap.classList.remove('d-none');
+                                if (summaryCode) summaryCode.value = code !== '' && code !== undefined ? String(code) : '-';
+                                if (summaryMessage) summaryMessage.value = message || '-';
+                                if (summaryDescription) summaryDescription.value = description || '-';
+                                if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
+                            }
+                        } else if (vr && typeof vr === 'object') {
+                            var errCode = vr.errorCode != null ? String(vr.errorCode) : '';
+                            var errText = vr.error != null ? String(vr.error) : '';
+                            var st = vr.status != null ? String(vr.status) : '';
+                            var stc = vr.statusCode != null ? String(vr.statusCode) : '';
+                            if (errCode || errText || st || stc) {
+                                summaryWrap.classList.remove('d-none');
+                                if (labelCode) labelCode.textContent = 'Error code';
+                                if (labelMessage) labelMessage.textContent = 'Status';
+                                if (labelDesc) labelDesc.textContent = 'Error details';
+                                if (summaryCode) summaryCode.value = errCode || '-';
+                                if (summaryMessage) {
+                                    var msgParts = [];
+                                    if (st) msgParts.push(st);
+                                    if (stc) msgParts.push('(' + stc + ')');
+                                    summaryMessage.value = msgParts.length ? msgParts.join(' ') : '-';
+                                }
+                                if (summaryDescription) summaryDescription.value = errText || '-';
+
+                                if (summaryStrip && badgeStatus && badgeCode) {
+                                    summaryStrip.classList.remove('d-none');
+                                    summaryStrip.classList.add('d-flex');
+                                    var stLower = st.toLowerCase();
+                                    if (stLower === 'invalid') {
+                                        badgeStatus.textContent = 'Invalid';
+                                        badgeStatus.className = 'badge rounded-pill bg-danger-subtle text-danger-emphasis';
+                                        if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
+                                    } else if (stLower === 'valid') {
+                                        badgeStatus.textContent = 'Valid';
+                                        badgeStatus.className = 'badge rounded-pill bg-success-subtle text-success-emphasis';
+                                        if (summaryCard) summaryCard.classList.add('fbr-summary--valid');
+                                    } else if (st) {
+                                        badgeStatus.textContent = st;
+                                        badgeStatus.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
+                                    }
+                                    if (errCode) {
+                                        badgeCode.textContent = 'Error ' + errCode;
+                                        badgeCode.className = 'badge rounded-pill bg-dark-subtle text-dark-emphasis';
+                                    } else if (stc) {
+                                        badgeCode.textContent = 'Code ' + stc;
+                                    }
+                                }
+                            }
+                        } else {
+                            var codeRoot = parsed.code != null ? parsed.code : '';
+                            var msgRoot = parsed.message != null ? parsed.message : '';
+                            var descRoot = parsed.description != null ? parsed.description : (parsed.detail != null ? parsed.detail : '');
+                            if (codeRoot !== '' || msgRoot !== '' || descRoot !== '') {
+                                summaryWrap.classList.remove('d-none');
+                                if (summaryCode) summaryCode.value = codeRoot !== '' ? String(codeRoot) : '-';
+                                if (summaryMessage) summaryMessage.value = msgRoot || '-';
+                                if (summaryDescription) summaryDescription.value = descRoot || '-';
+                                if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
+                            }
+                        }
                     }
 
                     text = JSON.stringify(parsed, null, 2);
