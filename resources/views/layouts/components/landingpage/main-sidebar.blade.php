@@ -102,10 +102,17 @@
                         <path d="M10.707 17.707 16.414 12l-5.707-5.707-1.414 1.414L13.586 12l-4.293 4.293z"></path>
                     </svg></div>
                 <div class="d-lg-flex d-none align-items-center">
-                    <div class="btn-list d-xl-flex d-none">
-                        <a href="{{ url('register') }}" class="btn btn-wave btn-primary border">
-                            Login / Register
-                        </a>
+                    <div class="btn-list d-xl-flex d-none gap-2">
+                        @guest
+                            @if (Route::has('login'))
+                                <a href="{{ route('login') }}" class="btn btn-wave btn-primary border">Login</a>
+                            @endif
+                            @if (Route::has('register'))
+                                <a href="{{ route('register') }}" class="btn btn-wave btn-primary border">Register</a>
+                            @endif
+                        @else
+                            <a href="{{ route('dashboard') }}" class="btn btn-wave btn-primary border">Dashboard</a>
+                        @endguest
                     </div>
 
                     <a href="javascript:void(0);" class="btn btn-icon btn-primary-light switcher-icon"
