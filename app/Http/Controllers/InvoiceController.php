@@ -95,11 +95,7 @@ class InvoiceController extends Controller
                 ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
                 ->select(
                     'h.*',
-                    DB::raw("
-                        COALESCE(NULLIF(TRIM(cust.DisplayName),''),
-                            CONCAT(COALESCE(cust.FirstName,''),' ',COALESCE(cust.LastName,''))
-                        ) AS CustomerDisplayName
-                    ")
+                    InvoiceModel::sqlCustomerDisplayName()
                 )
                 ->where('h.ID', $id)
                 ->where('h.Status', '!=', 2)
@@ -142,11 +138,7 @@ class InvoiceController extends Controller
             ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
             ->select(
                 'h.*',
-                DB::raw("
-                    COALESCE(NULLIF(TRIM(cust.DisplayName),''),
-                        CONCAT(COALESCE(cust.FirstName,''),' ',COALESCE(cust.LastName,''))
-                    ) AS CustomerDisplayName
-                ")
+                InvoiceModel::sqlCustomerDisplayName()
             )
             ->where('h.ID', $id)
             ->where('h.Status', '!=', 2)

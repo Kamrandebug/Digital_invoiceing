@@ -76,7 +76,7 @@ class InvoiceModel extends Model
     public static function Load_Customer()
     {
         // Raw SQL string used to populate the Customer dropdown
-        $query = "SELECT ID, DisplayName, FirstName, BusinessName
+        $query = "SELECT ID, DisplayName, FirstName, LastName, BusinessName
                   FROM tbl_customer
                   WHERE Status = 1";
 
@@ -138,6 +138,17 @@ class InvoiceModel extends Model
     //  LISTING
     // ══════════════════════════════════════════════════════════
 
+    /**
+     * Customer column label: BusinessName, else DisplayName, else first + last name (join alias: cust).
+     */
+    public static function sqlCustomerDisplayName()
+    {
+        return DB::raw(
+            'COALESCE(NULLIF(TRIM(cust.BusinessName),\'\'), NULLIF(TRIM(cust.DisplayName),\'\'), '
+            . 'TRIM(CONCAT(COALESCE(cust.FirstName,\'\'),\' \',COALESCE(cust.LastName,\'\')))) AS CustomerDisplayName'
+        );
+    }
+
     public static function getlistingdata($filters =[])
     {
         // 1. Point directly to tbl_sales_invoice_header (aliased as 'h')
@@ -159,11 +170,7 @@ class InvoiceModel extends Model
                 'h.FbrTransactionID',
                 'h.FbrResponseJson',
                 'h.CreatedOn',
-                DB::raw("
-                    COALESCE(NULLIF(TRIM(cust.DisplayName),''),
-                        CONCAT(COALESCE(cust.FirstName,''),' ',COALESCE(cust.LastName,''))
-                    ) AS CustomerDisplayName
-                ")
+                self::sqlCustomerDisplayName()
             )
             ->where('h.Status', '!=', 2); // Hide Archived Invoices
 
@@ -172,10 +179,12 @@ class InvoiceModel extends Model
             $s = $filters['search'];
             $query->where(function ($q) use ($s) {
                 $q->where('h.DocNo', 'LIKE', "%{$s}%")
-                  ->orWhereRaw("
-                      COALESCE(NULLIF(TRIM(cust.DisplayName),''),
-                          CONCAT(COALESCE(cust.FirstName,''),' ',COALESCE(cust.LastName,'')))
-                      LIKE ?", ["%{$s}%"]);
+                  ->orWhere('cust.BusinessName', 'LIKE', "%{$s}%")
+                  ->orWhereRaw(
+                      'COALESCE(NULLIF(TRIM(cust.DisplayName),\'\'), '
+                      . 'TRIM(CONCAT(COALESCE(cust.FirstName,\'\'),\' \',COALESCE(cust.LastName,\'\')))) LIKE ?',
+                      ["%{$s}%"]
+                  );
             });
         }
 
