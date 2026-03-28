@@ -47,6 +47,23 @@ class ProductController extends Controller
         // Get filtered data
         $products = ProductModel::getlistingdata($filters);
 
+        // FBR labels: same resolution as Product Details modal (UOM, Sale Type, Rate)
+        try {
+            $fbrDb = $this->fbrConnection();
+            foreach ($products as $product) {
+                $product->UomLabel       = $this->resolveUomLabelForProduct($product, $fbrDb);
+                $product->SaleTypeLabel  = $this->resolveSaleTypeLabelForProduct($product, $fbrDb);
+                $product->SaleRateLabel  = $this->resolveSaleTypeToRateLabelForProduct($product, $fbrDb);
+            }
+        } catch (\Throwable $e) {
+            \Log::debug('product index FBR labels failed', ['e' => $e->getMessage()]);
+            foreach ($products as $product) {
+                $product->UomLabel       = $this->resolveUomLabelForProduct($product);
+                $product->SaleTypeLabel  = $this->resolveSaleTypeLabelForProduct($product);
+                $product->SaleRateLabel  = $this->resolveSaleTypeToRateLabelForProduct($product);
+            }
+        }
+
         return view('pages.dashboards.Product.products', compact('products'));
     }
 
@@ -197,6 +214,8 @@ class ProductController extends Controller
         $mode    = $request->query('mode', 'create');
         $product = null;
 
+        $taxDisplayLabels = null;
+
         if ($id && in_array($mode, ['edit', 'show'])) {
             $row = DB::table('tbl_product')->where('ID', $id)->first();
             if (!$row) {
@@ -212,12 +231,17 @@ class ProductController extends Controller
             $product->SaleTypeToRate  = $product->SaleTypeToRateID ?? null;
             $product->SROSchedule     = $product->SroScheduleID   ?? null;
             $product->SROItem         = $product->SroItemID       ?? null;
+
+            if ($mode === 'show') {
+                $taxDisplayLabels = $this->resolveProductTaxDisplayLabels($product);
+            }
         }
 
         return view('pages.dashboards.Product._product-form-partial', [
-            'mode'    => $mode,
-            'product' => $product ?? new ProductModel(),
-            'inModal' => true,
+            'mode'             => $mode,
+            'product'          => $product ?? new ProductModel(),
+            'inModal'          => true,
+            'taxDisplayLabels' => $taxDisplayLabels,
         ]);
     }
 
@@ -958,6 +982,330 @@ class ProductController extends Controller
                 'items'   => [],
             ], 500);
         }
+    }
+
+    /**
+     * UOM text for display (same as Product Details / Add–Edit view mode: fbr_hscode_uom via uoM_ID + HsCode).
+     */
+    private function resolveUomLabelForProduct(object $product, $db = null): string
+    {
+        $dash = '—';
+        $uomId = $product->UomID ?? $product->UOM ?? null;
+        if ($uomId === null || $uomId === '') {
+            return '-';
+        }
+
+        try {
+            $conn   = $db ?? $this->fbrConnection();
+            $hsCode = trim((string) ($product->HsCode ?? ''));
+            $uomText = $this->fbrLookupUomLabel($conn, $uomId, $hsCode);
+
+            return $uomText !== null && $uomText !== '' ? (string) $uomText : $dash;
+        } catch (\Throwable $e) {
+            \Log::debug('resolveUomLabelForProduct failed', ['e' => $e->getMessage()]);
+
+            return $dash;
+        }
+    }
+
+    /**
+     * Sale type label (SaleTypeID → fbr_trans_type_code), same as Product Details.
+     */
+    private function resolveSaleTypeLabelForProduct(object $product, $db = null): string
+    {
+        $dash        = '—';
+        $saleTypeId = $product->SaleTypeID ?? $product->SaleType ?? null;
+        if ($saleTypeId === null || $saleTypeId === '') {
+            return '-';
+        }
+
+        try {
+            $conn = $db ?? $this->fbrConnection();
+            $t    = $this->fbrLookupTransTypeDesc($conn, $saleTypeId);
+
+            return $t !== null && $t !== '' ? (string) $t : $dash;
+        } catch (\Throwable $e) {
+            \Log::debug('resolveSaleTypeLabelForProduct failed', ['e' => $e->getMessage()]);
+
+            return $dash;
+        }
+    }
+
+    /**
+     * Sale type to rate label (SaleTypeToRateID), same as Product Details.
+     */
+    private function resolveSaleTypeToRateLabelForProduct(object $product, $db = null): string
+    {
+        $dash    = '—';
+        $rateId = $product->SaleTypeToRateID ?? $product->SaleTypeToRate ?? null;
+        if ($rateId === null || $rateId === '') {
+            return '-';
+        }
+
+        try {
+            $conn = $db ?? $this->fbrConnection();
+            $t    = $this->fbrLookupSaleTypeToRateDesc($conn, $rateId);
+
+            return $t !== null && $t !== '' ? (string) $t : $dash;
+        } catch (\Throwable $e) {
+            \Log::debug('resolveSaleTypeToRateLabelForProduct failed', ['e' => $e->getMessage()]);
+
+            return $dash;
+        }
+    }
+
+    /**
+     * Resolve FBR / HS-related IDs on a product to labels for read-only Product Details (same DB as dropdowns).
+     *
+     * @return array{uom: string, sale_type: string, sale_type_to_rate: string, sro_schedule: string, sro_item: string}
+     */
+    private function resolveProductTaxDisplayLabels(ProductModel $product): array
+    {
+        $dash = '—';
+        $out  = [
+            'uom'                 => '-',
+            'sale_type'           => '-',
+            'sale_type_to_rate'   => '-',
+            'sro_schedule'        => '-',
+            'sro_item'            => '-',
+        ];
+
+        try {
+            $db = $this->fbrConnection();
+
+            $out['uom']                 = $this->resolveUomLabelForProduct($product, $db);
+            $out['sale_type']           = $this->resolveSaleTypeLabelForProduct($product, $db);
+            $out['sale_type_to_rate']   = $this->resolveSaleTypeToRateLabelForProduct($product, $db);
+
+            $sroSchedId = $product->SroScheduleID ?? $product->SROSchedule ?? null;
+            if ($sroSchedId !== null && $sroSchedId !== '') {
+                $t = $this->fbrLookupSroScheduleDesc($db, $sroSchedId);
+                $out['sro_schedule'] = $t !== null && $t !== '' ? $t : $dash;
+            }
+
+            $sroItemId = $product->SroItemID ?? $product->SROItem ?? null;
+            if ($sroItemId !== null && $sroItemId !== '') {
+                $t = $this->fbrLookupSroItemDesc($db, $sroItemId);
+                $out['sro_item'] = $t !== null && $t !== '' ? $t : $dash;
+            }
+        } catch (\Throwable $e) {
+            \Log::debug('resolveProductTaxDisplayLabels failed', ['e' => $e->getMessage()]);
+        }
+
+        return $out;
+    }
+
+    private function fbrLookupUomLabel($db, $uomId, string $hsCode): ?string
+    {
+        $schema       = 'core_digital_invoicing';
+        $uomBaseTable = 'fbr_hscode_uom';
+        $uomTable     = $schema . '.' . $uomBaseTable;
+
+        $uomColumns = $db->table('information_schema.columns')
+            ->where('table_schema', $schema)
+            ->where('table_name', $uomBaseTable)
+            ->pluck('column_name');
+
+        $uomCodeCol = null;
+        $uomValCol  = null;
+        $uomIdCol   = null;
+
+        foreach ($uomColumns as $col) {
+            $lc = strtolower($col);
+            if ($uomCodeCol === null && (strpos($lc, 'hscode') !== false || strpos($lc, 'hs_code') !== false || strpos($lc, 'hs code') !== false)) {
+                $uomCodeCol = $col;
+            }
+            if ($uomIdCol === null && (strpos($lc, 'uom') !== false && strpos($lc, 'id') !== false)) {
+                $uomIdCol = $col;
+            }
+        }
+
+        foreach ($uomColumns as $col) {
+            $lc = strtolower($col);
+            if (strpos($lc, 'uom') !== false && (strpos($lc, 'desc') !== false || strpos($lc, 'name') !== false)) {
+                $uomValCol = $col;
+                break;
+            }
+        }
+        if ($uomValCol === null) {
+            foreach ($uomColumns as $col) {
+                $lc = strtolower($col);
+                if (strpos($lc, 'desc') !== false || strpos($lc, 'description') !== false) {
+                    $uomValCol = $col;
+                    break;
+                }
+            }
+        }
+
+        if ($uomIdCol === null) {
+            $uomIdCol = 'uoM_ID';
+        }
+
+        if ($uomCodeCol && $uomValCol && $hsCode !== '') {
+            $variants = $this->hsCodeLookupVariants($hsCode);
+            $row      = $db->table(DB::raw($uomTable))
+                ->whereIn($uomCodeCol, $variants)
+                ->where($uomIdCol, $uomId)
+                ->value($uomValCol);
+            if ($row !== null && $row !== '') {
+                return (string) $row;
+            }
+        }
+
+        if ($uomValCol && $uomIdCol) {
+            $row = $db->table(DB::raw($uomTable))
+                ->where($uomIdCol, $uomId)
+                ->value($uomValCol);
+            if ($row !== null && $row !== '') {
+                return (string) $row;
+            }
+        }
+
+        return null;
+    }
+
+    private function fbrLookupTransTypeDesc($db, $typeId): ?string
+    {
+        $schema    = 'core_digital_invoicing';
+        $baseTable = 'fbr_trans_type_code';
+        $fullTable = $schema . '.' . $baseTable;
+
+        $columns = $db->table('information_schema.columns')
+            ->where('table_schema', $schema)
+            ->where('table_name', $baseTable)
+            ->pluck('column_name');
+
+        $idCol   = null;
+        $descCol = null;
+
+        foreach ($columns as $col) {
+            $lc = strtolower($col);
+            if ($idCol === null && (strpos($lc, 'type') !== false && strpos($lc, 'id') !== false)) {
+                $idCol = $col;
+            }
+            if ($descCol === null && strpos($lc, 'desc') !== false) {
+                $descCol = $col;
+            }
+        }
+
+        if ($idCol === null) {
+            $idCol = 'transactioN_TYPE_ID';
+        }
+        if ($descCol === null) {
+            $descCol = 'transactioN_DESC';
+        }
+
+        $v = $db->table(DB::raw($fullTable))->where($idCol, $typeId)->value($descCol);
+
+        return $v !== null ? (string) $v : null;
+    }
+
+    private function fbrLookupSaleTypeToRateDesc($db, $rateId): ?string
+    {
+        $schema    = 'core_digital_invoicing';
+        $baseTable = 'fbr_sale_type_to_rate';
+        $fullTable = $schema . '.' . $baseTable;
+
+        $columns = $db->table('information_schema.columns')
+            ->where('table_schema', $schema)
+            ->where('table_name', $baseTable)
+            ->pluck('column_name');
+
+        $rateIdCol   = null;
+        $rateDescCol = null;
+
+        foreach ($columns as $col) {
+            $lc = strtolower($col);
+            if ($rateIdCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'id') !== false)) {
+                $rateIdCol = $col;
+            }
+            if ($rateDescCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'desc') !== false)) {
+                $rateDescCol = $col;
+            }
+        }
+
+        if ($rateIdCol === null) {
+            $rateIdCol = 'ratE_ID';
+        }
+        if ($rateDescCol === null) {
+            $rateDescCol = 'ratE_DESC';
+        }
+
+        $v = $db->table(DB::raw($fullTable))->where($rateIdCol, $rateId)->value($rateDescCol);
+
+        return $v !== null ? (string) $v : null;
+    }
+
+    private function fbrLookupSroScheduleDesc($db, $sroId): ?string
+    {
+        $schema    = 'core_digital_invoicing';
+        $baseTable = 'fbr_sro_schedule';
+        $fullTable = $schema . '.' . $baseTable;
+
+        $columns = $db->table('information_schema.columns')
+            ->where('table_schema', $schema)
+            ->where('table_name', $baseTable)
+            ->pluck('column_name');
+
+        $sroIdCol   = null;
+        $sroDescCol = null;
+
+        foreach ($columns as $col) {
+            $lc = strtolower($col);
+            if ($sroIdCol === null && (strpos($lc, 'sro') !== false && strpos($lc, 'id') !== false)) {
+                $sroIdCol = $col;
+            }
+            if ($sroDescCol === null && (strpos($lc, 'sro') !== false && strpos($lc, 'desc') !== false)) {
+                $sroDescCol = $col;
+            }
+        }
+
+        if ($sroIdCol === null) {
+            $sroIdCol = 'srO_ID';
+        }
+        if ($sroDescCol === null) {
+            $sroDescCol = 'srO_DESC';
+        }
+
+        $v = $db->table(DB::raw($fullTable))->where($sroIdCol, $sroId)->value($sroDescCol);
+
+        return $v !== null ? (string) $v : null;
+    }
+
+    private function fbrLookupSroItemDesc($db, $itemId): ?string
+    {
+        $schema    = 'core_digital_invoicing';
+        $baseTable = 'fbr_sro_item';
+        $fullTable = $schema . '.' . $baseTable;
+
+        $columns = $db->table('information_schema.columns')
+            ->where('table_schema', $schema)
+            ->where('table_name', $baseTable)
+            ->pluck('column_name');
+
+        $sroItemIdCol   = null;
+        $sroItemDescCol = null;
+
+        foreach ($columns as $col) {
+            $lc = strtolower($col);
+            if ($sroItemIdCol === null && (strpos($lc, 'sro') !== false && strpos($lc, 'item') !== false && strpos($lc, 'id') !== false)) {
+                $sroItemIdCol = $col;
+            }
+            if ($sroItemDescCol === null && (strpos($lc, 'sro') !== false && strpos($lc, 'item') !== false && strpos($lc, 'desc') !== false)) {
+                $sroItemDescCol = $col;
+            }
+        }
+
+        if ($sroItemIdCol === null) {
+            $sroItemIdCol = 'srO_ITEM_ID';
+        }
+        if ($sroItemDescCol === null) {
+            $sroItemDescCol = 'srO_ITEM_DESC';
+        }
+
+        $v = $db->table(DB::raw($fullTable))->where($sroItemIdCol, $itemId)->value($sroItemDescCol);
+
+        return $v !== null ? (string) $v : null;
     }
 
     /**

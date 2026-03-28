@@ -254,10 +254,11 @@
 					<thead>
 						<tr>
 							<th><input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
-							<th>ID <i class="fas fa-sort"></i></th>
 							<th>Name <i class="fas fa-sort"></i></th>
-							<th>Address</th>
+							<th>NTN</th>
+							<th>Province</th>
 							<th>Contact Number</th>
+							<th>Type</th>
                             <th>Status</th>
 							<th>Action</th>
 						</tr>
@@ -266,15 +267,22 @@
 						@forelse($customers as $customer)
 						<tr>
 							<td><input type="checkbox" class="customer-checkbox form-check-input" value="{{ $customer->ID }}"></td>
-							<td>{{ $customer->ID }}</td>
 							<td>
 								<strong>{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}</strong>
 								@if($customer->BusinessName)
 								<br><small class="text-muted">{{ $customer->BusinessName }}</small>
 								@endif
 							</td>
-							<td>{{ $customer->Address ?? 'N/A' }}</td>
+							<td>{{ $customer->NTN ?? 'N/A' }}</td>
+							<td>{{ $customer->County ?? 'N/A' }}</td>
 							<td>{{ $customer->Mobile ?? $customer->Phone ?? 'N/A' }}</td>
+							<td>
+								@if((int) ($customer->IsFiler ?? 0) === 1)
+									<span class="badge bg-success">Registered</span>
+								@else
+									<span class="badge bg-secondary">UnRegistered</span>
+								@endif
+							</td>
                             <td>
                                 @if(($customer->Status ?? 1) == 1)
                                     <span class="badge bg-success">Active</span>
@@ -312,7 +320,7 @@
 						</tr>
 						@empty
 						<tr>
-							<td colspan="7" class="text-center py-5">
+							<td colspan="8" class="text-center py-5">
 								<i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
 								<p class="text-muted mb-2">No customers found.</p>
 								{{-- Add button --}}

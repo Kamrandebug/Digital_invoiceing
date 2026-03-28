@@ -326,11 +326,11 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-2">
                     <div class="mb-3">
-                        <label for="Title" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Title</label>
+                        <label for="Title" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Title</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->Title ?? '-' }}</div>
                         @else
-                            <select name="Title" id="Title" class="form-select @error('Title') is-invalid @enderror" required>
+                            <select name="Title" id="Title" class="form-select @error('Title') is-invalid @enderror">
                                 <option value="">Select</option>
                                 <option value="Mr" {{ old('Title', $customer->Title ?? '') == 'Mr' ? 'selected' : '' }}>Mr</option>
                                 <option value="Mrs" {{ old('Title', $customer->Title ?? '') == 'Mrs' ? 'selected' : '' }}>Mrs</option>
@@ -348,13 +348,13 @@
                 
                 <div class="col-md-5">
                     <div class="mb-3">
-                        <label for="FirstName" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">First Name</label>
+                        <label for="FirstName" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">First Name</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->FirstName ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('FirstName') is-invalid @enderror" 
                                    id="FirstName" name="FirstName" 
-                                   value="{{ old('FirstName', $customer->FirstName ?? '') }}" placeholder="Enter first name" required>
+                                   value="{{ old('FirstName', $customer->FirstName ?? '') }}" placeholder="Enter first name">
                             @error('FirstName')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -364,13 +364,13 @@
                 
                 <div class="col-md-5">
                     <div class="mb-3">
-                        <label for="LastName" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Last Name</label>
+                        <label for="LastName" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Last Name</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->LastName ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('LastName') is-invalid @enderror" 
                                    id="LastName" name="LastName" 
-                                   value="{{ old('LastName', $customer->LastName ?? '') }}" placeholder="Enter last name" required>
+                                   value="{{ old('LastName', $customer->LastName ?? '') }}" placeholder="Enter last name">
                             @error('LastName')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -424,13 +424,13 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="Email" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Email</label>
+                        <label for="Email" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Email</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->Email ?? '-' }}</div>
                         @else
                             <input type="email" class="form-control @error('Email') is-invalid @enderror" 
                                    id="Email" name="Email" 
-                                   value="{{ old('Email', $customer->Email ?? '') }}" placeholder="customer@example.com" required>
+                                   value="{{ old('Email', $customer->Email ?? '') }}" placeholder="customer@example.com">
                             @error('Email')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -440,13 +440,13 @@
                 
                 <div class="col-md-3">
                     <div class="mb-3">
-                        <label for="Mobile" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Mobile</label>
+                        <label for="Mobile" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Mobile</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->Mobile ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('Mobile') is-invalid @enderror" 
                                    id="Mobile" name="Mobile" 
-                                   value="{{ old('Mobile', $customer->Mobile ?? '') }}" placeholder="3001234567" required>
+                                   value="{{ old('Mobile', $customer->Mobile ?? '') }}" placeholder="3001234567">
                             @error('Mobile')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -507,13 +507,13 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-12">
                     <div class="mb-3">
-                        <label for="Address" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Street Address</label>
+                        <label for="Address" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Street Address</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->Address ?? '-' }}</div>
                         @else
                             <textarea class="form-control @error('Address') is-invalid @enderror" 
                                       id="Address" name="Address" rows="2" 
-                                      placeholder="Enter street address" required>{{ old('Address', $customer->Address ?? '') }}</textarea>
+                                      placeholder="Enter street address">{{ old('Address', $customer->Address ?? '') }}</textarea>
                             @error('Address')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -525,13 +525,13 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="City" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">City</label>
+                        <label for="City" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">City</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->City ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('City') is-invalid @enderror" 
                                    id="City" name="City" 
-                                   value="{{ old('City', $customer->City ?? '') }}" placeholder="City" required>
+                                   value="{{ old('City', $customer->City ?? '') }}" placeholder="City">
                             @error('City')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -557,13 +557,13 @@
                 
                 <div class="col-md-2">
                     <div class="mb-3">
-                        <label for="PostalCode" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Postal Code</label>
+                        <label for="PostalCode" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Postal Code</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->PostalCode ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('PostalCode') is-invalid @enderror" 
                                    id="PostalCode" name="PostalCode" 
-                                   value="{{ old('PostalCode', $customer->PostalCode ?? '') }}" placeholder="54000" required>
+                                   value="{{ old('PostalCode', $customer->PostalCode ?? '') }}" placeholder="54000">
                             @error('PostalCode')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -573,13 +573,13 @@
                 
                 <div class="col-md-2">
                     <div class="mb-3">
-                        <label for="Country" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Country</label>
+                        <label for="Country" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Country</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->Country ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('Country') is-invalid @enderror" 
                                    id="Country" name="Country" 
-                                   value="{{ old('Country', $customer->Country ?? 'Pakistan') }}" placeholder="Pakistan" required>
+                                   value="{{ old('Country', $customer->Country ?? 'Pakistan') }}" placeholder="Pakistan">
                             @error('Country')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -610,10 +610,10 @@
                     <div class="row mt-3">
                         <div class="col-md-12">
                             <div class="mb-3">
-                                <label for="BillingAddress" class="form-label required-field">Billing Street Address</label>
+                                <label for="BillingAddress" class="form-label">Billing Street Address</label>
                                 <textarea class="form-control @error('BillingAddress') is-invalid @enderror" 
                                           id="BillingAddress" name="BillingAddress" rows="2" 
-                                          placeholder="Enter billing address" required>{{ old('BillingAddress', $customer->BillingAddress ?? '') }}</textarea>
+                                          placeholder="Enter billing address">{{ old('BillingAddress', $customer->BillingAddress ?? '') }}</textarea>
                                 @error('BillingAddress')
                                     <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                                 @enderror
@@ -624,10 +624,10 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="BillingCity" class="form-label required-field">Billing City</label>
+                                <label for="BillingCity" class="form-label">Billing City</label>
                                 <input type="text" class="form-control @error('BillingCity') is-invalid @enderror" 
                                        id="BillingCity" name="BillingCity" 
-                                       value="{{ old('BillingCity', $customer->BillingCity ?? '') }}" placeholder="City" required>
+                                       value="{{ old('BillingCity', $customer->BillingCity ?? '') }}" placeholder="City">
                                 @error('BillingCity')
                                     <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                                 @enderror
@@ -648,10 +648,10 @@
                         
                         <div class="col-md-2">
                             <div class="mb-3">
-                                <label for="BillingPostalCode" class="form-label required-field">Billing Postal Code</label>
+                                <label for="BillingPostalCode" class="form-label">Billing Postal Code</label>
                                 <input type="text" class="form-control @error('BillingPostalCode') is-invalid @enderror" 
                                        id="BillingPostalCode" name="BillingPostalCode" 
-                                       value="{{ old('BillingPostalCode', $customer->BillingPostalCode ?? '') }}" placeholder="54000" required>
+                                       value="{{ old('BillingPostalCode', $customer->BillingPostalCode ?? '') }}" placeholder="54000">
                                 @error('BillingPostalCode')
                                     <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                                 @enderror
@@ -660,10 +660,10 @@
                         
                         <div class="col-md-2">
                             <div class="mb-3">
-                                <label for="BillingCountry" class="form-label required-field">Billing Country</label>
+                                <label for="BillingCountry" class="form-label">Billing Country</label>
                                 <input type="text" class="form-control @error('BillingCountry') is-invalid @enderror" 
                                        id="BillingCountry" name="BillingCountry" 
-                                       value="{{ old('BillingCountry', $customer->BillingCountry ?? 'Pakistan') }}" placeholder="Pakistan" required>
+                                       value="{{ old('BillingCountry', $customer->BillingCountry ?? 'Pakistan') }}" placeholder="Pakistan">
                                 @error('BillingCountry')
                                     <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                                 @enderror
@@ -683,13 +683,15 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="NTN" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">NTN Number</label>
+                        <label for="NTN" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">
+                            NTN Number @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
+                        </label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->NTN ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('NTN') is-invalid @enderror" 
                                    id="NTN" name="NTN" 
-                                   value="{{ old('NTN', $customer->NTN ?? '') }}" placeholder="Enter NTN" required>
+                                   value="{{ old('NTN', $customer->NTN ?? '') }}" placeholder="Enter NTN">
                             @error('NTN')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -716,13 +718,13 @@
                 
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="CNIC" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">CNIC</label>
+                        <label for="CNIC" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">CNIC</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->CNIC ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('CNIC') is-invalid @enderror" 
                                    id="CNIC" name="CNIC" 
-                                   value="{{ old('CNIC', $customer->CNIC ?? '') }}" placeholder="12345-1234567-1" required>
+                                   value="{{ old('CNIC', $customer->CNIC ?? '') }}" placeholder="12345-1234567-1">
                             @error('CNIC')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -805,13 +807,13 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-12">
                     <div class="mb-3">
-                        <label for="Notes" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Notes</label>
+                        <label for="Notes" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Notes</label>
                         @if($isReadonly)
                             <div class="detail-value" style="min-height: 80px;">{{ $customer->Notes ?? 'No additional notes.' }}</div>
                         @else
                             <textarea class="form-control @error('Notes') is-invalid @enderror" 
                                       id="Notes" name="Notes" rows="3" 
-                                      placeholder="Any additional notes about the customer" required>{{ old('Notes', $customer->Notes ?? '') }}</textarea>
+                                      placeholder="Any additional notes about the customer">{{ old('Notes', $customer->Notes ?? '') }}</textarea>
                             @error('Notes')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -824,8 +826,8 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="Status" class="form-label required-field">Status</label>
-                        <select name="Status" id="Status" class="form-select @error('Status') is-invalid @enderror" required>
+                        <label for="Status" class="form-label">Status</label>
+                        <select name="Status" id="Status" class="form-select @error('Status') is-invalid @enderror">
                             <option value="1" {{ old('Status', $customer->Status ?? '1') == 'selected' ? 'selected' : '' }}>Active</option>
                             <option value="0" {{ old('Status', $customer->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
                         </select>
@@ -958,14 +960,11 @@
             
         } else {
             billingFields.style.display = 'block';
-            // Add back required attribute when visible
             billingInputs.forEach(input => {
-                if (input.id !== 'BillingAddress' && input.tagName !== 'TEXTAREA') {
-                    if (input.type !== 'hidden') {
-                        input.setAttribute('required', 'required');
-                    }
-                } else if (input.tagName === 'TEXTAREA') {
+                if (input.id === 'BillingCounty') {
                     input.setAttribute('required', 'required');
+                } else {
+                    input.removeAttribute('required');
                 }
             });
         }
