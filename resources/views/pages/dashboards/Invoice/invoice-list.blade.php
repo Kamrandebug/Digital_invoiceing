@@ -179,14 +179,12 @@
                     <thead>
                         <tr>
                             <th><input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
-                            <th>Doc No. <i class="fas fa-sort"></i></th>
-                            <th>Invoice Date <i class="fas fa-sort"></i></th>
-                            <th>Due Date</th>
+                            <th>InvoiceDate <i class="fas fa-sort"></i></th>
                             <th width="25%">Customer</th>
-                            <th>Total Amount</th>
+                            <th>DocNo <i class="fas fa-sort"></i></th>
+                            <th>Net</th>
                             <th>FBR Transaction ID</th>
                             <th style="width:260px;">FBR Response</th>
-                            <th>Status</th>
                             <th class="action-col">Action</th>
                         </tr>
                     </thead>
@@ -205,21 +203,15 @@
                                 <input type="checkbox" class="invoice-checkbox form-check-input" value="{{ $invoice->HeaderID }}" />
                             </td>
 
-                            <td>{{ $invoice->DocNo ?? 'N/A' }}</td>
-
                             <td>
                                 {{ $invoice->InvoiceDate
                                     ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d/m/Y')
                                     : '-' }}
                             </td>
 
-                            <td>
-                                {{ $invoice->DueDate
-                                    ? \Carbon\Carbon::parse($invoice->DueDate)->format('d/m/Y')
-                                    : '-' }}
-                            </td>
-
                             <td>{{ $invoice->CustomerDisplayName ?? 'N/A' }}</td>
+
+                            <td>{{ $invoice->DocNo ?? 'N/A' }}</td>
 
                             <td>{{ number_format($invoice->TotalAmount ?? 0, 2) }} PKR</td>
 
@@ -248,13 +240,6 @@
                                 @else
                                     <span class="badge rounded-pill bg-light text-muted">No Response</span>
                                 @endif
-                            </td>
-
-                            <td>
-                                {{-- Status is an integer: 1 = Active, 2 = Archived --}}
-                                <span class="status-badge  {{ $invoice->Status == 1 ? 'status-active' : 'status-inactive' }}">
-                                    {{ $invoice->Status == 1 ? 'Active' : 'Archived' }}
-                                </span>
                             </td>
 
                             <td>
