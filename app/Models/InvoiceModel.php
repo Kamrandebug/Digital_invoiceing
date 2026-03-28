@@ -97,41 +97,44 @@ class InvoiceModel extends Model
     /**
      * Load Invoice Types from core_digital_invoicing.fbr_doc_type_code.
      * Returns docTypeId as value, docDescription as display.
+     *
+     * Note: Invoice pages run on the tenant DB connection, which often cannot read
+     * cross-schema FBR tables. We try landlord/mysql (central reference) first.
      */
     public static function Load_InvoiceTypes()
     {
-        try {
-            $schema    = 'core_digital_invoicing';
-            $baseTable = 'fbr_doc_type_code';
-            $fullTable = $schema . '.' . $baseTable;
+        $table = 'core_digital_invoicing.fbr_doc_type_code';
 
-            $columns = DB::table('information_schema.columns')
-                ->where('table_schema', $schema)
-                ->where('table_name', $baseTable)
-                ->pluck('column_name');
+        $connectionOrder = array_values(array_unique(array_filter([
+            'landlord',
+            'mysql',
+            config('database.default'),
+        ])));
 
-            $idCol   = null;
-            $descCol = null;
-            foreach ($columns as $col) {
-                $lc = strtolower($col);
-                if ($idCol === null && (strpos($lc, 'type') !== false && strpos($lc, 'id') !== false)) {
-                    $idCol = $col;
-                }
-                if ($descCol === null && strpos($lc, 'desc') !== false) {
-                    $descCol = $col;
-                }
+        foreach ($connectionOrder as $connectionName) {
+            if (! config("database.connections.{$connectionName}")) {
+                continue;
             }
-            $idCol   = $idCol ?: 'docTypeId';
-            $descCol = $descCol ?: 'docDescription';
-
-            return DB::table(DB::raw($fullTable))
-                ->select([$idCol . ' as docTypeId', $descCol . ' as docDescription'])
-                ->orderBy($descCol)
-                ->get();
-        } catch (\Throwable $e) {
-            \Log::warning('Load_InvoiceTypes failed: ' . $e->getMessage());
-            return collect();
+            try {
+                $rows = DB::connection($connectionName)
+                    ->table($table)
+                    ->select('docTypeId', 'docDescription')
+                    ->orderBy('docDescription')
+                    ->get();
+                if ($rows->isNotEmpty()) {
+                    return $rows;
+                }
+            } catch (\Throwable $e) {
+                \Log::debug("Load_InvoiceTypes connection={$connectionName}: " . $e->getMessage());
+            }
         }
+
+        \Log::warning('Load_InvoiceTypes: no rows from FBR table; using fallback list.');
+
+        return collect([
+            (object) ['docTypeId' => 4, 'docDescription' => 'Sale Invoice'],
+            (object) ['docTypeId' => 9, 'docDescription' => 'Debit Note'],
+        ]);
     }
 
    // ══════════════════════════════════════════════════════════
