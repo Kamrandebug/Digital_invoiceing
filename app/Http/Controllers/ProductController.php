@@ -455,6 +455,9 @@ class ProductController extends Controller
      *
      * We don't assume exact column names; instead we discover them via information_schema
      * so it works even if columns are e.g. HSCODE / HS_CODE / UOM_CODE / ITEM_DESC, etc.
+     *
+     * Uses the landlord connection: tenant DBs are often on another host and cannot see
+     * `core_digital_invoicing`, which lives on the central server.
      */
     public function hsCodeInfo(Request $request)
     {
@@ -469,7 +472,10 @@ class ProductController extends Controller
             ], 422);
         }
 
+        $codeVariants = $this->hsCodeLookupVariants($code);
+
         try {
+            $db            = $this->fbrConnection();
             $schema        = 'core_digital_invoicing';
             $uomBaseTable  = 'fbr_hscode_uom';
             $descBaseTable = 'fbr_item_desc_code';
@@ -477,7 +483,7 @@ class ProductController extends Controller
             $descTable     = $schema . '.' . $descBaseTable;
 
             // Discover column names dynamically from information_schema
-            $uomColumns = DB::table('information_schema.columns')
+            $uomColumns = $db->table('information_schema.columns')
                 ->where('table_schema', $schema)
                 ->where('table_name', $uomBaseTable)
                 ->pluck('column_name');
@@ -488,26 +494,36 @@ class ProductController extends Controller
 
             foreach ($uomColumns as $col) {
                 $lc = strtolower($col);
-                // HS code column
                 if ($uomCodeCol === null && (strpos($lc, 'hscode') !== false || strpos($lc, 'hs_code') !== false || strpos($lc, 'hs code') !== false)) {
                     $uomCodeCol = $col;
                 }
-                // For UOM dropdown we show the *description* field from fbr_hscode_uom
-                if ($uomValCol === null && (strpos($lc, 'desc') !== false || strpos($lc, 'description') !== false)) {
-                    $uomValCol = $col;
-                }
-                // And we want the value to be the UOM ID (e.g. uoM_ID / uom_id)
                 if ($uomIdCol === null && (strpos($lc, 'uom') !== false && strpos($lc, 'id') !== false)) {
                     $uomIdCol = $col;
                 }
             }
 
-            // Fallbacks if detection failed
-            if ($uomIdCol === null) {
-                $uomIdCol = 'uoM_ID'; // per your naming
+            foreach ($uomColumns as $col) {
+                $lc = strtolower($col);
+                if (strpos($lc, 'uom') !== false && (strpos($lc, 'desc') !== false || strpos($lc, 'name') !== false)) {
+                    $uomValCol = $col;
+                    break;
+                }
+            }
+            if ($uomValCol === null) {
+                foreach ($uomColumns as $col) {
+                    $lc = strtolower($col);
+                    if (strpos($lc, 'desc') !== false || strpos($lc, 'description') !== false) {
+                        $uomValCol = $col;
+                        break;
+                    }
+                }
             }
 
-            $descColumns = DB::table('information_schema.columns')
+            if ($uomIdCol === null) {
+                $uomIdCol = 'uoM_ID';
+            }
+
+            $descColumns = $db->table('information_schema.columns')
                 ->where('table_schema', $schema)
                 ->where('table_name', $descBaseTable)
                 ->pluck('column_name');
@@ -520,8 +536,28 @@ class ProductController extends Controller
                 if ($descCodeCol === null && (strpos($lc, 'hscode') !== false || strpos($lc, 'hs_code') !== false || strpos($lc, 'hs code') !== false)) {
                     $descCodeCol = $col;
                 }
-                if ($descValCol === null && (strpos($lc, 'desc') !== false || strpos($lc, 'description') !== false || strpos($lc, 'item') !== false)) {
+            }
+
+            foreach ($descColumns as $col) {
+                $lc = strtolower($col);
+                if ($descCodeCol !== null && strcasecmp($col, $descCodeCol) === 0) {
+                    continue;
+                }
+                if (strpos($lc, 'item') !== false && (strpos($lc, 'desc') !== false || strpos($lc, 'description') !== false)) {
                     $descValCol = $col;
+                    break;
+                }
+            }
+            if ($descValCol === null) {
+                foreach ($descColumns as $col) {
+                    $lc = strtolower($col);
+                    if ($descCodeCol !== null && strcasecmp($col, $descCodeCol) === 0) {
+                        continue;
+                    }
+                    if (strpos($lc, 'desc') !== false || strpos($lc, 'description') !== false) {
+                        $descValCol = $col;
+                        break;
+                    }
                 }
             }
 
@@ -529,8 +565,8 @@ class ProductController extends Controller
             $description = null;
 
             if ($uomCodeCol && $uomValCol && $uomIdCol) {
-                $rows = DB::table(DB::raw($uomTable))
-                    ->where($uomCodeCol, $code)
+                $rows = $db->table(DB::raw($uomTable))
+                    ->whereIn($uomCodeCol, $codeVariants)
                     ->select([$uomIdCol . ' as id', $uomValCol . ' as text'])
                     ->get();
 
@@ -547,8 +583,8 @@ class ProductController extends Controller
             }
 
             if ($descCodeCol && $descValCol) {
-                $description = DB::table(DB::raw($descTable))
-                    ->where($descCodeCol, $code)
+                $description = $db->table(DB::raw($descTable))
+                    ->whereIn($descCodeCol, $codeVariants)
                     ->value($descValCol);
             }
 
@@ -573,6 +609,35 @@ class ProductController extends Controller
     }
 
     /**
+     * FBR reference data (`core_digital_invoicing`) is on the landlord MySQL instance.
+     */
+    private function fbrConnection()
+    {
+        return DB::connection('landlord');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function hsCodeLookupVariants(string $code): array
+    {
+        $code = trim($code);
+        $variants = [$code];
+        $digits = preg_replace('/\D/', '', $code);
+        if ($digits !== '' && ! in_array($digits, $variants, true)) {
+            $variants[] = $digits;
+        }
+        if (strlen($digits) === 8) {
+            $formatted = substr($digits, 0, 4) . '.' . substr($digits, 4, 4);
+            if (! in_array($formatted, $variants, true)) {
+                $variants[] = $formatted;
+            }
+        }
+
+        return array_values(array_unique($variants));
+    }
+
+    /**
      * AJAX: Load Sale Types (transaction types) from core_digital_invoicing.fbr_trans_type_code.
      *
      * Returns a list of { id, text } where:
@@ -582,12 +647,13 @@ class ProductController extends Controller
     public function saleTypes(Request $request)
     {
         try {
+            $db        = $this->fbrConnection();
             $schema    = 'core_digital_invoicing';
             $baseTable = 'fbr_trans_type_code';
             $fullTable = $schema . '.' . $baseTable;
 
             // Discover column names dynamically from information_schema
-            $columns = DB::table('information_schema.columns')
+            $columns = $db->table('information_schema.columns')
                 ->where('table_schema', $schema)
                 ->where('table_name', $baseTable)
                 ->pluck('column_name');
@@ -615,7 +681,7 @@ class ProductController extends Controller
                 $descCol = 'transactioN_DESC';
             }
 
-            $items = DB::table(DB::raw($fullTable))
+            $items = $db->table(DB::raw($fullTable))
                 ->select([$idCol . ' as id', $descCol . ' as text'])
                 ->orderBy($descCol)
                 ->get();
@@ -653,11 +719,12 @@ class ProductController extends Controller
         }
 
         try {
+            $db        = $this->fbrConnection();
             $schema    = 'core_digital_invoicing';
             $baseTable = 'fbr_sale_type_to_rate';
             $fullTable = $schema . '.' . $baseTable;
 
-            $columns = DB::table('information_schema.columns')
+            $columns = $db->table('information_schema.columns')
                 ->where('table_schema', $schema)
                 ->where('table_name', $baseTable)
                 ->pluck('column_name');
@@ -698,7 +765,7 @@ class ProductController extends Controller
                 $selectCols[] = $ratePctCol . ' as rate_pct';
             }
 
-            $rows = DB::table(DB::raw($fullTable))
+            $rows = $db->table(DB::raw($fullTable))
                 ->where($typeIdCol, $transactionTypeId)
                 ->select($selectCols)
                 ->orderBy($rateDescCol)
@@ -755,11 +822,12 @@ class ProductController extends Controller
         }
 
         try {
+            $db        = $this->fbrConnection();
             $schema    = 'core_digital_invoicing';
             $baseTable = 'fbr_sro_schedule';
             $fullTable = $schema . '.' . $baseTable;
 
-            $columns = DB::table('information_schema.columns')
+            $columns = $db->table('information_schema.columns')
                 ->where('table_schema', $schema)
                 ->where('table_name', $baseTable)
                 ->pluck('column_name');
@@ -791,7 +859,7 @@ class ProductController extends Controller
                 $sroDescCol = 'srO_DESC';
             }
 
-            $items = DB::table(DB::raw($fullTable))
+            $items = $db->table(DB::raw($fullTable))
                 ->where($rateIdCol, $rateId)
                 ->select([$sroIdCol . ' as id', $sroDescCol . ' as text'])
                 ->orderBy($sroDescCol)
@@ -831,11 +899,12 @@ class ProductController extends Controller
         }
 
         try {
+            $db        = $this->fbrConnection();
             $schema    = 'core_digital_invoicing';
             $baseTable = 'fbr_sro_item';
             $fullTable = $schema . '.' . $baseTable;
 
-            $columns = DB::table('information_schema.columns')
+            $columns = $db->table('information_schema.columns')
                 ->where('table_schema', $schema)
                 ->where('table_name', $baseTable)
                 ->pluck('column_name');
@@ -867,7 +936,7 @@ class ProductController extends Controller
                 $sroItemDescCol = 'srO_ITEM_DESC';
             }
 
-            $items = DB::table(DB::raw($fullTable))
+            $items = $db->table(DB::raw($fullTable))
                 ->where($sroIdCol, $sroId)
                 ->select([$sroItemIdCol . ' as id', $sroItemDescCol . ' as text'])
                 ->orderBy($sroItemDescCol)

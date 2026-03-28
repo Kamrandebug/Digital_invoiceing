@@ -258,7 +258,11 @@
         }
 
         fetch("{{ route('products.hscode-info') }}?code=" + encodeURIComponent(code), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
         })
             .then(function (res) { return res.json(); })
             .then(function (data) {
@@ -437,13 +441,17 @@
             .catch(function () {});
     }
 
-    if (hsInput && uomSelect) {
+    if (hsInput) {
         var debounceTimer;
         hsInput.addEventListener('input', function () {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(fetchHsCodeInfo, 500);
+            debounceTimer = setTimeout(fetchHsCodeInfo, 400);
         });
         hsInput.addEventListener('blur', function () {
+            clearTimeout(debounceTimer);
+            fetchHsCodeInfo();
+        });
+        hsInput.addEventListener('change', function () {
             clearTimeout(debounceTimer);
             fetchHsCodeInfo();
         });
