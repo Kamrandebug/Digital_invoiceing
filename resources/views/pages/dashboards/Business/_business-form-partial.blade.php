@@ -247,6 +247,32 @@
                         @error('Notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     @endif
                 </div>
+
+                <div class="col-md-6">
+                    <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Sandbox Access Token</label>
+                    @if($isReadonly)
+                        <div class="_cfp-detail-value">{{ $record->Sandbox_access_token ?? '-' }}</div>
+                    @else
+                        <input type="text" name="Sandbox_access_token"
+                               class="form-control form-control-sm @error('Sandbox_access_token') is-invalid @enderror"
+                               value="{{ old('Sandbox_access_token', $record->Sandbox_access_token ?? '') }}"
+                               placeholder="Enter sandbox access token">
+                        @error('Sandbox_access_token')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    @endif
+                </div>
+
+                <div class="col-md-6">
+                    <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">IRIS Access Token</label>
+                    @if($isReadonly)
+                        <div class="_cfp-detail-value">{{ $record->iris_access_token ?? '-' }}</div>
+                    @else
+                        <input type="text" name="iris_access_token"
+                               class="form-control form-control-sm @error('iris_access_token') is-invalid @enderror"
+                               value="{{ old('iris_access_token', $record->iris_access_token ?? '') }}"
+                               placeholder="Enter IRIS access token">
+                        @error('iris_access_token')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    @endif
+                </div>
             </div>
         </div>
     </div>

@@ -49,6 +49,8 @@ class BusinessInfoController extends Controller
                 'CNIC'         => ['nullable','string','max:50','unique:tbl_business_info,CNIC'],
                 'IsFiler'      => 'nullable|boolean',
                 'Notes'        => 'nullable|string|max:500',
+                'Sandbox_access_token' => ['nullable','string','max:1000'],
+                'iris_access_token'    => ['nullable','string','max:1000'],
                 'Status'       => 'required|integer|in:0,1',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -93,6 +95,8 @@ class BusinessInfoController extends Controller
                 'CNIC'          => $request->CNIC,
                 'IsFiler'       => $request->input('IsFiler', 1),
                 'Notes'         => $request->Notes,
+                'Sandbox_access_token' => $request->Sandbox_access_token,
+                'iris_access_token'    => $request->iris_access_token,
                 'Status'        => $request->Status,
                 'IsDashboard'   => 0,
                 'IsArchive'     => 0,
@@ -181,6 +185,8 @@ class BusinessInfoController extends Controller
                 'CNIC'         => ['nullable','string','max:50', Rule::unique('tbl_business_info','CNIC')->ignore($id, 'ID')],
                 'IsFiler'      => 'nullable|boolean',
                 'Notes'        => 'nullable|string|max:500',
+                'Sandbox_access_token' => ['nullable','string','max:1000'],
+                'iris_access_token'    => ['nullable','string','max:1000'],
                 'Status'       => 'required|integer|in:0,1',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -219,6 +225,8 @@ class BusinessInfoController extends Controller
                 'CNIC'          => $request->CNIC,
                 'IsFiler'       => $request->input('IsFiler', 1),
                 'Notes'         => $request->Notes,
+                'Sandbox_access_token' => $request->Sandbox_access_token,
+                'iris_access_token'    => $request->iris_access_token,
                 'Status'        => $request->Status,
                 'IsDashboard'   => $existing->IsDashboard ?? 0,
                 'IsArchive'     => $existing->IsArchive ?? 0,

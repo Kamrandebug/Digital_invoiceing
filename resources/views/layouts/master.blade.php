@@ -43,14 +43,16 @@
         </div>
         <!-- Loader -->
 
-        <div class="page">
+        <div class="page @if(request()->routeIs('tenants.index')) tenants-selection-page @endif">
 
             <!-- Start::main-header -->
             @include('layouts.components.main-header')
             <!-- End::main-header -->
 
-            <!-- Start::main-sidebar -->
+            <!-- Start::main-sidebar (hidden on tenant selection page) -->
+            @unless(request()->routeIs('tenants.index'))
             @include('layouts.components.main-sidebar')
+            @endunless
             <!-- End::main-sidebar -->
 
             <!-- Start::app-content -->

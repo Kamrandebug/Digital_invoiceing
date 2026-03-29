@@ -5,6 +5,43 @@
 @section('styles')
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.0/dist/css/bootstrap-datepicker3.min.css" rel="stylesheet">
+<style>
+    .filter-date-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: #6c757d;
+        margin-bottom: 4px;
+    }
+    .filter-date-group .form-control {
+        border-radius: 6px;
+        font-size: 12px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+    .filter-date-group .input-group-text {
+        border-radius: 6px 0 0 6px;
+        background: #f1f3f5;
+        border-right: 0;
+        font-size: 12px;
+        color: #6c757d;
+    }
+    .filter-date-group .form-control:not(:focus) {
+        border-left: 0;
+    }
+    .filter-date-group .form-control:focus {
+        box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+    }
+    @media (max-width: 767.98px) {
+        .filter-date-group .input-group-text {
+            display: none;
+        }
+        .filter-date-group .form-control {
+            border-radius: 6px !important;
+            border-left: 1px solid #ced4da;
+        }
+    }
+</style>
 @endsection
 
 @section('content')
@@ -79,18 +116,32 @@
                                 <div class="col-md-8">
                                     <div class="row g-2">
                                         <div class="col-md-4">
-                                            <label>Start Date</label>
-                                            <input type="date" class="form-control form-control-sm"
-                                                   name="start_date" id="startDate"
-                                                   value="{{ request('start_date') }}"
-                                                   onchange="debounceSearch()">
+                                            <label class="filter-date-label">Start Date</label>
+                                            <div class="input-group input-group-sm filter-date-group">
+                                                <span class="input-group-text">
+                                                    <i class="fas fa-calendar-alt"></i>
+                                                </span>
+                                                <input type="text"
+                                                       class="form-control filter-date-picker"
+                                                       name="start_date" id="startDate"
+                                                       value="{{ request('start_date') }}"
+                                                       autocomplete="off"
+                                                       placeholder="YYYY-MM-DD">
+                                            </div>
                                         </div>
                                         <div class="col-md-4">
-                                            <label>End Date</label>
-                                            <input type="date" class="form-control form-control-sm"
-                                                   name="end_date" id="endDate"
-                                                   value="{{ request('end_date') }}"
-                                                   onchange="debounceSearch()">
+                                            <label class="filter-date-label">End Date</label>
+                                            <div class="input-group input-group-sm filter-date-group">
+                                                <span class="input-group-text">
+                                                    <i class="fas fa-calendar-check"></i>
+                                                </span>
+                                                <input type="text"
+                                                       class="form-control filter-date-picker"
+                                                       name="end_date" id="endDate"
+                                                       value="{{ request('end_date') }}"
+                                                       autocomplete="off"
+                                                       placeholder="YYYY-MM-DD">
+                                            </div>
                                         </div>
                                         <div class="col">
                                             <button class="btn btn-sm btn-primary btn-margin" type="button"
@@ -123,6 +174,8 @@
                             <th>Due Date</th>
                             <th width="25%">Customer</th>
                             <th>Total Amount</th>
+                            <th>FBR Transaction ID</th>
+                            <th style="width:260px;">FBR Response</th>
                             <th>Status</th>
                             <th class="action-col">Action</th>
                         </tr>
@@ -153,6 +206,33 @@
 
                             <td>{{ number_format($invoice->TotalAmount ?? 0, 2) }} PKR</td>
 
+                            <td>{{ $invoice->FbrTransactionID ?? '-' }}</td>
+
+                            <td>
+                                @php
+                                    $resp = $invoice->FbrResponseJson ?? '';
+                                @endphp
+                                @if(!empty($resp))
+                                    @php
+                                        $isValid = \Illuminate\Support\Str::contains($resp, '\"Valid\"')
+                                            || \Illuminate\Support\Str::contains($resp, '"Valid"')
+                                            || \Illuminate\Support\Str::contains($resp, 'Valid');
+                                        $badgeClass = $isValid
+                                            ? 'bg-success-subtle text-success'
+                                            : 'bg-secondary-subtle text-secondary';
+                                        $badgeLabel = $isValid ? 'FBR Valid' : 'View FBR';
+                                    @endphp
+                                    <span class="badge rounded-pill fbr-response-btn {{ $badgeClass }}"
+                                          style="cursor:pointer; font-size:11px; padding:5px 10px;"
+                                          data-response="{{ e($resp) }}"
+                                          title="Click to view FBR response">
+                                        <i class="fas fa-receipt me-1"></i>{{ $badgeLabel }}
+                                    </span>
+                                @else
+                                    <span class="badge rounded-pill bg-light text-muted">No Response</span>
+                                @endif
+                            </td>
+
                             <td>
                                 {{-- Status is an integer: 1 = Active, 2 = Archived --}}
                                 <span class="status-badge  {{ $invoice->Status == 1 ? 'status-active' : 'status-inactive' }}">
@@ -175,6 +255,10 @@
 										<button class="dropdown-item"
 												onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})">
 											<i class="fas fa-edit"></i> Edit
+										</button>
+										<button class="dropdown-item" type="button"
+												onclick="openPrintModal({{ $invoice->HeaderID }}, '{{ $invoice->DocNo ?? 'Invoice' }}')">
+											<i class="fas fa-print"></i> Print
 										</button>
 
 										<form action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
@@ -280,6 +364,99 @@
     </div>
 </div>
 
+{{-- Print Invoice Modal — PDF/print preview with orientation --}}
+<div class="modal fade" id="invoice_print_modal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold">
+                    <i class="fas fa-print me-2"></i> Print Invoice — <span id="invoice_print_docno"></span>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3 no-print">
+                    <label class="mb-0 fw-medium">Orientation:</label>
+                    <select id="invoice_print_orientation" class="form-select form-select-sm" style="width: auto;">
+                        <option value="portrait">Portrait</option>
+                        <option value="landscape">Landscape</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-primary" id="invoice_print_apply_orientation">
+                        <i class="fas fa-sync-alt me-1"></i> Apply
+                    </button>
+                    <button type="button" class="btn btn-sm btn-success ms-2" id="invoice_print_do_print">
+                        <i class="fas fa-print me-1"></i> Print / Save as PDF
+                    </button>
+                </div>
+                <div class="border rounded bg-light" style="min-height: 400px;">
+                    <iframe id="invoice_print_frame" name="invoice_print_frame"
+                            style="width:100%; height:75vh; border:0; display:block;"
+                            title="Invoice print preview"></iframe>
+                </div>
+            </div>
+            <div class="modal-footer no-print">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- FBR Response Modal --}}
+<div class="modal fade" id="fbr_response_modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <span class="badge bg-primary-subtle text-primary fw-semibold">FBR API Response</span>
+                    <h6 class="modal-title fw-semibold mt-2 mb-0">Live Response Payload</h6>
+                    <small class="text-muted">Read-only response returned from FBR for this invoice.</small>
+                </div>
+                <button type="button" class="btn-close ms-2" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="text-muted small">
+                        <i class="fas fa-code me-1"></i>
+                        Formatted JSON view (if applicable)
+                    </div>
+                    <button type="button"
+                            class="btn btn-xs btn-outline-secondary"
+                            style="font-size: 11px; padding: 3px 8px;"
+                            onclick="copyFbrResponseToClipboard()">
+                        <i class="fas fa-copy me-1"></i> Copy
+                    </button>
+                </div>
+                <pre id="fbr_response_modal_body"
+                     class="mb-0 small"
+                     style="
+                        white-space: pre-wrap;
+                        word-break: break-word;
+                        font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+                        background-color: #0b1120;
+                        color: #e5e7eb;
+                        border-radius: 6px;
+                        padding: 14px 16px;
+                        max-height: 70vh;
+                        overflow: auto;
+                        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+                     "></pre>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <span class="text-muted small me-auto">
+                    <i class="fas fa-info-circle me-1"></i>
+                    This data is stored as received from FBR.
+                </span>
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -287,6 +464,7 @@
         integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="{{ asset('build/assets/select2.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.0/dist/js/bootstrap-datepicker.min.js"></script>
 
 <script>
 //	document.addEventListener('DOMContentLoaded', function () {
@@ -324,6 +502,19 @@
 //        });
 //    });
 //});
+
+    // ── Enhance date pickers (Start / End) ─────────────────────
+    $(function () {
+        $('.filter-date-picker').datepicker({
+            format: 'yyyy-mm-dd',
+            todayHighlight: true,
+            autoclose: true,
+            orientation: 'bottom auto',
+            clearBtn: true
+        }).on('changeDate clearDate', function () {
+            debounceSearch();
+        });
+    });
     // ── Auto-hide flash alerts ────────────────────────────────
     setTimeout(function () {
         document.querySelectorAll('.alert').forEach(function(a) {
@@ -509,6 +700,120 @@ saveBtn.onclick = function () {
             firstField.focus();
         }
     }
+
+    // ── Print modal ───────────────────────────────────────────
+    var _printModalInvoiceId = null;
+
+    function openPrintModal(invoiceId, docNo) {
+        _printModalInvoiceId = invoiceId;
+        document.getElementById('invoice_print_docno').textContent = docNo || ('#' + invoiceId);
+        document.getElementById('invoice_print_orientation').value = 'portrait';
+        setPrintFrameSrc('portrait');
+        var modalEl = document.getElementById('invoice_print_modal');
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    function setPrintFrameSrc(orientation) {
+        if (!_printModalInvoiceId) return;
+        var baseUrl = '{{ url("invoices") }}/' + _printModalInvoiceId + '/print-view';
+        var url = baseUrl + '?orientation=' + encodeURIComponent(orientation) + '&_=' + Date.now();
+        var frame = document.getElementById('invoice_print_frame');
+        frame.src = url;
+    }
+
+    document.getElementById('invoice_print_apply_orientation').addEventListener('click', function () {
+        var orient = document.getElementById('invoice_print_orientation').value;
+        setPrintFrameSrc(orient);
+    });
+
+    document.getElementById('invoice_print_orientation').addEventListener('change', function () {
+        var orient = this.value;
+        setPrintFrameSrc(orient);
+    });
+
+    document.getElementById('invoice_print_do_print').addEventListener('click', function () {
+        var frame = document.getElementById('invoice_print_frame');
+        if (frame && frame.contentWindow) {
+            try {
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+            } catch (e) {
+                showToast('error', 'Could not open print dialog. Try printing from the browser (Ctrl+P).');
+            }
+        }
+    });
+
+    // ── FBR Response popup ────────────────────────────────────
+    function openFbrResponseModal(resp) {
+        var bodyEl = document.getElementById('fbr_response_modal_body');
+        if (bodyEl) {
+            var text = resp || '-';
+            text = text.trim();
+
+            // Decode HTML entities like &quot; to real characters first
+            if (text.indexOf('&') !== -1) {
+                try {
+                    var textarea = document.createElement('textarea');
+                    textarea.innerHTML = text;
+                    text = textarea.value;
+                } catch (e) {
+                    // ignore if decoding fails
+                }
+            }
+
+            // If the whole payload is a quoted JSON string like "{\"key\":\"val\"}"
+            // decode it once so we remove the extra \" noise.
+            if (text.startsWith('"') && text.endsWith('"')) {
+                try {
+                    text = JSON.parse(text); // becomes inner string
+                } catch (e) {
+                    // ignore and keep original text
+                }
+            }
+
+            // Now, if it looks like JSON, pretty-print it
+            if (text.startsWith('{') || text.startsWith('[')) {
+                try {
+                    var parsed = JSON.parse(text);
+                    text = JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    // leave as raw text if not valid JSON
+                }
+            }
+
+            bodyEl.textContent = text;
+        }
+
+        var modalEl = document.getElementById('fbr_response_modal');
+        if (!modalEl) return;
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    function copyFbrResponseToClipboard() {
+        var bodyEl = document.getElementById('fbr_response_modal_body');
+        if (!bodyEl) return;
+
+        var text = bodyEl.textContent || '';
+        if (!text) {
+            showToast('error', 'Nothing to copy.');
+            return;
+        }
+
+        navigator.clipboard.writeText(text).then(function () {
+            showToast('success', 'FBR response copied to clipboard.');
+        }).catch(function () {
+            showToast('error', 'Unable to copy. Please copy manually.');
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.fbr-response-btn');
+        if (!btn) return;
+        var resp = btn.getAttribute('data-response') || '';
+        openFbrResponseModal(resp);
+    });
 
     // ── Toast notification ────────────────────────────────────
     function showToast(type, message) {
