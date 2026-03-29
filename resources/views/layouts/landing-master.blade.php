@@ -39,8 +39,8 @@
               <li><a href="services.html" aria-label="Menu link">Services</a></li>
               <li><a href="contact.html" aria-label="Menu link">Contact</a></li>
 -->
-              <li class="btn-gap"><a href="{{ route('login') }}" aria-label="Menu link"><span class="btn-login">Login</span></a></li>
-              <li><a href="{{ route('register') }}" aria-label="Menu link"><span class="btn-register">Register</span></a></li>
+              <li class="btn-gap login-btn"><a href="{{ route('login') }}" aria-label="Menu link"><span class="btn-login">Login</span></a></li>
+              <li class="reg-btn"><a href="{{ route('register') }}" aria-label="Menu link"><span class="btn-register">Register</span></a></li>
             </ul>
           </div>
         </div>
