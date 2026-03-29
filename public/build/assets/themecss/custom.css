@@ -493,6 +493,10 @@ label{
 }
 
 
+.form-control{
+    border: solid 1px var(--input-border) !important;
+}
+
 
 
 
