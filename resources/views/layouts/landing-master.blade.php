@@ -33,12 +33,14 @@
         <div class="cs_main_header_center">
           <div class="cs_nav">
             <ul class="cs_nav_list">
+<!--
               <li><a href="#" aria-label="Menu link">Home</a></li>
               <li><a href="about.html" aria-label="Menu link">About</a></li>
               <li><a href="services.html" aria-label="Menu link">Services</a></li>
               <li><a href="contact.html" aria-label="Menu link">Contact</a></li>
-              <li class="btn-gap"><a href="contact.html" aria-label="Menu link"><span class="btn-login">Login</span></a></li>
-              <li><a href="contact.html" aria-label="Menu link"><span class="btn-register">Register</span></a></li>
+-->
+              <li class="btn-gap"><a href="{{ route('login') }}" aria-label="Menu link"><span class="btn-login">Login</span></a></li>
+              <li><a href="{{ route('register') }}" aria-label="Menu link"><span class="btn-register">Register</span></a></li>
             </ul>
           </div>
         </div>
@@ -64,7 +66,7 @@
           <div class="cs_hero_text position-relative z-2">
             <h1 class="cs_hero_title wow fadeInDown">Streamline Your Business Invoicing with godigital.pk <span class="position-relative"> Platform <img src="{{ asset('build/assets/web-assets/img/vector.svg') }}" alt="Vector line" class="cs_line_1 position-absolute"> <img src="{{ asset('build/assets/web-assets/img/vector-2.svg') }}" alt="Vector line" class="cs_line_2 position-absolute"> </span> </h1>
             <p class="cs_hero_subtitle">Improve your invoicing workflows and simplify your billing processes with our powerful and intuitive invoicing solution</p>
-            <div class="cs_btn_group position-relative"> <a href="https://www.youtube.com/embed/U3IfeAqciL0" aria-label="Video open button" class="cs_btn cs_style_1 cs_purple_bg cs_white_color cs_video_open wow fadeInLeft"><span>Get a Demo</span></a> <a href="register.html" aria-label="Register free button" class="cs_btn cs_style_1 cs_outline cs_semibold cs_heading_color wow fadeInRight"> <span class="cs_player_text">Get Started Free</span> </a> </div>
+            <div class="cs_btn_group position-relative"> <a href="{{ route('register') }}" aria-label="Video open button" class="cs_btn cs_style_1 cs_purple_bg cs_white_color cs_video_open wow fadeInLeft"><span>Get a Demo</span></a> <a href="{{ route('register') }}" aria-label="Register free button" class="cs_btn cs_style_1 cs_outline cs_semibold cs_heading_color wow fadeInRight"> <span class="cs_player_text">Get Started Free</span> </a> </div>
           </div>
         </div>
       </div>
@@ -264,7 +266,7 @@
     <div class="cs_cta_text cs_center_column text-center position-relative z-1">
       <h2 class="cs_fs_50 cs_white_color cs_mb_48 wow fadeInDown">Boost Sales. Build Lasting Relationships. <br>
         Achieve Faster Growth Today!</h2>
-      <div class="text-center"> <a href="{{ url('sign-up-basic') }}" aria-label="Get started now button" class="btn-started-black"> Get Started Now! </a> </div>
+      <div class="text-center"> <a href="{{ route('register') }}" aria-label="Get started now button" class="btn-started-black"> Get Started Now! </a> </div>
     </div>
     <div class="cs_cta_shape_1 cs_accent_bg cs_radius_100 position-absolute"></div>
     <div class="cs_cta_shape_2 cs_accent_bg cs_radius_100 position-absolute"></div>
@@ -595,11 +597,11 @@
           customer satisfaction?</h2>
         <form action="#" class="cs_newsletter_form cs_type_3 cs_mb_21 position-relative wow fadeInUp">
           <input type="text" class="cs_newsletter_input cs_heading_bg cs_radius_50 text-capitalize" placeholder="Enter your email address">
-          <button type="submit" aria-label="Sign up button" class="cs_btn cs_style_1 cs_purple_bg cs_accent_hover cs_fs_16 cs_semibold cs_white_color"> <span>Sign Up Free</span> </button>
+          <a href="{{ route('register') }}" type="submit" aria-label="Sign up button" class="cs_btn cs_style_1 cs_purple_bg cs_accent_hover cs_fs_16 cs_semibold cs_white_color"> <span>Sign Up Free</span> </a>
         </form>
         <ul class="cs_list cs_style_2 cs_mp_0">
           <li class="cs_border_color"> <i class="fa-solid fa-check cs_accent_color"></i> Sign Up and Start Immediately </li>
-          <li class="cs_border_color"> <i class="fa-solid fa-check cs_accent_color"></i> Free trial </li>
+          <li class="cs_border_color"> <i class="fa-solid fa-check cs_accent_color"></i> 24/7 Support </li>
         </ul>
       </div>
     </div>
@@ -622,11 +624,11 @@
           <div class="cs_footer_widget cs_links_widget">
             <h3 class="cs_footer_widget_title cs_fs_21 cs_mb_21">Quick Links</h3>
             <ul class="cs_footer_medu cs_mp_0">
-              <li><a href="index.html" aria-label="Services">Services</a></li>
-              <li><a href="features.html" aria-label="Features">Features</a></li>
+              <li><a href="#" aria-label="Services">Services</a></li>
+              <li><a href="#" aria-label="Features">Features</a></li>
 <!--              <li><a href="pricing.html" aria-label="Pricing page link">Pricing</a></li>-->
 <!--              <li><a href="blog.html" aria-label="Blog page link">Blog</a></li>-->
-              <li><a href="contact.html" aria-label="Contact">Contact</a></li>
+              <li><a href="#" aria-label="Contact">Contact</a></li>
             </ul>
           </div>
         </div>
@@ -637,7 +639,7 @@
 <!--              <li><a href="contact.html" aria-label="Contact page link">Contact</a></li>-->
 <!--              <li><a href="#" aria-label="Help link">Help</a></li>-->
               <li><a href="#" aria-label="Refund Policy">Refund Policy</a></li>
-              <li><a href="term-condition.html" aria-label="Terms & Condition link">Terms & Condition</a></li>
+              <li><a href="#" aria-label="Terms & Condition link">Terms & Condition</a></li>
             </ul>
           </div>
         </div>
@@ -646,8 +648,8 @@
             <h3 class="cs_footer_widget_title cs_fs_21 cs_mb_21">Contact Info</h3>
             <ul class="cs_footer_medu cs_mp_0">
               <li>24/7 Support Center</li>
-              <li><a href="mailto:contact@gosaas.com" aria-label="Email send link">info@ai.godigital.pk </a></li>
-              <li><a href="tel:55123456789" aria-label="Phone call link">0300 849 59 52</a></li>
+              <li><a href="mailto:info@ai.godigital.pk" aria-label="Email send link">info@ai.godigital.pk </a></li>
+              <li><a href="tel:03008495952" aria-label="Phone call link">0300 849 59 52</a></li>
 <!--              <li>10 am - 12 pm, Everyday</li>-->
             </ul>
           </div>
