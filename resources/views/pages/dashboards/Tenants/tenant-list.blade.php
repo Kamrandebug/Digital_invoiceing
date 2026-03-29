@@ -21,6 +21,12 @@
 <div class="page-header-breadcrumb mb-3">
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Select Tenant</h1>
+        <button type="button"
+                class="btn btn-sm btn-primary ms-auto"
+                data-bs-toggle="modal"
+                data-bs-target="#addTenantModal">
+            <i class="ri-add-line align-middle me-1"></i> Add Tenant
+        </button>
     </div>
 </div>
 
@@ -82,6 +88,45 @@
                     </div>
                 @endif
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Tenant Modal -->
+<div class="modal fade" id="addTenantModal" tabindex="-1" aria-labelledby="addTenantModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addTenantModalLabel">Add Tenant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ route('tenants.add') }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="tenant-business-name" class="form-label">Business Name</label>
+                        <input type="text"
+                               name="BusinessName"
+                               id="tenant-business-name"
+                               class="form-control"
+                               value="{{ old('BusinessName') }}"
+                               required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tenant-image" class="form-label">Image (URL or path)</label>
+                        <input type="text"
+                               name="Image"
+                               id="tenant-image"
+                               class="form-control"
+                               value="{{ old('Image') }}"
+                               placeholder="https://example.com/logo.png or uploads/logo.png">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Tenant</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

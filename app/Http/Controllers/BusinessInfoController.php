@@ -23,35 +23,35 @@ class BusinessInfoController extends Controller
      */
     public function save_transaction(Request $request)
     {
-        // Normalize inputs
+        // Normalize inputs (empty optional fields → null where uniqueness applies)
+        $emailRaw = trim($request->Email ?? '');
+        $mobileRaw = preg_replace('/[^0-9+]/', '', $request->Mobile ?? '');
         $request->merge([
             'FirstName' => trim($request->FirstName ?? ''),
             'LastName'  => trim($request->LastName ?? ''),
-            'Email'     => strtolower(trim($request->Email ?? '')),
-            'Mobile'    => preg_replace('/[^0-9+]/', '', $request->Mobile ?? ''),
+            'Email'     => $emailRaw === '' ? null : strtolower($emailRaw),
+            'Mobile'    => $mobileRaw === '' ? null : $mobileRaw,
             'Phone'     => $request->Phone ? preg_replace('/[^0-9+]/', '', $request->Phone) : null,
         ]);
 
-        // Validate
+        // Validate (only BusinessName, NTN, Address are required)
         try {
             $validated = $request->validate([
-                'Title'        => 'required|string|in:Mr,Mrs,Miss,Ms,Dr,Prof,Engr',
-                'FirstName'    => ['required','string','min:2','max:100'],
-                'LastName'     => ['required','string','min:2','max:100'],
-                'BusinessName' => ['nullable','string','max:200'],
-                'Email'        => ['required','email','max:500','unique:tbl_business_info,Email'],
-                'Mobile'       => ['required','string','max:100','unique:tbl_business_info,Mobile'],
-                'Phone'        => ['nullable','string','max:100'],
-                'Website'      => ['nullable','url','max:200'],
-                'Address'      => 'nullable|string|max:500',
-                'NTN'          => ['nullable','string','max:20','unique:tbl_business_info,NTN'],
-                'SalesTaxNumber'=> ['nullable','string','max:50','unique:tbl_business_info,SalesTaxNumber'],
-                'CNIC'         => ['nullable','string','max:50','unique:tbl_business_info,CNIC'],
-                'IsFiler'      => 'nullable|boolean',
-                'Notes'        => 'nullable|string|max:500',
-                'Sandbox_access_token' => ['nullable','string','max:1000'],
-                'iris_access_token'    => ['nullable','string','max:1000'],
-                'Status'       => 'required|integer|in:0,1',
+                'BusinessName' => ['required', 'string', 'max:200'],
+                'NTN'          => ['required', 'string', 'max:20', 'unique:tbl_business_info,NTN'],
+                'Address'      => ['required', 'string', 'max:500'],
+                'Province'     => ['nullable', 'string', 'max:100'],
+                'FirstName'    => ['nullable', 'string', 'max:100'],
+                'LastName'     => ['nullable', 'string', 'max:100'],
+                'Email'        => ['nullable', 'email', 'max:500', 'unique:tbl_business_info,Email'],
+                'Mobile'       => ['nullable', 'string', 'max:100', 'unique:tbl_business_info,Mobile'],
+                'Phone'        => ['nullable', 'string', 'max:100'],
+                'Website'      => ['nullable', 'url', 'max:200'],
+                'SalesTaxNumber'=> ['nullable', 'string', 'max:50', 'unique:tbl_business_info,SalesTaxNumber'],
+                'CNIC'         => ['nullable', 'string', 'max:50', 'unique:tbl_business_info,CNIC'],
+                'Notes'        => ['nullable', 'string', 'max:500'],
+                'Sandbox_access_token' => ['nullable', 'string', 'max:1000'],
+                'iris_access_token'    => ['nullable', 'string', 'max:1000'],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -81,23 +81,24 @@ class BusinessInfoController extends Controller
                 'ID'            => $nextId,
                 'TID'           => $nextId,
                 'AccountNo'     => 'BIZ-' . str_pad($nextId, 6, '0', STR_PAD_LEFT),
-                'Title'         => $request->Title,
+                'Title'         => 'Mr',
                 'FirstName'     => $request->FirstName,
                 'LastName'      => $request->LastName,
                 'BusinessName'  => $request->BusinessName,
                 'Email'         => $request->Email,
-                'Mobile'        => $request->Mobile,
+                'Mobile'        => $request->Mobile ?? '',
                 'Phone'         => $request->Phone ?? '',
                 'Website'       => $request->Website ?? '',
                 'Address'       => $request->Address,
+                'Province'      => $request->Province ?? '',
                 'NTN'           => $request->NTN,
                 'SalesTaxNumber'=> $request->SalesTaxNumber ?? '',
                 'CNIC'          => $request->CNIC,
-                'IsFiler'       => $request->input('IsFiler', 1),
+                'IsFiler'       => 1,
                 'Notes'         => $request->Notes,
                 'Sandbox_access_token' => $request->Sandbox_access_token,
                 'iris_access_token'    => $request->iris_access_token,
-                'Status'        => $request->Status,
+                'Status'        => 1,
                 'IsDashboard'   => 0,
                 'IsArchive'     => 0,
                 'CreatedBy'     => (int) $userId,
@@ -161,33 +162,33 @@ class BusinessInfoController extends Controller
         }
 
         // Normalize
+        $emailRaw = trim($request->Email ?? '');
+        $mobileRaw = preg_replace('/[^0-9+]/', '', $request->Mobile ?? '');
         $request->merge([
             'FirstName' => trim($request->FirstName ?? ''),
             'LastName'  => trim($request->LastName ?? ''),
-            'Email'     => strtolower(trim($request->Email ?? '')),
-            'Mobile'    => preg_replace('/[^0-9+]/', '', $request->Mobile ?? ''),
+            'Email'     => $emailRaw === '' ? null : strtolower($emailRaw),
+            'Mobile'    => $mobileRaw === '' ? null : $mobileRaw,
             'Phone'     => $request->Phone ? preg_replace('/[^0-9+]/', '', $request->Phone) : null,
         ]);
 
         try {
             $validated = $request->validate([
-                'Title'        => 'required|string|in:Mr,Mrs,Miss,Ms,Dr,Prof,Engr',
-                'FirstName'    => ['required','string','min:2','max:100'],
-                'LastName'     => ['required','string','min:2','max:100'],
-                'BusinessName' => ['nullable','string','max:200'],
-                'Email'        => ['required','email','max:500', Rule::unique('tbl_business_info','Email')->ignore($id, 'ID')],
-                'Mobile'       => ['required','string','max:100', Rule::unique('tbl_business_info','Mobile')->ignore($id, 'ID')],
-                'Phone'        => ['nullable','string','max:100'],
-                'Website'      => ['nullable','url','max:200'],
-                'Address'      => 'nullable|string|max:500',
-                'NTN'          => ['nullable','string','max:20', Rule::unique('tbl_business_info','NTN')->ignore($id, 'ID')->whereNotNull('NTN')],
-                'SalesTaxNumber'=> ['nullable','string','max:50', Rule::unique('tbl_business_info','SalesTaxNumber')->ignore($id, 'ID')->whereNotNull('SalesTaxNumber')],
-                'CNIC'         => ['nullable','string','max:50', Rule::unique('tbl_business_info','CNIC')->ignore($id, 'ID')],
-                'IsFiler'      => 'nullable|boolean',
-                'Notes'        => 'nullable|string|max:500',
-                'Sandbox_access_token' => ['nullable','string','max:1000'],
-                'iris_access_token'    => ['nullable','string','max:1000'],
-                'Status'       => 'required|integer|in:0,1',
+                'BusinessName' => ['required', 'string', 'max:200'],
+                'NTN'          => ['required', 'string', 'max:20', Rule::unique('tbl_business_info', 'NTN')->ignore($id, 'ID')],
+                'Address'      => ['required', 'string', 'max:500'],
+                'Province'     => ['nullable', 'string', 'max:100'],
+                'FirstName'    => ['nullable', 'string', 'max:100'],
+                'LastName'     => ['nullable', 'string', 'max:100'],
+                'Email'        => ['nullable', 'email', 'max:500', Rule::unique('tbl_business_info', 'Email')->ignore($id, 'ID')],
+                'Mobile'       => ['nullable', 'string', 'max:100', Rule::unique('tbl_business_info', 'Mobile')->ignore($id, 'ID')],
+                'Phone'        => ['nullable', 'string', 'max:100'],
+                'Website'      => ['nullable', 'url', 'max:200'],
+                'SalesTaxNumber'=> ['nullable', 'string', 'max:50', Rule::unique('tbl_business_info', 'SalesTaxNumber')->ignore($id, 'ID')->whereNotNull('SalesTaxNumber')],
+                'CNIC'         => ['nullable', 'string', 'max:50', Rule::unique('tbl_business_info', 'CNIC')->ignore($id, 'ID')],
+                'Notes'        => ['nullable', 'string', 'max:500'],
+                'Sandbox_access_token' => ['nullable', 'string', 'max:1000'],
+                'iris_access_token'    => ['nullable', 'string', 'max:1000'],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -211,23 +212,24 @@ class BusinessInfoController extends Controller
             $data = [
                 'TID'           => $id,
                 'AccountNo'     => $existing->AccountNo ?? ('BIZ-' . str_pad($id, 6, '0', STR_PAD_LEFT)),
-                'Title'         => $request->Title,
+                'Title'         => $existing->Title ?? 'Mr',
                 'FirstName'     => $request->FirstName,
                 'LastName'      => $request->LastName,
                 'BusinessName'  => $request->BusinessName,
                 'Email'         => $request->Email,
-                'Mobile'        => $request->Mobile,
+                'Mobile'        => $request->Mobile ?? '',
                 'Phone'         => $request->Phone ?? '',
                 'Website'       => $request->Website ?? '',
                 'Address'       => $request->Address,
+                'Province'      => $request->Province ?? '',
                 'NTN'           => $request->NTN,
                 'SalesTaxNumber'=> $request->SalesTaxNumber ?? '',
                 'CNIC'          => $request->CNIC,
-                'IsFiler'       => $request->input('IsFiler', 1),
+                'IsFiler'       => $existing->IsFiler ?? 1,
                 'Notes'         => $request->Notes,
                 'Sandbox_access_token' => $request->Sandbox_access_token,
                 'iris_access_token'    => $request->iris_access_token,
-                'Status'        => $request->Status,
+                'Status'        => $existing->Status ?? 1,
                 'IsDashboard'   => $existing->IsDashboard ?? 0,
                 'IsArchive'     => $existing->IsArchive ?? 0,
                 'CreatedBy'     => $existing->CreatedBy ?? $userId,

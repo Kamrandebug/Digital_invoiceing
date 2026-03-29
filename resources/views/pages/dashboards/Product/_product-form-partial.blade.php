@@ -12,6 +12,7 @@
     $isReadonly = ($mode === 'show');
     $formAction = $isCreate ? route('products.save_transaction') : ($isEdit ? route('products.edit_transaction', $product->ID) : '#');
     $uid = 'pfp_' . $mode . '_' . ($product->ID ?? 'new');
+    $taxDisplayLabels = isset($taxDisplayLabels) && is_array($taxDisplayLabels) ? $taxDisplayLabels : null;
 @endphp
 
 @once
@@ -127,7 +128,7 @@
                         <div class="col-md-3">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">UOM</label>
                             @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ $product->UOM ?? '-' }}</div>
+                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['uom'] ?? '—') : ($product->UOM ?? '-') }}</div>
                             @else
                                 <select name="UOM"
                                         class="form-select form-select-sm @error('UOM') is-invalid @enderror"
@@ -140,11 +141,14 @@
                         <div class="col-md-3">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Sale Type</label>
                             @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ $product->SaleType ?? '-' }}</div>
+                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sale_type'] ?? '—') : ($product->SaleType ?? '-') }}</div>
                             @else
                                 <select name="SaleType"
                                         class="form-select form-select-sm @error('SaleType') is-invalid @enderror"
-                                        data-selected="{{ old('SaleType', $product->SaleType ?? '') }}">
+                                        data-selected="{{ old('SaleType', $product->SaleType ?? '') }}"
+                                        @if($isCreate && (string) old('SaleType', $product->SaleType ?? '') === '')
+                                        data-apply-default-sale-type="1"
+                                        @endif>
                                     <option value="">Loading...</option>
                                 </select>
                                 @error('SaleType')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -153,7 +157,7 @@
                         <div class="col-md-3">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Sale Type To Rate</label>
                             @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ $product->SaleTypeToRate ?? '-' }}</div>
+                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sale_type_to_rate'] ?? '—') : ($product->SaleTypeToRate ?? '-') }}</div>
                             @else
                                 <select name="SaleTypeToRate"
                                         class="form-select form-select-sm @error('SaleTypeToRate') is-invalid @enderror"
@@ -166,7 +170,7 @@
                         <div class="col-md-3">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">SRO Schedule</label>
                             @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ $product->SROSchedule ?? '-' }}</div>
+                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sro_schedule'] ?? '—') : ($product->SROSchedule ?? '-') }}</div>
                             @else
                                 <select name="SROSchedule"
                                         class="form-select form-select-sm @error('SROSchedule') is-invalid @enderror"
@@ -179,7 +183,7 @@
                         <div class="col-md-3">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">SRO Item</label>
                             @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ $product->SROItem ?? '-' }}</div>
+                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sro_item'] ?? '—') : ($product->SROItem ?? '-') }}</div>
                             @else
                                 <select name="SROItem"
                                         class="form-select form-select-sm @error('SROItem') is-invalid @enderror"
@@ -258,7 +262,11 @@
         }
 
         fetch("{{ route('products.hscode-info') }}?code=" + encodeURIComponent(code), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
         })
             .then(function (res) { return res.json(); })
             .then(function (data) {
@@ -313,6 +321,23 @@
                     }
                     saleTypeSelect.appendChild(opt);
                 });
+                // Add Product: default Sale Type to "Goods at standard rate (default)" when nothing saved
+                if (!selected && saleTypeSelect.getAttribute('data-apply-default-sale-type') === '1') {
+                    var want = 'Goods at standard rate (default)';
+                    var wantLc = want.toLowerCase();
+                    var opts = saleTypeSelect.querySelectorAll('option');
+                    for (var i = 0; i < opts.length; i++) {
+                        var opt = opts[i];
+                        if (!opt.value) continue;
+                        var label = (opt.textContent || '').trim();
+                        var ll = label.toLowerCase();
+                        if (ll === wantLc || (ll.indexOf('goods at standard rate') !== -1 && ll.indexOf('default') !== -1)) {
+                            opt.selected = true;
+                            saleTypeSelect.setAttribute('data-selected', opt.value);
+                            break;
+                        }
+                    }
+                }
                 // After Sale Types load, if one is selected, load Sale Type To Rate options
                 var selVal = saleTypeSelect.value;
                 if (selVal) {
@@ -437,13 +462,17 @@
             .catch(function () {});
     }
 
-    if (hsInput && uomSelect) {
+    if (hsInput) {
         var debounceTimer;
         hsInput.addEventListener('input', function () {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(fetchHsCodeInfo, 500);
+            debounceTimer = setTimeout(fetchHsCodeInfo, 400);
         });
         hsInput.addEventListener('blur', function () {
+            clearTimeout(debounceTimer);
+            fetchHsCodeInfo();
+        });
+        hsInput.addEventListener('change', function () {
             clearTimeout(debounceTimer);
             fetchHsCodeInfo();
         });

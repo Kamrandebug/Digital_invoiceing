@@ -3,6 +3,33 @@
 @extends('layouts.master')
 
 @section('styles')
+<style>
+    .fbr-summary-card.fbr-summary--invalid {
+        background: #fff8f8 !important;
+        border-color: #f5c2c7 !important;
+    }
+    .fbr-summary-card.fbr-summary--valid {
+        background: #f4fff8 !important;
+        border-color: #badbcc !important;
+    }
+
+    /* Invoice list: action column — global .action-col is 100px max and breaks split + dropdown */
+    #invoicesTable th.action-col,
+    #invoicesTable td:last-child {
+        min-width: 10rem;
+        max-width: none !important;
+        width: auto !important;
+        text-align: end;
+        vertical-align: middle;
+    }
+    #invoicesTable .btn-group.btn-listing {
+        position: relative;
+    }
+    /* Popper uses strategy:fixed on toggle; keep menu above table scroll layers */
+    #invoicesTable .dropdown-menu {
+        z-index: 1060;
+    }
+</style>
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.0/dist/css/bootstrap-datepicker3.min.css" rel="stylesheet">
@@ -169,26 +196,29 @@
                     <thead>
                         <tr>
                             <th><input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
-                            <th>Doc No. <i class="fas fa-sort"></i></th>
-                            <th>Invoice Date <i class="fas fa-sort"></i></th>
-                            <th>Due Date</th>
+                            <th>InvoiceDate <i class="fas fa-sort"></i></th>
                             <th width="25%">Customer</th>
-                            <th>Total Amount</th>
+                            <th>DocNo <i class="fas fa-sort"></i></th>
+                            <th>Net</th>
                             <th>FBR Transaction ID</th>
                             <th style="width:260px;">FBR Response</th>
-                            <th>Status</th>
                             <th class="action-col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($invoices as $invoice)
+                        @php
+                            $fbrTxId = trim((string) ($invoice->FbrTransactionID ?? ''));
+                            $fbrRespRaw = trim((string) ($invoice->FbrResponseJson ?? ''));
+                            $fbrRespForCheck = strtolower($fbrRespRaw);
+                            $fbrIsValid = $fbrRespForCheck !== '' && str_contains($fbrRespForCheck, 'valid');
+                            $fbrLocked = $fbrTxId !== '' && $fbrIsValid;
+                        @endphp
                         <tr>
                             {{-- HeaderID is the unique key from getlistingdata() --}}
                             <td>
                                 <input type="checkbox" class="invoice-checkbox form-check-input" value="{{ $invoice->HeaderID }}" />
                             </td>
-
-                            <td>{{ $invoice->DocNo ?? 'N/A' }}</td>
 
                             <td>
                                 {{ $invoice->InvoiceDate
@@ -196,13 +226,9 @@
                                     : '-' }}
                             </td>
 
-                            <td>
-                                {{ $invoice->DueDate
-                                    ? \Carbon\Carbon::parse($invoice->DueDate)->format('d/m/Y')
-                                    : '-' }}
-                            </td>
-
                             <td>{{ $invoice->CustomerDisplayName ?? 'N/A' }}</td>
+
+                            <td>{{ $invoice->DocNo ?? 'N/A' }}</td>
 
                             <td>{{ number_format($invoice->TotalAmount ?? 0, 2) }} PKR</td>
 
@@ -234,41 +260,61 @@
                             </td>
 
                             <td>
-                                {{-- Status is an integer: 1 = Active, 2 = Archived --}}
-                                <span class="status-badge  {{ $invoice->Status == 1 ? 'status-active' : 'status-inactive' }}">
-                                    {{ $invoice->Status == 1 ? 'Active' : 'Archived' }}
-                                </span>
-                            </td>
-
-                            <td>
-								
-								<div class="action-wrapper">
+								<div class="action-wrapper d-inline-flex justify-content-end">
 									<div class="btn-group btn-listing">
-									  <button class="btn btn-outline-primary btn-list-left" onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})">
+									  <button type="button" class="btn btn-outline-primary btn-list-left" onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
-									  <button type="button" class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-										<span class="sr-only">Toggle Dropdown</span>
+									  <button type="button"
+                                              class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split"
+                                              data-bs-toggle="dropdown"
+                                              data-bs-auto-close="true"
+                                              data-bs-popper-config='{"strategy":"fixed"}'
+                                              aria-expanded="false">
+										<span class="visually-hidden">Toggle Dropdown</span>
 									  </button>
-									  <ul class="dropdown-menu">
-										
-										<button class="dropdown-item"
-												onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})">
-											<i class="fas fa-edit"></i> Edit
-										</button>
-										<button class="dropdown-item" type="button"
-												onclick="openPrintModal({{ $invoice->HeaderID }}, '{{ $invoice->DocNo ?? 'Invoice' }}')">
-											<i class="fas fa-print"></i> Print
-										</button>
-
-										<form action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
-											  method="POST" onsubmit="return confirmDelete('{{ $invoice->DocNo }}')">
-											@csrf
-											@method('DELETE')
-											<button class="dropdown-item">
-												<i class="fas fa-trash"></i> Delete
+									  <ul class="dropdown-menu dropdown-menu-end">
+										@if(!$fbrLocked)
+										<li>
+											<button type="button" class="dropdown-item"
+													onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})">
+												<i class="fas fa-edit"></i> Edit
 											</button>
-										</form>
+										</li>
+										@endif
+										<li>
+											<button type="button" class="dropdown-item"
+													onclick="openPrintModal({{ $invoice->HeaderID }}, '{{ $invoice->DocNo ?? 'Invoice' }}')">
+												<i class="fas fa-print"></i> Print
+											</button>
+										</li>
+
+										@if(empty(trim((string) ($invoice->FbrTransactionID ?? ''))))
+										<li>
+											<form action="{{ route('invoices.post-fbr', $invoice->HeaderID) }}" method="POST"
+												  class="m-0"
+												  onsubmit="return confirm('Post this invoice to FBR?');">
+												@csrf
+												<button type="submit" class="dropdown-item">
+													<i class="fas fa-paper-plane"></i> Post to FBR
+												</button>
+											</form>
+										</li>
+										@endif
+
+										@if(!$fbrLocked)
+										<li>
+											<form action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
+												  method="POST" class="m-0"
+												  onsubmit="return confirmDelete('{{ $invoice->DocNo }}')">
+												@csrf
+												@method('DELETE')
+												<button type="submit" class="dropdown-item">
+													<i class="fas fa-trash"></i> Delete
+												</button>
+											</form>
+										</li>
+										@endif
 									  </ul>
 									</div>
 								</div>
@@ -417,6 +463,30 @@
                 <button type="button" class="btn-close ms-2" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body pt-3">
+                <div id="fbr_response_summary" class="mb-3 d-none">
+                    <div id="fbr_summary_card" class="card border shadow-sm mb-0 fbr-summary-card" style="background:#f8fbff;">
+                        <div class="card-body p-3">
+                            <div id="fbr_summary_strip" class="d-none align-items-center gap-2 mb-3 pb-2 border-bottom">
+                                <span id="fbr_summary_badge_status" class="badge rounded-pill"></span>
+                                <span id="fbr_summary_badge_code" class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis"></span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label id="fbr_label_code" class="form-label mb-1 fw-semibold text-muted small">Code</label>
+                                    <input type="text" id="fbr_summary_code" class="form-control form-control-sm" readonly>
+                                </div>
+                                <div class="col-md-9">
+                                    <label id="fbr_label_message" class="form-label mb-1 fw-semibold text-muted small">Message</label>
+                                    <input type="text" id="fbr_summary_message" class="form-control form-control-sm" readonly>
+                                </div>
+                                <div class="col-12">
+                                    <label id="fbr_label_description" class="form-label mb-1 fw-semibold text-muted small">Description</label>
+                                    <textarea id="fbr_summary_description" class="form-control form-control-sm" rows="3" readonly></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="text-muted small">
                         <i class="fas fa-code me-1"></i>
@@ -746,6 +816,41 @@ saveBtn.onclick = function () {
 
     // ── FBR Response popup ────────────────────────────────────
     function openFbrResponseModal(resp) {
+        var summaryWrap = document.getElementById('fbr_response_summary');
+        var summaryCard = document.getElementById('fbr_summary_card');
+        var summaryStrip = document.getElementById('fbr_summary_strip');
+        var badgeStatus = document.getElementById('fbr_summary_badge_status');
+        var badgeCode = document.getElementById('fbr_summary_badge_code');
+        var labelCode = document.getElementById('fbr_label_code');
+        var labelMessage = document.getElementById('fbr_label_message');
+        var labelDesc = document.getElementById('fbr_label_description');
+        var summaryCode = document.getElementById('fbr_summary_code');
+        var summaryMessage = document.getElementById('fbr_summary_message');
+        var summaryDescription = document.getElementById('fbr_summary_description');
+
+        if (summaryWrap) summaryWrap.classList.add('d-none');
+        if (summaryCard) {
+            summaryCard.classList.remove('fbr-summary--invalid', 'fbr-summary--valid');
+        }
+        if (summaryStrip) {
+            summaryStrip.classList.add('d-none');
+            summaryStrip.classList.remove('d-flex');
+        }
+        if (badgeStatus) {
+            badgeStatus.textContent = '';
+            badgeStatus.className = 'badge rounded-pill';
+        }
+        if (badgeCode) {
+            badgeCode.textContent = '';
+            badgeCode.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
+        }
+        if (labelCode) labelCode.textContent = 'Code';
+        if (labelMessage) labelMessage.textContent = 'Message';
+        if (labelDesc) labelDesc.textContent = 'Description';
+        if (summaryCode) summaryCode.value = '';
+        if (summaryMessage) summaryMessage.value = '';
+        if (summaryDescription) summaryDescription.value = '';
+
         var bodyEl = document.getElementById('fbr_response_modal_body');
         if (bodyEl) {
             var text = resp || '-';
@@ -776,6 +881,79 @@ saveBtn.onclick = function () {
             if (text.startsWith('{') || text.startsWith('[')) {
                 try {
                     var parsed = JSON.parse(text);
+
+                    if (parsed && typeof parsed === 'object' && summaryWrap) {
+                        var vr = parsed.validationResponse;
+                        var fault = parsed.fault;
+
+                        if (fault && typeof fault === 'object') {
+                            var code = fault.code ?? fault.statusCode ?? '';
+                            var message = fault.message ?? parsed.message ?? '';
+                            var description = fault.description ?? parsed.description ?? parsed.detail ?? '';
+                            if (code || message || description) {
+                                summaryWrap.classList.remove('d-none');
+                                if (summaryCode) summaryCode.value = code !== '' && code !== undefined ? String(code) : '-';
+                                if (summaryMessage) summaryMessage.value = message || '-';
+                                if (summaryDescription) summaryDescription.value = description || '-';
+                                if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
+                            }
+                        } else if (vr && typeof vr === 'object') {
+                            var errCode = vr.errorCode != null ? String(vr.errorCode) : '';
+                            var errText = vr.error != null ? String(vr.error) : '';
+                            var st = vr.status != null ? String(vr.status) : '';
+                            var stc = vr.statusCode != null ? String(vr.statusCode) : '';
+                            if (errCode || errText || st || stc) {
+                                summaryWrap.classList.remove('d-none');
+                                if (labelCode) labelCode.textContent = 'Error code';
+                                if (labelMessage) labelMessage.textContent = 'Status';
+                                if (labelDesc) labelDesc.textContent = 'Error details';
+                                if (summaryCode) summaryCode.value = errCode || '-';
+                                if (summaryMessage) {
+                                    var msgParts = [];
+                                    if (st) msgParts.push(st);
+                                    if (stc) msgParts.push('(' + stc + ')');
+                                    summaryMessage.value = msgParts.length ? msgParts.join(' ') : '-';
+                                }
+                                if (summaryDescription) summaryDescription.value = errText || '-';
+
+                                if (summaryStrip && badgeStatus && badgeCode) {
+                                    summaryStrip.classList.remove('d-none');
+                                    summaryStrip.classList.add('d-flex');
+                                    var stLower = st.toLowerCase();
+                                    if (stLower === 'invalid') {
+                                        badgeStatus.textContent = 'Invalid';
+                                        badgeStatus.className = 'badge rounded-pill bg-danger-subtle text-danger-emphasis';
+                                        if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
+                                    } else if (stLower === 'valid') {
+                                        badgeStatus.textContent = 'Valid';
+                                        badgeStatus.className = 'badge rounded-pill bg-success-subtle text-success-emphasis';
+                                        if (summaryCard) summaryCard.classList.add('fbr-summary--valid');
+                                    } else if (st) {
+                                        badgeStatus.textContent = st;
+                                        badgeStatus.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
+                                    }
+                                    if (errCode) {
+                                        badgeCode.textContent = 'Error ' + errCode;
+                                        badgeCode.className = 'badge rounded-pill bg-dark-subtle text-dark-emphasis';
+                                    } else if (stc) {
+                                        badgeCode.textContent = 'Code ' + stc;
+                                    }
+                                }
+                            }
+                        } else {
+                            var codeRoot = parsed.code != null ? parsed.code : '';
+                            var msgRoot = parsed.message != null ? parsed.message : '';
+                            var descRoot = parsed.description != null ? parsed.description : (parsed.detail != null ? parsed.detail : '');
+                            if (codeRoot !== '' || msgRoot !== '' || descRoot !== '') {
+                                summaryWrap.classList.remove('d-none');
+                                if (summaryCode) summaryCode.value = codeRoot !== '' ? String(codeRoot) : '-';
+                                if (summaryMessage) summaryMessage.value = msgRoot || '-';
+                                if (summaryDescription) summaryDescription.value = descRoot || '-';
+                                if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
+                            }
+                        }
+                    }
+
                     text = JSON.stringify(parsed, null, 2);
                 } catch (e) {
                     // leave as raw text if not valid JSON

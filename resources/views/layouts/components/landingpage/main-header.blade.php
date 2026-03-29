@@ -44,10 +44,17 @@
             <!-- Start::header-element -->
             <div class="header-element align-items-center">
                 <!-- Start::header-link|switcher-icon -->
-                <div class="btn-list d-lg-none d-block">
-                    <a href="{{ url('sign-up-basic') }}" class="btn btn-primary-light">
-                        Sign Up
-                    </a>
+                <div class="btn-list d-lg-none d-block gap-1">
+                    @guest
+                        @if (Route::has('login'))
+                            <a href="{{ route('login') }}" class="btn btn-primary-light btn-sm">Login</a>
+                        @endif
+                        @if (Route::has('register'))
+                            <a href="{{ route('register') }}" class="btn btn-primary-light btn-sm">Register</a>
+                        @endif
+                    @else
+                        <a href="{{ route('dashboard') }}" class="btn btn-primary-light btn-sm">Dashboard</a>
+                    @endguest
                     <button class="btn btn-icon btn-success switcher-icon" data-bs-toggle="offcanvas"
                         data-bs-target="#switcher-canvas">
                         <i class="ri-settings-3-line"></i>

@@ -46,6 +46,18 @@ class InvoiceController extends Controller
         return view('pages.dashboards.Invoice.invoice-list', compact('invoices'));
     }
 
+    /**
+     * POST invoice payload to FBR and store transaction id + full JSON response on the header row.
+     */
+    public function postToFbr(int $id)
+    {
+        $result = InvoiceModel::post_to_fbr($id);
+
+        return redirect()
+            ->route('invoices.index')
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
     // ══════════════════════════════════════════════════════════
     //  CREATE — Load form with dropdowns
     // ══════════════════════════════════════════════════════════
@@ -83,11 +95,7 @@ class InvoiceController extends Controller
                 ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
                 ->select(
                     'h.*',
-                    DB::raw("
-                        COALESCE(NULLIF(TRIM(cust.DisplayName),''),
-                            CONCAT(COALESCE(cust.FirstName,''),' ',COALESCE(cust.LastName,''))
-                        ) AS CustomerDisplayName
-                    ")
+                    InvoiceModel::sqlCustomerDisplayName()
                 )
                 ->where('h.ID', $id)
                 ->where('h.Status', '!=', 2)
@@ -130,11 +138,7 @@ class InvoiceController extends Controller
             ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
             ->select(
                 'h.*',
-                DB::raw("
-                    COALESCE(NULLIF(TRIM(cust.DisplayName),''),
-                        CONCAT(COALESCE(cust.FirstName,''),' ',COALESCE(cust.LastName,''))
-                    ) AS CustomerDisplayName
-                ")
+                InvoiceModel::sqlCustomerDisplayName()
             )
             ->where('h.ID', $id)
             ->where('h.Status', '!=', 2)

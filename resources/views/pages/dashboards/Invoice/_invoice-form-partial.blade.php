@@ -85,7 +85,7 @@
                 <option value="">— Select Customer —</option>
                 @foreach($customers as $cust)
                     <option value="{{ $cust->ID }}" {{ old('CustomerID', $invoice->CustomerID ?? '') == $cust->ID ? 'selected' : '' }}>
-                        {{ trim($cust->DisplayName ?? '') ?: trim($cust->BusinessName ?? '') ?: trim($cust->FirstName ?? '') ?: ('Customer #' . $cust->ID) }}
+                        {{ trim($cust->BusinessName ?? '') ?: trim($cust->DisplayName ?? '') ?: trim(trim(($cust->FirstName ?? '') . ' ' . ($cust->LastName ?? ''))) ?: ('Customer #' . $cust->ID) }}
                     </option>
                 @endforeach
             </select>

@@ -538,6 +538,13 @@
 						</div>
 					</div>
 					<div class="dropdown-divider"></div>
+					@php
+						// Read user from the landlord/digital_invoicing database instead of the tenant DB
+						$headerUser = \Illuminate\Support\Facades\DB::connection('landlord')
+							->table('users')
+							->where('id', auth()->id())
+							->first();
+					@endphp
 					<div class="p-3">
 						<div class="d-flex align-items-start gap-2">
 							<div class="lh-1">
@@ -546,8 +553,12 @@
 								</span>
 							</div>
 							<div>
-								<span class="d-block fw-semibold lh-1">Tom Phillip</span>
-								<span class="text-muted fs-12">tomphillip32@gmail.com</span>
+								<span class="d-block fw-semibold lh-1">
+									{{ $headerUser?->name ?? 'User' }}
+								</span>
+								<span class="text-muted fs-12">
+									{{ $headerUser?->email ?? '' }}
+								</span>
 							</div>
 						</div>
 					</div>
@@ -561,6 +572,13 @@
 								<li>
 									<a class="dropdown-item d-flex align-items-center" href="javascript:void(0);" onclick="openBusinessModal('edit', 1);"><i class="ti ti-building-store me-2 fs-18"></i>Business Info</a>
 								</li>
+								@if(!request()->routeIs('tenants.index'))
+									<li>
+										<a class="dropdown-item d-flex align-items-center" href="{{ route('tenants.index') }}">
+											<i class="ti ti-building-store me-2 fs-18"></i>Switch Tenant
+										</a>
+									</li>
+								@endif
 								<li>
 									<a class="dropdown-item d-flex align-items-center" href="{{url('mail-settings')}}"><i class="ti ti-settings-cog me-2 fs-18"></i>Account Settings</a>
 								</li>
@@ -579,7 +597,15 @@
 								</li>
 							</ul>        
 						</li>
-						<li><a class="dropdown-item d-flex align-items-center" href="{{url('sign-in-cover')}}"><i class="ti ti-logout me-2 fs-18"></i>Log Out</a></li>
+						<li>
+							<form method="POST" action="{{ route('logout') }}">
+								@csrf
+								<a href="javascript:void(0);" class="dropdown-item d-flex align-items-center"
+								   onclick="event.preventDefault(); this.closest('form').submit();">
+									<i class="ti ti-logout me-2 fs-18"></i>Log Out
+								</a>
+							</form>
+						</li>
 					</ul>
 				</div>
 			</li>  

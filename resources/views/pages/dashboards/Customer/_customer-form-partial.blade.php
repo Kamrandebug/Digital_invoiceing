@@ -189,11 +189,11 @@
 		<div class="row g-2">
 			{{-- Title --}}
 			<div class="col-md-3">
-				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Title</label>
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Title</label>
 				@if($isReadonly)
 					<div class="_cfp-detail-value">{{ $customer->Title ?? '-' }}</div>
 				@else
-					<select name="Title" class="form-select form-select-sm @error('Title') is-invalid @enderror" required>
+					<select name="Title" class="form-select form-select-sm @error('Title') is-invalid @enderror">
 						<option value="">Select</option>
 						@foreach(['Mr','Mrs','Miss','Dr','Prof','Engr'] as $t)
 							<option value="{{ $t }}" {{ old('Title', $customer->Title ?? '') == $t ? 'selected' : '' }}>{{ $t }}</option>
@@ -205,26 +205,26 @@
 
 			{{-- First Name --}}
 			<div class="col-md-3">
-				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">First Name</label>
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">First Name</label>
 				@if($isReadonly)
 					<div class="_cfp-detail-value">{{ $customer->FirstName ?? '-' }}</div>
 				@else
 					<input type="text" name="FirstName" id="{{ $uid }}_FirstName"
 						   class="form-control form-control-sm @error('FirstName') is-invalid @enderror"
-						   value="{{ old('FirstName', $customer->FirstName ?? '') }}" placeholder="First name" required>
+						   value="{{ old('FirstName', $customer->FirstName ?? '') }}" placeholder="First name">
 					@error('FirstName')<div class="invalid-feedback">{{ $message }}</div>@enderror
 				@endif
 			</div>
 
 			{{-- Last Name --}}
 			<div class="col-md-3">
-				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Last Name</label>
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Last Name</label>
 				@if($isReadonly)
 					<div class="_cfp-detail-value">{{ $customer->LastName ?? '-' }}</div>
 				@else
 					<input type="text" name="LastName" id="{{ $uid }}_LastName"
 						   class="form-control form-control-sm @error('LastName') is-invalid @enderror"
-						   value="{{ old('LastName', $customer->LastName ?? '') }}" placeholder="Last name" required>
+						   value="{{ old('LastName', $customer->LastName ?? '') }}" placeholder="Last name">
 					@error('LastName')<div class="invalid-feedback">{{ $message }}</div>@enderror
 				@endif
 			</div>
@@ -258,25 +258,25 @@
 			</div>
 			
 			<div class="col-md-3">
-				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Email</label>
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Email</label>
 				@if($isReadonly)
 					<div class="_cfp-detail-value">{{ $customer->Email ?? '-' }}</div>
 				@else
 					<input type="email" name="Email"
 						   class="form-control form-control-sm @error('Email') is-invalid @enderror"
-						   value="{{ old('Email', $customer->Email ?? '') }}" placeholder="customer@example.com" required>
+						   value="{{ old('Email', $customer->Email ?? '') }}" placeholder="customer@example.com">
 					@error('Email')<div class="invalid-feedback">{{ $message }}</div>@enderror
 				@endif
 			</div>
 
 			<div class="col-md-3">
-				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Mobile</label>
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Mobile</label>
 				@if($isReadonly)
 					<div class="_cfp-detail-value">{{ $customer->Mobile ?? '-' }}</div>
 				@else
 					<input type="text" name="Mobile"
 						   class="form-control form-control-sm @error('Mobile') is-invalid @enderror"
-						   value="{{ old('Mobile', $customer->Mobile ?? '') }}" placeholder="3001234567" required>
+						   value="{{ old('Mobile', $customer->Mobile ?? '') }}" placeholder="3001234567">
 					@error('Mobile')<div class="invalid-feedback">{{ $message }}</div>@enderror
 				@endif
 			</div>
@@ -331,7 +331,7 @@
 						<div class="col-md-6">
 							<div class="row g-2">
 								<div class="col-md-12">
-									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }} float-start">Street Address</label>
+									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }} float-start">Street Address</label>
 									<div class="form-check float-end">
 										<input type="hidden" name="SameAsBilling" value="0">
 										<input class="form-check-input" type="checkbox" name="SameAsBilling" id="{{ $uid }}_SameAsBilling" value="1" {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
@@ -342,19 +342,19 @@
 									@else
 										<textarea name="Address" rows="2"
 												  class="form-control form-control-sm @error('Address') is-invalid @enderror"
-												  placeholder="Enter street address" required>{{ old('Address', $customer->Address ?? '') }}</textarea>
+												  placeholder="Enter street address">{{ old('Address', $customer->Address ?? '') }}</textarea>
 										@error('Address')<div class="invalid-feedback">{{ $message }}</div>@enderror
 									@endif
 								</div>
 
 								<div class="col-md-3">
-									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">City</label>
+									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">City</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->City ?? '-' }}</div>
 									@else
 										<input type="text" name="City"
 											   class="form-control form-control-sm @error('City') is-invalid @enderror"
-											   value="{{ old('City', $customer->City ?? '') }}" placeholder="City" required>
+											   value="{{ old('City', $customer->City ?? '') }}" placeholder="City">
 										@error('City')<div class="invalid-feedback">{{ $message }}</div>@enderror
 									@endif
 								</div>
@@ -372,25 +372,25 @@
 								</div>
 
 								<div class="col-md-3">
-									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Postal Code</label>
+									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Postal Code</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->PostalCode ?? '-' }}</div>
 									@else
 										<input type="text" name="PostalCode"
 											   class="form-control form-control-sm @error('PostalCode') is-invalid @enderror"
-											   value="{{ old('PostalCode', $customer->PostalCode ?? '') }}" placeholder="54000" required>
+											   value="{{ old('PostalCode', $customer->PostalCode ?? '') }}" placeholder="54000">
 										@error('PostalCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
 									@endif
 								</div>
 
 								<div class="col-md-3">
-									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Country</label>
+									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Country</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->Country ?? '-' }}</div>
 									@else
 										<input type="text" name="Country"
 											   class="form-control form-control-sm @error('Country') is-invalid @enderror"
-											   value="{{ old('Country', $customer->Country ?? 'Pakistan') }}" placeholder="Pakistan" required>
+											   value="{{ old('Country', $customer->Country ?? 'Pakistan') }}" placeholder="Pakistan">
 										@error('Country')<div class="invalid-feedback">{{ $message }}</div>@enderror
 									@endif
 								</div>
@@ -402,18 +402,18 @@
 							<div id="{{ $uid }}_billingFields" class="row g-2" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'display:none' : '' }}">
 
 								<div class="col-md-12">
-									<label class="form-label _cfp-required">Street Address</label>
+									<label class="form-label">Street Address</label>
 									<textarea name="BillingAddress" id="{{ $uid }}_BillingAddress" rows="2"
 											  class="form-control form-control-sm @error('BillingAddress') is-invalid @enderror"
-											  placeholder="Billing address" required>{{ old('BillingAddress', $customer->BillingAddress ?? '') }}</textarea>
+											  placeholder="Billing address">{{ old('BillingAddress', $customer->BillingAddress ?? '') }}</textarea>
 									@error('BillingAddress')<div class="invalid-feedback">{{ $message }}</div>@enderror
 								</div>
 
 								<div class="col-md-3">
-									<label class="form-label _cfp-required">City</label>
+									<label class="form-label">City</label>
 									<input type="text" name="BillingCity" id="{{ $uid }}_BillingCity"
 										   class="form-control form-control-sm @error('BillingCity') is-invalid @enderror"
-										   value="{{ old('BillingCity', $customer->BillingCity ?? '') }}" placeholder="City" required>
+										   value="{{ old('BillingCity', $customer->BillingCity ?? '') }}" placeholder="City">
 									@error('BillingCity')<div class="invalid-feedback">{{ $message }}</div>@enderror
 								</div>
 
@@ -426,18 +426,18 @@
 								</div>
 
 								<div class="col-md-3">
-									<label class="form-label _cfp-required">Postal Code</label>
+									<label class="form-label">Postal Code</label>
 									<input type="text" name="BillingPostalCode" id="{{ $uid }}_BillingPostalCode"
 										   class="form-control form-control-sm @error('BillingPostalCode') is-invalid @enderror"
-										   value="{{ old('BillingPostalCode', $customer->BillingPostalCode ?? '') }}" placeholder="54000" required>
+										   value="{{ old('BillingPostalCode', $customer->BillingPostalCode ?? '') }}" placeholder="54000">
 									@error('BillingPostalCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
 								</div>
 
 								<div class="col-md-3">
-									<label class="form-label _cfp-required">Country</label>
+									<label class="form-label">Country</label>
 									<input type="text" name="BillingCountry" id="{{ $uid }}_BillingCountry"
 										   class="form-control form-control-sm @error('BillingCountry') is-invalid @enderror"
-										   value="{{ old('BillingCountry', $customer->BillingCountry ?? 'Pakistan') }}" placeholder="Pakistan" required>
+										   value="{{ old('BillingCountry', $customer->BillingCountry ?? 'Pakistan') }}" placeholder="Pakistan">
 									@error('BillingCountry')<div class="invalid-feedback">{{ $message }}</div>@enderror
 								</div>
 							</div>
@@ -447,13 +447,15 @@
 				  <div class="tab-pane fade" id="profile-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
 					<div class="row g-2">
 						<div class="col-md-4">
-							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">NTN Number</label>
+							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
+								NTN Number @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
+							</label>
 							@if($isReadonly)
 								<div class="_cfp-detail-value">{{ $customer->NTN ?? '-' }}</div>
 							@else
 								<input type="text" name="NTN"
 									   class="form-control form-control-sm @error('NTN') is-invalid @enderror"
-									   value="{{ old('NTN', $customer->NTN ?? '') }}" placeholder="Enter NTN" required>
+									   value="{{ old('NTN', $customer->NTN ?? '') }}" placeholder="Enter NTN">
 								@error('NTN')<div class="invalid-feedback">{{ $message }}</div>@enderror
 							@endif
 						</div>
@@ -473,13 +475,13 @@
 						</div>
 
 						<div class="col-md-4">
-							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">CNIC</label>
+							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">CNIC</label>
 							@if($isReadonly)
 								<div class="_cfp-detail-value">{{ $customer->CNIC ?? '-' }}</div>
 							@else
 								<input type="text" name="CNIC"
 									   class="form-control form-control-sm @error('CNIC') is-invalid @enderror"
-									   value="{{ old('CNIC', $customer->CNIC ?? '') }}" placeholder="12345-1234567-1" required>
+									   value="{{ old('CNIC', $customer->CNIC ?? '') }}" placeholder="12345-1234567-1">
 								@error('CNIC')<div class="invalid-feedback">{{ $message }}</div>@enderror
 							@endif
 						</div>
@@ -510,21 +512,21 @@
 				  <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
 					<div class="row g-2">
 					<div class="col-md-12">
-						<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Notes</label>
+						<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Notes</label>
 						@if($isReadonly)
 							<div class="_cfp-detail-value" style="min-height:70px;">{{ $customer->Notes ?? 'No additional notes.' }}</div>
 						@else
 							<textarea name="Notes" rows="3"
 									  class="form-control form-control-sm @error('Notes') is-invalid @enderror"
-									  placeholder="Any additional notes" required>{{ old('Notes', $customer->Notes ?? '') }}</textarea>
+									  placeholder="Any additional notes">{{ old('Notes', $customer->Notes ?? '') }}</textarea>
 							@error('Notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
 						@endif
 					</div>
 
 					@if(!$isReadonly)
 					<div class="col-md-4">
-						<label class="form-label _cfp-required">Status</label>
-						<select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror" required>
+						<label class="form-label">Status</label>
+						<select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror">
 							<option value="1" {{ old('Status', $customer->Status ?? '1') != '0' ? 'selected' : '' }}>Active</option>
 							<option value="0" {{ old('Status', $customer->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
 						</select>
@@ -646,7 +648,13 @@
             syncValues();
         } else {
             panel.style.display = '';
-            inputs.forEach(i => i.setAttribute('required', 'required'));
+            inputs.forEach(i => {
+                if (i.name === 'BillingCounty') {
+                    i.setAttribute('required', 'required');
+                } else {
+                    i.removeAttribute('required');
+                }
+            });
         }
 
         function syncValues() {

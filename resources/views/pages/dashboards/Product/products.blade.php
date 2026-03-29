@@ -122,9 +122,10 @@
                             <th>Code</th>
                             <th>Name</th>
                             <th>Type</th>
-                            <th>Sale Price</th>
-                            <th>Cost</th>
-                            <th>Current Qty</th>
+                            <th>HsCode</th>
+                            <th>UOM</th>
+                            <th>SaleType</th>
+                            <th>Rate</th>
                             <th>Status</th>
                             <th>Created On</th>
                             <th class="action-col">Action</th>
@@ -142,9 +143,10 @@
                                 @endif
                             </td>
                             <td>{{ $product->Type ?? '-' }}</td>
-                            <td>PKR {{ number_format($product->SalePrice ?? 0, 2) }}</td>
-                            <td>PKR {{ number_format($product->Cost ?? 0, 2) }}</td>
-                            <td>{{ $product->CurrentQuantity ?? 0 }}</td>
+                            <td>{{ $product->HsCode !== null && $product->HsCode !== '' ? $product->HsCode : '—' }}</td>
+                            <td>{{ $product->UomLabel ?? '—' }}</td>
+                            <td>{{ $product->SaleTypeLabel ?? '—' }}</td>
+                            <td>{{ $product->SaleRateLabel ?? '—' }}</td>
                             <td>
                                 @if(($product->Status ?? 1) == 1)
                                     <span class="status-badge status-active">Active</span>
@@ -210,7 +212,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" class="text-center py-5">
+                            <td colspan="11" class="text-center py-5">
                                 <i class="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
                                 <p class="text-muted mb-2">No products found.</p>
                                 @if(request('search') || request('start_date') || request('end_date'))
