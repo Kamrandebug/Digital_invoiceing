@@ -5990,7 +5990,9 @@ Pricing controller
 	color: #000 !important;
 }
 
-
+.login-btn a::before, .reg-btn a::before{
+	background: transparent !important;
+}
 
 
 
