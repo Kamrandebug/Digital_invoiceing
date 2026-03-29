@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -269,7 +268,7 @@ class InvoiceModel extends Model
     }
 
     /**
-     * POST invoice JSON to FBR, then persist invoiceNumber → FbrTransactionID and full body → FbrResponseJson.
+     * Build JSON from header + business + customer + lines (SQL), POST to FBR sandbox, save response on header.
      *
      * @return array{success: bool, message: string}
      */
@@ -280,127 +279,166 @@ class InvoiceModel extends Model
             ->where('Status', '!=', 2)
             ->first();
 
-        if (!$header) {
+        if (! $header) {
             return ['success' => false, 'message' => 'Invoice not found.'];
         }
 
-        $existingFbr = trim((string) ($header->FbrTransactionID ?? ''));
-        if ($existingFbr !== '') {
+        if (trim((string) ($header->FbrTransactionID ?? '')) !== '') {
             return ['success' => false, 'message' => 'This invoice was already posted to FBR.'];
         }
 
-        $business = DB::table('tbl_business_info')
-            ->where('IsArchive', 0)
-            ->orderBy('ID')
-            ->first();
+        DB::statement('SET SESSION group_concat_max_len = 1048576');
 
-        if (!$business) {
-            return [
-                'success' => false,
-                'message' => 'Business record not found. Add business info before posting to FBR.',
-            ];
+        $sql = <<<'SQL'
+SELECT
+    CONCAT(
+        '{',
+        '"invoiceType" : ', JSON_QUOTE(IF(h.InvoiceType = 4, 'Sale Invoice', 'Debit Note')), ',',
+        '"invoiceDate" : ', JSON_QUOTE(DATE_FORMAT(h.InvoiceDate, '%Y-%m-%d')), ',',
+        '"sellerBusinessName" : ', JSON_QUOTE(IFNULL(b.BusinessName, '')), ',',
+        '"sellerProvince" : ', JSON_QUOTE(IFNULL(b.Province, '')), ',',
+        '"sellerNTNCNIC" : ', JSON_QUOTE(IFNULL(b.NTN, '')), ',',
+        '"sellerAddress" : ', JSON_QUOTE(IFNULL(b.Address, '')), ',',
+        '"buyerNTNCNIC" : ', JSON_QUOTE(IFNULL(c.NTN, '')), ',',
+        '"buyerBusinessName" : ', JSON_QUOTE(IFNULL(c.BusinessName, '')), ',',
+        '"buyerProvince" : ', JSON_QUOTE(IFNULL(c.County, '')), ',',
+        '"buyerAddress" : ', JSON_QUOTE(IFNULL(c.Address, '')), ',',
+        '"invoiceRefNo" : ', JSON_QUOTE(''), ',',
+        '"scenarioId" : ', JSON_QUOTE(IF(c.IsFiler = 1, 'SN001', 'SN002')), ',',
+        '"buyerRegistrationType" : ', JSON_QUOTE(IF(c.IsFiler = 1, 'Registered', 'Unregistered')), ',',
+        '"items":[',
+        IFNULL((
+            SELECT GROUP_CONCAT(
+                CONCAT(
+                    '{',
+                    '"hsCode" : ', JSON_QUOTE(IFNULL(d.HsCode, '')), ',',
+                    '"productDescription" : ', JSON_QUOTE(IFNULL(d.ProductDescription, '')), ',',
+                    '"rate" : ', JSON_QUOTE(IFNULL(d.SaleTypeToRateDesc, '')), ',',
+                    '"uoM" : ', JSON_QUOTE(IFNULL(d.Uom_Desc, '')), ',',
+                    '"quantity" : ', IFNULL(d.Quantity, 0), ',',
+                    '"totalValues" : ', IFNULL(d.TotalValues, 0), ',',
+                    '"valueSalesExcludingST" : ', IFNULL(d.ValueSalesExcludingST, 0), ',',
+                    '"fixedNotifiedValueOrRetailPrice" : ', IFNULL(d.FixedNotifiedValueOrRetailPrice, 0), ',',
+                    '"salesTaxApplicable" : ', IFNULL(d.SalesTaxApplicable, 0), ',',
+                    '"salesTaxWithheldAtSource" : ', IFNULL(d.SalesTaxWithheldAtSource, 0), ',',
+                    '"extraTax" : ', JSON_QUOTE(IFNULL(CAST(d.ExtraTax AS CHAR), '')), ',',
+                    '"furtherTax" : ', IFNULL(d.FurtherTax, 0), ',',
+                    '"sroScheduleNo" : ', JSON_QUOTE(IFNULL(d.SroScheduleDesc, '')), ',',
+                    '"fedPayable" : ', IFNULL(d.FedPayable, 0), ',',
+                    '"discount" : ', IFNULL(d.Discount, 0), ',',
+                    '"saleType" : ', JSON_QUOTE(IFNULL(d.SaleTypeDesc, '')), ',',
+                    '"sroItemSerialNo" : ', JSON_QUOTE(IFNULL(d.SroItemSerialNo, '')),
+                    '}'
+                )
+                SEPARATOR ','
+            )
+            FROM tbl_sales_invoice_detail d
+            WHERE d.InvoiceID = h.ID AND IFNULL(d.Status, 0) != 2
+        ), ''),
+        ']}'
+    ) AS payloadstring,
+    b.Sandbox_access_token AS access_token
+FROM tbl_sales_invoice_header h
+CROSS JOIN (
+    SELECT bi.* FROM tbl_business_info bi WHERE bi.IsArchive = 0 ORDER BY bi.ID ASC LIMIT 1
+) b
+INNER JOIN tbl_customer c ON (c.ID = h.CustomerID)
+WHERE h.ID = ?
+AND IFNULL(h.Status, 0) != 2
+SQL;
+
+        try {
+            $row = DB::selectOne($sql, [$headerId]);
+        } catch (\Throwable $e) {
+            Log::error('FBR payload SQL failed', ['headerId' => $headerId, 'error' => $e->getMessage()]);
+
+            return ['success' => false, 'message' => 'Could not build FBR payload: ' . $e->getMessage()];
         }
 
-        $token = trim((string) ($business->Sandbox_access_token ?? ''));
+        if (! $row || empty($row->payloadstring)) {
+            return ['success' => false, 'message' => 'No payload: check invoice lines, customer, and business info.'];
+        }
 
+        try {
+            $payload = json_decode($row->payloadstring, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            return ['success' => false, 'message' => 'Invalid JSON from payload query: ' . $e->getMessage()];
+        }
+
+        $token = trim((string) ($row->access_token ?? ''));
         if ($token === '') {
             return [
                 'success' => false,
-                'message' => 'FBR bearer token is missing. Set Sandbox_access_token in Business Info (tbl_business_info).',
+                'message' => 'FBR bearer token is missing. Set Sandbox_access_token in Business Info.',
             ];
         }
 
-        $customer = null;
-        if (!empty($header->CustomerID)) {
-            $customer = DB::table('tbl_customer')->where('ID', $header->CustomerID)->first();
-        }
-
-        $lines = DB::table('tbl_sales_invoice_detail')
-            ->where('InvoiceID', $headerId)
-            ->where('Status', '!=', 2)
-            ->orderBy('ID')
-            ->get();
-
-        if ($lines->isEmpty()) {
-            return ['success' => false, 'message' => 'No line items to post.'];
-        }
-
-        $invoiceDate = $header->InvoiceDate
-            ? Carbon::parse($header->InvoiceDate)->format('Y-m-d')
-            : Carbon::now()->format('Y-m-d');
-
-        $invoiceTypeLabel = self::resolveInvoiceTypeLabel($header->InvoiceType ?? null);
-
-        $buyerNtn = self::nz($header->BuyerNTNCNIC ?? null)
-            ?: self::nz($customer->NTN ?? null)
-            ?: self::nz($customer->CNIC ?? null)
-            ?: '';
-
-        $buyerName = self::nz($header->BuyerBusinessName ?? null)
-            ?: self::nz($customer->DisplayName ?? null)
-            ?: trim((string) (($customer->FirstName ?? '') . ' ' . ($customer->LastName ?? '')));
-
-        $buyerProvince = self::nz($header->BuyerProvince ?? null)
-            ?: self::nz($customer->County ?? null)
-            ?: self::nz($customer->City ?? null)
-            ?: '';
-
-        $buyerAddress = self::nz($header->BuyerAddress ?? null)
-            ?: self::nz($customer->Address ?? null)
-            ?: '';
-
-        $sellerName = $business->BusinessName ?? '';
-        $sellerNtn = self::nz($business->NTN ?? null) ?: self::nz($business->SalesTaxNumber ?? null) ?: '';
-        $sellerAddress = self::nz($business->Address ?? null) ?: '';
-        // TODO: load from business / settings when available
-        $sellerProvince = 'Sindh';
-
-        $payload = [
-            'invoiceType' => $invoiceTypeLabel,
-            'invoiceDate' => $invoiceDate,
-            'sellerBusinessName' => $sellerName,
-            'sellerProvince' => $sellerProvince,
-            'sellerNTNCNIC' => $sellerNtn,
-            'sellerAddress' => $sellerAddress,
-            'buyerNTNCNIC' => $buyerNtn,
-            'buyerBusinessName' => $buyerName,
-            'buyerProvince' => $buyerProvince,
-            'buyerAddress' => $buyerAddress,
-            'invoiceRefNo' => self::nz($header->InvoiceRefNo ?? null),
-            'scenarioId' => self::nz($header->ScenarioId ?? null) ?: 'SN004',
-            'buyerRegistrationType' => self::nz($header->BuyerRegistrationType ?? null) ?: 'Unregistered',
-            'items' => $lines->map(fn ($line) => self::mapDetailLineToFbrItem($line))->values()->all(),
-        ];
         $url = config('services.fbr.post_url');
+        $jsonBody = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($jsonBody === false) {
+            return ['success' => false, 'message' => 'Failed to JSON-encode payload for FBR.'];
+        }
+
+        $headers = array_merge([
+            // Match working PHP cURL client (gzip/br responses are decoded by Guzzle).
+            'Accept-Encoding' => 'gzip, deflate, br',
+            'User-Agent' => 'Mozilla/5.0',
+        ], array_filter((array) config('services.fbr.extra_headers', [])));
+
+        $timeout = config('services.fbr.timeout', 120);
+        if (! is_numeric($timeout) || (float) $timeout < 0) {
+            $timeout = 120;
+        }
+
+        $verifySsl = (bool) config('services.fbr.verify_ssl', false);
+        $guzzleOptions = [
+            'verify' => $verifySsl,
+            'expect' => false,
+            'version' => 1.1,
+            'allow_redirects' => [
+                'max' => 10,
+                'strict' => false,
+                'referer' => false,
+                'protocols' => ['http', 'https'],
+            ],
+            'decode_content' => true,
+        ];
+        if (! $verifySsl) {
+            $guzzleOptions['curl'] = [
+                CURLOPT_SSL_VERIFYHOST => 0,
+                CURLOPT_SSL_VERIFYPEER => 0,
+            ];
+        }
 
         try {
-            $httpResponse = Http::timeout(120)
-                ->withToken($token)
-                ->acceptJson()
-                ->asJson()
-                ->post($url, $payload);
+            $httpResponse = Http::timeout((float) $timeout)
+                ->withOptions($guzzleOptions)
+                ->withToken(trim($token))
+                ->withHeaders($headers)
+                ->withBody($jsonBody, 'application/json')
+                ->post($url);
         } catch (\Throwable $e) {
             Log::error('FBR post_to_fbr HTTP exception', ['id' => $headerId, 'error' => $e->getMessage()]);
 
             return ['success' => false, 'message' => 'FBR request failed: ' . $e->getMessage()];
         }
 
-        $rawBody = $httpResponse->body();
-        $decoded = null;
-        if ($rawBody !== '') {
+        $rawBody = (string) $httpResponse->body();
+        $decoded = $httpResponse->json();
+        if (! is_array($decoded) && $rawBody !== '') {
             try {
-                $decoded = json_decode($rawBody, true, 512, JSON_THROW_ON_ERROR);
+                $decoded = json_decode($rawBody, true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
             } catch (\JsonException $e) {
                 $decoded = null;
             }
         }
-
-        $responseForDb = $decoded !== null ? json_encode($decoded, JSON_UNESCAPED_UNICODE) : $rawBody;
-
-        $invoiceNumber = null;
-        if (is_array($decoded)) {
-            $invoiceNumber = self::extractFbrInvoiceNumber($decoded);
+        if (! is_array($decoded)) {
+            $decoded = null;
         }
+
+        $responseForDb = self::fbrEncodeResponseForDb($decoded, $rawBody);
+
+        $invoiceNumber = $decoded !== null ? self::extractFbrInvoiceNumber($decoded) : null;
 
         $update = [
             'FbrResponseJson' => $responseForDb,
@@ -409,112 +447,57 @@ class InvoiceModel extends Model
         if (auth()->check()) {
             $update['UpdatedBy'] = auth()->id();
         }
-
         if ($invoiceNumber !== null && $invoiceNumber !== '') {
             $update['FbrTransactionID'] = $invoiceNumber;
         }
 
         DB::table('tbl_sales_invoice_header')->where('ID', $headerId)->update($update);
 
-        if (!$httpResponse->successful()) {
+        if (! $httpResponse->successful()) {
             return [
                 'success' => false,
                 'message' => 'FBR returned HTTP ' . $httpResponse->status() . '. Response saved on invoice.',
             ];
         }
 
+        if ($decoded !== null) {
+            $vrStatus = data_get($decoded, 'validationResponse.status');
+            if (is_string($vrStatus) && strcasecmp($vrStatus, 'Invalid') === 0) {
+                $err = (string) data_get($decoded, 'validationResponse.error', 'Validation failed');
+                $code = (string) data_get($decoded, 'validationResponse.errorCode', '');
+
+                return [
+                    'success' => false,
+                    'message' => 'FBR rejected the invoice' . ($code !== '' ? " [{$code}]" : '') . ': ' . $err,
+                ];
+            }
+        }
+
         if ($invoiceNumber === null || $invoiceNumber === '') {
             return [
                 'success' => false,
-                'message' => 'FBR responded but invoiceNumber was not found in the response. Full response saved on invoice.',
+                'message' => 'FBR responded (HTTP ' . $httpResponse->status() . ') but no invoice / IRN was found in the response. Check FbrResponseJson on the invoice.',
             ];
         }
 
         return ['success' => true, 'message' => 'Invoice posted to FBR successfully. Transaction ID: ' . $invoiceNumber];
     }
 
-    private static function nz(?string $v): string
+    /**
+     * @param  array<string, mixed>|null  $decoded
+     */
+    private static function fbrEncodeResponseForDb(?array $decoded, string $rawBody): string
     {
-        $v = trim((string) $v);
-
-        return $v;
-    }
-
-    private static function resolveInvoiceTypeLabel($invoiceType): string
-    {
-        if ($invoiceType === null || $invoiceType === '') {
-            return 'Sale Invoice';
-        }
-        if (is_numeric($invoiceType)) {
-            try {
-                $row = DB::table('core_digital_invoicing.fbr_doc_type_code')
-                    ->where('docTypeId', (int) $invoiceType)
-                    ->first();
-                if ($row && isset($row->docDescription) && $row->docDescription !== '') {
-                    return (string) $row->docDescription;
-                }
-            } catch (\Throwable $e) {
-                return 'Sale Invoice';
+        if ($decoded !== null) {
+            $encoded = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+            if ($encoded !== false && $encoded !== '') {
+                return $encoded;
             }
-
-            return 'Sale Invoice';
         }
 
-        return (string) $invoiceType;
-    }
-
-    private static function mapDetailLineToFbrItem(object $line): array
-    {
-        $qty = (float) ($line->Quantity ?? 0);
-        $ex = (float) ($line->ValueSalesExcludingST ?? $line->Amount ?? 0);
-        $st = (float) ($line->SalesTaxApplicable ?? $line->GSTAmount ?? 0);
-        $extra = $line->ExtraTax ?? null;
-        $extraOut = ($extra === null || $extra === '') ? '' : $extra;
-
-        return [
-            'hsCode' => (string) ($line->HsCode ?? ''),
-            'productDescription' => (string) ($line->ProductDescription ?? ''),
-            'rate' => self::formatFbrRatePercent($line, $ex, $st),
-            'uoM' => (string) (($line->Uom_Desc ?? '') !== '' ? $line->Uom_Desc : 'Numbers, pieces, units'),
-            'quantity' => $qty,
-            'totalValues' => (float) ($line->TotalValues ?? 0),
-            'valueSalesExcludingST' => $ex,
-            'fixedNotifiedValueOrRetailPrice' => (float) ($line->FixedNotifiedValueOrRetailPrice ?? 0),
-            'salesTaxApplicable' => $st,
-            'salesTaxWithheldAtSource' => (float) ($line->SalesTaxWithheldAtSource ?? 0),
-            'extraTax' => $extraOut,
-            'furtherTax' => (float) ($line->FurtherTax ?? 0),
-            'sroScheduleNo' => (string) ($line->SroScheduleDesc ?? $line->SroScheduleID ?? ''),
-            'fedPayable' => (float) ($line->FedPayable ?? 0),
-            'discount' => (float) ($line->Discount ?? 0),
-            'saleType' => (string) (($line->SaleTypeDesc ?? '') !== '' ? $line->SaleTypeDesc : 'Goods at standard rate (default)'),
-            'sroItemSerialNo' => (string) ($line->SroItemSerialNo ?? ''),
-        ];
-    }
-
-    private static function formatFbrRatePercent(object $line, float $ex, float $st): string
-    {
-        $gp = $line->GstPercentage ?? null;
-        if ($gp !== null && $gp !== '') {
-            $num = is_numeric($gp)
-                ? (float) $gp
-                : (float) preg_replace('/[^0-9.]/', '', (string) $gp);
-
-            return self::trimPercentString($num) . '%';
-        }
-        if ($ex > 0 && $st > 0) {
-            return self::trimPercentString(round(($st / $ex) * 100, 2)) . '%';
-        }
-
-        return '0%';
-    }
-
-    private static function trimPercentString(float $n): string
-    {
-        $s = number_format($n, 4, '.', '');
-        $s = rtrim(rtrim($s, '0'), '.');
-
-        return $s === '' ? '0' : $s;
+        return $rawBody !== '' ? $rawBody : json_encode([
+            '_meta' => ['note' => 'Empty FBR response body', 'length' => strlen($rawBody)],
+        ], JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -525,14 +508,46 @@ class InvoiceModel extends Model
         $paths = [
             'invoiceNumber',
             'data.invoiceNumber',
-            'response.invoiceNumber',
-            'result.invoiceNumber',
-            'Data.invoiceNumber',
+            'validationResponse.invoiceNumber',
+            'validationResponse.draftInvoiceNumber',
+            'validationResponse.irn',
+            'data.validationResponse.invoiceNumber',
+            'data.validationResponse.irn',
         ];
         foreach ($paths as $p) {
             $v = data_get($json, $p);
             if ($v !== null && $v !== '') {
                 return (string) $v;
+            }
+        }
+
+        return self::fbrDeepFindInvoiceId($json);
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     */
+    private static function fbrDeepFindInvoiceId(array $node, int $depth = 0): ?string
+    {
+        if ($depth > 14) {
+            return null;
+        }
+
+        foreach (['invoiceNumber', 'draftInvoiceNumber', 'irn', 'IRN', 'InvoiceNumber'] as $k) {
+            if (array_key_exists($k, $node)) {
+                $v = $node[$k];
+                if ($v !== null && $v !== '' && is_scalar($v)) {
+                    return (string) $v;
+                }
+            }
+        }
+
+        foreach ($node as $child) {
+            if (is_array($child)) {
+                $found = self::fbrDeepFindInvoiceId($child, $depth + 1);
+                if ($found !== null) {
+                    return $found;
+                }
             }
         }
 

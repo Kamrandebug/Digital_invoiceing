@@ -12,6 +12,23 @@
         background: #f4fff8 !important;
         border-color: #badbcc !important;
     }
+
+    /* Invoice list: action column — global .action-col is 100px max and breaks split + dropdown */
+    #invoicesTable th.action-col,
+    #invoicesTable td:last-child {
+        min-width: 10rem;
+        max-width: none !important;
+        width: auto !important;
+        text-align: end;
+        vertical-align: middle;
+    }
+    #invoicesTable .btn-group.btn-listing {
+        position: relative;
+    }
+    /* Popper uses strategy:fixed on toggle; keep menu above table scroll layers */
+    #invoicesTable .dropdown-menu {
+        z-index: 1060;
+    }
 </style>
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
@@ -243,46 +260,60 @@
                             </td>
 
                             <td>
-								
-								<div class="action-wrapper">
+								<div class="action-wrapper d-inline-flex justify-content-end">
 									<div class="btn-group btn-listing">
-									  <button class="btn btn-outline-primary btn-list-left" onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})">
+									  <button type="button" class="btn btn-outline-primary btn-list-left" onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
-									  <button type="button" class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-										<span class="sr-only">Toggle Dropdown</span>
+									  <button type="button"
+                                              class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split"
+                                              data-bs-toggle="dropdown"
+                                              data-bs-auto-close="true"
+                                              data-bs-popper-config='{"strategy":"fixed"}'
+                                              aria-expanded="false">
+										<span class="visually-hidden">Toggle Dropdown</span>
 									  </button>
-									  <ul class="dropdown-menu">
+									  <ul class="dropdown-menu dropdown-menu-end">
 										@if(!$fbrLocked)
-										<button class="dropdown-item"
-												onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})">
-											<i class="fas fa-edit"></i> Edit
-										</button>
+										<li>
+											<button type="button" class="dropdown-item"
+													onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})">
+												<i class="fas fa-edit"></i> Edit
+											</button>
+										</li>
 										@endif
-										<button class="dropdown-item" type="button"
-												onclick="openPrintModal({{ $invoice->HeaderID }}, '{{ $invoice->DocNo ?? 'Invoice' }}')">
-											<i class="fas fa-print"></i> Print
-										</button>
+										<li>
+											<button type="button" class="dropdown-item"
+													onclick="openPrintModal({{ $invoice->HeaderID }}, '{{ $invoice->DocNo ?? 'Invoice' }}')">
+												<i class="fas fa-print"></i> Print
+											</button>
+										</li>
 
 										@if(empty(trim((string) ($invoice->FbrTransactionID ?? ''))))
-										<form action="{{ route('invoices.post-fbr', $invoice->HeaderID) }}" method="POST"
-											  onsubmit="return confirm('Post this invoice to FBR?');">
-											@csrf
-											<button type="submit" class="dropdown-item">
-												<i class="fas fa-paper-plane"></i> Post to FBR
-											</button>
-										</form>
+										<li>
+											<form action="{{ route('invoices.post-fbr', $invoice->HeaderID) }}" method="POST"
+												  class="m-0"
+												  onsubmit="return confirm('Post this invoice to FBR?');">
+												@csrf
+												<button type="submit" class="dropdown-item">
+													<i class="fas fa-paper-plane"></i> Post to FBR
+												</button>
+											</form>
+										</li>
 										@endif
 
 										@if(!$fbrLocked)
-										<form action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
-											  method="POST" onsubmit="return confirmDelete('{{ $invoice->DocNo }}')">
-											@csrf
-											@method('DELETE')
-											<button class="dropdown-item">
-												<i class="fas fa-trash"></i> Delete
-											</button>
-										</form>
+										<li>
+											<form action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
+												  method="POST" class="m-0"
+												  onsubmit="return confirmDelete('{{ $invoice->DocNo }}')">
+												@csrf
+												@method('DELETE')
+												<button type="submit" class="dropdown-item">
+													<i class="fas fa-trash"></i> Delete
+												</button>
+											</form>
+										</li>
 										@endif
 									  </ul>
 									</div>

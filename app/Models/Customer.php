@@ -135,6 +135,8 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 uu.FirstName = u.FirstName,
                 uu.LastName = u.LastName,
                 uu.AccountNo = u.AccountNo,
+                uu.NTN = u.NTN,
+                uu.CNIC = u.CNIC,
                 uu.Status = u.Status,
                 uu.UpdatedBy = u.UpdatedBy,
                 uu.UpdatedOn = u.UpdatedOn

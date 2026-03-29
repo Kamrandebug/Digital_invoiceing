@@ -39,7 +39,12 @@ return [
     | FBR Digital Invoicing — POST URL only. Bearer token comes from tbl_business_info.Sandbox_access_token.
     */
     'fbr' => [
-        'post_url' => 'https://gw.fbr.gov.pk/di_data/v1/di/postinvoicedata_sb',
+        'post_url' => env('FBR_POST_URL', 'https://gw.fbr.gov.pk/di_data/v1/di/postinvoicedata_sb'),
+        /** Set true in production when FBR gateway SSL is trusted. Your working cURL used verify off. */
+        'verify_ssl' => env('FBR_VERIFY_SSL', false),
+        'timeout' => env('FBR_HTTP_TIMEOUT', 120),
+        /** Merged into FBR POST (e.g. ['X-Custom' => 'value']) */
+        'extra_headers' => [],
     ],
 
 ];
