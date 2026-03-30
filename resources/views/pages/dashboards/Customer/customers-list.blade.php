@@ -7,109 +7,7 @@
 @section('styles')
 <!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">-->
 <!--<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">-->
-<!--<style>
-    .search-filters-section {
-        display: flex;
-        align-items: flex-end; /* Bottom align everything so inputs match */
-        gap: 10px;
-        flex-wrap: wrap;
-        margin-bottom: 20px; /* Add some space below */
-    }
 
-    .search-box {
-        position: relative;
-        flex: 1;
-        min-width: 300px;
-        display: flex;
-        align-items: center; /* Vertical alignment for input and button */
-        gap: 10px; /* RESTORE GAP */
-    }
-    
-    .search-box input {
-        width: 100%;
-        padding: 0 15px 0 35px; 
-        border: 1px solid #ddd;
-        /* border-right: none; REMOVE THIS */
-        border-radius: 5px; /* RESTORE RADIUS */
-        font-size: 14px;
-        height: 40px; 
-    }
-
-    .search-filters-section .btn-search {
-        border-radius: 5px; /* RESTORE RADIUS */
-        margin-left: 0 !important; 
-    }
-    
-    .date-filters {
-        display: flex;
-        gap: 10px;
-        align-items: flex-end; /* Align inputs and labels properly */
-    }
-    
-    .date-filters > div {
-        display: flex;
-        flex-direction: column; /* Stack label above input */
-        gap: 5px;
-    }
-
-    .date-filters label {
-        margin: 0;
-        white-space: nowrap;
-        font-weight: 500;
-        color: #555;
-        font-size: 12px; /* Smaller font for labels */
-    }
-    
-    .date-filters input {
-        height: 40px; 
-        padding: 5px 10px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-    }
-    
-    /* Ensure all buttons have the same height and alignment */
-    .export-buttons button, 
-    .search-filters-section button, 
-    .search-filters-section .btn-search {
-        padding: 0 20px; /* Horizontal padding */
-        height: 40px;    /* Fixed height matching inputs */
-        border: none;
-        border-radius: 5px;
-        color: white;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        font-size: 14px;
-        line-height: 1; /* Reset line height for centering */
-    }
-    
-    /* Clear filters button specific style */
-    .search-filters-section button[type="button"]:not(.btn-search) {
-        background-color: #dc3545; /* Red */
-    }
-
-    .btn-search {
-        background-color: #0d6efd; /* Blue like Print */
-    }
-    
-    .btn-export-csv {
-        background-color: #6f42c1; /* Purple */
-    }
-    
-    .btn-print {
-        background-color: #0d6efd; /* Blue */
-    }
-
-    .export-buttons {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        height: 40px; /* Match height of filter bar */
-        margin-bottom: 20px; /* Space below export buttons */
-    }
-</style>-->
 <style>
 	.btn-margin{
 		margin-top: 20px;
@@ -250,7 +148,7 @@
 		<div class="card-body p-0">
 			{{-- Table --}}
 			<div class="table-responsive">
-				<table class="customers-table table text-nowrap" id="customersTable">
+				<table class="customers-table table text-nowrap listing-table" id="customersTable">
 					<thead>
 						<tr>
 							<th><input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
@@ -260,7 +158,7 @@
 							<th>Contact Number</th>
 							<th>Type</th>
                             <th>Status</th>
-							<th>Action</th>
+							<th class="action-col">Action</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -278,44 +176,46 @@
 							<td>{{ $customer->Mobile ?? $customer->Phone ?? 'N/A' }}</td>
 							<td>
 								@if((int) ($customer->IsFiler ?? 0) === 1)
-									<span class="badge bg-success">Registered</span>
+									<span class="status-badge status-active">Registered</span>
 								@else
-									<span class="badge bg-secondary">UnRegistered</span>
+									<span class="status-badge status-inactive">UnRegistered</span>
 								@endif
 							</td>
                             <td>
                                 @if(($customer->Status ?? 1) == 1)
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="status-badge status-active">Active</span>
                                 @else
-                                    <span class="badge bg-danger">Inactive</span>
+                                    <span class="status-badge status-inactive">Inactive</span>
                                 @endif
                             </td>
 							<td>
-    {{-- VIEW --}}
-    <button class="action-btn btn-info"
-            onclick="openCustomerModal('show', {{ $customer->ID }})"
-            title="View Details">
-        <i class="fas fa-clipboard-list"></i>
-    </button>
-
-    {{-- EDIT --}}
-    <button class="action-btn btn-warning"
-            onclick="openCustomerModal('edit', {{ $customer->ID }})"
-            title="Edit Customer">
-        <i class="fas fa-edit"></i>
-    </button>
-
-    {{-- DELETE --}}
-    <form action="{{ route('customers.delete_transaction', $customer->ID ?? 0) }}"
-          method="POST"
-          style="display: inline;"
-          onsubmit="return confirmDelete('{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}')">
-        @csrf
-        @method('DELETE')
-        <button type="submit" class="action-btn btn-delete" title="Archive Customer">
-            <i class="fas fa-trash"></i>
-        </button>
-    </form>
+								
+								<div class="btn-group btn-listing">
+									  <button class="btn btn-outline-primary btn-list-left" onclick="openCustomerModal('show', {{ $customer->ID }})">
+										<i class="fas fa-eye"></i> View
+									  </button>
+									  <button type="button" class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+										<span class="sr-only">Toggle Dropdown</span>
+									  </button>
+									  <ul class="dropdown-menu">
+										
+										<button class="dropdown-item" onclick="openCustomerModal('edit', {{ $customer->ID }})">
+											<i class="fas fa-edit"></i> Edit
+										</button>
+										
+										<form action="{{ route('customers.delete_transaction', $customer->ID ?? 0) }}" method="POST" style="display: inline;"
+											  onsubmit="return confirmDelete('{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}')">
+											@csrf
+											@method('DELETE')
+											<button type="submit" class="dropdown-item" title="Archive Customer">
+												<i class="fas fa-trash"></i> Delete
+											</button>
+										</form>
+										  
+									  </ul>
+									</div>
+								
+								
 </td>
 						</tr>
 						@empty
