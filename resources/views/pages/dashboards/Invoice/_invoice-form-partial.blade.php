@@ -541,20 +541,24 @@
         // Product select → auto-fill rate, GST, and product fields (HsCode, Description, UOM, Sale Type cascade)
         const prodSel = row.querySelector('.ifp-product');
         if (prodSel) {
-            prodSel.addEventListener('change', function() {
-                const opt = this.options[this.selectedIndex];
+            const applySelectedProductToRow = function(forceDetailsFill) {
+                const opt = (prodSel.selectedOptions && prodSel.selectedOptions.length)
+                    ? prodSel.selectedOptions[0]
+                    : prodSel.options[prodSel.selectedIndex];
+                if (!opt) return;
                 const rateEl = row.querySelector('.ifp-rate');
                 const gstEl  = row.querySelector('.ifp-gst-pct');
-                if (rateEl) rateEl.value = opt.getAttribute('data-rate') || 0;
-                if (gstEl)  gstEl.value  = opt.getAttribute('data-gst')  || 0;
+                const ds = opt.dataset || {};
+                if (rateEl) rateEl.value = ds.rate || opt.getAttribute('data-rate') || 0;
+                if (gstEl)  gstEl.value  = ds.gst  || opt.getAttribute('data-gst')  || 0;
 
-                const hsCode = opt.getAttribute('data-hscode') || '';
-                const saleInfo = opt.getAttribute('data-sale-information') || '';
-                const uomId = opt.getAttribute('data-uom-id') || '';
-                const saleTypeId = opt.getAttribute('data-sale-type-id') || '';
-                const saleTypeToRateId = opt.getAttribute('data-sale-type-to-rate-id') || '';
-                const sroScheduleId = opt.getAttribute('data-sro-schedule-id') || '';
-                const sroItemId = opt.getAttribute('data-sro-item-id') || '';
+                const hsCode = ds.hscode || opt.getAttribute('data-hscode') || '';
+                const saleInfo = ds.saleInformation || opt.getAttribute('data-sale-information') || '';
+                const uomId = ds.uomId || opt.getAttribute('data-uom-id') || '';
+                const saleTypeId = ds.saleTypeId || opt.getAttribute('data-sale-type-id') || '';
+                const saleTypeToRateId = ds.saleTypeToRateId || opt.getAttribute('data-sale-type-to-rate-id') || '';
+                const sroScheduleId = ds.sroScheduleId || opt.getAttribute('data-sro-schedule-id') || '';
+                const sroItemId = ds.sroItemId || opt.getAttribute('data-sro-item-id') || '';
 
                 const hsInp = row.querySelector('.ifp-hscode');
                 const detailsTa = row.querySelector('textarea[name*="[Details]"]');
@@ -565,7 +569,15 @@
                 const sroItemSel = row.querySelector('.ifp-sro-item');
 
                 if (hsInp) hsInp.value = hsCode;
-                if (detailsTa) detailsTa.value = saleInfo;
+                if (detailsTa) {
+                    const isBlank = String(detailsTa.value || '').trim() === '';
+                    if (forceDetailsFill || isBlank) {
+                        detailsTa.value = saleInfo;
+                        // Trigger listeners bound by autosize/validators in some modal contexts.
+                        detailsTa.dispatchEvent(new Event('input', { bubbles: true }));
+                        detailsTa.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
                 if (uomSel) {
                     uomSel.setAttribute('data-selected', uomId);
                     fetchHsCodeInfoForRow(row);
@@ -578,7 +590,16 @@
 
                 calcRow(row);
                 calcSummary();
+            };
+
+            prodSel.addEventListener('change', function() {
+                applySelectedProductToRow(true);
             });
+
+            // On Edit modal open, pre-fill row using current selected product (without overriding typed description).
+            if (prodSel.value) {
+                applySelectedProductToRow(false);
+            }
         }
 
         // Delete row

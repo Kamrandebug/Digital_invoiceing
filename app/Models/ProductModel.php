@@ -10,6 +10,7 @@ class ProductModel extends Model
 {
     use HasFactory;
 
+    protected $connection = 'landlord';
     protected $table = 'temp_product';
     protected $primaryKey = 'ID';
 
@@ -130,12 +131,34 @@ class ProductModel extends Model
     public static function save_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
-        DB::unprepared("
-            INSERT INTO tbl_product (VoucherID,`Name`,`Code`,`Type`,CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,HsCode,UomID,SaleTypeID,SaleTypeToRateID,SroScheduleID,SroItemID,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID)          
-            SELECT VoucherID,`Name`,`Code`,`Type`,1 AS CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,HsCode,UOM,SaleType,SaleTypeToRate,SroSchedule,SroItem,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
-            FROM temp_product
-            WHERE RequestID = '$requestID'
-        ");
+        $tenantDb = session('selected_tenant.dbname') ?: config('database.connections.tenant.database');
+        $tenantDb = trim((string) $tenantDb);
+
+        if ($tenantDb === '' || ! preg_match('/^[A-Za-z0-9_]+$/', $tenantDb)) {
+            throw new \RuntimeException('Invalid tenant database name in session.');
+        }
+
+        $tenantDbQuoted = '`' . str_replace('`', '``', $tenantDb) . '`';
+
+        DB::connection('landlord')->statement("
+            INSERT INTO {$tenantDbQuoted}.tbl_product (
+                VoucherID,`Name`,`Code`,`Type`,CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,
+                HsCode,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,
+                SroItemID,SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
+            )
+            SELECT
+                VoucherID,`Name`,`Code`,`Type`,1 AS CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,
+                HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
+                SaleTypeToRate,fsttr.`ratE_DESC` AS SaleTypeToRateDesc,SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
+                SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
+            FROM {$tenantDbQuoted}.temp_product t
+            LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fho ON (fho.`uoM_ID` = t.UOM AND fho.hs_CODE = t.HsCode)
+            LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc ON (fttc.`transactioN_TYPE_ID` = t.SaleType)
+            LEFT JOIN `core_digital_invoicing`.`fbr_sale_type_to_rate` fsttr ON (fsttr.`ratE_ID` = t.SaleTypeToRate AND fsttr.`transactioN_TYPE_ID` = fttc.`transactioN_TYPE_ID`)
+            LEFT JOIN `core_digital_invoicing`.`fbr_sro_schedule` fss ON (fss.`srO_ID` = t.SroSchedule)
+            LEFT JOIN `core_digital_invoicing`.`fbr_sro_item` fsi ON (fsi.`srO_ITEM_ID` = t.SroItem)
+            WHERE t.RequestID = ?
+        ", [$requestID]);
     }
 
     /**
@@ -144,37 +167,58 @@ class ProductModel extends Model
     public static function edit_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
-        DB::unprepared("
-            UPDATE tbl_product uu
+        $tenantDb = session('selected_tenant.dbname') ?: config('database.connections.tenant.database');
+        $tenantDb = trim((string) $tenantDb);
+
+        if ($tenantDb === '' || ! preg_match('/^[A-Za-z0-9_]+$/', $tenantDb)) {
+            throw new \RuntimeException('Invalid tenant database name in session.');
+        }
+
+        $tenantDbQuoted = '`' . str_replace('`', '``', $tenantDb) . '`';
+
+        DB::connection('landlord')->statement("
+            UPDATE {$tenantDbQuoted}.tbl_product uu
             JOIN (
-                SELECT  TID,VoucherID,`Name`,`Code`,`Type`,CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,HsCode,UOM,SaleType,
-                        SaleTypeToRate,SroSchedule,SroItem,SaleInformation,`Status`,UpdatedBy,UpdatedOn,RequestID
-                FROM temp_product
-                WHERE RequestID = '$requestID'
+                SELECT t.TID, VoucherID,`Name`,`Code`,`Type`,1 AS CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,
+                HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
+                SaleTypeToRate, fsttr.`ratE_DESC` AS SaleTypeToRateDesc, SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
+                SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,UpdatedBy,UpdatedOn,RequestID
+            FROM {$tenantDbQuoted}.temp_product t
+            LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fho ON (fho.`uoM_ID` = t.UOM AND fho.hs_CODE = t.HsCode)
+            LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc ON (fttc.`transactioN_TYPE_ID` = t.SaleType)
+            LEFT JOIN `core_digital_invoicing`.`fbr_sale_type_to_rate` fsttr ON (fsttr.`ratE_ID` = t.SaleTypeToRate AND fsttr.`transactioN_TYPE_ID` = fttc.`transactioN_TYPE_ID`)
+            LEFT JOIN `core_digital_invoicing`.`fbr_sro_schedule` fss ON (fss.`srO_ID` = t.SroSchedule)
+            LEFT JOIN `core_digital_invoicing`.`fbr_sro_item` fsi ON (fsi.`srO_ITEM_ID` = t.SroItem)
+            WHERE t.RequestID = ?
             ) u ON uu.ID = u.TID
             SET
-                uu.Name             = u.Name,
-                uu.Code             = u.Code,
-                uu.Type             = u.Type,
-                uu.CategoryID       = u.CategoryID,
-                uu.CurrentQuantity  = u.CurrentQuantity,
-                uu.Unit             = u.Unit,
-                uu.SalePrice        = u.SalePrice,
-                uu.Cost             = u.Cost,
-                uu.TPRate           = u.TPRate,
-                uu.Weight           = u.Weight,
-                uu.Image            = u.Image,
-                uu.HsCode           = u.HsCode,
-                uu.UomID            = u.UOM,
-                uu.SaleTypeID       = u.SaleType,
-                uu.SaleTypeToRateID = u.SaleTypeToRate,
-                uu.SroScheduleID    = u.SroSchedule,
-                uu.SroItemID        = u.SroItem,
-                uu.SaleInformation  = u.SaleInformation,
-                uu.`Status`         = u.`Status`,
-                uu.UpdatedBy        = u.UpdatedBy,
-                uu.UpdatedOn        = u.UpdatedOn
-        ");
+                uu.Name               = u.Name,
+                uu.Code               = u.Code,
+                uu.Type               = u.Type,
+                uu.CategoryID         = u.CategoryID,
+                uu.CurrentQuantity    = u.CurrentQuantity,
+                uu.Unit               = u.Unit,
+                uu.SalePrice          = u.SalePrice,
+                uu.Cost               = u.Cost,
+                uu.TPRate             = u.TPRate,
+                uu.Weight             = u.Weight,
+                uu.Image              = u.Image,
+                uu.HsCode             = u.HsCode,
+                uu.UomID              = u.UOM,
+                uu.Uom_Desc           = u.Uom_Desc,
+                uu.SaleTypeID         = u.SaleType,
+                uu.SaleTypeDesc       = u.SaleTypeDesc,
+                uu.SaleTypeToRateID   = u.SaleTypeToRate,
+                uu.SaleTypeToRateDesc = u.SaleTypeToRateDesc,
+                uu.SroScheduleID      = u.SroSchedule,
+                uu.SroScheduleDesc    = u.SroScheduleDesc,
+                uu.SroItemID          = u.SroItem,
+                uu.SroItemSerialNo    = u.SroItemSerialNo,
+                uu.SaleInformation    = u.SaleInformation,
+                uu.`Status`           = u.`Status`,
+                uu.UpdatedBy          = u.UpdatedBy,
+                uu.UpdatedOn          = u.UpdatedOn
+        ", [$requestID]);
     }
 
     /**

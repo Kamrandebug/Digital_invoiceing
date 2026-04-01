@@ -272,7 +272,7 @@
             .then(function (data) {
                 if (!data || data.status !== 'success') return;
                 if (uomSelect) {
-                    var selectedUom = uomSelect.getAttribute('data-selected') || '';
+                    var selectedUom = uomSelect.value || uomSelect.getAttribute('data-selected') || '';
                     clearUomOptions();
                     if (Array.isArray(data.uoms) && data.uoms.length) {
                         data.uoms.forEach(function (item) {
@@ -285,6 +285,9 @@
                             }
                             uomSelect.appendChild(opt);
                         });
+                        if (selectedUom) {
+                            uomSelect.setAttribute('data-selected', String(selectedUom));
+                        }
                     }
                 }
                 if (saleInfo && data.description) {
@@ -475,6 +478,12 @@
         hsInput.addEventListener('change', function () {
             clearTimeout(debounceTimer);
             fetchHsCodeInfo();
+        });
+    }
+
+    if (uomSelect) {
+        uomSelect.addEventListener('change', function () {
+            uomSelect.setAttribute('data-selected', uomSelect.value || '');
         });
     }
 

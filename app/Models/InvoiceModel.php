@@ -225,12 +225,15 @@ class InvoiceModel extends Model
         // -- 2. Insert into tbl_sales_invoice_detail
         DB::unprepared("
             INSERT INTO `tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,'' AS Uom_Desc,
-                SaleTypeID,'' AS SaleTypeDesc,SaleTypeToRateID,'' AS SaleTypeToRateDesc,SroScheduleID,'' AS SroScheduleDesc,
-                SroItemID,'' AS SroItemSerialNo,
-                TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,
-                CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
+            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.Weight, 
+                h.HsCode, h.SaleInformation,t.UomID, h.Uom_Desc AS Uom_Desc, t.SaleTypeID, h.SaleTypeDesc AS SaleTypeDesc, 
+                t.SaleTypeToRateID, h.SaleTypeToRateDesc AS SaleTypeToRateDesc, t.SroScheduleID, h.SroScheduleDesc AS SroScheduleDesc, 
+                t.SroItemID, h.SroItemSerialNo AS SroItemSerialNo, 
+                IFNULL(t.TotalValues,0.00), IFNULL(t.ValueSalesExcludingST,0.00), IFNULL(t.FixedNotifiedValueOrRetailPrice,0.00), IFNULL(t.SalesTaxApplicable,0.00), 
+	            IFNULL(t.SalesTaxWithheldAtSource,0.00),IFNULL(t.ExtraTax,0.00), IFNULL(t.FurtherTax,0.00), IFNULL(t.FedPayable,0.00), IFNULL(t.Discount,0.00), 
+                t.CreatedBy, t.CreatedOn, t.UpdatedBy, t.UpdatedOn
             FROM `tbl_temp_invoice_detail` t
+            INNER JOIN tbl_product h ON (h.ID = t.ProductID)
             WHERE t.RequestID = '$requestID'
         ");
     }
