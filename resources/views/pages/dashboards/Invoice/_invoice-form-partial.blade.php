@@ -172,15 +172,22 @@
         .table-inv th,
         .table-inv td { padding: 0.25rem 0.4rem !important; vertical-align: middle; }
         .table-inv th.ifp-col-desc,
-        .table-inv td.ifp-col-desc { min-width: 220px; width: 20%; }
+        .table-inv td.ifp-col-desc { min-width: 320px; width: 30%; }
         .table-inv .form-control,
         .table-inv .form-select { padding: 0.25rem 0.4rem; margin: 0; min-height: 1.75rem; font-size: 0.8125rem; box-sizing: border-box; min-width: 3.5rem; }
         .table-inv textarea.form-control { padding: 0.25rem 0.4rem; margin: 0; min-height: 1.75rem; }
         .table-inv td.ifp-col-desc textarea.form-control { min-width: 200px; width: 100%; }
+        .table-inv td.ifp-col-desc .ifp-readonly-desc {
+            display: block;
+            min-width: 320px;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.25;
+        }
         .table-inv .btn-icon { padding: 0.2rem 0.35rem; margin: 0; }
     </style>
     <div class="col-xl-12">
-        <table class="table nowrap text-nowrap table-borderless border mt-3 table-inv">
+        <table class="table nowrap {{ $isReadonly ? '' : 'text-nowrap' }} table-borderless border mt-3 table-inv">
             <thead>
                 <tr>
                     <th>Product / Services</th>
@@ -232,7 +239,7 @@
                     </td>
                     <td class="ifp-col-desc">
                         @if($isReadonly)
-                            <span class="small">{{ $item->Details ?? '-' }}</span>
+                            <span class="small ifp-readonly-desc">{{ $item->Details ?? $item->ProductDescription ?? '-' }}</span>
                         @else
                             <input type="hidden" name="items[{{ $idx }}][HsCode]" class="ifp-hscode" value="{{ $item->HsCode ?? '' }}">
                             <textarea name="items[{{ $idx }}][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description">{{ $item->Details ?? '' }}</textarea>
@@ -240,7 +247,7 @@
                     </td>
                     <td>
                         @if($isReadonly)
-                            <span class="small">{{ $item->UomName ?? $item->UomID ?? '-' }}</span>
+                            <span class="small">{{ $item->Uom_Desc ?? $item->UomName ?? $item->UomID ?? '-' }}</span>
                         @else
                             <select name="items[{{ $idx }}][UomID]" class="form-select form-select-sm ifp-uom" data-selected="{{ $item->UomID ?? '' }}">
                                 <option value="">Select UOM</option>
@@ -249,7 +256,7 @@
                     </td>
                     <td>
                         @if($isReadonly)
-                            <span class="small">{{ $item->SaleTypeName ?? $item->SaleTypeID ?? '-' }}</span>
+                            <span class="small">{{ $item->SaleTypeDesc ?? $item->SaleTypeName ?? $item->SaleTypeID ?? '-' }}</span>
                         @else
                             <select name="items[{{ $idx }}][SaleTypeID]" class="form-select form-select-sm ifp-sale-type" data-selected="{{ $item->SaleTypeID ?? '' }}">
                                 <option value="">Loading...</option>
@@ -258,7 +265,7 @@
                     </td>
                     <td>
                         @if($isReadonly)
-                            <span class="small">{{ $item->SaleTypeToRateName ?? $item->SaleTypeToRateID ?? '-' }}</span>
+                            <span class="small">{{ $item->SaleTypeToRateDesc ?? $item->SaleTypeToRateName ?? $item->SaleTypeToRateID ?? '-' }}</span>
                         @else
                             <select name="items[{{ $idx }}][SaleTypeToRateID]" class="form-select form-select-sm ifp-sale-type-to-rate" data-selected="{{ $item->SaleTypeToRateID ?? '' }}">
                                 <option value="">Select Sale Type first</option>
@@ -267,7 +274,7 @@
                     </td>
                     <td>
                         @if($isReadonly)
-                            <span class="small">{{ $item->SroScheduleName ?? $item->SroScheduleID ?? '-' }}</span>
+                            <span class="small">{{ $item->SroScheduleDesc ?? $item->SroScheduleName ?? $item->SroScheduleID ?? '-' }}</span>
                         @else
                             <select name="items[{{ $idx }}][SroScheduleID]" class="form-select form-select-sm ifp-sro-schedule" data-selected="{{ $item->SroScheduleID ?? '' }}">
                                 <option value="">Select Sale Type To Rate first</option>
@@ -276,7 +283,7 @@
                     </td>
                     <td>
                         @if($isReadonly)
-                            <span class="small">{{ $item->SroItemName ?? $item->SroItemID ?? '-' }}</span>
+                            <span class="small">{{ $item->SroItemSerialNo ?? $item->SroItemName ?? $item->SroItemID ?? '-' }}</span>
                         @else
                             <select name="items[{{ $idx }}][SroItemID]" class="form-select form-select-sm ifp-sro-item" data-selected="{{ $item->SroItemID ?? '' }}">
                                 <option value="">Select SRO Schedule first</option>
@@ -401,6 +408,26 @@
         @endif
 
         {{-- ── Notes + Summary ── --}}
+        @php
+            $calcSubTotal = collect($items ?? [])->sum(fn($r) => (float) ($r->Amount ?? 0));
+            $calcDiscount = collect($items ?? [])->sum(fn($r) => (float) ($r->DiscountAmount ?? 0));
+            $calcGst      = collect($items ?? [])->sum(fn($r) => (float) ($r->GSTAmount ?? 0));
+            $calcTotal    = collect($items ?? [])->sum(function($r) {
+                $rowTotal = (float) ($r->Total ?? 0);
+                if ($rowTotal > 0) {
+                    return $rowTotal;
+                }
+                $amt  = (float) ($r->Amount ?? 0);
+                $disc = (float) ($r->DiscountAmount ?? 0);
+                $gst  = (float) ($r->GSTAmount ?? 0);
+                return max(0, ($amt - $disc) + $gst);
+            });
+
+            $viewSubTotal = $invoice->SubTotal ?? $calcSubTotal;
+            $viewDiscount = $invoice->TotalDiscount ?? $invoice->DiscountAmount ?? $calcDiscount;
+            $viewGst      = $invoice->TotalGST ?? $invoice->GSTAmount ?? $calcGst;
+            $viewGrand    = $invoice->TotalAmount ?? $invoice->Total ?? $calcTotal;
+        @endphp
         <div class="row mt-4">
             <div class="col-md-9">
                 <div class="clearfix w-50">
@@ -425,7 +452,7 @@
                             <td>
                                 <input type="number" step="0.01" name="SubTotal" id="{{ $uid }}_SubTotal"
                                        class="form-control invoice-amount-input w-100"
-                                       value="{{ $isReadonly ? number_format($invoice->SubTotal ?? 0, 2) : '0.00' }}" readonly>
+                                       value="{{ $isReadonly ? number_format((float) $viewSubTotal, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
                         <tr>
@@ -433,7 +460,7 @@
                             <td>
                                 <input type="number" step="0.01" name="TotalDiscount" id="{{ $uid }}_TotalDiscount"
                                        class="form-control invoice-amount-input w-100"
-                                       value="{{ $isReadonly ? number_format($invoice->TotalDiscount ?? 0, 2) : '0.00' }}" readonly>
+                                       value="{{ $isReadonly ? number_format((float) $viewDiscount, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
                         <tr>
@@ -441,7 +468,7 @@
                             <td>
                                 <input type="number" step="0.01" name="TotalGST" id="{{ $uid }}_TotalGST"
                                        class="form-control invoice-amount-input w-100"
-                                       value="{{ $isReadonly ? number_format($invoice->TotalGST ?? 0, 2) : '0.00' }}" readonly>
+                                       value="{{ $isReadonly ? number_format((float) $viewGst, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
                         <tr>
@@ -449,7 +476,7 @@
                             <td>
                                 <input type="number" step="0.01" name="GrandTotal" id="{{ $uid }}_GrandTotal"
                                        class="form-control invoice-amount-input w-100 fw-bold"
-                                       value="{{ $isReadonly ? number_format($invoice->TotalAmount ?? 0, 2) : '0.00' }}" readonly>
+                                       value="{{ $isReadonly ? number_format((float) $viewGrand, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
                     </tbody>
@@ -549,8 +576,10 @@
                 const rateEl = row.querySelector('.ifp-rate');
                 const gstEl  = row.querySelector('.ifp-gst-pct');
                 const ds = opt.dataset || {};
-                if (rateEl) rateEl.value = ds.rate || opt.getAttribute('data-rate') || 0;
-                if (gstEl)  gstEl.value  = ds.gst  || opt.getAttribute('data-gst')  || 0;
+                if (forceDetailsFill) {
+                    if (rateEl) rateEl.value = ds.rate || opt.getAttribute('data-rate') || 0;
+                    if (gstEl)  gstEl.value  = ds.gst  || opt.getAttribute('data-gst')  || 0;
+                }
 
                 const hsCode = ds.hscode || opt.getAttribute('data-hscode') || '';
                 const saleInfo = ds.saleInformation || opt.getAttribute('data-sale-information') || '';
@@ -579,14 +608,18 @@
                     }
                 }
                 if (uomSel) {
-                    uomSel.setAttribute('data-selected', uomId);
+                    if (forceDetailsFill || !uomSel.getAttribute('data-selected')) {
+                        uomSel.setAttribute('data-selected', uomId);
+                    }
                     fetchHsCodeInfoForRow(row);
                 }
-                if (saleTypeSel) saleTypeSel.setAttribute('data-selected', saleTypeId);
-                if (saleTypeToRateSel) saleTypeToRateSel.setAttribute('data-selected', saleTypeToRateId);
-                if (sroScheduleSel) sroScheduleSel.setAttribute('data-selected', sroScheduleId);
-                if (sroItemSel) sroItemSel.setAttribute('data-selected', sroItemId);
-                loadSaleTypesForRow(row);
+                if (saleTypeSel && (forceDetailsFill || !saleTypeSel.getAttribute('data-selected'))) saleTypeSel.setAttribute('data-selected', saleTypeId);
+                if (saleTypeToRateSel && (forceDetailsFill || !saleTypeToRateSel.getAttribute('data-selected'))) saleTypeToRateSel.setAttribute('data-selected', saleTypeToRateId);
+                if (sroScheduleSel && (forceDetailsFill || !sroScheduleSel.getAttribute('data-selected'))) sroScheduleSel.setAttribute('data-selected', sroScheduleId);
+                if (sroItemSel && (forceDetailsFill || !sroItemSel.getAttribute('data-selected'))) sroItemSel.setAttribute('data-selected', sroItemId);
+                if (forceDetailsFill) {
+                    loadSaleTypesForRow(row);
+                }
 
                 calcRow(row);
                 calcSummary();

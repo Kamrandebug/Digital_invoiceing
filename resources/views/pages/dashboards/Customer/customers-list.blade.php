@@ -12,6 +12,16 @@
 	.btn-margin{
 		margin-top: 20px;
 	}
+    #customersTable th.action-col,
+    #customersTable td:last-child {
+        min-width: 10rem;
+        max-width: none !important;
+        width: auto !important;
+        text-align: end;
+        vertical-align: middle;
+    }
+    #customersTable .btn-group.btn-listing { position: relative; }
+    #customersTable .dropdown-menu { z-index: 1060; }
 </style>
 @endsection
 
@@ -166,9 +176,9 @@
 						<tr>
 							<td><input type="checkbox" class="customer-checkbox form-check-input" value="{{ $customer->ID }}"></td>
 							<td>
-								<strong>{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}</strong>
-								@if($customer->BusinessName)
-								<br><small class="text-muted">{{ $customer->BusinessName }}</small>
+								<strong>{{ $customer->BusinessName ?? ($customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName)) }}</strong>
+								@if($customer->DisplayName)
+								<br><small class="text-muted">{{ $customer->DisplayName }}</small>
 								@endif
 							</td>
 							<td>{{ $customer->NTN ?? 'N/A' }}</td>
@@ -194,24 +204,33 @@
 									  <button class="btn btn-outline-primary btn-list-left" onclick="openCustomerModal('show', {{ $customer->ID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
-									  <button type="button" class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									  <button type="button"
+                                              class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2"
+                                              data-bs-toggle="dropdown"
+                                              data-bs-auto-close="true"
+                                              data-bs-popper-config='{"strategy":"fixed"}'
+                                              aria-expanded="false">
 										<span class="sr-only">Toggle Dropdown</span>
 									  </button>
-									  <ul class="dropdown-menu">
-										
-										<button class="dropdown-item" onclick="openCustomerModal('edit', {{ $customer->ID }})">
-											<i class="fas fa-edit"></i> Edit
-										</button>
-										
-										<form action="{{ route('customers.delete_transaction', $customer->ID ?? 0) }}" method="POST" style="display: inline;"
-											  onsubmit="return confirmDelete('{{ $customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName) }}')">
-											@csrf
-											@method('DELETE')
-											<button type="submit" class="dropdown-item" title="Archive Customer">
-												<i class="fas fa-trash"></i> Delete
-											</button>
-										</form>
-										  
+									  <ul class="dropdown-menu dropdown-menu-end">
+										<li>
+										    <button type="button" class="dropdown-item" onclick="openCustomerModal('edit', {{ $customer->ID }})">
+											    <i class="fas fa-edit"></i> Edit
+										    </button>
+										</li>
+										<li>
+                                            <button type="button"
+                                                    class="dropdown-item text-danger"
+                                                    onclick="confirmDelete({{ $customer->ID }}, '{{ addslashes($customer->BusinessName ?? ($customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName))) }}')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                            <form id="delete-form-{{ $customer->ID }}"
+                                                  action="{{ route('customers.delete_transaction', $customer->ID ?? 0) }}"
+                                                  method="POST" class="d-none">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                        </li>
 									  </ul>
 									</div>
 								
@@ -287,10 +306,38 @@
     </div>
 </div>
 
+<div class="modal fade" id="deleteCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold text-danger">
+                    <i class="fas fa-trash me-2"></i> Archive Customer
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to archive <strong id="deleteCustomerName"></strong>?</p>
+                <p class="text-muted fs-13 mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    This will archive the customer and hide it from active lists.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-danger" id="confirmCustomerDeleteBtn">
+                    <i class="fas fa-trash me-1"></i> Yes, Archive It
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
 <script>
+    let deleteCustomerId = null;
+
     // Auto-hide alerts
     setTimeout(function() {
         const alerts = document.querySelectorAll('.alert');
@@ -300,10 +347,18 @@
         });
     }, 5000);
     
-    // Confirm delete
-    function confirmDelete(customerName) {
-        return confirm(`Are you sure you want to archive the customer "${customerName}"?\n\nThis will set IsArchive = 1 and hide the customer from the active list.`);
+    function confirmDelete(id, customerName) {
+        deleteCustomerId = id;
+        document.getElementById('deleteCustomerName').textContent = customerName || 'this customer';
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteCustomerModal'));
+        modal.show();
+        return false;
     }
+    document.getElementById('confirmCustomerDeleteBtn').addEventListener('click', function() {
+        if (deleteCustomerId) {
+            document.getElementById('delete-form-' + deleteCustomerId).submit();
+        }
+    });
     
     // Frontend filter
    // ── Debounced backend search (works with pagination) ──

@@ -108,7 +108,7 @@ class InvoiceController extends Controller
             $items = DB::table('tbl_sales_invoice_detail as d')
                 ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
                 ->select('d.*', 'p.Name as ProductName')
-                ->where('d.InvoiceID', $id)
+                ->where('d.InvoiceID', $invoice->InvoiceID)
                 ->where('d.Status', '!=', 2)
                 ->get();
         }
@@ -151,7 +151,7 @@ class InvoiceController extends Controller
         $items = DB::table('tbl_sales_invoice_detail as d')
             ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
             ->select('d.*', 'p.Name as ProductName')
-            ->where('d.InvoiceID', $id)
+            ->where('d.InvoiceID', $invoice->InvoiceID)
             ->where('d.Status', '!=', 2)
             ->get();
 
@@ -185,7 +185,7 @@ class InvoiceController extends Controller
         $items = DB::table('tbl_sales_invoice_detail as d')
             ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
             ->select('d.*', 'p.Name as ProductName')
-            ->where('d.InvoiceID', $id)
+            ->where('d.InvoiceID', $invoice->InvoiceID)
             ->where('d.Status', '!=', 2)
             ->get();
 
@@ -221,7 +221,7 @@ class InvoiceController extends Controller
         $items = DB::table('tbl_sales_invoice_detail as d')
             ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
             ->select('d.*', 'p.Name as ProductName')
-            ->where('d.InvoiceID', $id)
+            ->where('d.InvoiceID', $invoice->InvoiceID)
             ->where('d.Status', '!=', 2)
             ->get();
 

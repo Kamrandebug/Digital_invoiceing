@@ -304,15 +304,17 @@
 
 										@if(!$fbrLocked)
 										<li>
-											<form action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
-												  method="POST" class="m-0"
-												  onsubmit="return confirmDelete('{{ $invoice->DocNo }}')">
-												@csrf
-												@method('DELETE')
-												<button type="submit" class="dropdown-item">
-													<i class="fas fa-trash"></i> Delete
-												</button>
-											</form>
+                                            <button type="button"
+                                                    class="dropdown-item text-danger"
+                                                    onclick="confirmDelete({{ $invoice->HeaderID }}, '{{ addslashes($invoice->DocNo ?? '') }}')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                            <form id="delete-form-{{ $invoice->HeaderID }}"
+                                                  action="{{ route('invoices.delete_transaction', $invoice->HeaderID) }}"
+                                                  method="POST" class="d-none">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
 										</li>
 										@endif
 									  </ul>
@@ -450,6 +452,33 @@
     </div>
 </div>
 
+{{-- Invoice Delete Modal --}}
+<div class="modal fade" id="deleteInvoiceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold text-danger">
+                    <i class="fas fa-trash me-2"></i> Archive Invoice
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to archive invoice <strong id="deleteInvoiceDocNo"></strong>?</p>
+                <p class="text-muted fs-13 mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    This will archive the invoice and hide it from active lists.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-danger" id="confirmInvoiceDeleteBtn">
+                    <i class="fas fa-trash me-1"></i> Yes, Archive It
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- FBR Response Modal --}}
 <div class="modal fade" id="fbr_response_modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -537,6 +566,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.0/dist/js/bootstrap-datepicker.min.js"></script>
 
 <script>
+    let deleteInvoiceId = null;
 //	document.addEventListener('DOMContentLoaded', function () {
 //    // Toggle dropdown on button click
 //    document.querySelectorAll('.action-toggle').forEach(btn => {
@@ -594,9 +624,18 @@
     }, 5000);
 
     // ── Confirm delete ────────────────────────────────────────
-    function confirmDelete(docNo) {
-        return confirm('Are you sure you want to archive invoice "' + docNo + '"?');
+    function confirmDelete(id, docNo) {
+        deleteInvoiceId = id;
+        document.getElementById('deleteInvoiceDocNo').textContent = docNo || 'this invoice';
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteInvoiceModal'));
+        modal.show();
+        return false;
     }
+    document.getElementById('confirmInvoiceDeleteBtn').addEventListener('click', function() {
+        if (deleteInvoiceId) {
+            document.getElementById('delete-form-' + deleteInvoiceId).submit();
+        }
+    });
 
     // ── Debounced search ──────────────────────────────────────
     let searchTimer = null;

@@ -55,7 +55,11 @@ class CustomerController extends Controller
      */
     public function create()
     {
-        return view('pages.dashboards.Customer.customers-form', ['mode' => 'create', 'customer' => new Customer()]);
+        return view('pages.dashboards.Customer.customers-form', [
+            'mode' => 'create',
+            'customer' => new Customer(),
+            'provinces' => $this->provinceOptions(),
+        ]);
     }
     
     /**
@@ -257,7 +261,11 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
         $customerModel->setRawAttributes((array)$customer, true);
         $customerModel->exists = true;
 
-        return view('pages.dashboards.Customer.customers-form', ['mode' => 'show', 'customer' => $customerModel]);
+        return view('pages.dashboards.Customer.customers-form', [
+            'mode' => 'show',
+            'customer' => $customerModel,
+            'provinces' => $this->provinceOptions(),
+        ]);
     }
     
     /**
@@ -277,7 +285,11 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
         $customerModel->setRawAttributes((array)$customer, true);
         $customerModel->exists = true;
 
-        return view('pages.dashboards.Customer.customers-form', ['mode' => 'edit', 'customer' => $customerModel]);
+        return view('pages.dashboards.Customer.customers-form', [
+            'mode' => 'edit',
+            'customer' => $customerModel,
+            'provinces' => $this->provinceOptions(),
+        ]);
     }
 
     /**
@@ -307,8 +319,33 @@ public function modal(Request $request, $id = null)
         'mode'     => $mode,
         'customer' => $customer ?? new Customer(),
         'inModal'  => true,
+        'provinces'=> $this->provinceOptions(),
     ]);
 }
+
+    /**
+     * Province dropdown options from core_digital_invoicing.fbr_province.
+     *
+     * @return \Illuminate\Support\Collection<int, string>
+     */
+    private function provinceOptions()
+    {
+        try {
+            return DB::connection('landlord')
+                ->table('core_digital_invoicing.fbr_province')
+                ->whereNotNull('stateProvinceDesc')
+                ->select('stateProvinceDesc')
+                ->orderBy('stateProvinceDesc')
+                ->pluck('stateProvinceDesc')
+                ->map(fn ($v) => trim((string) $v))
+                ->filter(fn ($v) => $v !== '')
+                ->unique()
+                ->values();
+        } catch (\Throwable $e) {
+            \Log::warning('provinceOptions load failed', ['error' => $e->getMessage()]);
+            return collect(['Punjab', 'Sindh', 'Balochistan', 'KPK', 'Gilgit Baltistan', 'Islamabad', 'AJK']);
+        }
+    }
     
     /**
      * Update customer

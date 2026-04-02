@@ -172,7 +172,7 @@
 											<i class="fas fa-edit"></i> Edit
 										</button>
 										  
-										<button class="dropdown-item" title="Archive"
+										<button class="dropdown-item text-danger" title="Archive"
 											onclick="confirmDelete({{ $product->ID }}, '{{ addslashes($product->Name ?? '') }}')">
 											<i class="fas fa-trash"></i> Delete
 										</button>
