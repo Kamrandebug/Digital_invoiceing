@@ -3,27 +3,15 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Services\TenantProvisioningService;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
-    protected $tenantService;
-
-    public function __construct(TenantProvisioningService $tenantService)
-    {
-        $this->tenantService = $tenantService;
-    }
-
     /**
-     * Display the registration view.
+     * Display the registration (lead capture) view.
      */
     public function create(): View
     {
@@ -31,55 +19,38 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Save registration details only to digital_invoicing.tbl_lead (landlord connection).
      */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'mobile' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
-            'password' => ['required', Rules\Password::defaults()],
+            'name' => ['required', 'string', 'max:100'],
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:100'],
+            'city' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'mobile' => $request->mobile,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-
-        // 🔥 CREATE TENANT DATABASE FROM CENTRAL SCHEMA
-        
         try {
-            $tenant = $this->tenantService->createTenant($user);
+            DB::connection('landlord')->table('tbl_lead')->insert([
+                'BusinessName' => $request->name,
+                'FirstName' => $request->first_name,
+                'LastName' => $request->last_name,
+                'Email' => $request->email,
+                'City' => $request->city,
+                'Statusi' => 1,
+                'CreatedBy' => 1,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
 
-            // Optional: Log success
-            \Illuminate\Support\Facades\Log::info("Tenant created for user {$user->id}: {$tenant->database_name}");
-        } catch (\Exception $e) {
-            // Log the error for debugging
-            \Illuminate\Support\Facades\Log::error('Tenant creation failed: ' . $e->getMessage());
-
-            // If tenant creation fails, delete the user and show error
-            $user->delete();
-
-            return back()->withErrors([
-                'email' => 'Failed to create your account. Please try again.',
-            ])->withInput();
+            return back()
+                ->withErrors(['email' => 'Could not save your registration. Please try again later.'])
+                ->withInput();
         }
-        
 
-        event(new Registered($user));
-
-        Auth::login($user);
-
-        return redirect(route('tenants.index', absolute: false));
+        return redirect()
+            ->route('register')
+            ->with('success', 'Thank you. Our team will contact you Shortly.');
     }
 }
