@@ -23,7 +23,19 @@ class TenantList extends Model
         'TenantName',
         'ImageUrl',
         'UserID',
+        'SaleStatus',
+        'ExpiryDate',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'ExpiryDate' => 'datetime',
+        ];
+    }
 
     /**
      * Scope: tenants assigned to the given user id (default: logged-in user).
