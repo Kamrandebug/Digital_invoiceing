@@ -47,11 +47,11 @@ class ProductController extends Controller
         // Get filtered data
         $products = ProductModel::getlistingdata($filters);
 
-        // Listing labels should come directly from tbl_product (no FBR lookup on index).
+        // Listing: UOM / SaleType / Rate columns use description fields from tbl_product only (no ID fallback).
         foreach ($products as $product) {
-            $product->UomLabel      = $product->Uom_Desc ?? ($product->UOM ?? '-');
-            $product->SaleTypeLabel = $product->SaleTypeDesc ?? ($product->SaleTypeID ?? '-');
-            $product->SaleRateLabel = $product->SaleTypeToRateDesc ?? ($product->SaleTypeToRateID ?? '-');
+            $product->UomLabel      = $this->productListingDesc($product, ['Uom_Desc', 'uom_desc']);
+            $product->SaleTypeLabel = $this->productListingDesc($product, ['SaleTypeDesc', 'saletypedesc']);
+            $product->SaleRateLabel = $this->productListingDesc($product, ['SaleTypeToRateDesc', 'saletypetoratedesc']);
         }
 
         return view('pages.dashboards.Product.products', compact('products'));
@@ -1368,5 +1368,20 @@ class ProductController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * First non-empty description column from listing row (handles PDO case variants).
+     */
+    private function productListingDesc(object $row, array $keys): string
+    {
+        foreach ($keys as $key) {
+            $v = data_get($row, $key);
+            if ($v !== null && $v !== '') {
+                return (string) $v;
+            }
+        }
+
+        return '—';
     }
 }

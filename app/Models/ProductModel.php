@@ -123,7 +123,8 @@ class ProductModel extends Model
     // Order By
     $query .= " ORDER BY CreatedOn DESC";
 
-    return DB::select($query, $bindings);
+    // Tenant catalog lives on the session-scoped tenant connection (not landlord).
+    return DB::connection('tenant')->select($query, $bindings);
 }
     /**
      * Execute save: insert from temp_product into tbl_product. No return; runs query inside.
