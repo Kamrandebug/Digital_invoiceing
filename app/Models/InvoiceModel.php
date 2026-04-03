@@ -264,11 +264,14 @@ class InvoiceModel extends Model
                 t.HsCode, t.ProductDescription AS SaleInformation,t.UomID, t.Uom_Desc AS Uom_Desc, 
                 t.SaleTypeID, t.SaleTypeDesc AS SaleTypeDesc, 
                 t.SaleTypeToRateID, t.SaleTypeToRateDesc AS SaleTypeToRateDesc, 
-                t.SroScheduleID, t.SroScheduleDesc AS SroScheduleDesc, 
-                t.SroItemID, t.SroItemSerialNo AS SroItemSerialNo, 
-                IFNULL(t.TotalValues,0.00), IFNULL(t.ValueSalesExcludingST,0.00), IFNULL(t.FixedNotifiedValueOrRetailPrice,0.00), IFNULL(t.SalesTaxApplicable,0.00), 
+                t.SroScheduleID, IFNULL(t.SroScheduleDesc,'') AS SroScheduleDesc, 
+                t.SroItemID, IFNULL(t.SroItemSerialNo,'') AS SroItemSerialNo, 
+                IFNULL(t.TotalValues,0.00), 
+                IFNULL(t.Amount,0.00) AS ValueSalesExcludingST, 
+                IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS FixedNotifiedValueOrRetailPrice, 
+                IFNULL(t.GSTAmount,0.00) AS SalesTaxApplicable, 
 	            IFNULL(t.SalesTaxWithheldAtSource,0.00),IFNULL(t.ExtraTax,0.00), IFNULL(t.FurtherTax,0.00), IFNULL(t.FedPayable,0.00), IFNULL(t.Discount,0.00),
-                1 AS Status,
+                1 AS `Status`,
                 t.CreatedBy, t.CreatedOn, t.UpdatedBy, t.UpdatedOn
             FROM `tbl_temp_invoice_detail` t
             WHERE t.RequestID = '$requestID'
