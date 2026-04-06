@@ -26,6 +26,12 @@
             </div>
         @endif
 
+        @if(session('error'))
+            <div class="alert alert-danger" role="alert">
+                {{ session('error') }}
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('register') }}">
             @csrf
 			
@@ -72,6 +78,15 @@
 						<input class="form-control @error('city') is-invalid @enderror" id="city" type="text" name="city" value="{{ old('city') }}" placeholder="" autocomplete="address-level2" />
 						<label for="city">City</label>
 						@error('city')
+							<div class="invalid-feedback">{{ $message }}</div>
+						@enderror
+					</div>
+				</div>
+				<div class="col-md-12">
+					<div class="form-floating">
+						<input class="form-control @error('mobile_no') is-invalid @enderror" id="mobile_no" type="text" name="mobile_no" value="{{ old('mobile_no') }}" placeholder="" required autocomplete="tel" maxlength="15" inputmode="tel" />
+						<label for="mobile_no">Mobile No <span>*</span></label>
+						@error('mobile_no')
 							<div class="invalid-feedback">{{ $message }}</div>
 						@enderror
 					</div>
