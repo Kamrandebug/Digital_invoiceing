@@ -44,7 +44,7 @@ class TenantListController extends Controller
     public function select(Request $request, int $id): RedirectResponse
     {
         $tenant = TenantList::assignedToUser()->find($id);
-dd($tenant);
+
         if (!$tenant) {
             return redirect()->route('tenants.index')->with('error', 'Tenant not found or not assigned to you.');
         }
