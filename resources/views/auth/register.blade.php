@@ -16,9 +16,21 @@
     <div class="auth-card-register">
 
         <div class="text-center">
-            <h2 class="auth-title">Sign in to your account</h2>
-            <p class="auth-subtitle">Enter your credentials to continue</p>
+            <h2 class="auth-title">Create your account</h2>
+            <p class="auth-subtitle">Enter your details to register</p>
         </div>
+
+        @if(session('success'))
+            <div class="alert alert-success" role="alert">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger" role="alert">
+                {{ session('error') }}
+            </div>
+        @endif
 
         <form method="POST" action="{{ route('register') }}">
             @csrf
@@ -26,15 +38,15 @@
 			<div class="row g-3">
 				<div class="col-md-12">
 					<div class="form-floating">
-						<input class="form-control @error('name') is-invalid @enderror" id="name" type="text" name="name" value="{{ old('name') }}" placeholder="" required autocomplete="name" />
-						<label for="name">Business Name</label>
+						<input class="form-control @error('name') is-invalid @enderror" id="name" type="text" name="name" value="{{ old('name') }}" placeholder="" required autocomplete="organization" />
+						<label for="name">Business Name <span>*</span></label>
 						@error('name')
 							<div class="invalid-feedback">{{ $message }}</div>
 						@enderror
 					</div>
 				</div>
 				
-				<div class="col-md-4">
+				<div class="col-md-6">
 					<div class="form-floating">
 						<input class="form-control @error('first_name') is-invalid @enderror" id="first_name" type="text" name="first_name" value="{{ old('first_name') }}" placeholder="" required autocomplete="given-name" />
 						<label for="first_name">First Name</label>
@@ -43,7 +55,7 @@
 						@enderror
 					</div>
 				</div>
-				<div class="col-md-4">
+				<div class="col-md-6">
 					<div class="form-floating">
 						<input class="form-control @error('last_name') is-invalid @enderror" id="last_name" type="text" name="last_name" value="{{ old('last_name') }}" placeholder="" required autocomplete="family-name" />
 						<label for="last_name">Last Name</label>
@@ -51,39 +63,39 @@
 							<div class="invalid-feedback">{{ $message }}</div>
 						@enderror
 					</div>
-				</div>							
-				<div class="col-md-4">
-					<div class="form-floating">
-						<input class="form-control @error('mobile') is-invalid @enderror" id="mobile" type="text" name="mobile" value="{{ old('mobile') }}" placeholder="" required autofocus autocomplete="tel" />
-						<label for="mobile">Mobile <span>*</span></label>
-						@error('mobile')
-							<div class="invalid-feedback">{{ $message }}</div>
-						@enderror
-					</div>
 				</div>
-				<div class="col-md-4">
+				<div class="col-md-6">
 					<div class="form-floating">
-						<input class="form-control @error('email') is-invalid @enderror" id="email" type="email" name="email" value="{{ old('email') }}" placeholder="" autocomplete="username" />
+						<input class="form-control @error('email') is-invalid @enderror" id="email" type="email" name="email" value="{{ old('email') }}" placeholder="" required autocomplete="username" />
 						<label for="email">Email Address</label>
 						@error('email')
 							<div class="invalid-feedback">{{ $message }}</div>
 						@enderror
 					</div>
 				</div>
-				<div class="col-md-4">
-					<div class="form-floating position-relative">
-						<input class="form-control @error('password') is-invalid @enderror" id="password" type="password" name="password" placeholder="" required autocomplete="new-password" >
-						<label for="password">Password</label>
-						<span class="toggle-password" onclick="togglePassword()">Show</span>
-						@error('password')
-							<div class="invalid-feedback d-block">{{ $message }}</div>
+				<div class="col-md-6">
+					<div class="form-floating">
+						<input class="form-control @error('city') is-invalid @enderror" id="city" type="text" name="city" value="{{ old('city') }}" placeholder="" autocomplete="address-level2" />
+						<label for="city">City</label>
+						@error('city')
+							<div class="invalid-feedback">{{ $message }}</div>
 						@enderror
 					</div>
-				</div>	
-				
-				<div class="col-md-4">
-					<button type="submit" class="btn btn-smart btn-lg text-white w-100">{{ __('Register') }}</button>
-				</div>	
+				</div>
+				<div class="col-md-12">
+					<div class="form-floating">
+						<input class="form-control @error('mobile_no') is-invalid @enderror" id="mobile_no" type="text" name="mobile_no" value="{{ old('mobile_no') }}" placeholder="" required autocomplete="tel" maxlength="15" inputmode="tel" />
+						<label for="mobile_no">Mobile No <span>*</span></label>
+						@error('mobile_no')
+							<div class="invalid-feedback">{{ $message }}</div>
+						@enderror
+					</div>
+				</div>
+				<div class="col-12 mt-2">
+					<button type="submit" class="btn btn-smart btn-lg text-white w-100 py-3" id="registerSubmitBtn">
+						{{ __('Register') }}
+					</button>
+				</div>
 			</div>
 		</form>
 
@@ -99,21 +111,6 @@
 
     </div>
 </div>
-
-<script>
-function togglePassword() {
-    const input = document.getElementById("password");
-    const toggle = document.querySelector(".toggle-password");
-
-    if (input.type === "password") {
-        input.type = "text";
-        toggle.textContent = "Hide";
-    } else {
-        input.type = "password";
-        toggle.textContent = "Show";
-    }
-}
-</script>
 
 </body>
 </html>

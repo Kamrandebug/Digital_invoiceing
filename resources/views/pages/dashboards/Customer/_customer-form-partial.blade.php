@@ -37,6 +37,7 @@
     $mode     = $mode     ?? 'create';
     $customer = $customer ?? null;
     $inModal  = $inModal  ?? false;
+    $provinces = $provinces ?? collect();
 
     $isCreate   = $mode === 'create';
     $isEdit     = $mode === 'edit';
@@ -364,9 +365,14 @@
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->County ?? '-' }}</div>
 									@else
-										<input type="text" name="County"
-											   class="form-control form-control-sm @error('County') is-invalid @enderror"
-											   value="{{ old('County', $customer->County ?? '') }}" placeholder="State/Province" required>
+										<select name="County"
+												class="form-select form-select-sm @error('County') is-invalid @enderror"
+												required>
+											<option value="">Select State/Province</option>
+											@foreach($provinces as $prov)
+												<option value="{{ $prov }}" {{ old('County', $customer->County ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
+											@endforeach
+										</select>
 										@error('County')<div class="invalid-feedback">{{ $message }}</div>@enderror
 									@endif
 								</div>
@@ -419,9 +425,14 @@
 
 								<div class="col-md-3">
 									<label class="form-label _cfp-required">State / Province</label>
-									<input type="text" name="BillingCounty" id="{{ $uid }}_BillingCounty"
-										   class="form-control form-control-sm @error('BillingCounty') is-invalid @enderror"
-										   value="{{ old('BillingCounty', $customer->BillingCounty ?? '') }}" placeholder="State/Province" required>
+									<select name="BillingCounty" id="{{ $uid }}_BillingCounty"
+											class="form-select form-select-sm @error('BillingCounty') is-invalid @enderror"
+											required>
+										<option value="">Select State/Province</option>
+										@foreach($provinces as $prov)
+											<option value="{{ $prov }}" {{ old('BillingCounty', $customer->BillingCounty ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
+										@endforeach
+									</select>
 									@error('BillingCounty')<div class="invalid-feedback">{{ $message }}</div>@enderror
 								</div>
 

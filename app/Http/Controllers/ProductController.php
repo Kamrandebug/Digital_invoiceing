@@ -47,21 +47,11 @@ class ProductController extends Controller
         // Get filtered data
         $products = ProductModel::getlistingdata($filters);
 
-        // FBR labels: same resolution as Product Details modal (UOM, Sale Type, Rate)
-        try {
-            $fbrDb = $this->fbrConnection();
-            foreach ($products as $product) {
-                $product->UomLabel       = $this->resolveUomLabelForProduct($product, $fbrDb);
-                $product->SaleTypeLabel  = $this->resolveSaleTypeLabelForProduct($product, $fbrDb);
-                $product->SaleRateLabel  = $this->resolveSaleTypeToRateLabelForProduct($product, $fbrDb);
-            }
-        } catch (\Throwable $e) {
-            \Log::debug('product index FBR labels failed', ['e' => $e->getMessage()]);
-            foreach ($products as $product) {
-                $product->UomLabel       = $this->resolveUomLabelForProduct($product);
-                $product->SaleTypeLabel  = $this->resolveSaleTypeLabelForProduct($product);
-                $product->SaleRateLabel  = $this->resolveSaleTypeToRateLabelForProduct($product);
-            }
+        // Listing: UOM / SaleType / Rate columns use description fields from tbl_product only (no ID fallback).
+        foreach ($products as $product) {
+            $product->UomLabel      = $this->productListingDesc($product, ['Uom_Desc', 'uom_desc']);
+            $product->SaleTypeLabel = $this->productListingDesc($product, ['SaleTypeDesc', 'saletypedesc']);
+            $product->SaleRateLabel = $this->productListingDesc($product, ['SaleTypeToRateDesc', 'saletypetoratedesc']);
         }
 
         return view('pages.dashboards.Product.products', compact('products'));
@@ -164,7 +154,7 @@ class ProductController extends Controller
                 'Weight'          => $request->Weight ?? 0,
                 'Image'           => $request->Image ?? null,
                 'HsCode'          => $request->HsCode ?? null,
-                'UOM'             => $request->UOM ?? null,
+                'UOM'             => $request->input('UOM', $request->input('UomID', $request->input('uom'))),
                 'SaleType'        => $request->SaleType ?: null,
                 'SaleTypeToRate'  => $request->SaleTypeToRate ?: null,
                 'SroSchedule'     => $request->SROSchedule ?: null,
@@ -378,7 +368,7 @@ class ProductController extends Controller
                 'Weight'          => $request->Weight ?? 0,
                 'Image'           => $request->Image ?? $product->Image ?? null,
                 'HsCode'          => $request->HsCode ?? $product->HsCode ?? null,
-                'UOM'             => $request->UOM ?? $product->UOM ?? null,
+                'UOM'             => $request->input('UOM', $request->input('UomID', $request->input('uom', $product->UOM ?? null))),
                 'SaleType'        => $request->SaleType ?: ($product->SaleType ?? null),
                 'SaleTypeToRate'  => $request->SaleTypeToRate ?: ($product->SaleTypeToRate ?? null),
                 'SroSchedule'     => $request->SROSchedule ?: ($product->SroSchedule ?? null),
@@ -1378,5 +1368,20 @@ class ProductController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * First non-empty description column from listing row (handles PDO case variants).
+     */
+    private function productListingDesc(object $row, array $keys): string
+    {
+        foreach ($keys as $key) {
+            $v = data_get($row, $key);
+            if ($v !== null && $v !== '') {
+                return (string) $v;
+            }
+        }
+
+        return '—';
     }
 }

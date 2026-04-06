@@ -23,7 +23,19 @@ class TenantList extends Model
         'TenantName',
         'ImageUrl',
         'UserID',
+        'SaleStatus',
+        'ExpiryDate',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'ExpiryDate' => 'datetime',
+        ];
+    }
 
     /**
      * Scope: tenants assigned to the given user id (default: logged-in user).
@@ -46,38 +58,29 @@ class TenantList extends Model
     }
 
     /**
-     * Add/update a tenant record for the current user using a raw UPDATE query.
+     * Add/update a tenant record for the current user.
      *
-     * Updates the first tenant row with Status = 5 for the given user id,
+     * Updates the first tenant row with Statusi = 5 for the given user id,
      * setting TenantName from BusinessName and ImageUrl from Image.
      *
-     * Mirrors the unprepared pattern used in Customer::save_transaction/edit_transaction.
+     * Must use the landlord connection: DB::unprepared() / default DB uses the
+     * tenant session connection, whose MySQL user may not have UPDATE on tbl_tenant.
      */
     public static function addTenant(array $validated = []): void
     {
         $businessName = $validated['BusinessName'] ?? '';
         $image        = $validated['Image'] ?? '';
 
-        // Default to the currently authenticated user if no explicit UserID was provided
         $userId = $validated['UserID'] ?? auth()->id();
         if ($userId === null) {
             return;
         }
 
-        // Basic casting before building the raw query
-        $userId       = (int) $userId;
-        $businessName = addslashes($businessName);
-        $image        = addslashes($image);
+        $userId = (int) $userId;
 
-        DB::unprepared("
-            UPDATE digital_invoicing.tbl_tenant
-            SET
-                TenantName = '{$businessName}',
-                ImageUrl   = '{$image}',
-                UserID   = '{$userId}',
-                Statusi   = '1'
-            WHERE Statusi = 5
-            LIMIT 1
-        ");
+        DB::connection('landlord')->update(
+            'UPDATE `tbl_tenant` SET `TenantName` = ?, `ImageUrl` = ?, `UserID` = ?, `Statusi` = ? WHERE `Statusi` = ? LIMIT 1',
+            [$businessName, $image, $userId, 1, 5]
+        );
     }
 }

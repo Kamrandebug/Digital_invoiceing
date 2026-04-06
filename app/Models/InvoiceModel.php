@@ -213,10 +213,45 @@ class InvoiceModel extends Model
      */
     public static function save_transaction($requestID)
     {
+        $requestID = trim((string) $requestID);
+        if ($requestID === '') {
+            throw new \RuntimeException('RequestID is required for save_transaction.');
+        }
+        $tenantDb = session('selected_tenant.dbname') ?: config('database.connections.tenant.database');
+        $tenantDb = trim((string) $tenantDb);
+
+        if ($tenantDb === '' || ! preg_match('/^[A-Za-z0-9_]+$/', $tenantDb)) {
+            throw new \RuntimeException('Invalid tenant database name in session.');
+        }
+
+        $tenantDbQuoted = '`' . str_replace('`', '``', $tenantDb) . '`';
+
+        DB::connection('landlord')->statement("
+            UPDATE {$tenantDbQuoted}.tbl_temp_invoice_detail uu
+            JOIN (
+                SELECT  t.ID, HsCode,fho.`description` AS Uom_Desc,fttc.`transactioN_DESC` AS SaleTypeDesc,
+                        fsttr.`ratE_DESC` AS SaleTypeToRateDesc, fss.`srO_DESC` AS SroScheduleDesc,
+                        fsi.`srO_ITEM_DESC` AS SroItemSerialNo,ProductDescription,RequestID
+                FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
+                LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fho ON (fho.`uoM_ID` = t.UomID AND fho.hs_CODE = t.HsCode)
+                LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc ON (fttc.`transactioN_TYPE_ID` = t.SaleTypeID)
+                LEFT JOIN `core_digital_invoicing`.`fbr_sale_type_to_rate` fsttr ON (fsttr.`ratE_ID` = t.SaleTypeToRateID AND fsttr.`transactioN_TYPE_ID` = fttc.`transactioN_TYPE_ID`)
+                LEFT JOIN `core_digital_invoicing`.`fbr_sro_schedule` fss ON (fss.`srO_ID` = t.SroScheduleID)
+                LEFT JOIN `core_digital_invoicing`.`fbr_sro_item` fsi ON (fsi.`srO_ITEM_ID` = t.SroItemID)
+                WHERE t.RequestID = ?
+            ) u ON uu.ID = u.ID
+            SET
+                uu.Uom_Desc           = u.Uom_Desc,
+                uu.SaleTypeDesc       = u.SaleTypeDesc,
+                uu.SaleTypeToRateDesc = u.SaleTypeToRateDesc,
+                uu.SroScheduleDesc    = u.SroScheduleDesc,
+                uu.SroItemSerialNo    = u.SroItemSerialNo
+                ", [$requestID]);
+
         // -- 1. Insert into tbl_sales_invoice_header
         DB::unprepared("
-            INSERT INTO tbl_sales_invoice_header (InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT InvoiceID,1 AS InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,''AS BuyerNTNCNIC,''AS BuyerBusinessName,''AS BuyerProvince,''AS BuyerAddress,''AS InvoiceRefNo,''AS BuyerRegistrationType,''AS ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
+            INSERT INTO tbl_sales_invoice_header (ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT TID AS ID,InvoiceID,1 AS InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,''AS BuyerNTNCNIC,''AS BuyerBusinessName,''AS BuyerProvince,''AS BuyerAddress,''AS InvoiceRefNo,''AS BuyerRegistrationType,''AS ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
             FROM tbl_temp_invoice_detail
             WHERE RequestID = '$requestID'
             Group BY RequestID
@@ -224,12 +259,20 @@ class InvoiceModel extends Model
 
         // -- 2. Insert into tbl_sales_invoice_detail
         DB::unprepared("
-            INSERT INTO `tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,'' AS Uom_Desc,
-                SaleTypeID,'' AS SaleTypeDesc,SaleTypeToRateID,'' AS SaleTypeToRateDesc,SroScheduleID,'' AS SroScheduleDesc,
-                SroItemID,'' AS SroItemSerialNo,
-                TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,
-                CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
+            INSERT INTO `tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.Weight, 
+                t.HsCode, t.ProductDescription AS SaleInformation,t.UomID, t.Uom_Desc AS Uom_Desc, 
+                t.SaleTypeID, t.SaleTypeDesc AS SaleTypeDesc, 
+                t.SaleTypeToRateID, t.SaleTypeToRateDesc AS SaleTypeToRateDesc, 
+                t.SroScheduleID, IFNULL(t.SroScheduleDesc,'') AS SroScheduleDesc, 
+                t.SroItemID, IFNULL(t.SroItemSerialNo,'') AS SroItemSerialNo, 
+                IFNULL(t.TotalValues,0.00), 
+                IFNULL(t.Amount,0.00) AS ValueSalesExcludingST, 
+                IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS FixedNotifiedValueOrRetailPrice, 
+                IFNULL(t.GSTAmount,0.00) AS SalesTaxApplicable, 
+	            IFNULL(t.SalesTaxWithheldAtSource,0.00),IFNULL(t.ExtraTax,0.00), IFNULL(t.FurtherTax,0.00), IFNULL(t.FedPayable,0.00), IFNULL(t.Discount,0.00),
+                1 AS `Status`,
+                t.CreatedBy, t.CreatedOn, t.UpdatedBy, t.UpdatedOn
             FROM `tbl_temp_invoice_detail` t
             WHERE t.RequestID = '$requestID'
         ");
@@ -238,17 +281,16 @@ class InvoiceModel extends Model
     public static function edit_transaction($requestID)
     {
         DB::unprepared("
-            UPDATE tbl_sales_invoice_header uu
-            JOIN (
-                SELECT CustomerID, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
-                FROM tbl_temp_invoice_detail
-                WHERE RequestID = '$requestID'
-            ) u ON uu.ID = u.TID
-            SET
-                uu.CustomerID = u.CustomerID,
-                uu.UpdatedBy = u.UpdatedBy,
-                uu.UpdatedOn = u.UpdatedOn
+
+            DELETE FROM tbl_sales_invoice_detail WHERE InvoiceID IN (SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = '$requestID');
         ");
+
+        DB::unprepared("
+
+           DELETE FROM tbl_sales_invoice_header WHERE ID IN (SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = '$requestID');
+        ");
+
+        self::save_transaction($requestID);
     }
 
     public static function delete_transaction($requestID)
