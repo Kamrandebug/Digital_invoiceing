@@ -2,7 +2,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Luxury Login</title>
+<title>Digital Invoicing</title>
 
 <link id="style" href="{{asset('build/assets/libs/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet" >
 <link id="style" href="{{asset('build/assets/themecss/custom-static.css')}}" rel="stylesheet" >
