@@ -16,6 +16,7 @@
     }
     .tenant-card-meta {
         min-height: 2.75rem;
+		margin-bottom: 15px;
     }
     .tenant-card-meta .tenant-sale-badge {
         display: inline-flex;
@@ -66,39 +67,92 @@
         color: #5c5470;
         border-color: #e2dfe8;
     }
-    .tenant-card-meta .tenant-sale-badge.tenant-sale--empty {
+    
+	.tenant-card-meta .tenant-sale-badge.tenant-sale--empty {
         background: #fafbfc;
         color: #adb5bd;
         border: 1px dashed #dee2e6;
         font-weight: 400;
     }
-    .tenant-card-meta .tenant-expiry {
+    
+	.tenant-card-meta .tenant-expiry {
         font-size: 0.75rem;
         line-height: 1.4;
         color: #6c757d;
+		border: dashed 1px #ccc;
+/*		border-left: 0px;*/
+		padding: 4px 10px !important;
+		border-radius: 5px;
+/*		border-top-left-radius: 0px;*/
+/*		border-bottom-left-radius: 0px;*/
     }
-    .tenant-card-meta .tenant-expiry.tenant-expiry--past {
+    
+	.tenant-card-meta .tenant-expiry.tenant-expiry--past {
         color: #a94442;
         font-weight: 500;
     }
-    .tenant-card-meta .tenant-expiry.tenant-expiry--soon {
+    
+	.tenant-card-meta .tenant-expiry.tenant-expiry--soon {
         color: #8a6d3b;
         font-weight: 500;
     }
+	
+	.app-header{
+		display: none;
+	}
+	
+	.company-card{
+		border: 0px !important;
+		box-shadow: rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.04) 0px 10px 10px -5px !important;
+		border-radius: 25px !important;
+		background: #fff;
+		padding: 7px;
+	}
+	
+	.company-header{
+		background: #fff;
+		border-radius: 50px;
+    	padding: 10px 10px 10px 30px;
+		box-shadow: rgba(0, 0, 0, 0.05) 0px 5px 12px;
+		
+		.title-tenant{
+			display: flex;
+			align-items: center;
+			font-size: 18px;
+		}
+	}
+	
+	.company-title{
+		font-size: 18px;
+		padding: 15px 0;
+		margin: 0;
+		font-weight: 600;
+		font-family: system-ui;
+	}
+	
+	.company-logo-card{
+		width: 120px;
+		height: 120px;
+		border: solid 1px rgba(0, 0, 0, 0.07);
+		background: #fff !important;
+/*		box-shadow: rgba(0, 0, 0, 0.07) 0px 0px 7px;*/
+	}
+	
 </style>
 @endsection
 
 @section('content')
-<div class="page-header-breadcrumb mb-3">
-    <div class="d-flex align-center justify-content-between flex-wrap">
-        <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Select Tenant</h1>
-        <button type="button"
-                class="btn btn-sm btn-primary ms-auto"
-                data-bs-toggle="modal"
-                data-bs-target="#addTenantModal">
-            <i class="ri-add-line align-middle me-1"></i> Add Tenant
-        </button>
-    </div>
+<div class="row justify-content-center">
+	<div class="col-10">
+		<div class="page-header-breadcrumb mb-5 company-header">
+			<div class="d-flex align-center justify-content-between flex-wrap">
+				<span class="title-tenant">Select Tenant</span>
+				<button type="button" class="btn btn-purple-gradient rounded-pill btn-wave waves-effect waves-light" data-bs-toggle="modal" data-bs-target="#addTenantModal">
+					<i class="ri-add-line align-middle me-1"></i> Add Tenant
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 @if(session('success'))
@@ -123,9 +177,9 @@
 </div>
 @endif
 
-<div class="row">
-    <div class="col-12">
-        <div class="card custom-card">
+<div class="row justify-content-center">
+    <div class="col-10">
+        <div class="">
             <div class="card-body">
                 @if($tenants->isEmpty())
                     <div class="text-center py-5 text-muted">
@@ -133,22 +187,22 @@
                         <p class="mb-0 mt-2">No tenants assigned to you.</p>
                     </div>
                 @else
-                    <div class="row g-3">
+                    <div class="row g-4 justify-content-center">
                         @foreach($tenants as $tenant)
                         <div class="col-md-6 col-lg-4 col-xl-3">
-                            <div class="card border shadow-none h-100">
-                                <div class="card-body text-center p-3">
+                            <div class="company-card card ribbon-card">
+								<div class="card-body text-center p-3">
                                     <div class="tenant-list-image mb-2">
                                         @if(!empty($tenant->ImageUrl))
                                             @php $imgSrc = str_starts_with($tenant->ImageUrl, 'http') ? $tenant->ImageUrl : asset($tenant->ImageUrl); @endphp
                                             <img src="{{ $imgSrc }}" alt="{{ $tenant->TenantName }}" class="rounded" style="max-height: 120px; width: auto; object-fit: contain;">
                                         @else
-                                            <div class="bg-light rounded d-inline-flex align-items-center justify-content-center" style="width: 120px; height: 120px;">
+                                            <div class="bg-light rounded d-inline-flex align-items-center justify-content-center company-logo-card">
                                                 <i class="ri-building-line fs-1 text-secondary"></i>
                                             </div>
                                         @endif
                                     </div>
-                                    <h6 class="card-title fw-semibold mb-2">{{ $tenant->TenantName ?? 'Unnamed' }}</h6>
+                                    <h6 class="company-title">{{ $tenant->TenantName ?? 'Unnamed' }}</h6>
                                     @php
                                         $saleStatus = data_get($tenant, 'SaleStatus') ?? data_get($tenant, 'salestatus');
                                         $expiry = data_get($tenant, 'ExpiryDate') ?? data_get($tenant, 'expirydate');
@@ -166,36 +220,45 @@
                                         if (filled($saleStatus)) {
                                             $compact = strtolower(preg_replace('/[\s._-]+/', '', (string) $saleStatus));
                                             if (str_contains($compact, 'unpaid') || $compact === 'overdue') {
-                                                $saleBadgeClass = 'tenant-sale--unpaid';
+                                                $saleBadgeClass = 'ribbon-danger';
                                                 $saleIcon = 'ri-error-warning-line';
                                             } elseif (in_array($compact, ['paid', 'fullypaid', 'complete', 'completed'], true)) {
-                                                $saleBadgeClass = 'tenant-sale--paid';
+                                                $saleBadgeClass = 'ribbon-success';
                                                 $saleIcon = 'ri-checkbox-circle-line';
                                             } elseif (in_array($compact, ['trial', 'trail'], true) || str_starts_with($compact, 'trial') || str_starts_with($compact, 'trail')) {
-                                                $saleBadgeClass = 'tenant-sale--trial';
+                                                $saleBadgeClass = 'ribbon-secondary';
                                                 $saleIcon = 'ri-timer-flash-line';
                                             } elseif (str_contains($compact, 'invoice')) {
-                                                $saleBadgeClass = 'tenant-sale--invoiced';
+                                                $saleBadgeClass = 'ribbon-primary';
                                                 $saleIcon = 'ri-file-list-3-line';
                                             } elseif (in_array($compact, ['pending', 'processing', 'draft', 'due'], true) || str_contains($compact, 'pending')) {
-                                                $saleBadgeClass = 'tenant-sale--pending';
+                                                $saleBadgeClass = 'ribbon-orange';
                                                 $saleIcon = 'ri-loader-4-line';
                                             }
                                         }
                                     @endphp
-                                    <div class="tenant-card-meta d-flex flex-column align-items-center gap-2 w-100 mb-3">
-                                        @if(filled($saleStatus))
-                                            <span class="tenant-sale-badge {{ $saleBadgeClass }}">
-                                                <i class="{{ $saleIcon }}" aria-hidden="true"></i>
+                                    <div class="tenant-card-meta row g-3 justify-content-center">
+										@if(filled($saleStatus))
+                                            <div class="ribbon ribbon-top-left mt-0 {{ $saleBadgeClass }}">
                                                 <span>{{ $saleStatus }}</span>
-                                            </span>
+                                            </div>
                                         @else
-                                            <span class="tenant-sale-badge tenant-sale--empty">
+                                            <span class="ribbon ribbon-danger mt-0 ribbon-top-left">
                                                 <span>No status</span>
                                             </span>
                                         @endif
+										<?php /*?>@if(filled($saleStatus))
+                                            <div class="tenant-sale-badge {{ $saleBadgeClass }} col-md-4">
+                                                <i class="{{ $saleIcon }}" aria-hidden="true"></i>
+                                                <span>{{ $saleStatus }}</span>
+                                            </div>
+                                        @else
+                                            <span class="tenant-sale-badge tenant-sale--empty col-md-4">
+                                                <span>No status</span>
+                                            </span>
+                                        @endif<?php */?>
                                         @if($expiry)
-                                            <div class="tenant-expiry text-muted w-100 px-1 {{ $expiry->isPast() ? 'tenant-expiry--past' : ($expirySoon ? 'tenant-expiry--soon' : '') }}">
+                                            <div class="tenant-expiry text-muted col-md-10 {{ $expiry->isPast() ? 'tenant-expiry--past' : ($expirySoon ? 'tenant-expiry--soon' : '') }}">
                                                 <i class="ri-calendar-event-line align-middle me-1"></i>
                                                 @if($expiry->isPast())
                                                     Expired {{ $expiry->format('M j, Y') }}
@@ -204,13 +267,14 @@
                                                 @endif
                                             </div>
                                         @else
-                                            <div class="tenant-expiry text-muted opacity-50 w-100 px-1 small">
+                                            <div class="tenant-expiry text-muted opacity-50 tenant-expiry text-muted col-md-8">
                                                 <i class="ri-calendar-line align-middle me-1"></i>—
                                             </div>
                                         @endif
                                     </div>
-                                    <a href="{{ route('tenants.select', $tenant->ID) }}" class="btn btn-sm btn-primary btn-wave waves-light">
-                                        <i class="ri-arrow-right-line align-middle me-1"></i> Select
+                                    <a href="{{ route('tenants.select', $tenant->ID) }}" class="btn btn-success label-btn label-end rounded-pill">
+                                        Select 
+										<i class="ri-arrow-right-line label-btn-icon ms-2 rounded-pill"></i>
                                     </a>
                                 </div>
                             </div>
