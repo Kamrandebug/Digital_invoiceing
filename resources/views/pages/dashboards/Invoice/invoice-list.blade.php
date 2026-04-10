@@ -979,45 +979,101 @@ saveBtn.onclick = function () {
                                 if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
                             }
                         } else if (vr && typeof vr === 'object') {
-                            var errCode = vr.errorCode != null ? String(vr.errorCode) : '';
-                            var errText = vr.error != null ? String(vr.error) : '';
+                            var errCode = vr.errorCode != null && vr.errorCode !== '' ? String(vr.errorCode) : '';
+                            var errText = vr.error != null ? String(vr.error).trim() : '';
                             var st = vr.status != null ? String(vr.status) : '';
                             var stc = vr.statusCode != null ? String(vr.statusCode) : '';
-                            if (errCode || errText || st || stc) {
+                            var isValidResponse = stc === '00';
+
+                            var errorLines = [];
+                            if (errText) {
+                                errorLines.push(errCode ? ('[' + errCode + '] ' + errText) : errText);
+                            }
+                            if (Array.isArray(vr.invoiceStatuses)) {
+                                vr.invoiceStatuses.forEach(function (item) {
+                                    if (!item || typeof item !== 'object') return;
+                                    var lineErr = item.error != null ? String(item.error).trim() : '';
+                                    if (!lineErr) return;
+                                    var lineCode = item.errorCode != null && item.errorCode !== '' ? String(item.errorCode) : '';
+                                    var lineNo = item.itemSNo != null && item.itemSNo !== '' ? String(item.itemSNo) : '';
+                                    var head = [];
+                                    if (lineNo) head.push('Item ' + lineNo);
+                                    if (lineCode) head.push('[' + lineCode + ']');
+                                    errorLines.push(head.length ? (head.join(' ') + ' ' + lineErr) : lineErr);
+                                });
+                            }
+                            var combinedErrors = errorLines.join('\n').trim();
+
+                            var hasSummary = isValidResponse || errCode || errText || st || stc || combinedErrors;
+                            if (hasSummary) {
                                 summaryWrap.classList.remove('d-none');
-                                if (labelCode) labelCode.textContent = 'Error code';
-                                if (labelMessage) labelMessage.textContent = 'Status';
-                                if (labelDesc) labelDesc.textContent = 'Error details';
-                                if (summaryCode) summaryCode.value = errCode || '-';
-                                if (summaryMessage) {
-                                    var msgParts = [];
-                                    if (st) msgParts.push(st);
-                                    if (stc) msgParts.push('(' + stc + ')');
-                                    summaryMessage.value = msgParts.length ? msgParts.join(' ') : '-';
+                                if (isValidResponse) {
+                                    if (labelCode) labelCode.textContent = 'Code';
+                                    if (labelMessage) labelMessage.textContent = 'Status';
+                                    if (labelDesc) labelDesc.textContent = 'Message';
+                                    if (summaryCode) summaryCode.value = stc || '-';
+                                    if (summaryMessage) {
+                                        var okParts = [];
+                                        if (st) okParts.push(st);
+                                        if (stc) okParts.push('(' + stc + ')');
+                                        summaryMessage.value = okParts.length ? okParts.join(' ') : '-';
+                                    }
+                                    if (summaryDescription) {
+                                        summaryDescription.value = 'Invoice Successfully Posted to FBR';
+                                        summaryDescription.rows = 3;
+                                    }
+                                    if (summaryCard) summaryCard.classList.add('fbr-summary--valid');
+                                } else {
+                                    if (labelCode) labelCode.textContent = 'Error code';
+                                    if (labelMessage) labelMessage.textContent = 'Status';
+                                    if (labelDesc) labelDesc.textContent = 'Error details';
+                                    if (summaryCode) summaryCode.value = errCode || '-';
+                                    if (summaryMessage) {
+                                        var msgParts = [];
+                                        if (st) msgParts.push(st);
+                                        if (stc) msgParts.push('(' + stc + ')');
+                                        summaryMessage.value = msgParts.length ? msgParts.join(' ') : '-';
+                                    }
+                                    if (summaryDescription) {
+                                        summaryDescription.value = combinedErrors || '-';
+                                        if (combinedErrors) {
+                                            var ln = combinedErrors.split('\n').length;
+                                            summaryDescription.rows = Math.min(14, Math.max(3, ln + 1));
+                                        } else {
+                                            summaryDescription.rows = 3;
+                                        }
+                                    }
+                                    if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
                                 }
-                                if (summaryDescription) summaryDescription.value = errText || '-';
 
                                 if (summaryStrip && badgeStatus && badgeCode) {
                                     summaryStrip.classList.remove('d-none');
                                     summaryStrip.classList.add('d-flex');
-                                    var stLower = st.toLowerCase();
-                                    if (stLower === 'invalid') {
-                                        badgeStatus.textContent = 'Invalid';
-                                        badgeStatus.className = 'badge rounded-pill bg-danger-subtle text-danger-emphasis';
-                                        if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
-                                    } else if (stLower === 'valid') {
+                                    if (isValidResponse) {
                                         badgeStatus.textContent = 'Valid';
                                         badgeStatus.className = 'badge rounded-pill bg-success-subtle text-success-emphasis';
-                                        if (summaryCard) summaryCard.classList.add('fbr-summary--valid');
-                                    } else if (st) {
-                                        badgeStatus.textContent = st;
-                                        badgeStatus.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
-                                    }
-                                    if (errCode) {
-                                        badgeCode.textContent = 'Error ' + errCode;
-                                        badgeCode.className = 'badge rounded-pill bg-dark-subtle text-dark-emphasis';
-                                    } else if (stc) {
-                                        badgeCode.textContent = 'Code ' + stc;
+                                        badgeCode.textContent = stc ? stc : '';
+                                        badgeCode.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
+                                    } else {
+                                        var stLower = st.toLowerCase();
+                                        if (stLower === 'invalid') {
+                                            badgeStatus.textContent = 'Invalid';
+                                            badgeStatus.className = 'badge rounded-pill bg-danger-subtle text-danger-emphasis';
+                                        } else if (stLower === 'valid') {
+                                            badgeStatus.textContent = 'Valid';
+                                            badgeStatus.className = 'badge rounded-pill bg-success-subtle text-success-emphasis';
+                                        } else if (st) {
+                                            badgeStatus.textContent = st;
+                                            badgeStatus.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
+                                        }
+                                        if (errCode) {
+                                            badgeCode.textContent = 'Error ' + errCode;
+                                            badgeCode.className = 'badge rounded-pill bg-dark-subtle text-dark-emphasis';
+                                        } else if (stc) {
+                                            badgeCode.textContent = 'Code ' + stc;
+                                        } else {
+                                            badgeCode.textContent = '';
+                                        }
                                     }
                                 }
                             }
