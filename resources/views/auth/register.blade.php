@@ -34,7 +34,7 @@
 <div class="auth-wrapper">
     <div class="card auth-card-register">
 		<span class="ribbon-3 top-right ribbon-warning">
-			<span><i class="fe fe-lock"></i></span>
+			<span><i class="fe fe-umbrella"></i></span>
 		</span>
 		<div style="text-align: center; margin: 0px 0px 20px 0px;"><img src="{{asset('build/assets/images/se_logo.png')}}" /></div>
         <div class="text-center">
