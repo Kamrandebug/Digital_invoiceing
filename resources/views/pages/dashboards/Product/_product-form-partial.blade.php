@@ -101,10 +101,41 @@
                 <div class="tab-pane fade _pfp-tab-pane" id="{{ $uid }}_pricing" role="tabpanel">
                     <h6 class="_pfp-section-title"><i class="fas fa-dollar-sign"></i> Pricing</h6>
                     <div class="row g-2">
-                        <div class="col-md-3"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Sale Price (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->SalePrice ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="SalePrice" class="form-control form-control-sm @error('SalePrice') is-invalid @enderror" value="{{ old('SalePrice', $product->SalePrice ?? '0.00') }}" required>@error('SalePrice')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-3"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Cost (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Cost ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Cost" class="form-control form-control-sm @error('Cost') is-invalid @enderror" value="{{ old('Cost', $product->Cost ?? '0.00') }}">@error('Cost')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-3"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">TP Rate</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->TPRate ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="TPRate" class="form-control form-control-sm @error('TPRate') is-invalid @enderror" value="{{ old('TPRate', $product->TPRate ?? '0.00') }}">@error('TPRate')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-3"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Weight (kg)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Weight ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Weight" class="form-control form-control-sm @error('Weight') is-invalid @enderror" value="{{ old('Weight', $product->Weight ?? '0.00') }}">@error('Weight')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
+                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Sale Price (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->SalePrice ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="SalePrice" class="form-control form-control-sm @error('SalePrice') is-invalid @enderror" value="{{ old('SalePrice', $product->SalePrice ?? '0.00') }}" required>@error('SalePrice')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
+                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Cost (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Cost ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Cost" class="form-control form-control-sm @error('Cost') is-invalid @enderror" value="{{ old('Cost', $product->Cost ?? '0.00') }}">@error('Cost')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
+                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Weight (kg)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Weight ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Weight" class="form-control form-control-sm @error('Weight') is-invalid @enderror" value="{{ old('Weight', $product->Weight ?? '0.00') }}">@error('Weight')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
+                    </div>
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-3">
+                            @if($isReadonly)
+                                <label class="_pfp-detail-label">IsFixedValue</label>
+                                @php $isFixedValue = (float)($product->TPRate ?? 0) > 0; @endphp
+                                <div class="_pfp-detail-value">{{ $isFixedValue ? 'Yes' : 'No' }}</div>
+                            @else
+                                @php
+                                    $isFixedValueOld = old('IsFixedValue');
+                                    $isFixedValueChecked = $isFixedValueOld !== null
+                                        ? ((string)$isFixedValueOld === '1')
+                                        : ((float)($product->TPRate ?? 0) > 0);
+                                @endphp
+                                <label class="form-label d-block">IsFixedValue</label>
+                                <input type="hidden" name="IsFixedValue" value="0">
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" id="{{ $uid }}_is_fixed_value" name="IsFixedValue" value="1" {{ $isFixedValueChecked ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="{{ $uid }}_is_fixed_value">Enable fixed notified value</label>
+                                </div>
+                                @error('IsFixedValue')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            @endif
+                        </div>
+                        <div class="col-md-5">
+                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">FixedNotifiedValueOrRetailPrice</label>
+                            @if($isReadonly)
+                                <div class="_pfp-detail-value">{{ number_format($product->TPRate ?? 0, 2) }}</div>
+                            @else
+                                <input type="number" step="0.000001" min="0" name="TPRate" id="{{ $uid }}_fixed_notified_value" class="form-control form-control-sm @error('TPRate') is-invalid @enderror" value="{{ old('TPRate', $product->TPRate ?? '0.00') }}">
+                                @error('TPRate')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -238,10 +269,21 @@
     var hsInput        = form.querySelector('input[name="HsCode"]');
     var uomSelect      = form.querySelector('select[name="UOM"]');
     var saleInfo       = form.querySelector('textarea[name="SaleInformation"]');
+    var isFixedValueCheckbox = form.querySelector('input[name="IsFixedValue"][type="checkbox"]');
+    var fixedNotifiedValueInput = form.querySelector('input[name="TPRate"]');
     var saleTypeSelect      = form.querySelector('select[name="SaleType"]');
     var saleTypeToRateSelect = form.querySelector('select[name="SaleTypeToRate"]');
     var sroScheduleSelect   = form.querySelector('select[name="SROSchedule"]');
     var sroItemSelect       = form.querySelector('select[name="SROItem"]');
+
+    function syncFixedValueUi() {
+        if (!isFixedValueCheckbox || !fixedNotifiedValueInput) return;
+        var checked = !!isFixedValueCheckbox.checked;
+        fixedNotifiedValueInput.readOnly = !checked;
+        if (!checked) {
+            fixedNotifiedValueInput.value = '0.00';
+        }
+    }
 
     function clearUomOptions() {
         if (!uomSelect) return;
@@ -546,5 +588,11 @@
     if (hsInput && uomSelect && hsInput.value && hsInput.value.trim() !== '') {
         fetchHsCodeInfo();
     }
+
+    if (isFixedValueCheckbox && fixedNotifiedValueInput) {
+        syncFixedValueUi();
+        isFixedValueCheckbox.addEventListener('change', syncFixedValueUi);
+    }
 })();
 </script>
+

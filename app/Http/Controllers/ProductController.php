@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -76,6 +77,7 @@ class ProductController extends Controller
             'Code'     => strtoupper(trim($request->Code ?? '')),
             'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
             'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
+            'IsFixedValue' => $request->boolean('IsFixedValue') ? 1 : 0,
         ]);
 
         // Validate
@@ -93,6 +95,7 @@ class ProductController extends Controller
             'SalePrice'       => ['required', 'numeric', 'min:0'],
             'Cost'            => ['nullable', 'numeric', 'min:0'],
             'TPRate'          => ['nullable', 'numeric', 'min:0'],
+            'IsFixedValue'    => ['required', 'integer', 'in:0,1'],
             'Weight'          => ['nullable', 'numeric', 'min:0'],
 
             // Stock
@@ -110,9 +113,25 @@ class ProductController extends Controller
             'SalePrice.numeric'      => 'Sale price must be a valid number.',
             'SalePrice.min'          => 'Sale price cannot be negative.',
             'Cost.numeric'           => 'Cost must be a valid number.',
+            'IsFixedValue.required'  => 'Fixed value selection is required.',
             'Status.required'        => 'Status is required.',
             'Status.in'              => 'Invalid status value.',
         ]);
+
+            $isFixedValue = (int) $request->input('IsFixedValue', 0) === 1;
+            $tpRate = (float) ($request->input('TPRate', 0) ?: 0);
+
+            if ($isFixedValue && $tpRate <= 0) {
+                throw ValidationException::withMessages([
+                    'TPRate' => 'FixedNotifiedValueOrRetailPrice must be greater than 0.00 when IsFixedValue is checked.',
+                ]);
+            }
+
+            if (! $isFixedValue && abs($tpRate) > 0.0000001) {
+                throw ValidationException::withMessages([
+                    'TPRate' => 'FixedNotifiedValueOrRetailPrice must be 0.00 when IsFixedValue is unchecked.',
+                ]);
+            }
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
@@ -150,7 +169,7 @@ class ProductController extends Controller
                 'UnitName'        => null,
                 'SalePrice'       => $request->SalePrice ?? 0,
                 'Cost'            => $request->Cost ?? 0,
-                'TPRate'          => $request->TPRate ?? 0,
+                'TPRate'          => ((int) $request->input('IsFixedValue', 0) === 1) ? ($request->TPRate ?? 0) : 0,
                 'Weight'          => $request->Weight ?? 0,
                 'Image'           => $request->Image ?? null,
                 'HsCode'          => $request->HsCode ?? null,
@@ -296,6 +315,7 @@ class ProductController extends Controller
             'Code'     => strtoupper(trim($request->Code ?? '')),
             'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
             'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
+            'IsFixedValue' => $request->boolean('IsFixedValue') ? 1 : 0,
         ]);
 
         // Validate
@@ -313,6 +333,7 @@ class ProductController extends Controller
             'SalePrice'       => ['required', 'numeric', 'min:0'],
             'Cost'            => ['nullable', 'numeric', 'min:0'],
             'TPRate'          => ['nullable', 'numeric', 'min:0'],
+            'IsFixedValue'    => ['required', 'integer', 'in:0,1'],
             'Weight'          => ['nullable', 'numeric', 'min:0'],
 
             // Stock
@@ -329,9 +350,25 @@ class ProductController extends Controller
             'SalePrice.required'     => 'Sale price is required.',
             'SalePrice.numeric'      => 'Sale price must be a valid number.',
             'SalePrice.min'          => 'Sale price cannot be negative.',
+            'IsFixedValue.required'  => 'Fixed value selection is required.',
             'Status.required'        => 'Status is required.',
             'Status.in'              => 'Invalid status value.',
         ]);
+
+            $isFixedValue = (int) $request->input('IsFixedValue', 0) === 1;
+            $tpRate = (float) ($request->input('TPRate', 0) ?: 0);
+
+            if ($isFixedValue && $tpRate <= 0) {
+                throw ValidationException::withMessages([
+                    'TPRate' => 'FixedNotifiedValueOrRetailPrice must be greater than 0.00 when IsFixedValue is checked.',
+                ]);
+            }
+
+            if (! $isFixedValue && abs($tpRate) > 0.0000001) {
+                throw ValidationException::withMessages([
+                    'TPRate' => 'FixedNotifiedValueOrRetailPrice must be 0.00 when IsFixedValue is unchecked.',
+                ]);
+            }
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
@@ -364,7 +401,7 @@ class ProductController extends Controller
                 'UnitName'        => null,
                 'SalePrice'       => $request->SalePrice ?? 0,
                 'Cost'            => $request->Cost ?? 0,
-                'TPRate'          => $request->TPRate ?? 0,
+                'TPRate'          => ((int) $request->input('IsFixedValue', 0) === 1) ? ($request->TPRate ?? 0) : 0,
                 'Weight'          => $request->Weight ?? 0,
                 'Image'           => $request->Image ?? $product->Image ?? null,
                 'HsCode'          => $request->HsCode ?? $product->HsCode ?? null,
