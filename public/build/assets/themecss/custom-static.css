@@ -20,9 +20,25 @@ body {
     border-radius: 18px;
     padding: 45px 40px;
     box-shadow: 0 0px 29px rgba(0, 0, 0, 0.15) ;
-    border: 2px solid #fff;
+    border: 1px solid #fff;
     transition: 0.3s;
     backdrop-filter: blur(20px);
+}
+
+.auth-card-register {
+	width: 100%;
+    max-width: 80%;
+    background: rgba(255, 255, 255, 0) !important;
+    border-radius: 18px;
+    padding: 45px 40px;
+    box-shadow: 0 0px 29px rgba(0, 0, 0, 0.15);
+    border: 1px solid #fff;
+    transition: 0.3s;
+    backdrop-filter: blur(20px);
+}
+
+.auth-card:hover {
+    box-shadow: 0 30px 70px rgba(0,0,0,0.08);
 }
 
 .btn-regiser{
@@ -71,22 +87,6 @@ body {
     box-shadow: 0 30px 70px rgba(0,0,0,0.08);
 }
 */
-
-.auth-card-register {
-	width: 100%;
-    max-width: 80%;
-    background: rgba(255, 255, 255, 0) !important;
-    border-radius: 18px;
-    padding: 45px 40px;
-    box-shadow: 0 0px 60px rgba(0, 0, 0, 0.3);
-    border: 2px solid #fff;
-    transition: 0.3s;
-    backdrop-filter: blur(20px);
-}
-
-.auth-card:hover {
-    box-shadow: 0 30px 70px rgba(0,0,0,0.08);
-}
 
 /* Heading */
 .auth-title {

@@ -32,7 +32,7 @@
 <body class="main-bg">
 
 <div class="auth-wrapper">
-    <div class="card auth-card-register">
+    <div class="auth-card-register">
 		<span class="ribbon-3 top-right ribbon-warning">
 			<span><i class="fe fe-umbrella"></i></span>
 		</span>
