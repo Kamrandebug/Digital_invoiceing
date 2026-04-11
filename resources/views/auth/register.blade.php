@@ -114,7 +114,7 @@
 					</div>
 				</div>
 				<div class="col-12 mt-4 text-center">
-					<button type="submit" class="btn btn-outline-light rounded-pill btn-wave waves-effect waves-light w-25" id="registerSubmitBtn">
+					<button type="submit" class="btn-regiser w-25" id="registerSubmitBtn">
 						{{ __('Register') }}
 					</button>
 				</div>
