@@ -152,6 +152,7 @@ class DashboardsController extends Controller
         $recentInvoices = (clone $invoiceBase)
             ->select([
                 'ID',
+                'DocNo',
                 'InvoiceNumber',
                 'InvoiceDate',
                 'FbrTransactionID',
