@@ -16,9 +16,6 @@
             <h1 class="page-title fw-medium fs-18 mb-0">Dashboard</h1>
             <div class="dash-mini mt-1">
                 Tenant: <strong>{{ $selectedTenant['TenantName'] ?? 'Selected Tenant' }}</strong>
-                @if(!empty($selectedTenant['dbname']))
-                    | DB: {{ $selectedTenant['dbname'] }}
-                @endif
             </div>
         </div>
         <ol class="breadcrumb mb-0">

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Tenant list from digital_invoicing.tbl_tenant.
- * Filter by UserID = logged-in user.
+ * Access is controlled through tbl_tenant_users (many-to-many membership).
  */
 class TenantList extends Model
 {
@@ -38,7 +38,8 @@ class TenantList extends Model
     }
 
     /**
-     * Scope: tenants assigned to the given user id (default: logged-in user).
+     * Scope: tenants assigned to the given user id (default: logged-in user)
+     * through tbl_tenant_users membership.
      */
     public function scopeAssignedToUser($query, $userId = null)
     {
@@ -46,7 +47,19 @@ class TenantList extends Model
         if ($userId === null) {
             return $query->whereRaw('1 = 0');
         }
-        return $query->where('UserID', $userId)->where('Statusi', 1);
+
+        return $query
+            ->join('tbl_tenant_users as tu', 'tu.TenantID', '=', 'tbl_tenant.ID')
+            ->where('tu.UserID', $userId)
+            ->where('tu.IsActive', 1)
+            ->where('tbl_tenant.Statusi', 1)
+            ->distinct()
+            ->select(
+                'tbl_tenant.*',
+                'tu.ID as TenantUserID',
+                'tu.Role as UserRole',
+                'tu.IsActive as TenantUserIsActive'
+            );
     }
 
     /**

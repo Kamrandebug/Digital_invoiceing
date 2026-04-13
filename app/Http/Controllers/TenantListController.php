@@ -10,7 +10,7 @@ use Illuminate\View\View;
 class TenantListController extends Controller
 {
     /**
-     * List tenants assigned to the logged-in user (from tbl_tenant, UserID = auth id).
+     * List tenants assigned to the logged-in user (via tbl_tenant_users).
      */
     public function index(): View
     {
@@ -43,7 +43,9 @@ class TenantListController extends Controller
      */
     public function select(Request $request, int $id): RedirectResponse
     {
-        $tenant = TenantList::assignedToUser()->find($id);
+        $tenant = TenantList::assignedToUser()
+            ->where('tbl_tenant.ID', $id)
+            ->first();
 
         if (!$tenant) {
             return redirect()->route('tenants.index')->with('error', 'Tenant not found or not assigned to you.');
@@ -69,6 +71,9 @@ class TenantListController extends Controller
             'dbuser'     => $dbUser,
             'dbpassword' => $dbPassword,
             'dbname'     => $dbName,
+            // Membership context from tbl_tenant_users for role-aware authorization.
+            'tenant_user_id' => $tenant->TenantUserID ?? null,
+            'role'           => strtolower((string) ($tenant->UserRole ?? 'user')),
         ]);
 
         return redirect()->intended(route('dashboard', absolute: false));
