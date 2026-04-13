@@ -371,7 +371,7 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-3">
                     <div class="mb-3">
-                        <label for="TPRate" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">FixedNotifiedValueOrRetailPrice</label>
+                        <label for="TPRate" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">eeOrRetailPrice</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ number_format($product->TPRate ?? 0, 2) }}</div>
                         @else

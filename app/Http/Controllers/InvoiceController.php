@@ -51,7 +51,19 @@ class InvoiceController extends Controller
      */
     public function postToFbr(int $id)
     {
-        $result = InvoiceModel::post_to_fbr($id);
+        try {
+            $result = InvoiceModel::post_to_fbr($id);
+        } catch (\Throwable $e) {
+            \Log::error('Invoice postToFbr uncaught', ['id' => $id, 'error' => $e->getMessage(), 'type' => $e::class]);
+
+            $message = config('app.debug')
+                ? ('FBR post failed: '.$e->getMessage())
+                : 'We could not complete the FBR request. Please try again later.';
+
+            return redirect()
+                ->route('invoices.index')
+                ->with('error', $message);
+        }
 
         return redirect()
             ->route('invoices.index')

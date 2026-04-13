@@ -316,6 +316,20 @@ class InvoiceModel extends Model
      */
     public static function post_to_fbr(int $headerId): array
     {
+        // PHP default max_execution_time (often 60s) can kill the script before Guzzle's timeout throws.
+        // Allow the HTTP client enough wall time; Guzzle still enforces connect/request timeouts.
+        $fbrTimeout = (float) config('services.fbr.timeout', 120);
+        if ($fbrTimeout < 1) {
+            $fbrTimeout = 120;
+        }
+        $phpMaxExec = (int) config('services.fbr.max_execution_time', (int) ceil($fbrTimeout + 90));
+        if ($phpMaxExec < 120) {
+            $phpMaxExec = 180;
+        }
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($phpMaxExec);
+        }
+
         $header = DB::table('tbl_sales_invoice_header')
             ->where('ID', $headerId)
             ->where('Status', '!=', 2)
@@ -346,7 +360,7 @@ SELECT
         '"buyerProvince" : ', JSON_QUOTE(IFNULL(c.County, '')), ',',
         '"buyerAddress" : ', JSON_QUOTE(IFNULL(c.Address, '')), ',',
         '"invoiceRefNo" : ', JSON_QUOTE(''), ',',
-        '"scenarioId" : ', JSON_QUOTE(IF(c.IsFiler = 1, 'SN001', 'SN002')), ',',
+        -- '"scenarioId" : ', JSON_QUOTE(IF(c.IsFiler = 1, 'SN001', 'SN002')), ',',
         '"buyerRegistrationType" : ', JSON_QUOTE(IF(c.IsFiler = 1, 'Registered', 'Unregistered')), ',',
         '"items":[',
         IFNULL((
@@ -415,7 +429,13 @@ SQL;
             ];
         }
 
-        $url = config('services.fbr.post_url');
+        $url = trim((string) config('services.fbr.post_url'));
+        if ($url === '') {
+            return [
+                'success' => false,
+                'message' => 'FBR POST URL is not configured. Set FBR_POST_URL.',
+            ];
+        }
         $jsonBody = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($jsonBody === false) {
             return ['success' => false, 'message' => 'Failed to JSON-encode payload for FBR.'];
@@ -460,9 +480,28 @@ SQL;
                 ->withBody($jsonBody, 'application/json')
                 ->post($url);
         } catch (\Throwable $e) {
-            Log::error('FBR post_to_fbr HTTP exception', ['id' => $headerId, 'error' => $e->getMessage()]);
+            Log::error('FBR post_to_fbr HTTP exception', [
+                'id' => $headerId,
+                'error' => $e->getMessage(),
+                'type' => $e::class,
+            ]);
 
-            return ['success' => false, 'message' => 'FBR request failed: ' . $e->getMessage()];
+            $technical = $e->getMessage();
+            $friendly = 'The FBR service did not respond in time or the connection failed. Please try again in a few minutes.';
+            if (
+                str_contains($technical, 'timed out')
+                || str_contains($technical, 'Operation timed out')
+                || str_contains($technical, 'cURL error 28')
+                || str_contains($technical, 'Connection timed out')
+            ) {
+                $userMsg = $friendly;
+            } elseif (config('app.debug')) {
+                $userMsg = 'FBR request failed: ' . $technical;
+            } else {
+                $userMsg = 'Could not reach FBR right now. Please try again later.';
+            }
+
+            return ['success' => false, 'message' => $userMsg];
         }
 
         $rawBody = (string) $httpResponse->body();

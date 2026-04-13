@@ -43,6 +43,11 @@ return [
         /** Set true in production when FBR gateway SSL is trusted. Your working cURL used verify off. */
         'verify_ssl' => env('FBR_VERIFY_SSL', false),
         'timeout' => env('FBR_HTTP_TIMEOUT', 120),
+        /**
+         * Max PHP script time (seconds) during post_to_fbr so default php.ini (e.g. 60) does not fatal-error
+         * before Guzzle times out. Should be >= timeout + buffer.
+         */
+        'max_execution_time' => (int) env('FBR_MAX_EXECUTION', 210),
         /** Merged into FBR POST (e.g. ['X-Custom' => 'value']) */
         'extra_headers' => [],
     ],
