@@ -29,7 +29,7 @@
 
                 <!-- Start::slide -->
 				<li class="slide">
-                    <a href="javascript:void(0)" class="side-menu__item">
+                    <a href="{{ route('dashboard') }}" class="side-menu__item">
                         <i class="ri-pie-chart-line menu-icon"></i>
                         <span class="side-menu__label">Dashboard</span>
                     </a>

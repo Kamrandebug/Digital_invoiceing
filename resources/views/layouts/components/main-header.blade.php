@@ -126,6 +126,28 @@
 			</li><?php */?>
 			<!-- End::header-element -->
 
+			@php
+				$selectedTenant = session('selected_tenant');
+				$selectedTenantName = is_array($selectedTenant) ? trim((string) ($selectedTenant['TenantName'] ?? '')) : '';
+			@endphp
+
+			@if($selectedTenantName !== '')
+			<li class="header-element d-none d-md-flex align-items-center">
+				<a href="{{ route('tenants.index') }}"
+				   class="d-flex align-items-center gap-2 px-3 py-2 rounded-pill text-decoration-none"
+				   style="background: linear-gradient(135deg, #111827 0%, #1f2937 55%, #3730a3 100%); box-shadow: 0 8px 20px rgba(31,41,55,.25); border: 1px solid rgba(255,255,255,.12);"
+				   title="Selected Tenant (click to switch)">
+					<span class="avatar avatar-sm bg-white text-dark rounded-circle d-flex align-items-center justify-content-center" style="width: 26px; height: 26px;">
+						<i class="ri-building-2-line fs-13"></i>
+					</span>
+					<span class="d-flex flex-column lh-1">
+						<span class="text-white-50 fw-medium" style="font-size: 10px; letter-spacing: .06em;">WORKING TENANT</span>
+						<span class="text-white fw-semibold" style="font-size: 13px; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $selectedTenantName }}</span>
+					</span>
+				</a>
+			</li>
+			@endif
+
 			<!-- Start::header-element -->
 			<li class="header-element header-theme-mode">
 				<!-- Start::header-link|layout-setting -->

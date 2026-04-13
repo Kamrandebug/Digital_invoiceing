@@ -15,7 +15,7 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', [DashboardsController::class, 'index2'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'tenant'])
     ->name('dashboard');
 
 // ── Tenants (list + select; no tenant middleware) ────────────
@@ -25,7 +25,7 @@ Route::post('/add', [TenantListController::class, 'add'])->name('add');
 Route::get('/{id}/select', [TenantListController::class, 'select'])->name('select');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('/index2', [DashboardsController::class, 'index2'])->name('index2');
     Route::get('/customers-list', [CustomerController::class, 'index'])->middleware('tenant');
 });
