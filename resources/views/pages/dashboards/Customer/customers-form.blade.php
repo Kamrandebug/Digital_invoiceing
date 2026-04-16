@@ -796,6 +796,82 @@
                     @endif
                 </div>
             </div>
+
+            @if($isReadonly)
+                @if(empty($customer->IsFiler))
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <span class="detail-label">Sales tax withheld at source</span>
+                            <div class="detail-value">{{ $customer->SalesTaxWithheldAtSource ?? '—' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="detail-label">Extra tax</span>
+                            <div class="detail-value">{{ number_format((float) ($customer->ExtraTax ?? 0), 2) }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="detail-label">Further tax</span>
+                            <div class="detail-value">{{ number_format((float) ($customer->FurtherTax ?? 0), 2) }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="detail-label">FED payable</span>
+                            <div class="detail-value">{{ number_format((float) ($customer->FedPayable ?? 0), 2) }}</div>
+                        </div>
+                    </div>
+                @else
+                    <p class="text-muted small mb-0"><i class="fas fa-info-circle"></i> Withholding / extra / further / FED amounts are stored as <strong>0.00</strong> for tax filers.</p>
+                @endif
+            @else
+                <div id="nonFilerTaxFieldsRow" class="row mb-1 {{ (string) old('IsFiler', isset($customer) ? ($customer->IsFiler ?? '1') : '1') === '1' ? 'd-none' : '' }}">
+                    <div class="col-12">
+                        <p class="text-muted small mb-2">These fields apply to <strong>non-tax filers</strong> only. They are hidden when &quot;Is Tax Filer?&quot; is checked and default to 0.00.</p>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="SalesTaxWithheldAtSource" class="form-label">Sales tax withheld at source</label>
+                            <input type="text" class="form-control @error('SalesTaxWithheldAtSource') is-invalid @enderror"
+                                   id="SalesTaxWithheldAtSource" name="SalesTaxWithheldAtSource" maxlength="50"
+                                   value="{{ old('SalesTaxWithheldAtSource', $customer->SalesTaxWithheldAtSource ?? '') }}"
+                                   placeholder="Optional">
+                            @error('SalesTaxWithheldAtSource')
+                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="ExtraTax" class="form-label">Extra tax</label>
+                            <input type="number" step="0.01" min="0" max="999.99" class="form-control @error('ExtraTax') is-invalid @enderror"
+                                   id="ExtraTax" name="ExtraTax"
+                                   value="{{ old('ExtraTax', isset($customer->ExtraTax) ? number_format((float) $customer->ExtraTax, 2, '.', '') : '0.00') }}">
+                            @error('ExtraTax')
+                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="FurtherTax" class="form-label">Further tax</label>
+                            <input type="number" step="0.01" min="0" max="999.99" class="form-control @error('FurtherTax') is-invalid @enderror"
+                                   id="FurtherTax" name="FurtherTax"
+                                   value="{{ old('FurtherTax', isset($customer->FurtherTax) ? number_format((float) $customer->FurtherTax, 2, '.', '') : '0.00') }}">
+                            @error('FurtherTax')
+                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="FedPayable" class="form-label">FED payable</label>
+                            <input type="number" step="0.01" min="0" max="999.99" class="form-control @error('FedPayable') is-invalid @enderror"
+                                   id="FedPayable" name="FedPayable"
+                                   value="{{ old('FedPayable', isset($customer->FedPayable) ? number_format((float) $customer->FedPayable, 2, '.', '') : '0.00') }}">
+                            @error('FedPayable')
+                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
         
         {{-- Additional Info --}}
@@ -970,6 +1046,24 @@
         }
     };
     
+    window.syncNonFilerTaxFieldsVisibility = function () {
+        const isFiler = document.getElementById('IsFiler');
+        const row = document.getElementById('nonFilerTaxFieldsRow');
+        if (!isFiler || !row) return;
+        const hide = !!isFiler.checked;
+        row.classList.toggle('d-none', hide);
+        if (hide) {
+            const s = document.getElementById('SalesTaxWithheldAtSource');
+            const ex = document.getElementById('ExtraTax');
+            const fu = document.getElementById('FurtherTax');
+            const fe = document.getElementById('FedPayable');
+            if (s) s.value = '';
+            if (ex) ex.value = '0.00';
+            if (fu) fu.value = '0.00';
+            if (fe) fe.value = '0.00';
+        }
+    };
+
     document.addEventListener('DOMContentLoaded', function() {
         // Initial state check
         window.toggleBillingFields();
@@ -987,6 +1081,12 @@
                 el.addEventListener('input', window.syncBillingAddress);
             }
         });
+
+        const isFilerCb = document.getElementById('IsFiler');
+        if (isFilerCb) {
+            window.syncNonFilerTaxFieldsVisibility();
+            isFilerCb.addEventListener('change', window.syncNonFilerTaxFieldsVisibility);
+        }
     });
     
     // Scroll to error

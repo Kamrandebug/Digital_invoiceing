@@ -106,23 +106,24 @@
                         <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Weight (kg)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Weight ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Weight" class="form-control form-control-sm @error('Weight') is-invalid @enderror" value="{{ old('Weight', $product->Weight ?? '0.00') }}">@error('Weight')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
                     </div>
                     <div class="row g-2 mt-1">
-                        <div class="col-md-3">
+                        <div class="col-md-3 d-flex align-items-center">
+                            @php
+                                $isFixedValue = (float)($product->TPRate ?? 0) > 0;
+                                $isFixedValueOld = old('IsFixedValue');
+                                $isFixedValueChecked = $isFixedValueOld !== null
+                                    ? ((string)$isFixedValueOld === '1')
+                                    : $isFixedValue;
+                            @endphp
                             @if($isReadonly)
-                                <label class="_pfp-detail-label">IsFixedValue</label>
-                                @php $isFixedValue = (float)($product->TPRate ?? 0) > 0; @endphp
-                                <div class="_pfp-detail-value">{{ $isFixedValue ? 'Yes' : 'No' }}</div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" disabled {{ $isFixedValue ? 'checked' : '' }}>
+                                    <label class="form-check-label ms-1">IsFixedRate</label>
+                                </div>
                             @else
-                                @php
-                                    $isFixedValueOld = old('IsFixedValue');
-                                    $isFixedValueChecked = $isFixedValueOld !== null
-                                        ? ((string)$isFixedValueOld === '1')
-                                        : ((float)($product->TPRate ?? 0) > 0);
-                                @endphp
-                                <label class="form-label d-block">IsFixedValue</label>
                                 <input type="hidden" name="IsFixedValue" value="0">
-                                <div class="form-check mt-1">
+                                <div class="form-check mb-0">
                                     <input class="form-check-input" type="checkbox" id="{{ $uid }}_is_fixed_value" name="IsFixedValue" value="1" {{ $isFixedValueChecked ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="{{ $uid }}_is_fixed_value">Enable fixed notified value</label>
+                                    <label class="form-check-label ms-1" for="{{ $uid }}_is_fixed_value">IsFixedRate</label>
                                 </div>
                                 @error('IsFixedValue')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             @endif

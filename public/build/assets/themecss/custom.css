@@ -17,7 +17,6 @@ body{
     padding-top: 0.25rem !important;
     padding-bottom: 0.25rem !important;
     padding-left: 0.5rem !important;
-    font-size: 0.875rem !important;
     border-radius: 0.25rem !important;
     min-height: calc(1.5em + 0.5rem + 2px) !important;
 	
@@ -358,7 +357,8 @@ label{
 	color: var(--cm-text-main);
 }
 
-.form-control, .form-select {
+/* Native selects: keep Bootstrap caret/padding from libs; match Vyzor theme font (Space Grotesk, 0.875rem) — body above uses Verdana. */
+.form-control {
 	border: 1px solid var(--cm-border-color);
 	border-radius: 5px;
 	padding: 10px;
@@ -368,10 +368,22 @@ label{
 	color: var(--cm-text-main);
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus {
 	border-color: rgb(var(--primary-rgb)) !important;
 	box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
 	outline: none;
+}
+
+.form-select {
+	font-family: var(--default-font-family, "Space Grotesk", sans-serif);
+	font-weight: var(--default-font-weight, 400);
+	font-size: 0.875rem;
+	line-height: 1.5;
+	color: var(--default-text-color, var(--cm-text-main));
+}
+
+.form-select.form-select-sm {
+	font-size: 0.8rem;
 }
 
 .last-updated-info {

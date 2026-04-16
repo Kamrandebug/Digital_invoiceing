@@ -518,6 +518,69 @@
 							@endif
 						</div>
 
+						@if($isReadonly)
+							@if(empty($customer->IsFiler))
+								<div class="col-12 mt-2">
+									<div class="row g-2">
+										<div class="col-md-3">
+											<span class="_cfp-detail-label">Sales tax withheld at source</span>
+											<div class="_cfp-detail-value">{{ $customer->SalesTaxWithheldAtSource ?? '—' }}</div>
+										</div>
+										<div class="col-md-3">
+											<span class="_cfp-detail-label">Extra tax</span>
+											<div class="_cfp-detail-value">{{ number_format((float) ($customer->ExtraTax ?? 0), 2) }}</div>
+										</div>
+										<div class="col-md-3">
+											<span class="_cfp-detail-label">Further tax</span>
+											<div class="_cfp-detail-value">{{ number_format((float) ($customer->FurtherTax ?? 0), 2) }}</div>
+										</div>
+										<div class="col-md-3">
+											<span class="_cfp-detail-label">FED payable</span>
+											<div class="_cfp-detail-value">{{ number_format((float) ($customer->FedPayable ?? 0), 2) }}</div>
+										</div>
+									</div>
+								</div>
+							@else
+								<div class="col-12 mt-2">
+									<p class="text-muted small mb-0"><i class="fas fa-info-circle"></i> Withholding / extra / further / FED stored as <strong>0.00</strong> for tax filers.</p>
+								</div>
+							@endif
+						@else
+							<div id="{{ $uid }}_nonFilerTaxRow" class="col-12 mt-1 {{ (string) old('IsFiler', $customer->IsFiler ?? '1') === '1' ? 'd-none' : '' }}">
+								<p class="text-muted small mb-2">For <strong>non-tax filers</strong> only. Hidden when &quot;Is Tax Filer?&quot; is checked (defaults 0.00).</p>
+								<div class="row g-2">
+									<div class="col-md-3">
+										<label class="form-label" for="{{ $uid }}_SalesTaxWithheldAtSource">Sales tax withheld at source</label>
+										<input type="text" name="SalesTaxWithheldAtSource" id="{{ $uid }}_SalesTaxWithheldAtSource" maxlength="50"
+											   class="form-control form-control-sm @error('SalesTaxWithheldAtSource') is-invalid @enderror"
+											   value="{{ old('SalesTaxWithheldAtSource', $customer->SalesTaxWithheldAtSource ?? '') }}" placeholder="Optional">
+										@error('SalesTaxWithheldAtSource')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									</div>
+									<div class="col-md-3">
+										<label class="form-label" for="{{ $uid }}_ExtraTax">Extra tax</label>
+										<input type="number" step="0.01" min="0" max="999.99" name="ExtraTax" id="{{ $uid }}_ExtraTax"
+											   class="form-control form-control-sm @error('ExtraTax') is-invalid @enderror"
+											   value="{{ old('ExtraTax', isset($customer->ExtraTax) ? number_format((float) $customer->ExtraTax, 2, '.', '') : '0.00') }}">
+										@error('ExtraTax')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									</div>
+									<div class="col-md-3">
+										<label class="form-label" for="{{ $uid }}_FurtherTax">Further tax</label>
+										<input type="number" step="0.01" min="0" max="999.99" name="FurtherTax" id="{{ $uid }}_FurtherTax"
+											   class="form-control form-control-sm @error('FurtherTax') is-invalid @enderror"
+											   value="{{ old('FurtherTax', isset($customer->FurtherTax) ? number_format((float) $customer->FurtherTax, 2, '.', '') : '0.00') }}">
+										@error('FurtherTax')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									</div>
+									<div class="col-md-3">
+										<label class="form-label" for="{{ $uid }}_FedPayable">FED payable</label>
+										<input type="number" step="0.01" min="0" max="999.99" name="FedPayable" id="{{ $uid }}_FedPayable"
+											   class="form-control form-control-sm @error('FedPayable') is-invalid @enderror"
+											   value="{{ old('FedPayable', isset($customer->FedPayable) ? number_format((float) $customer->FedPayable, 2, '.', '') : '0.00') }}">
+										@error('FedPayable')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									</div>
+								</div>
+							</div>
+						@endif
+
 					</div>
 				  </div>
 				  <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
@@ -697,6 +760,26 @@
     }
     document.getElementById(uid + '_SameAsBilling')?.addEventListener('change', toggleBilling);
     toggleBilling();
+
+    function syncNonFilerTaxFields() {
+        const cb = document.getElementById(uid + '_IsFiler');
+        const row = document.getElementById(uid + '_nonFilerTaxRow');
+        if (!cb || !row) return;
+        const hide = !!cb.checked;
+        row.classList.toggle('d-none', hide);
+        if (hide) {
+            const s = document.getElementById(uid + '_SalesTaxWithheldAtSource');
+            const ex = document.getElementById(uid + '_ExtraTax');
+            const fu = document.getElementById(uid + '_FurtherTax');
+            const fe = document.getElementById(uid + '_FedPayable');
+            if (s) s.value = '';
+            if (ex) ex.value = '0.00';
+            if (fu) fu.value = '0.00';
+            if (fe) fe.value = '0.00';
+        }
+    }
+    document.getElementById(uid + '_IsFiler')?.addEventListener('change', syncNonFilerTaxFields);
+    syncNonFilerTaxFields();
 
     /* Scroll to first error */
     window.addEventListener('load', () => {

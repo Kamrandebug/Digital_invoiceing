@@ -93,6 +93,15 @@ class CustomerController extends Controller
                 'BillingPostalCode' => $request->PostalCode,
             ]);
         }
+
+        if ((int) $request->input('IsFiler', 0) === 1) {
+            $request->merge([
+                'SalesTaxWithheldAtSource' => null,
+                'ExtraTax' => '0.00',
+                'FurtherTax' => '0.00',
+                'FedPayable' => '0.00',
+            ]);
+        }
         
   // ── Validate ──────────────────────────────────────────
 try {
@@ -122,6 +131,10 @@ try {
         'IsFiler'           => 'nullable|boolean',
         'CNIC'              => ['nullable', 'string', 'regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('tbl_customer', 'CNIC')],
         'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
+        'SalesTaxWithheldAtSource' => 'nullable|string|max:50',
+        'ExtraTax'          => 'nullable|numeric|min:0|max:999.99',
+        'FurtherTax'        => 'nullable|numeric|min:0|max:999.99',
+        'FedPayable'        => 'nullable|numeric|min:0|max:999.99',
         'Notes'             => 'nullable|string|max:500',
         'Status'            => 'nullable|integer|in:0,1',
     ], [
@@ -214,6 +227,10 @@ try {
                 'CNIC'              => $request->CNIC,
                 'IsFiler'           => $request->input('IsFiler', 0),
                 'Notes'             => $request->Notes,
+                'SalesTaxWithheldAtSource' => $request->input('SalesTaxWithheldAtSource'),
+                'ExtraTax'          => (float) ($request->input('ExtraTax', 0) ?: 0),
+                'FurtherTax'        => (float) ($request->input('FurtherTax', 0) ?: 0),
+                'FedPayable'        => (float) ($request->input('FedPayable', 0) ?: 0),
                 'Status'            => (int) $request->input('Status', 1),
                 'CreatedBy'         => (int)$userId,
                 'CreatedOn'         => $now,
@@ -385,6 +402,15 @@ public function modal(Request $request, $id = null)
                 'BillingPostalCode' => $request->PostalCode,
             ]);
         }
+
+        if ((int) $request->input('IsFiler', 0) === 1) {
+            $request->merge([
+                'SalesTaxWithheldAtSource' => null,
+                'ExtraTax' => '0.00',
+                'FurtherTax' => '0.00',
+                'FedPayable' => '0.00',
+            ]);
+        }
         
      // ── Validate ──────────────────────────────────────────
 try {
@@ -415,6 +441,10 @@ try {
         'CNIC'              => ['nullable', 'string', 'regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('tbl_customer', 'CNIC')->ignore($id, 'ID')],
         'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
         'PaymentTerms'      => 'nullable|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
+        'SalesTaxWithheldAtSource' => 'nullable|string|max:50',
+        'ExtraTax'          => 'nullable|numeric|min:0|max:999.99',
+        'FurtherTax'        => 'nullable|numeric|min:0|max:999.99',
+        'FedPayable'        => 'nullable|numeric|min:0|max:999.99',
         'Notes'             => 'nullable|string|max:500',
         'Status'            => 'nullable|integer|in:0,1',
     ], [
@@ -506,6 +536,10 @@ try {
                 'CNIC'              => $request->CNIC,
                 'IsFiler'           => $request->input('IsFiler', 0),
                 'Notes'             => $request->Notes,
+                'SalesTaxWithheldAtSource' => $request->input('SalesTaxWithheldAtSource'),
+                'ExtraTax'          => (float) ($request->input('ExtraTax', 0) ?: 0),
+                'FurtherTax'        => (float) ($request->input('FurtherTax', 0) ?: 0),
+                'FedPayable'        => (float) ($request->input('FedPayable', 0) ?: 0),
                 'Status'            => (int) $request->input('Status', 1),
                 'CreatedBy'         => (int)($customer->CreatedBy ?? $userId),
                 'CreatedOn'         => $customer->CreatedOn ?? $now,

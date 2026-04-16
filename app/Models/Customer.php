@@ -107,9 +107,13 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
     {
         $requestID = $validated['RequestID'] ?? '';
         DB::unprepared("
-            INSERT INTO tbl_customer (AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,Notes,`Status`,CreatedBy,CreatedOn)
-            SELECT AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,Notes,`Status`,CreatedBy,CreatedOn
-            FROM temp_customer
+            INSERT INTO tbl_customer (AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
+                SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,
+                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn)
+            SELECT 	AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
+                SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,
+                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn
+            FROM 	temp_customer
             WHERE RequestID = '$requestID'
         ");
     }
@@ -125,7 +129,8 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
             JOIN (
                 SELECT TID,AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,SameAsBilling,
 			BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,
-			NTN,SalesTaxNumber,CNIC,IsFiler,Notes,`Status`,UpdatedBy,UpdatedOn
+			NTN,SalesTaxNumber,CNIC,IsFiler,Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,
+			`Status`,UpdatedBy,UpdatedOn
                 FROM temp_customer
                 WHERE RequestID = '$requestID'
             ) u ON uu.ID = u.TID
@@ -134,9 +139,20 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 uu.Title = u.Title,
                 uu.FirstName = u.FirstName,
                 uu.LastName = u.LastName,
-                uu.AccountNo = u.AccountNo,
+                uu.BusinessName = u.BusinessName,
+                uu.DisplayName = u.DisplayName,
+                uu.Email = u.Email,
+                uu.Mobile = u.Mobile,
+                uu.Phone = u.Phone,
+                uu.Website = u.Website,
+                uu.Address = u.Address,
                 uu.NTN = u.NTN,
                 uu.CNIC = u.CNIC,
+                uu.SalesTaxNumber = u.SalesTaxNumber,
+                uu.SalesTaxWithheldAtSource = u.SalesTaxWithheldAtSource,
+                uu.ExtraTax = u.ExtraTax,
+                uu.FurtherTax = u.FurtherTax,
+                uu.FedPayable = u.FedPayable,
                 uu.Status = u.Status,
                 uu.UpdatedBy = u.UpdatedBy,
                 uu.UpdatedOn = u.UpdatedOn
