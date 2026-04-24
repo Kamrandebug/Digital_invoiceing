@@ -323,11 +323,20 @@ class InvoiceController extends Controller
                 'UpdatedBy'          => $userId,
                 'UpdatedOn'          => $now,
                 'RequestID'          => $requestId,
+                'ErrMsg'             => null,
             ]);
         }
 
-        // 3. Execute model transaction (inserts header + detail from temp; no return)
-        InvoiceModel::save_transaction($requestId);
+        // 3. Execute model transaction (inserts header + detail from temp)
+        $saveResult = InvoiceModel::save_transaction($requestId);
+        if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+            $message = $saveResult['message'] ?? 'Unable to save invoice.';
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json(['status' => 'error', 'message' => $message], 422);
+            }
+
+            return redirect()->back()->with('error', $message)->withInput();
+        }
 
         // 4. Clean temp
         // DB::table('tbl_temp_invoice_detail')->where('RequestID', $requestId)->delete();
@@ -426,6 +435,7 @@ class InvoiceController extends Controller
                 'UpdatedBy'          => $userId,
                 'UpdatedOn'          => $now,
                 'RequestID'          => $requestId,
+                'ErrMsg'             => null,
             ]);
         }
 
@@ -471,8 +481,16 @@ class InvoiceController extends Controller
             ]);
         }
 
-        // Call model (executes update inside model)
-        InvoiceModel::edit_transaction($requestId);
+        // Call model (validates temp, replaces header + lines from temp)
+        $editResult = InvoiceModel::edit_transaction($requestId);
+        if (is_array($editResult) && ($editResult['status'] ?? false) === false) {
+            $message = $editResult['message'] ?? 'Unable to update invoice.';
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json(['status' => 'error', 'message' => $message], 422);
+            }
+
+            return redirect()->back()->with('error', $message)->withInput();
+        }
 
         if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json(['status' => 'success', 'message' => 'Invoice updated successfully.']);

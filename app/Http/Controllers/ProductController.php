@@ -71,10 +71,15 @@ class ProductController extends Controller
      */
     public function save_transaction(Request $request)
     {
+        // Auto-generate product code (same pattern style as customer AccountNo generation).
+        $maxId = DB::table('temp_product')->max('ID');
+        $nextId = $maxId ? $maxId + 1 : 1;
+        $autoProductCode = 'PROD-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+
         // Format inputs (normalize empty Category/Unit for modal)
         $request->merge([
             'Name'     => trim($request->Name ?? ''),
-            'Code'     => strtoupper(trim($request->Code ?? '')),
+            'Code'     => $autoProductCode,
             'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
             'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
             'IsFixedValue' => $request->boolean('IsFixedValue') ? 1 : 0,
@@ -149,10 +154,6 @@ class ProductController extends Controller
             $userId    = auth()->id() ?? 1;
             $now       = now()->toDateTimeString();
 
-            // Calculate next ID (we still set ID explicitly even though it's AUTO_INCREMENT)
-            $maxId  = DB::table('temp_product')->max('ID');
-            $nextId = $maxId ? $maxId + 1 : 1;
-
             // Prepare data for new temp_product structure
             $data = [
                 'ID'              => $nextId,
@@ -160,7 +161,7 @@ class ProductController extends Controller
                 'VoucherID'       => 0,
                 'ProductID'       => null,
                 'Name'            => $request->Name,
-                'Code'            => $request->Code,
+                'Code'            => $autoProductCode,
                 'Type'            => $request->Type,
                 'CategoryID'      => $request->Category ?? null,
                 'CategoryName'    => null,
@@ -196,7 +197,15 @@ class ProductController extends Controller
             DB::table('temp_product')->insert($data);
 
             // Execute model transaction (runs query inside model)
-            ProductModel::save_transaction(['RequestID' => $requestId]);
+            $saveResult = ProductModel::save_transaction(['RequestID' => $requestId]);
+            if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+                $message = $saveResult['message'] ?? 'Unable to save product.';
+                if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json(['status' => 'error', 'message' => $message], 422);
+                }
+
+                return redirect()->back()->with('error', $message)->withInput();
+            }
 
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json(['status' => 'success', 'message' => 'Product created successfully!']);
@@ -311,9 +320,14 @@ class ProductController extends Controller
         }
 
         // Format inputs (normalize empty Category/Unit for modal)
+        $codeInput = strtoupper(trim($request->Code ?? ''));
+        if ($codeInput === '') {
+            $codeInput = strtoupper(trim((string) ($product->Code ?? '')));
+        }
+
         $request->merge([
             'Name'     => trim($request->Name ?? ''),
-            'Code'     => strtoupper(trim($request->Code ?? '')),
+            'Code'     => $codeInput,
             'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
             'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
             'IsFixedValue' => $request->boolean('IsFixedValue') ? 1 : 0,
@@ -431,7 +445,15 @@ class ProductController extends Controller
             DB::table('temp_product')->insert($data);
 
             // Execute model transaction (runs query inside model)
-            ProductModel::edit_transaction(['RequestID' => $requestId]);
+            $editResult = ProductModel::edit_transaction(['RequestID' => $requestId]);
+            if (is_array($editResult) && ($editResult['status'] ?? false) === false) {
+                $message = $editResult['message'] ?? 'Unable to update product.';
+                if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json(['status' => 'error', 'message' => $message], 422);
+                }
+
+                return redirect()->back()->with('error', $message)->withInput();
+            }
 
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json(['status' => 'success', 'message' => 'Product updated successfully!']);

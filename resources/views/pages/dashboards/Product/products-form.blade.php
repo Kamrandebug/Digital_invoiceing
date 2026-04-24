@@ -135,13 +135,15 @@
 
                 <div class="col-md-3">
                     <div class="mb-3">
-                        <label for="Code" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Product Code</label>
+                        <label for="Code" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Product Code</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->Code ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('Code') is-invalid @enderror"
                                    id="Code" name="Code"
-                                   value="{{ old('Code', $product->Code ?? '') }}" placeholder="e.g. PROD-001" required>
+                                   value="{{ old('Code', $product->Code ?? '') }}"
+                                   placeholder="{{ $isCreate ? 'Auto-assigned if left blank' : '' }}"
+                                   autocomplete="off">
                             @error('Code')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror

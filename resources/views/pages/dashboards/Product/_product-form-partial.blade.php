@@ -18,7 +18,6 @@
 @once
 
 @endonce
-<link rel="stylesheet" href="{{asset('build/assets/themecss/custom.css')}}">
 @if(!$isCreate && $product)
 <div class="_pfp-info-badge {{ $isReadonly ? 'show-mode' : 'edit-mode' }}">
     <div class="row align-items-center g-2">
@@ -63,17 +62,17 @@
                         <div class="col-md-6">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Product Name</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->Name ?? '-' }}</div>
-                            @else<input type="text" name="Name" class="form-control form-control-sm @error('Name') is-invalid @enderror" value="{{ old('Name', $product->Name ?? '') }}" placeholder="Product name" required>@error('Name')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
+                            @else<input type="text" name="Name" class="form-control @error('Name') is-invalid @enderror" value="{{ old('Name', $product->Name ?? '') }}" placeholder="Product name" required>@error('Name')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
                         </div>
                         <div class="col-md-3">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Code</label>
+                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Code</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->Code ?? '-' }}</div>
-                            @else<input type="text" name="Code" class="form-control form-control-sm @error('Code') is-invalid @enderror" value="{{ old('Code', $product->Code ?? '') }}" placeholder="PROD-001" required>@error('Code')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
+                            @else<input type="text" name="Code" class="form-control @error('Code') is-invalid @enderror" value="{{ old('Code', $product->Code ?? '') }}" placeholder="{{ $isCreate ? 'Auto-assigned if left blank' : '' }}" autocomplete="off">@error('Code')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
                         </div>
                         <div class="col-md-3">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Type</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->Type ?? '-' }}</div>
-                            @else<select name="Type" class="form-select form-select-sm @error('Type') is-invalid @enderror">
+                            @else<select name="Type" class="form-select @error('Type') is-invalid @enderror">
                                 <option value="">Select</option>
                                 <option value="Product" {{ old('Type', $product->Type ?? '') == 'Product' ? 'selected' : '' }}>Product</option>
                                 <option value="Service" {{ old('Type', $product->Type ?? '') == 'Service' ? 'selected' : '' }}>Service</option>
@@ -82,17 +81,17 @@
                         <div class="col-md-6">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Category</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->CategoryName ?? $product->Category ?? '-' }}</div>
-                            @else<select name="Category" class="form-select form-select-sm @error('Category') is-invalid @enderror"><option value="">Select Category</option></select>@error('Category')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
+                            @else<select name="Category" class="form-select @error('Category') is-invalid @enderror"><option value="">Select Category</option></select>@error('Category')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
                         </div>
                         <div class="col-md-6">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Unit</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->UnitName ?? $product->Unit ?? '-' }}</div>
-                            @else<select name="Unit" class="form-select form-select-sm @error('Unit') is-invalid @enderror"><option value="0">Select Unit</option></select>@error('Unit')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
+                            @else<select name="Unit" class="form-select @error('Unit') is-invalid @enderror"><option value="0">Select Unit</option></select>@error('Unit')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
                         </div>
                         <div class="col-md-3">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Current Qty</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->CurrentQuantity ?? 0 }}</div>
-                            @else<input type="number" step="0.000001" name="CurrentQuantity" class="form-control form-control-sm @error('CurrentQuantity') is-invalid @enderror" value="{{ old('CurrentQuantity', $product->CurrentQuantity ?? '0') }}">@error('CurrentQuantity')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
+                            @else<input type="number" step="0.000001" name="CurrentQuantity" class="form-control @error('CurrentQuantity') is-invalid @enderror" value="{{ old('CurrentQuantity', $product->CurrentQuantity ?? '0') }}">@error('CurrentQuantity')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
                         </div>
                     </div>
                 </div>
@@ -101,9 +100,9 @@
                 <div class="tab-pane fade _pfp-tab-pane" id="{{ $uid }}_pricing" role="tabpanel">
                     <h6 class="_pfp-section-title"><i class="fas fa-dollar-sign"></i> Pricing</h6>
                     <div class="row g-2">
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Sale Price (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->SalePrice ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="SalePrice" class="form-control form-control-sm @error('SalePrice') is-invalid @enderror" value="{{ old('SalePrice', $product->SalePrice ?? '0.00') }}" required>@error('SalePrice')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Cost (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Cost ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Cost" class="form-control form-control-sm @error('Cost') is-invalid @enderror" value="{{ old('Cost', $product->Cost ?? '0.00') }}">@error('Cost')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Weight (kg)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Weight ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Weight" class="form-control form-control-sm @error('Weight') is-invalid @enderror" value="{{ old('Weight', $product->Weight ?? '0.00') }}">@error('Weight')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
+                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Sale Price (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->SalePrice ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="SalePrice" class="form-control @error('SalePrice') is-invalid @enderror" value="{{ old('SalePrice', $product->SalePrice ?? '0.00') }}" required>@error('SalePrice')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
+                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Cost (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Cost ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Cost" class="form-control @error('Cost') is-invalid @enderror" value="{{ old('Cost', $product->Cost ?? '0.00') }}">@error('Cost')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
+                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Weight (kg)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Weight ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Weight" class="form-control @error('Weight') is-invalid @enderror" value="{{ old('Weight', $product->Weight ?? '0.00') }}">@error('Weight')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
                     </div>
                     <div class="row g-2 mt-1">
                         <div class="col-md-3 d-flex align-items-center">
@@ -133,7 +132,7 @@
                             @if($isReadonly)
                                 <div class="_pfp-detail-value">{{ number_format($product->TPRate ?? 0, 2) }}</div>
                             @else
-                                <input type="number" step="0.000001" min="0" name="TPRate" id="{{ $uid }}_fixed_notified_value" class="form-control form-control-sm @error('TPRate') is-invalid @enderror" value="{{ old('TPRate', $product->TPRate ?? '0.00') }}">
+                                <input type="number" step="0.000001" min="0" name="TPRate" id="{{ $uid }}_fixed_notified_value" class="form-control @error('TPRate') is-invalid @enderror" value="{{ old('TPRate', $product->TPRate ?? '0.00') }}">
                                 @error('TPRate')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             @endif
                         </div>
@@ -151,7 +150,7 @@
                             @else
                                 <input type="text"
                                        name="HsCode"
-                                       class="form-control form-control-sm @error('HsCode') is-invalid @enderror"
+                                       class="form-control @error('HsCode') is-invalid @enderror"
                                        value="{{ old('HsCode', $product->HsCode ?? '') }}"
                                        placeholder="e.g. 8517.12">
                                 @error('HsCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -163,7 +162,7 @@
                                 <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['uom'] ?? '—') : ($product->UOM ?? '-') }}</div>
                             @else
                                 <select name="UOM"
-                                        class="form-select form-select-sm @error('UOM') is-invalid @enderror"
+                                        class="form-select @error('UOM') is-invalid @enderror"
                                         data-selected="{{ old('UOM', $product->UOM ?? '') }}">
                                     <option value="">Select UOM</option>
                                 </select>
@@ -176,7 +175,7 @@
                                 <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sale_type'] ?? '—') : ($product->SaleType ?? '-') }}</div>
                             @else
                                 <select name="SaleType"
-                                        class="form-select form-select-sm @error('SaleType') is-invalid @enderror"
+                                        class="form-select @error('SaleType') is-invalid @enderror"
                                         data-selected="{{ old('SaleType', $product->SaleType ?? '') }}"
                                         @if($isCreate && (string) old('SaleType', $product->SaleType ?? '') === '')
                                         data-apply-default-sale-type="1"
@@ -192,7 +191,7 @@
                                 <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sale_type_to_rate'] ?? '—') : ($product->SaleTypeToRate ?? '-') }}</div>
                             @else
                                 <select name="SaleTypeToRate"
-                                        class="form-select form-select-sm @error('SaleTypeToRate') is-invalid @enderror"
+                                        class="form-select @error('SaleTypeToRate') is-invalid @enderror"
                                         data-selected="{{ old('SaleTypeToRate', $product->SaleTypeToRate ?? '') }}">
                                     <option value="">Select Sale Type first</option>
                                 </select>
@@ -205,7 +204,7 @@
                                 <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sro_schedule'] ?? '—') : ($product->SROSchedule ?? '-') }}</div>
                             @else
                                 <select name="SROSchedule"
-                                        class="form-select form-select-sm @error('SROSchedule') is-invalid @enderror"
+                                        class="form-select @error('SROSchedule') is-invalid @enderror"
                                         data-selected="{{ old('SROSchedule', $product->SROSchedule ?? '') }}">
                                     <option value="">Select Sale Type To Rate first</option>
                                 </select>
@@ -218,7 +217,7 @@
                                 <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sro_item'] ?? '—') : ($product->SROItem ?? '-') }}</div>
                             @else
                                 <select name="SROItem"
-                                        class="form-select form-select-sm @error('SROItem') is-invalid @enderror"
+                                        class="form-select @error('SROItem') is-invalid @enderror"
                                         data-selected="{{ old('SROItem', $product->SROItem ?? '') }}">
                                     <option value="">Select SRO Schedule first</option>
                                 </select>
@@ -231,8 +230,8 @@
                                 <div class="_pfp-detail-value">{{ $product->SaleInformation ?? '-' }}</div>
                             @else
                                 <textarea name="SaleInformation"
-                                          class="form-control form-control-sm @error('SaleInformation') is-invalid @enderror"
-                                          rows="2"
+                                          class="form-control @error('SaleInformation') is-invalid @enderror"
+                                          rows="5"
                                           placeholder="Sale info">{{ old('SaleInformation', $product->SaleInformation ?? '') }}</textarea>
                                 @error('SaleInformation')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             @endif

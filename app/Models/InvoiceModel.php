@@ -53,6 +53,7 @@ class InvoiceModel extends Model
         'CreatedOn',
         'UpdatedBy',
         'UpdatedOn',
+        'ErrMsg',
     ];
 
     protected $casts = [
@@ -208,15 +209,10 @@ class InvoiceModel extends Model
     // ══════════════════════════════════════════════════════════
 
     /**
-     * Execute save: run multiple queries (header + detail) from tbl_temp_invoice_detail for the given RequestID.
-     * No return; add more DB::unprepared() calls here for any extra queries you need.
+     * @throws \RuntimeException
      */
-    public static function save_transaction($requestID)
+    private static function tenantDatabaseQuoted(): string
     {
-        $requestID = trim((string) $requestID);
-        if ($requestID === '') {
-            throw new \RuntimeException('RequestID is required for save_transaction.');
-        }
         $tenantDb = session('selected_tenant.dbname') ?: config('database.connections.tenant.database');
         $tenantDb = trim((string) $tenantDb);
 
@@ -224,8 +220,66 @@ class InvoiceModel extends Model
             throw new \RuntimeException('Invalid tenant database name in session.');
         }
 
-        $tenantDbQuoted = '`' . str_replace('`', '``', $tenantDb) . '`';
+        return '`' . str_replace('`', '``', $tenantDb) . '`';
+    }
 
+    /**
+     * @return array{status: bool, message: string}|null null when validation passes
+     */
+    private static function runTempInvoiceValidation(string $requestID, string $tenantDbQuoted): ?array
+    {
+        DB::connection('landlord')->statement("
+            UPDATE {$tenantDbQuoted}.`tbl_temp_invoice_detail` uu
+            JOIN (
+                SELECT t.ID,
+                    CASE
+                        WHEN COALESCE(TRIM(t.DocNo), '') = '' THEN 'Invalid Document Number'
+                        WHEN t.CustomerID IS NULL OR t.CustomerID <= 0 THEN 'Invalid Customer'
+                        WHEN NOT EXISTS (
+                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_customer` c
+                            WHERE c.ID = t.CustomerID AND c.Status = 1
+                        ) THEN 'Invalid Customer'
+                        WHEN t.ProductID IS NULL OR t.ProductID <= 0 THEN 'Invalid Product'
+                        WHEN NOT EXISTS (
+                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_product` p
+                            WHERE p.ID = t.ProductID AND p.Status = 1
+                        ) THEN 'Invalid Product'
+                        WHEN EXISTS (
+                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_sales_invoice_header` h
+                            WHERE BINARY h.DocNo = BINARY t.DocNo
+                              AND IFNULL(h.Status, 0) <> 2
+                              AND h.ID <> t.TID
+                        ) THEN 'Document No already exist'
+                        ELSE 'Pass'
+                    END AS ErrMsg
+                FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
+                WHERE t.RequestID = ?
+            ) u ON u.ID = uu.ID
+            SET uu.ErrMsg = u.ErrMsg
+        ", [$requestID]);
+
+        $errorSummary = DB::connection('landlord')->selectOne("
+            SELECT
+                IFNULL(COUNT(*), 0) AS cnt,
+                GROUP_CONCAT(DISTINCT t.ErrMsg ORDER BY t.ErrMsg SEPARATOR ', ') AS ErrMsg
+            FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
+            WHERE t.ErrMsg IS NOT NULL
+              AND t.ErrMsg <> 'Pass'
+              AND t.RequestID = ?
+        ", [$requestID]);
+
+        if ((int) ($errorSummary->cnt ?? 0) > 0) {
+            return [
+                'status' => false,
+                'message' => $errorSummary->ErrMsg ?: 'Unable to save invoice due to invalid data.',
+            ];
+        }
+
+        return null;
+    }
+
+    private static function persistInvoiceFromTemp(string $requestID, string $tenantDbQuoted): void
+    {
         DB::connection('landlord')->statement("
             UPDATE {$tenantDbQuoted}.tbl_temp_invoice_detail uu
             JOIN (
@@ -248,49 +302,98 @@ class InvoiceModel extends Model
                 uu.SroItemSerialNo    = u.SroItemSerialNo
                 ", [$requestID]);
 
-        // -- 1. Insert into tbl_sales_invoice_header
-        DB::unprepared("
-            INSERT INTO tbl_sales_invoice_header (ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+        DB::connection('landlord')->statement("
+            INSERT INTO {$tenantDbQuoted}.tbl_sales_invoice_header (ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
             SELECT TID AS ID,InvoiceID,1 AS InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,''AS BuyerNTNCNIC,''AS BuyerBusinessName,''AS BuyerProvince,''AS BuyerAddress,''AS InvoiceRefNo,''AS BuyerRegistrationType,''AS ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
-            FROM tbl_temp_invoice_detail
-            WHERE RequestID = '$requestID'
+            FROM {$tenantDbQuoted}.tbl_temp_invoice_detail
+            WHERE RequestID = ?
             Group BY RequestID
-        ");
+        ", [$requestID]);
 
-        // -- 2. Insert into tbl_sales_invoice_detail
-        DB::unprepared("
-            INSERT INTO `tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.Weight, 
-                t.HsCode, t.ProductDescription AS SaleInformation,t.UomID, t.Uom_Desc AS Uom_Desc, 
-                t.SaleTypeID, t.SaleTypeDesc AS SaleTypeDesc, 
-                t.SaleTypeToRateID, t.SaleTypeToRateDesc AS SaleTypeToRateDesc, 
-                t.SroScheduleID, IFNULL(t.SroScheduleDesc,'') AS SroScheduleDesc, 
-                t.SroItemID, IFNULL(t.SroItemSerialNo,'') AS SroItemSerialNo, 
-                IFNULL(t.TotalValues,0.00), 
-                IFNULL(t.Amount,0.00) AS ValueSalesExcludingST, 
-                IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS FixedNotifiedValueOrRetailPrice, 
-                IFNULL(t.GSTAmount,0.00) AS SalesTaxApplicable, 
+        DB::connection('landlord')->statement("
+            INSERT INTO {$tenantDbQuoted}.`tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.Weight,
+                t.HsCode, t.ProductDescription AS SaleInformation,t.UomID, t.Uom_Desc AS Uom_Desc,
+                t.SaleTypeID, t.SaleTypeDesc AS SaleTypeDesc,
+                t.SaleTypeToRateID, t.SaleTypeToRateDesc AS SaleTypeToRateDesc,
+                t.SroScheduleID, IFNULL(t.SroScheduleDesc,'') AS SroScheduleDesc,
+                t.SroItemID, IFNULL(t.SroItemSerialNo,'') AS SroItemSerialNo,
+                IFNULL(t.TotalValues,0.00),
+                IFNULL(t.Amount,0.00) AS ValueSalesExcludingST,
+                IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS FixedNotifiedValueOrRetailPrice,
+                IFNULL(t.GSTAmount,0.00) AS SalesTaxApplicable,
 	            IFNULL(t.SalesTaxWithheldAtSource,0.00),IFNULL(t.ExtraTax,0.00), IFNULL(t.FurtherTax,0.00), IFNULL(t.FedPayable,0.00), IFNULL(t.Discount,0.00),
                 1 AS `Status`,
                 t.CreatedBy, t.CreatedOn, t.UpdatedBy, t.UpdatedOn
-            FROM `tbl_temp_invoice_detail` t
-            WHERE t.RequestID = '$requestID'
-        ");
+            FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
+            WHERE t.RequestID = ?
+        ", [$requestID]);
     }
 
+    /**
+     * Execute save: validate temp rows, then insert header + detail from tbl_temp_invoice_detail for the given RequestID.
+     *
+     * @return array{status: bool, message: ?string}
+     */
+    public static function save_transaction($requestID)
+    {
+        $requestID = trim((string) $requestID);
+        if ($requestID === '') {
+            throw new \RuntimeException('RequestID is required for save_transaction.');
+        }
+
+        $tenantDbQuoted = self::tenantDatabaseQuoted();
+        $validationError = self::runTempInvoiceValidation($requestID, $tenantDbQuoted);
+        if ($validationError !== null) {
+            return $validationError;
+        }
+
+        self::persistInvoiceFromTemp($requestID, $tenantDbQuoted);
+
+        return [
+            'status' => true,
+            'message' => null,
+        ];
+    }
+
+    /**
+     * Validate temp rows, remove existing header/lines for this edit, then persist from temp (same as save path).
+     *
+     * @return array{status: bool, message: ?string}
+     */
     public static function edit_transaction($requestID)
     {
-        DB::unprepared("
+        $requestID = trim((string) $requestID);
+        if ($requestID === '') {
+            throw new \RuntimeException('RequestID is required for edit_transaction.');
+        }
 
-            DELETE FROM tbl_sales_invoice_detail WHERE InvoiceID IN (SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = '$requestID');
-        ");
+        $tenantDbQuoted = self::tenantDatabaseQuoted();
+        $validationError = self::runTempInvoiceValidation($requestID, $tenantDbQuoted);
+        if ($validationError !== null) {
+            return $validationError;
+        }
 
-        DB::unprepared("
+        DB::connection('landlord')->statement("
+            DELETE FROM {$tenantDbQuoted}.tbl_sales_invoice_detail
+            WHERE InvoiceID IN (
+                SELECT TID FROM {$tenantDbQuoted}.tbl_temp_invoice_detail WHERE RequestID = ?
+            )
+        ", [$requestID]);
 
-           DELETE FROM tbl_sales_invoice_header WHERE ID IN (SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = '$requestID');
-        ");
+        DB::connection('landlord')->statement("
+            DELETE FROM {$tenantDbQuoted}.tbl_sales_invoice_header
+            WHERE ID IN (
+                SELECT TID FROM {$tenantDbQuoted}.tbl_temp_invoice_detail WHERE RequestID = ?
+            )
+        ", [$requestID]);
 
-        self::save_transaction($requestID);
+        self::persistInvoiceFromTemp($requestID, $tenantDbQuoted);
+
+        return [
+            'status' => true,
+            'message' => null,
+        ];
     }
 
     public static function delete_transaction($requestID)

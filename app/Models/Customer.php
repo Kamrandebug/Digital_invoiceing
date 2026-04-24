@@ -101,12 +101,48 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
 }
 
     /**
-     * Execute save: insert from temp_customer into tbl_customer. No return; runs query inside.
+     * Execute save: insert from temp_customer into tbl_customer.
+     * Returns status and error message (if any temp row failed validation).
      */
     public static function save_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
-        DB::unprepared("
+
+        DB::statement("
+            UPDATE `temp_customer` uu
+            JOIN
+            (
+                SELECT 	t.ID,
+                    CASE
+                    WHEN t.BusinessName IS NULL OR t.BusinessName = '' THEN 'Invalid Business Name'
+                    -- WHEN t.NTN IS NULL OR t.NTN = '' THEN 'Invalid NTN'
+                    WHEN t.NTN = c.NTN THEN 'NTN No already exist'
+                    ELSE 'Pass' END AS `ErrMsg`
+                FROM `temp_customer` t
+                LEFT JOIN `tbl_customer` c ON (c.NTN = BINARY t.NTN AND c.Status=1)
+                WHERE t.RequestID = ?
+            ) u ON (u.ID = uu.ID)
+            SET	uu.ErrMsg = u.ErrMsg;
+        ", [$requestID]);
+
+        $errorSummary = DB::selectOne("
+            SELECT
+                IFNULL(COUNT(*),0) AS cnt,
+                GROUP_CONCAT(DISTINCT t.ErrMsg ORDER BY t.ErrMsg SEPARATOR ', ') AS ErrMsg
+            FROM `temp_customer` t
+            WHERE t.`ErrMsg` IS NOT NULL
+              AND t.`ErrMsg` <> 'Pass'
+              AND t.RequestID = ?
+        ", [$requestID]);
+
+        if ((int) ($errorSummary->cnt ?? 0) > 0) {
+            return [
+                'status' => false,
+                'message' => $errorSummary->ErrMsg ?: 'Unable to add customer due to invalid data.',
+            ];
+        }
+
+        DB::statement("
             INSERT INTO tbl_customer (AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,
                 Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn)
@@ -114,17 +150,57 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,
                 Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn
             FROM 	temp_customer
-            WHERE RequestID = '$requestID'
-        ");
+            WHERE RequestID = ?
+        ", [$requestID]);
+
+        return [
+            'status' => true,
+            'message' => null,
+        ];
     }
 
     /**
-     * Execute edit: update tbl_customer from temp_customer. No return; runs query inside.
+     * Execute edit: update tbl_customer from temp_customer.
+     * Returns status and error message (if any temp row failed validation).
      */
     public static function edit_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
-        DB::unprepared("
+
+        DB::statement("
+            UPDATE `temp_customer` uu
+            JOIN
+            (
+                SELECT 	t.ID,
+                    CASE
+                    WHEN t.BusinessName IS NULL OR t.BusinessName = '' THEN 'Invalid Business Name'
+                    WHEN t.NTN IS NOT NULL AND t.NTN <> '' AND t.NTN = c.NTN THEN 'NTN No already exist'
+                    ELSE 'Pass' END AS `ErrMsg`
+                FROM `temp_customer` t
+                LEFT JOIN `tbl_customer` c ON (c.NTN = BINARY t.NTN AND c.Status=1 AND c.ID <> t.TID)
+                WHERE t.RequestID = ?
+            ) u ON (u.ID = uu.ID)
+            SET	uu.ErrMsg = u.ErrMsg;
+        ", [$requestID]);
+
+        $errorSummary = DB::selectOne("
+            SELECT
+                IFNULL(COUNT(*),0) AS cnt,
+                GROUP_CONCAT(DISTINCT t.ErrMsg ORDER BY t.ErrMsg SEPARATOR ', ') AS ErrMsg
+            FROM `temp_customer` t
+            WHERE t.`ErrMsg` IS NOT NULL
+              AND t.`ErrMsg` <> 'Pass'
+              AND t.RequestID = ?
+        ", [$requestID]);
+
+        if ((int) ($errorSummary->cnt ?? 0) > 0) {
+            return [
+                'status' => false,
+                'message' => $errorSummary->ErrMsg ?: 'Unable to update customer due to invalid data.',
+            ];
+        }
+
+        DB::statement("
             UPDATE tbl_customer uu
             JOIN (
                 SELECT TID,AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,SameAsBilling,
@@ -132,7 +208,7 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
 			NTN,SalesTaxNumber,CNIC,IsFiler,Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,
 			`Status`,UpdatedBy,UpdatedOn
                 FROM temp_customer
-                WHERE RequestID = '$requestID'
+                WHERE RequestID = ?
             ) u ON uu.ID = u.TID
             SET
                 uu.AccountNo = u.AccountNo,
@@ -156,7 +232,12 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 uu.Status = u.Status,
                 uu.UpdatedBy = u.UpdatedBy,
                 uu.UpdatedOn = u.UpdatedOn
-        ");
+        ", [$requestID]);
+
+        return [
+            'status' => true,
+            'message' => null,
+        ];
     }
 
     /**

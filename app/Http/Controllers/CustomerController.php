@@ -245,9 +245,17 @@ try {
             DB::table('temp_customer')->insert($data);
 
             // Execute model transaction (runs query inside model)
-            Customer::save_transaction(['RequestID' => $requestId]);
-
+            $saveResult = Customer::save_transaction(['RequestID' => $requestId]);
+            if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+                $message = $saveResult['message'] ?? 'Unable to add customer.';
                 if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json(['status' => 'error', 'message' => $message], 422);
+                }
+
+                return redirect()->back()->with('error', $message)->withInput();
+            }
+
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json(['status' => 'success', 'message' => 'Customer created successfully!']);
         }
         return redirect()->route('customers.index')->with('success', 'Customer created successfully!');
@@ -556,7 +564,15 @@ try {
             DB::table('temp_customer')->insert($data);
 
             // Execute model transaction (runs query inside model)
-            Customer::edit_transaction(['RequestID' => $requestId]);
+            $editResult = Customer::edit_transaction(['RequestID' => $requestId]);
+            if (is_array($editResult) && ($editResult['status'] ?? false) === false) {
+                $message = $editResult['message'] ?? 'Unable to update customer.';
+                if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json(['status' => 'error', 'message' => $message], 422);
+                }
+
+                return redirect()->back()->with('error', $message)->withInput();
+            }
 
            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
     return response()->json(['status' => 'success', 'message' => 'Customer created successfully!']);

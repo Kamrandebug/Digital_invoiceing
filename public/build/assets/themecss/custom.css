@@ -99,6 +99,120 @@ label{
 
 .btn-margin { margin-top: 20px; }
 
+/* ── Listing filter bar (customers / products / invoices): one control height + aligned Clear column ── */
+.listing-filters-form {
+	--listing-filter-control-height: calc(1.5em + 10px + 2px);
+}
+
+.listing-filters-form .col-md-8 > .row.g-2 {
+	align-items: flex-end;
+}
+
+/* Spacer = same vertical space as "Start/End Date" labels so Clear lines up with inputs */
+.listing-filters-form .listing-filter-actions-col {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+}
+.listing-filters-form .listing-filter-actions-col::before {
+	content: "\00a0";
+	display: block;
+	font-size: 11px;
+	line-height: 1.25;
+	min-height: 1.25em;
+	margin-bottom: 4px;
+	visibility: hidden;
+	pointer-events: none;
+	flex: 0 0 auto;
+}
+
+/* Native date filters (customer / product lists) */
+.listing-filters-form .col-md-8 > .row.g-2 input.form-control[type="date"] {
+	height: var(--listing-filter-control-height);
+	min-height: var(--listing-filter-control-height);
+	max-height: var(--listing-filter-control-height);
+	padding-top: 5px;
+	padding-bottom: 5px;
+	box-sizing: border-box;
+}
+
+/* Invoice flatpickr rows: fixed-height input-group, Start/End identical */
+.listing-filters-form .filter-date-label,
+.listing-filters-form .listing-filter-date-label {
+	font-size: 11px;
+	font-weight: 500;
+	color: #6c757d;
+	margin-bottom: 4px;
+	display: block;
+}
+.listing-filters-form .input-group.filter-date-group {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: stretch;
+	height: var(--listing-filter-control-height);
+	min-height: var(--listing-filter-control-height);
+	max-height: var(--listing-filter-control-height);
+}
+.listing-filters-form .input-group.filter-date-group > .input-group-text {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	min-height: 0;
+	padding: 0 0.65rem;
+	border-radius: 6px 0 0 6px;
+	background: #f1f3f5;
+	border-right: 0;
+	font-size: 12px;
+	color: #6c757d;
+	box-sizing: border-box;
+}
+.listing-filters-form .input-group.filter-date-group > .form-control {
+	flex: 1 1 0%;
+	min-width: 0;
+	height: 100%;
+	min-height: 0;
+	border-radius: 0 6px 6px 0;
+	font-size: 12px !important;
+	padding: 5px 0.5rem;
+	box-sizing: border-box;
+	line-height: 1.35;
+}
+.listing-filters-form .input-group.filter-date-group .form-control:not(:focus) {
+	border-left: 0;
+}
+.listing-filters-form .input-group.filter-date-group .form-control:focus {
+	box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+}
+
+@media (max-width: 767.98px) {
+	.listing-filters-form .input-group.filter-date-group > .input-group-text {
+		display: none;
+	}
+	.listing-filters-form .input-group.filter-date-group > .form-control {
+		border-radius: 6px !important;
+		border-left: 1px solid #ced4da;
+	}
+}
+
+.listing-filters-form .col-md-8 > .row.g-2 .listing-filter-actions-col .btn.btn-sm,
+.listing-filters-form .col-md-8 > .row.g-2 .listing-filter-actions-col a.btn.btn-sm {
+	height: var(--listing-filter-control-height);
+	min-height: var(--listing-filter-control-height);
+	max-height: var(--listing-filter-control-height);
+	padding-top: 0;
+	padding-bottom: 0;
+	padding-left: 0.65rem;
+	padding-right: 0.65rem;
+	line-height: 1.35;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-top: 0 !important;
+}
+
 .listing-table{
 	thead{
 		tr{
@@ -357,15 +471,50 @@ label{
 	color: var(--cm-text-main);
 }
 
-/* Native selects: keep Bootstrap caret/padding from libs; match Vyzor theme font (Space Grotesk, 0.875rem) — body above uses Verdana. */
-.form-control {
+/* Unified typography: inputs, textareas, native selects (overrides body Verdana 12px). */
+.form-control:not(textarea),
+textarea.form-control,
+.form-select:not([multiple]):not([size]),
+.form-select[multiple],
+.form-select[size]:not([size="1"]) {
+	display: block;
+	cursor: default;
+	font-family: "Space Grotesk", sans-serif !important;
+	font-size: 14px !important;
+	font-weight: 400;
+	font-style: normal;
+	font-stretch: 100%;
+	line-height: 1.5;
+	color: rgb(1, 26, 66) !important;
+	font-feature-settings: normal;
+	font-kerning: auto;
+	font-optical-sizing: auto;
+	font-variant-ligatures: normal;
+	font-variant-numeric: normal;
+	font-variant-caps: normal;
+	font-variant-east-asian: normal;
+	font-size-adjust: none;
+	font-language-override: normal;
+}
+
+/* Text inputs + native selects: same box model (modals + app-wide). */
+.form-control:not(textarea) {
 	border: 1px solid var(--cm-border-color);
 	border-radius: 5px;
-	padding: 10px;
-	font-size: 14px;
+	padding: 5px;
 	width: 100%;
+	box-sizing: border-box;
 	background-color: var(--cm-input-bg);
-	color: var(--cm-text-main);
+	min-height: calc(1.5em + 10px + 2px);
+}
+
+textarea.form-control {
+	border: 1px solid var(--cm-border-color);
+	border-radius: 5px;
+	padding: 5px;
+	width: 100%;
+	box-sizing: border-box;
+	background-color: var(--cm-input-bg);
 }
 
 .form-control:focus {
@@ -374,16 +523,46 @@ label{
 	outline: none;
 }
 
-.form-select {
-	font-family: var(--default-font-family, "Space Grotesk", sans-serif);
-	font-weight: var(--default-font-weight, 400);
-	font-size: 0.875rem;
-	line-height: 1.5;
-	color: var(--default-text-color, var(--cm-text-main));
+.form-select:not([multiple]):not([size]) {
+	border: 1px solid var(--cm-border-color);
+	border-radius: 5px;
+	padding: 5px 2.5rem 5px 5px;
+	width: 100%;
+	box-sizing: border-box;
+	background-color: var(--cm-input-bg);
+	min-height: calc(1.5em + 10px + 2px);
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+}
+
+.form-select:not([multiple]):not([size]):focus {
+	border-color: rgb(var(--primary-rgb)) !important;
+	box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+	outline: none;
+}
+
+.form-select[multiple],
+.form-select[size]:not([size="1"]) {
+	border: 1px solid var(--cm-border-color);
+	border-radius: 5px;
+	padding: 5px;
+	width: 100%;
+	box-sizing: border-box;
+	background-color: var(--cm-input-bg);
 }
 
 .form-select.form-select-sm {
-	font-size: 0.8rem;
+	font-family: "Space Grotesk", sans-serif !important;
+	font-size: 0.8rem !important;
+	font-weight: 400;
+	color: rgb(1, 26, 66) !important;
+	line-height: 1.5;
+	min-height: calc(1.5em + 0.5rem + 2px);
+	padding-top: 0.35rem;
+	padding-bottom: 0.35rem;
+	padding-left: 0.5rem;
+	padding-right: 2rem;
 }
 
 .last-updated-info {
@@ -459,7 +638,21 @@ label{
 ._pfp-info-badge.edit-mode { background: var(--cm-bg-body); color: var(--dark-rgb); }
 ._pfp-info-badge.show-mode { background: linear-gradient(135deg, #17a2b8, #36b9cc); }
 ._pfp-detail-label { font-weight: 600; font-size: 12px; color: #6c757d; margin-bottom: 4px; }
-._pfp-detail-value { font-size: 14px; padding: 7px 11px; background: var(--cm-input-bg); border: 1px solid var(--cm-border-color); border-radius: 4px; min-height: 36px; }
+._pfp-detail-value {
+	font-family: "Space Grotesk", sans-serif !important;
+	font-size: 14px !important;
+	font-weight: 400;
+	line-height: 1.5;
+	color: rgb(1, 26, 66) !important;
+	padding: 5px 11px;
+	background: var(--cm-input-bg);
+	border: 1px solid var(--cm-border-color);
+	border-radius: 5px;
+	min-height: calc(1.5em + 10px + 2px);
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+}
 ._pfp-required::after { content: " *"; color: #dc3545; }
 ._pfp-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 8px; }
 

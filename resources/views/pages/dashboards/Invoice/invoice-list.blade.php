@@ -33,42 +33,6 @@
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.0/dist/css/bootstrap-datepicker3.min.css" rel="stylesheet">
-<style>
-    .filter-date-label {
-        font-size: 11px;
-        font-weight: 500;
-        color: #6c757d;
-        margin-bottom: 4px;
-    }
-    .filter-date-group .form-control {
-        border-radius: 6px;
-        font-size: 12px;
-        padding-top: 6px;
-        padding-bottom: 6px;
-    }
-    .filter-date-group .input-group-text {
-        border-radius: 6px 0 0 6px;
-        background: #f1f3f5;
-        border-right: 0;
-        font-size: 12px;
-        color: #6c757d;
-    }
-    .filter-date-group .form-control:not(:focus) {
-        border-left: 0;
-    }
-    .filter-date-group .form-control:focus {
-        box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
-    }
-    @media (max-width: 767.98px) {
-        .filter-date-group .input-group-text {
-            display: none;
-        }
-        .filter-date-group .form-control {
-            border-radius: 6px !important;
-            border-left: 1px solid #ced4da;
-        }
-    }
-</style>
 @endsection
 
 @section('content')
@@ -124,7 +88,7 @@
             <div class="card-body p-2">
                 <div class="row">
                     <div class="col-md-9">
-                        <form action="{{ route('invoices.index') }}" method="GET">
+                        <form action="{{ route('invoices.index') }}" method="GET" class="listing-filters-form">
                             <div class="row g-2">
                                 <div class="col-md-4">
                                     <div class="header-search d-md-block d-none">
@@ -170,7 +134,7 @@
                                                        placeholder="YYYY-MM-DD">
                                             </div>
                                         </div>
-                                        <div class="col">
+                                        <div class="col listing-filter-actions-col">
                                             <button class="btn btn-sm btn-primary btn-margin" type="button"
                                                     onclick="window.location.href='{{ route('invoices.index') }}'">
                                                 <i class="fas fa-times"></i> Clear Filters
