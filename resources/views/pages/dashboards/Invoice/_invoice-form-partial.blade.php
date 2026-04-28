@@ -182,7 +182,7 @@
         /* Compact spacing for invoice detail table only; maximize usable cell width */
         .table-inv { border-collapse: collapse; border-spacing: 0; }
         .table-inv th,
-        .table-inv td { padding: 0 !important; vertical-align: middle; }
+        .table-inv td { padding: 0.1rem 0.14rem !important; vertical-align: middle; }
         .table-inv th.ifp-col-product,
         .table-inv td.ifp-col-product { min-width: 170px; width: 13%; }
         .table-inv th.ifp-col-desc,
@@ -190,7 +190,7 @@
         .table-inv th.ifp-col-uom,
         .table-inv td.ifp-col-uom { min-width: 130px; width: 10%; }
         .table-inv th.ifp-col-tax-sro,
-        .table-inv td.ifp-col-tax-sro { min-width: 120px; width: 10%; }
+        .table-inv td.ifp-col-tax-sro { min-width: 145px; width: 10%; }
         .table-inv th.ifp-col-qty,
         .table-inv td.ifp-col-qty { min-width: 64px; width: 4%; }
         .table-inv th.ifp-col-amount,
@@ -227,10 +227,17 @@
             word-break: break-word;
             line-height: 1.25;
         }
+        .table-inv .ifp-tax-sro-readonly-pill {
+            border: 1px solid #d6daf0;
+            background: #f8f9ff;
+            border-radius: 0.35rem;
+            padding: 0.2rem 0.35rem;
+            line-height: 1.1;
+        }
         .table-inv .btn-icon { padding: 0.16rem 0.26rem; margin: 0; }
     </style>
     <div class="col-xl-12">
-        <table class="table nowrap {{ $isReadonly ? '' : 'text-nowrap' }} table-borderless border mt-3 table-inv" cellpadding="0" cellspacing="0">
+        <table class="table nowrap {{ $isReadonly ? '' : 'text-nowrap' }} table-borderless border mt-3 table-inv">
             <thead>
                 <tr>
                     <th class="ifp-col-product">Product / Services</th>
@@ -689,6 +696,27 @@
         return null;
     }
 
+    function updateTaxSroTriggerSummary(row) {
+        if (!row) return;
+        var saleLine = row.querySelector('.ifp-tax-sro-trigger__sale');
+        var rateLine = row.querySelector('.ifp-tax-sro-trigger__rate');
+        if (!saleLine || !rateLine) return;
+        var saleTypeSel = rowEl(row, '.ifp-sale-type');
+        var saleRateSel = rowEl(row, '.ifp-sale-type-to-rate');
+        var saleTypeText = '';
+        var saleRateText = '';
+        if (saleTypeSel && saleTypeSel.selectedIndex >= 0) {
+            saleTypeText = String(saleTypeSel.options[saleTypeSel.selectedIndex].textContent || '').trim();
+        }
+        if (saleRateSel && saleRateSel.selectedIndex >= 0) {
+            saleRateText = String(saleRateSel.options[saleRateSel.selectedIndex].textContent || '').trim();
+        }
+        saleLine.textContent = (saleTypeText && saleTypeText.toLowerCase().indexOf('select') !== 0) ? saleTypeText : 'Sale type —';
+        rateLine.textContent = (saleRateText && saleRateText.toLowerCase().indexOf('select') !== 0) ? saleRateText : 'Rate profile —';
+        saleLine.setAttribute('title', saleLine.textContent);
+        rateLine.setAttribute('title', rateLine.textContent);
+    }
+
     // ── Row calculation ──
     function calcRow(row) {
         const qty     = n(rowEl(row, '.ifp-qty')?.value);
@@ -1003,6 +1031,7 @@
                     sel.appendChild(opt);
                 });
                 var v = sel.value;
+                updateTaxSroTriggerSummary(row);
                 if (v) loadSaleTypeToRatesForRow(row, v);
             })
             .catch(function() {});
@@ -1042,7 +1071,10 @@
                     if (rtInp) rtInp.value = (opt && opt.getAttribute('data-rate-type')) ? opt.getAttribute('data-rate-type') : '';
                     calcRow(row);
                     calcSummary();
+                    updateTaxSroTriggerSummary(row);
                     loadSroSchedulesForRow(row, v);
+                } else {
+                    updateTaxSroTriggerSummary(row);
                 }
             })
             .catch(function() {});
@@ -1114,6 +1146,7 @@
                     var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type first'; saleTypeToRateSel.appendChild(o);
                 }
                 if (rtInp) rtInp.value = '';
+                updateTaxSroTriggerSummary(row);
                 if (sroScheduleSel) {
                     sroScheduleSel.innerHTML = '';
                     var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type To Rate first'; sroScheduleSel.appendChild(o);
@@ -1138,9 +1171,11 @@
                     if (rtInp) rtInp.value = (opt && opt.getAttribute('data-rate-type')) ? opt.getAttribute('data-rate-type') : '';
                     calcRow(row);
                     calcSummary();
+                    updateTaxSroTriggerSummary(row);
                 } else {
                     if (gstEl) gstEl.value = '0';
                     if (rtInp) rtInp.value = '';
+                    updateTaxSroTriggerSummary(row);
                 }
                 if (sroScheduleSel) {
                     sroScheduleSel.setAttribute('data-selected', '');
@@ -1178,7 +1213,7 @@
             ? (`<td class="ifp-col-tax-sro align-middle">
                     <button type="button" class="ifp-tax-sro-open-btn" title="Open Tax &amp; SRO in a dialog" aria-haspopup="dialog">
                         <span class="ifp-tax-sro-trigger__icon" aria-hidden="true"><i class="ri-equalizer-line"></i></span>
-                        <span class="ifp-tax-sro-trigger__text"><span class="ifp-tax-sro-trigger__title">Tax &amp; SRO</span><span class="ifp-tax-sro-trigger__sub">Configure</span></span>
+                        <span class="ifp-tax-sro-trigger__text"><span class="ifp-tax-sro-trigger__title">Tax &amp; SRO</span><span class="ifp-tax-sro-trigger__sub"><span class="ifp-tax-sro-trigger__sale d-block text-truncate">Sale type —</span><span class="ifp-tax-sro-trigger__rate d-block text-truncate">Rate profile —</span></span></span>
                         <i class="ri-arrow-right-s-line ifp-tax-sro-trigger__chev" aria-hidden="true"></i>
                     </button>
                     <div class="ifp-tax-sro-slot d-none">

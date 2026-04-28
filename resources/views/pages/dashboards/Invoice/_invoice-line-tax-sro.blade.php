@@ -46,49 +46,31 @@
         @endif
     </td>
 @elseif($isReadonly)
-    <td class="ifp-col-tax-sro">
-        <div class="ifp-tax-sro-readonly-card text-break">
-            <dl class="ifp-tax-sro-dl mb-0">
-                <dt>Sale type</dt>
-                <dd>{{ $item->SaleTypeDesc ?? $item->SaleTypeName ?? $item->SaleTypeID ?? '—' }}</dd>
-                <dt>Rate profile</dt>
-                <dd>{{ $item->SaleTypeToRateDesc ?? $item->SaleTypeToRateName ?? $item->SaleTypeToRateID ?? '—' }}</dd>
-                <dt>SRO schedule</dt>
-                <dd>{{ $item->SroScheduleDesc ?? $item->SroScheduleName ?? $item->SroScheduleID ?? '—' }}</dd>
-                <dt>SRO item</dt>
-                <dd>{{ $item->SroItemSerialNo ?? $item->SroItemName ?? $item->SroItemID ?? '—' }}</dd>
-                <dt>Description</dt>
-                <dd class="text-break">{{ $item->Details ?? $item->ProductDescription ?? '—' }}</dd>
-                <dt>Rate</dt>
-                <dd>{{ number_format((float) ($item->Rate ?? 0), 4) }}</dd>
-                <dt>GST rate %</dt>
-                <dd>{{ number_format((float) ($item->GstPercentage ?? 0), 2) }}%</dd>
-                <dt>Discount %</dt>
-                <dd>{{ number_format((float) ($item->DiscountPercentage ?? 0), 2) }}%</dd>
-                <dt>Is filer</dt>
-                <dd>{{ (int) ($item->IsFiler ?? 0) ? 'Yes' : 'No' }}</dd>
-                <dt>Sales tax withheld at source</dt>
-                <dd>{{ number_format((float) ($item->SalesTaxWithheldAtSource ?? 0), 2) }}</dd>
-                <dt>Extra tax %</dt>
-                <dd>{{ number_format((float) ($item->ExtraTax ?? 0), 2) }}%</dd>
-                <dt>Further tax %</dt>
-                <dd>{{ number_format((float) ($item->FurtherTax ?? 0), 2) }}%</dd>
-                <dt>FED payable %</dt>
-                <dd>{{ number_format((float) ($item->FedPayable ?? 0), 2) }}%</dd>
-                <dt>Is fixed</dt>
-                <dd>{{ in_array(strtolower(trim((string) ($item->ProductIsFixedRate ?? $item->IsFixedRate ?? '0'))), ['1', 'true', 'yes', 'y', 'on'], true) ? 'Yes' : 'No' }}</dd>
-                <dt>Fixed rate</dt>
-                <dd>{{ number_format((float) ($item->TPRate ?? 0), 2) }}</dd>
-            </dl>
+    <td class="ifp-col-tax-sro align-middle">
+        <div class="ifp-tax-sro-readonly-pill">
+            <div class="fw-semibold small mb-1">Tax &amp; SRO</div>
+            <div class="small text-truncate" title="{{ $item->SaleTypeDesc ?? $item->SaleTypeName ?? $item->SaleTypeID ?? '—' }}">
+                {{ $item->SaleTypeDesc ?? $item->SaleTypeName ?? $item->SaleTypeID ?? '—' }}
+            </div>
+            <div class="small text-truncate" title="{{ $item->SaleTypeToRateDesc ?? $item->SaleTypeToRateName ?? $item->SaleTypeToRateID ?? '—' }}">
+                {{ $item->SaleTypeToRateDesc ?? $item->SaleTypeToRateName ?? $item->SaleTypeToRateID ?? '—' }}
+            </div>
         </div>
     </td>
 @else
+    @php
+        $saleTypeLabel = trim((string) ($item->SaleTypeDesc ?? $item->SaleTypeName ?? $item->SaleTypeID ?? ''));
+        $saleRateLabel = trim((string) ($item->SaleTypeToRateDesc ?? $item->SaleTypeToRateName ?? $item->SaleTypeToRateID ?? ''));
+    @endphp
     <td class="ifp-col-tax-sro align-middle">
         <button type="button" class="ifp-tax-sro-open-btn" title="Open Tax &amp; SRO in a dialog" aria-haspopup="dialog">
             <span class="ifp-tax-sro-trigger__icon" aria-hidden="true"><i class="ri-equalizer-line"></i></span>
             <span class="ifp-tax-sro-trigger__text">
                 <span class="ifp-tax-sro-trigger__title">Tax &amp; SRO</span>
-                <span class="ifp-tax-sro-trigger__sub">Configure</span>
+                <span class="ifp-tax-sro-trigger__sub">
+                    <span class="ifp-tax-sro-trigger__sale d-block text-truncate">{{ $saleTypeLabel !== '' ? $saleTypeLabel : 'Sale type —' }}</span>
+                    <span class="ifp-tax-sro-trigger__rate d-block text-truncate">{{ $saleRateLabel !== '' ? $saleRateLabel : 'Rate profile —' }}</span>
+                </span>
             </span>
             <i class="ri-arrow-right-s-line ifp-tax-sro-trigger__chev" aria-hidden="true"></i>
         </button>
