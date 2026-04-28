@@ -119,7 +119,7 @@ class InvoiceController extends Controller
 
             $items = DB::table('tbl_sales_invoice_detail as d')
                 ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
-                ->select('d.*', 'p.Name as ProductName')
+                ->select('d.*', 'p.Name as ProductName', 'p.IsFixedRate as ProductIsFixedRate')
                 ->where('d.InvoiceID', $invoice->InvoiceID)
                 ->where('d.Status', '!=', 2)
                 ->get();
@@ -162,7 +162,7 @@ class InvoiceController extends Controller
 
         $items = DB::table('tbl_sales_invoice_detail as d')
             ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
-            ->select('d.*', 'p.Name as ProductName')
+            ->select('d.*', 'p.Name as ProductName', 'p.IsFixedRate as ProductIsFixedRate')
             ->where('d.InvoiceID', $invoice->InvoiceID)
             ->where('d.Status', '!=', 2)
             ->get();
@@ -196,7 +196,7 @@ class InvoiceController extends Controller
 
         $items = DB::table('tbl_sales_invoice_detail as d')
             ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
-            ->select('d.*', 'p.Name as ProductName')
+            ->select('d.*', 'p.Name as ProductName', 'p.IsFixedRate as ProductIsFixedRate')
             ->where('d.InvoiceID', $invoice->InvoiceID)
             ->where('d.Status', '!=', 2)
             ->get();
@@ -232,7 +232,7 @@ class InvoiceController extends Controller
 
         $items = DB::table('tbl_sales_invoice_detail as d')
             ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
-            ->select('d.*', 'p.Name as ProductName')
+            ->select('d.*', 'p.Name as ProductName', 'p.IsFixedRate as ProductIsFixedRate')
             ->where('d.InvoiceID', $invoice->InvoiceID)
             ->where('d.Status', '!=', 2)
             ->get();
@@ -305,6 +305,7 @@ class InvoiceController extends Controller
                 'SaleTypeToRateID'   => $item['SaleTypeToRateID']  ?? null,
                 'SroScheduleID'      => $item['SroScheduleID']     ?? null,
                 'SroItemID'          => $item['SroItemID']         ?? null,
+                'TPRate'             => $item['TPRate']            ?? 0,
                 'Quantity'           => $item['Quantity'],
                 'Rate'               => $item['Rate'],
                 'Amount'             => $item['Amount']            ?? 0,
@@ -312,6 +313,10 @@ class InvoiceController extends Controller
                 'DiscountAmount'     => $item['DiscountAmount']    ?? 0,
                 'GstPercentage'      => $item['GstPercentage']     ?? '0',
                 'GSTAmount'          => $item['GSTAmount']         ?? 0,
+                'SalesTaxWithheldAtSource' => $item['SalesTaxWithheldAtSource'] ?? ($request->SalesTaxWithheldAtSource ?? 0),
+                'ExtraTax'           => $item['ExtraTax']          ?? ($request->ExtraTax ?? 0),
+                'FurtherTax'         => $item['FurtherTax']        ?? ($request->FurtherTax ?? 0),
+                'FedPayable'         => $item['FedPayable']        ?? ($request->FedPayable ?? 0),
                 'Total'              => $item['Total']             ?? 0,
                 // 'SubTotal'           => $request->SubTotal         ?? 0,
                 'Notes'              => $request->Notes            ?? null,
@@ -417,6 +422,7 @@ class InvoiceController extends Controller
                 'SaleTypeToRateID'   => $item['SaleTypeToRateID']  ?? null,
                 'SroScheduleID'      => $item['SroScheduleID']     ?? null,
                 'SroItemID'          => $item['SroItemID']         ?? null,
+                'TPRate'             => $item['TPRate']            ?? 0,
                 'Quantity'           => $item['Quantity'],
                 'Rate'               => $item['Rate'],
                 'Amount'             => $item['Amount']            ?? 0,
@@ -424,6 +430,10 @@ class InvoiceController extends Controller
                 'DiscountAmount'     => $item['DiscountAmount']    ?? 0,
                 'GstPercentage'      => $item['GstPercentage']     ?? '0',
                 'GSTAmount'          => $item['GSTAmount']         ?? 0,
+                'SalesTaxWithheldAtSource' => $item['SalesTaxWithheldAtSource'] ?? ($request->SalesTaxWithheldAtSource ?? 0),
+                'ExtraTax'           => $item['ExtraTax']          ?? ($request->ExtraTax ?? 0),
+                'FurtherTax'         => $item['FurtherTax']        ?? ($request->FurtherTax ?? 0),
+                'FedPayable'         => $item['FedPayable']        ?? ($request->FedPayable ?? 0),
                 'Total'              => $item['Total']             ?? 0,
                 //'SubTotal'           => $request->SubTotal         ?? 0,
                 'Notes'              => $request->Notes            ?? null,
@@ -461,6 +471,7 @@ class InvoiceController extends Controller
                 'SaleTypeToRateID'   => $item['SaleTypeToRateID']  ?? null,
                 'SroScheduleID'      => $item['SroScheduleID']     ?? null,
                 'SroItemID'          => $item['SroItemID']         ?? null,
+                'TPRate'             => $item['TPRate']            ?? 0,
                 'Quantity'           => $item['Quantity'],
                 'Rate'               => $item['Rate'],
                 'Amount'             => $item['Amount']            ?? 0,
@@ -468,6 +479,10 @@ class InvoiceController extends Controller
                 'DiscountAmount'     => $item['DiscountAmount']    ?? 0,
                 'GstPercentage'      => $item['GstPercentage']     ?? '0',
                 'GSTAmount'          => $item['GSTAmount']         ?? 0,
+                'SalesTaxWithheldAtSource' => $item['SalesTaxWithheldAtSource'] ?? ($request->SalesTaxWithheldAtSource ?? 0),
+                'ExtraTax'           => $item['ExtraTax']          ?? ($request->ExtraTax ?? 0),
+                'FurtherTax'         => $item['FurtherTax']        ?? ($request->FurtherTax ?? 0),
+                'FedPayable'         => $item['FedPayable']        ?? ($request->FedPayable ?? 0),
                 'Type'               => 'SI',
                 'Status'             => 1,
                 'CreatedBy'          => $userId,

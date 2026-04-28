@@ -656,6 +656,244 @@ textarea.form-control {
 ._pfp-required::after { content: " *"; color: #dc3545; }
 ._pfp-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 8px; }
 
+/* Invoice Add/Edit/View (AJAX modal): native selects match product modal — full border, same box model as .form-control */
+/* #invoice_modal_body: fallback scope if shell class missing; var(..., #dee2e6): borders work when customer-management.css is not loaded */
+.ifp-modal-shell .form-select:not([multiple]):not([size]),
+#invoice_modal_body .form-select:not([multiple]):not([size]) {
+	border: 1px solid var(--cm-border-color, #dee2e6) !important;
+	border-radius: 5px !important;
+	background-color: var(--cm-input-bg, #ffffff) !important;
+	box-sizing: border-box !important;
+	width: 100%;
+	min-height: calc(1.5em + 10px + 2px) !important;
+	padding: 5px 2.5rem 5px 5px !important;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	font-family: "Space Grotesk", sans-serif !important;
+	font-size: 14px !important;
+	font-weight: 400;
+	line-height: 1.5;
+	color: rgb(1, 26, 66) !important;
+}
+.ifp-modal-shell .form-select:not([multiple]):not([size]):focus,
+#invoice_modal_body .form-select:not([multiple]):not([size]):focus {
+	border-color: rgb(var(--primary-rgb)) !important;
+	box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+	outline: none;
+}
+.ifp-modal-shell .form-select.is-invalid:not([multiple]):not([size]),
+#invoice_modal_body .form-select.is-invalid:not([multiple]):not([size]) {
+	border-color: #dc3545 !important;
+}
+.ifp-modal-shell .table-inv .form-select:not([multiple]):not([size]),
+.ifp-modal-shell .table-inv .form-control:not(textarea),
+#invoice_modal_body .table-inv .form-select:not([multiple]):not([size]),
+#invoice_modal_body .table-inv .form-control:not(textarea) {
+	min-height: calc(1.25em + 4px + 2px) !important;
+	padding-top: 2px !important;
+	padding-bottom: 2px !important;
+	padding-left: 0.22rem !important;
+	padding-right: 0.22rem !important;
+}
+
+/* Invoice modal: Tax & SRO — row button + nested modal (slot moved in/out of form) */
+.modal.ifp-tax-sro-nested-modal {
+	z-index: 1085 !important;
+}
+.ifp-modal-shell .ifp-col-tax-sro-header,
+#invoice_modal_body .ifp-col-tax-sro-header {
+	font-size: 0.65rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: #6c757d;
+	vertical-align: bottom;
+	padding-bottom: 0.45rem !important;
+	border-bottom: 1px solid var(--cm-border-color, #e9ecef);
+}
+.ifp-modal-shell .ifp-col-tax-sro-header__title,
+#invoice_modal_body .ifp-col-tax-sro-header__title {
+	color: rgb(1, 26, 66);
+	font-size: 0.7rem;
+}
+.ifp-modal-shell .ifp-col-tax-sro-header__hint,
+#invoice_modal_body .ifp-col-tax-sro-header__hint {
+	font-weight: 500;
+	font-size: 0.58rem;
+	text-transform: none;
+	letter-spacing: 0.02em;
+	color: #8b95a5;
+}
+.ifp-modal-shell .ifp-col-tax-sro,
+#invoice_modal_body .ifp-col-tax-sro {
+	min-width: 6.75rem;
+	max-width: 10rem;
+	vertical-align: middle !important;
+}
+.ifp-modal-shell .ifp-tax-sro-readonly-card,
+#invoice_modal_body .ifp-tax-sro-readonly-card {
+	border: 1px solid var(--cm-border-color, #e9ecef);
+	border-radius: 8px;
+	padding: 0.4rem 0.5rem;
+	background: linear-gradient(180deg, #fafbfc 0%, #f4f6f9 100%);
+}
+.ifp-modal-shell .ifp-tax-sro-dl,
+#invoice_modal_body .ifp-tax-sro-dl {
+	display: grid;
+	grid-template-columns: minmax(4.25rem, auto) 1fr;
+	gap: 0.15rem 0.45rem;
+	align-items: baseline;
+}
+.ifp-modal-shell .ifp-tax-sro-dl dt,
+#invoice_modal_body .ifp-tax-sro-dl dt {
+	margin: 0;
+	font-size: 0.6rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #868e96;
+}
+.ifp-modal-shell .ifp-tax-sro-dl dd,
+#invoice_modal_body .ifp-tax-sro-dl dd {
+	margin: 0;
+	font-size: 0.72rem;
+	font-weight: 500;
+	color: rgb(1, 26, 66);
+	line-height: 1.35;
+}
+.ifp-modal-shell button.ifp-tax-sro-open-btn,
+#invoice_modal_body button.ifp-tax-sro-open-btn {
+	background: transparent;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	width: 100%;
+	margin: 0;
+	padding: 0.4rem 0.45rem 0.4rem 0.5rem;
+	border-radius: 8px;
+	border: 1px solid rgba(var(--primary-rgb), 0.22);
+	background: linear-gradient(180deg, rgba(var(--primary-rgb), 0.09) 0%, rgba(var(--primary-rgb), 0.03) 100%);
+	color: rgb(1, 26, 66);
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+	text-align: start;
+}
+.ifp-modal-shell .ifp-tax-sro-trigger__icon,
+#invoice_modal_body .ifp-tax-sro-trigger__icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.65rem;
+	height: 1.65rem;
+	border-radius: 6px;
+	background: rgba(var(--primary-rgb), 0.12);
+	color: rgb(var(--primary-rgb));
+	font-size: 1rem;
+	flex-shrink: 0;
+}
+.ifp-modal-shell .ifp-tax-sro-trigger__text,
+#invoice_modal_body .ifp-tax-sro-trigger__text {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	line-height: 1.15;
+	min-width: 0;
+	flex: 1;
+}
+.ifp-modal-shell .ifp-tax-sro-trigger__title,
+#invoice_modal_body .ifp-tax-sro-trigger__title {
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+.ifp-modal-shell .ifp-tax-sro-trigger__sub,
+#invoice_modal_body .ifp-tax-sro-trigger__sub {
+	font-size: 0.58rem;
+	font-weight: 500;
+	color: #6c757d;
+}
+.ifp-modal-shell .ifp-tax-sro-trigger__chev,
+#invoice_modal_body .ifp-tax-sro-trigger__chev {
+	flex-shrink: 0;
+	font-size: 1.05rem;
+	opacity: 0.45;
+}
+.ifp-modal-shell button.ifp-tax-sro-open-btn:hover,
+#invoice_modal_body button.ifp-tax-sro-open-btn:hover {
+	border-color: rgba(var(--primary-rgb), 0.38);
+	box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.12);
+}
+.ifp-modal-shell button.ifp-tax-sro-open-btn:focus-visible,
+#invoice_modal_body button.ifp-tax-sro-open-btn:focus-visible {
+	outline: 2px solid rgb(var(--primary-rgb));
+	outline-offset: 2px;
+}
+.ifp-tax-sro-nested-modal .ifp-tax-sro-slot {
+	padding: 0.75rem 1rem 1rem;
+}
+.ifp-tax-sro-nested-modal .modal-dialog {
+	max-width: min(960px, 96vw);
+}
+.ifp-tax-sro-nested-modal .ifp-tax-sro-fields {
+	border-radius: 10px;
+	border: 1px solid var(--cm-border-color, #e2e6ea);
+	background: var(--cm-input-bg, #fff);
+	overflow: hidden;
+	margin: 0;
+	box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+.ifp-modal-shell .ifp-tax-sro-fields__head,
+#invoice_modal_body .ifp-tax-sro-fields__head {
+	padding: 0.45rem 0.75rem;
+	font-size: 0.62rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+	color: #5c6578;
+	background: linear-gradient(180deg, rgba(var(--primary-rgb), 0.08) 0%, rgba(var(--primary-rgb), 0.02) 100%);
+	border-bottom: 1px solid var(--cm-border-color, #e9ecef);
+}
+.ifp-modal-shell .ifp-tax-sro-fields__body,
+#invoice_modal_body .ifp-tax-sro-fields__body {
+	padding: 0.65rem 0.75rem 0.75rem;
+}
+.ifp-modal-shell .ifp-tax-sro-field,
+#invoice_modal_body .ifp-tax-sro-field {
+	margin-bottom: 0.6rem;
+}
+.ifp-modal-shell .ifp-tax-sro-field--last,
+#invoice_modal_body .ifp-tax-sro-field--last {
+	margin-bottom: 0;
+}
+.ifp-modal-shell .ifp-tax-sro-fixed-row .ifp-tax-sro-field,
+#invoice_modal_body .ifp-tax-sro-fixed-row .ifp-tax-sro-field {
+	margin-bottom: 0;
+}
+.ifp-modal-shell .ifp-tax-sro-fixed-row,
+#invoice_modal_body .ifp-tax-sro-fixed-row {
+	margin-top: 0.15rem;
+}
+.ifp-modal-shell .ifp-tax-sro-fields__body .row,
+#invoice_modal_body .ifp-tax-sro-fields__body .row {
+	--bs-gutter-x: 0.65rem;
+	--bs-gutter-y: 0.55rem;
+}
+.ifp-modal-shell .ifp-tax-sro-fields__body .ifp-tax-sro-field,
+#invoice_modal_body .ifp-tax-sro-fields__body .ifp-tax-sro-field {
+	margin-bottom: 0;
+}
+.ifp-modal-shell .ifp-tax-sro-lbl,
+#invoice_modal_body .ifp-tax-sro-lbl {
+	display: block;
+	font-size: 0.65rem;
+	font-weight: 700;
+	color: #5c6578;
+	margin-bottom: 0.28rem;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+}
 .app-sidebar .side-menu__label {
     font-size: 12px !important;
  }

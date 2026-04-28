@@ -76,7 +76,7 @@ class InvoiceModel extends Model
     public static function Load_Customer()
     {
         // Raw SQL string used to populate the Customer dropdown
-        $query = "SELECT ID, DisplayName, FirstName, LastName, BusinessName
+        $query = "SELECT ID, DisplayName, FirstName, LastName, BusinessName, IsFiler, SalesTaxWithheldAtSource, ExtraTax, FurtherTax, FedPayable
                   FROM tbl_customer
                   WHERE Status = 1";
 
@@ -87,7 +87,7 @@ class InvoiceModel extends Model
     {
         // Product dropdown for invoice: include tax/FBR fields for auto-fill on line item.
         $query = "SELECT ID, Name AS ProductName, SalePrice, 0 AS GstPercentage,
-                  HsCode, SaleInformation, UomID, SaleTypeID, SaleTypeToRateID, SroScheduleID, SroItemID
+                  HsCode, SaleInformation, UomID, SaleTypeID, SaleTypeToRateID, SroScheduleID, SroItemID, TPRate, IsFixedRate
                   FROM tbl_product
                   WHERE Status = 1";
 

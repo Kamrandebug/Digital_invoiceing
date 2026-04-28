@@ -3,6 +3,8 @@
 @extends('layouts.master')
 
 @section('styles')
+{{-- Defines :root --cm-border-color, --cm-input-bg, etc. (invoice modal .ifp-modal-shell relies on them; same as products) --}}
+<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
 <style>
     .fbr-summary-card.fbr-summary--invalid {
         background: #fff8f8 !important;

@@ -808,6 +808,8 @@ class ProductController extends Controller
             $rateIdCol = null;
             $rateDescCol = null;
             $ratePctCol = null;
+            $rateValueCol = null;
+            $rateTypeCol = null;
 
             foreach ($columns as $col) {
                 $lc = strtolower($col);
@@ -820,8 +822,14 @@ class ProductController extends Controller
                 if ($rateDescCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'desc') !== false)) {
                     $rateDescCol = $col;
                 }
-                if ($ratePctCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'id') === false && strpos($lc, 'desc') === false)) {
+                if ($ratePctCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'id') === false && strpos($lc, 'desc') === false && strpos($lc, 'type') === false)) {
                     $ratePctCol = $col;
+                }
+                if ($rateValueCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'value') !== false)) {
+                    $rateValueCol = $col;
+                }
+                if ($rateTypeCol === null && (strpos($lc, 'rate') !== false && strpos($lc, 'type') !== false)) {
+                    $rateTypeCol = $col;
                 }
             }
 
@@ -838,6 +846,12 @@ class ProductController extends Controller
             $selectCols = [$rateIdCol . ' as id', $rateDescCol . ' as text'];
             if ($ratePctCol !== null) {
                 $selectCols[] = $ratePctCol . ' as rate_pct';
+            }
+            if ($rateValueCol !== null) {
+                $selectCols[] = $rateValueCol . ' as rate_value';
+            }
+            if ($rateTypeCol !== null) {
+                $selectCols[] = $rateTypeCol . ' as rate_type';
             }
 
             $rows = $db->table(DB::raw($fullTable))
@@ -856,10 +870,20 @@ class ProductController extends Controller
                         $ratePct = (float) $m[1];
                     }
                 }
+                $rateValue = null;
+                if (isset($row->rate_value) && (is_numeric($row->rate_value) || preg_match('/^\d+(\.\d+)?/', (string) $row->rate_value, $m))) {
+                    $rateValue = is_numeric($row->rate_value) ? (float) $row->rate_value : (float) $m[0];
+                }
+                if ($rateValue === null && $ratePct !== null) {
+                    $rateValue = $ratePct;
+                }
+
                 return [
                     'id'       => $row->id,
                     'text'     => $row->text,
                     'rate_pct' => $ratePct !== null ? $ratePct : '',
+                    'rate_value' => $rateValue !== null ? $rateValue : '',
+                    'rate_type' => isset($row->rate_type) ? (string) $row->rate_type : '',
                 ];
             });
 
