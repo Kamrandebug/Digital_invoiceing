@@ -785,12 +785,12 @@ textarea.form-control {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 1.65rem;
-	height: 1.65rem;
+	width: 1.25rem;
+	height: 1.25rem;
 	border-radius: 6px;
 	background: rgba(var(--primary-rgb), 0.12);
 	color: rgb(var(--primary-rgb));
-	font-size: 1rem;
+	font-size: 0.78rem;
 	flex-shrink: 0;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__text,
@@ -813,6 +813,18 @@ textarea.form-control {
 	font-size: 0.58rem;
 	font-weight: 500;
 	color: #6c757d;
+	white-space: normal;
+	line-height: 1.15;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+}
+.ifp-modal-shell .ifp-tax-sro-trigger__sale,
+#invoice_modal_body .ifp-tax-sro-trigger__sale,
+.ifp-modal-shell .ifp-tax-sro-trigger__rate,
+#invoice_modal_body .ifp-tax-sro-trigger__rate {
+	white-space: normal;
+	word-break: break-word;
+	overflow-wrap: anywhere;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__chev,
 #invoice_modal_body .ifp-tax-sro-trigger__chev {

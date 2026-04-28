@@ -772,9 +772,7 @@
             const gstBase = isFixed ? fixedNotified : taxable;
             gstAmt = gstBase * gstPct / 100;
         }
-        const total   = !isFiler
-            ? (taxable + extraTax + furtherTax + fedPayable)
-            : (taxable + gstAmt + extraTax + furtherTax + fedPayable);
+        const total   = taxable + gstAmt + extraTax + furtherTax + fedPayable;
 
         function set(cls, val) {
             const el = rowEl(row, '.' + cls);
@@ -1213,7 +1211,7 @@
             ? (`<td class="ifp-col-tax-sro align-middle">
                     <button type="button" class="ifp-tax-sro-open-btn" title="Open Tax &amp; SRO in a dialog" aria-haspopup="dialog">
                         <span class="ifp-tax-sro-trigger__icon" aria-hidden="true"><i class="ri-equalizer-line"></i></span>
-                        <span class="ifp-tax-sro-trigger__text"><span class="ifp-tax-sro-trigger__title">Tax &amp; SRO</span><span class="ifp-tax-sro-trigger__sub"><span class="ifp-tax-sro-trigger__sale d-block text-truncate">Sale type —</span><span class="ifp-tax-sro-trigger__rate d-block text-truncate">Rate profile —</span></span></span>
+                        <span class="ifp-tax-sro-trigger__text"><span class="ifp-tax-sro-trigger__title">Tax &amp; SRO</span><span class="ifp-tax-sro-trigger__sub"><span class="ifp-tax-sro-trigger__sale d-block">Sale type —</span><span class="ifp-tax-sro-trigger__rate d-block">Rate profile —</span></span></span>
                         <i class="ri-arrow-right-s-line ifp-tax-sro-trigger__chev" aria-hidden="true"></i>
                     </button>
                     <div class="ifp-tax-sro-slot d-none">

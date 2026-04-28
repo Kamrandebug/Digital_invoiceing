@@ -68,8 +68,8 @@
             <span class="ifp-tax-sro-trigger__text">
                 <span class="ifp-tax-sro-trigger__title">Tax &amp; SRO</span>
                 <span class="ifp-tax-sro-trigger__sub">
-                    <span class="ifp-tax-sro-trigger__sale d-block text-truncate">{{ $saleTypeLabel !== '' ? $saleTypeLabel : 'Sale type —' }}</span>
-                    <span class="ifp-tax-sro-trigger__rate d-block text-truncate">{{ $saleRateLabel !== '' ? $saleRateLabel : 'Rate profile —' }}</span>
+                    <span class="ifp-tax-sro-trigger__sale d-block">{{ $saleTypeLabel !== '' ? $saleTypeLabel : 'Sale type —' }}</span>
+                    <span class="ifp-tax-sro-trigger__rate d-block">{{ $saleRateLabel !== '' ? $saleRateLabel : 'Rate profile —' }}</span>
                 </span>
             </span>
             <i class="ri-arrow-right-s-line ifp-tax-sro-trigger__chev" aria-hidden="true"></i>
