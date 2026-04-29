@@ -496,7 +496,7 @@ SELECT
         ), ''),
         ']}'
     ) AS payloadstring,
-    b.Sandbox_access_token AS access_token
+    b.iris_access_token AS access_token
 FROM tbl_sales_invoice_header h
 CROSS JOIN (
     SELECT bi.* FROM tbl_business_info bi WHERE bi.IsArchive = 0 ORDER BY bi.ID ASC LIMIT 1
