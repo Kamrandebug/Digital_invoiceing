@@ -170,7 +170,7 @@ try {
         'Status.in'                    => 'Invalid status value.',
     ]);
 } catch (\Illuminate\Validation\ValidationException $e) {
-    if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+    if ($request->header('X-Requested-With') === 'XMLHttpRequest' || $request->expectsJson()) {
         return response()->json([
             'status'  => 'error',
             'errors'  => $e->errors(),
@@ -255,9 +255,28 @@ try {
                 return redirect()->back()->with('error', $message)->withInput();
             }
 
-            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return response()->json(['status' => 'success', 'message' => 'Customer created successfully!']);
-        }
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest' || $request->expectsJson()) {
+                $newId = DB::table('tbl_customer')->where('AccountNo', $data['AccountNo'])->value('ID');
+                $custRow = $newId ? DB::table('tbl_customer')->where('ID', $newId)->first() : null;
+                $payload = ['status' => 'success', 'message' => 'Customer created successfully!'];
+                if ($custRow) {
+                    $label = trim($custRow->BusinessName ?? '')
+                        ?: trim($custRow->DisplayName ?? '')
+                        ?: trim(trim(($custRow->FirstName ?? '') . ' ' . ($custRow->LastName ?? '')))
+                        ?: ('Customer #' . $custRow->ID);
+                    $payload['customer'] = [
+                        'id'                   => (int) $custRow->ID,
+                        'label'                => $label,
+                        'is_filer'             => (int) ($custRow->IsFiler ?? 0) ? 1 : 0,
+                        'sales_tax_withheld'   => $custRow->SalesTaxWithheldAtSource ?? 0,
+                        'extra_tax'            => $custRow->ExtraTax ?? 0,
+                        'further_tax'          => $custRow->FurtherTax ?? 0,
+                        'fed_payable'          => $custRow->FedPayable ?? 0,
+                    ];
+                }
+
+                return response()->json($payload);
+            }
         return redirect()->route('customers.index')->with('success', 'Customer created successfully!');
 
         } catch (\Exception $e) {

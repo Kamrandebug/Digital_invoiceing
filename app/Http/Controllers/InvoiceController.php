@@ -81,13 +81,13 @@ class InvoiceController extends Controller
         $productSql  = InvoiceModel::Load_Product();
 
         return view('pages.dashboards.Invoice._invoice-form-partial', [
-            'mode'         => 'create',
-            'invoice'      => null,
-            'items'        => collect(),
-            'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
-            'customers'    => DB::select($customerSql),
-            'products'     => DB::select($productSql),
-            'inModal'      => false,
+            'mode'               => 'create',
+            'invoice'            => null,
+            'items'              => collect(),
+            'invoiceTypes'       => InvoiceModel::Load_InvoiceTypes(),
+            'customers'          => DB::select($customerSql),
+            'products'           => DB::select($productSql),
+            'inModal'            => false,
         ]);
     }
 
@@ -130,13 +130,13 @@ class InvoiceController extends Controller
         $productSql  = InvoiceModel::Load_Product();
 
         return view('pages.dashboards.Invoice._invoice-form-partial', [
-            'mode'         => $mode,
-            'invoice'      => $invoice,
-            'items'        => $items,
-            'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
-            'customers'    => DB::select($customerSql),
-            'products'     => DB::select($productSql),
-            'inModal'      => true,
+            'mode'               => $mode,
+            'invoice'            => $invoice,
+            'items'              => $items,
+            'invoiceTypes'       => InvoiceModel::Load_InvoiceTypes(),
+            'customers'          => DB::select($customerSql),
+            'products'           => DB::select($productSql),
+            'inModal'            => true,
         ]);
     }
 
@@ -241,13 +241,13 @@ class InvoiceController extends Controller
         $productSql  = InvoiceModel::Load_Product();
 
         return view('pages.dashboards.Invoice._invoice-form-partial', [
-            'mode'         => 'edit',
-            'invoice'      => $invoice,
-            'items'        => $items,
-            'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
-            'customers'    => DB::select($customerSql),
-            'products'     => DB::select($productSql),
-            'inModal'      => false,
+            'mode'               => 'edit',
+            'invoice'            => $invoice,
+            'items'              => $items,
+            'invoiceTypes'       => InvoiceModel::Load_InvoiceTypes(),
+            'customers'          => DB::select($customerSql),
+            'products'           => DB::select($productSql),
+            'inModal'            => false,
         ]);
     }
 

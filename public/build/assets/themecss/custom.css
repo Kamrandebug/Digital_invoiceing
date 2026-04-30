@@ -952,6 +952,49 @@ textarea.form-control {
     border: solid 1px var(--input-border) !important;
 }
 
+/* ── Invoice: nested Customer / Product modals (reparented to body) + line (+) buttons ── */
+.modal.ifp-customer-over-invoice,
+.modal.ifp-product-over-invoice {
+	z-index: 1100 !important;
+}
+.modal.ifp-customer-over-invoice .modal-content,
+.modal.ifp-product-over-invoice .modal-content {
+	box-shadow: 0 1.25rem 4rem rgba(15, 23, 42, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.modal.ifp-customer-nested.fade .modal-dialog,
+.modal.ifp-product-nested.fade .modal-dialog {
+	transition: transform 0.28s ease-out, opacity 0.28s ease-out;
+}
+body.ifp-invoice-customer-open .modal-backdrop.show,
+body.ifp-invoice-product-open .modal-backdrop.show {
+	background-color: #0f172a;
+	opacity: 0.58 !important;
+}
+body.ifp-invoice-customer-open .modal-backdrop.show ~ .modal-backdrop.show,
+body.ifp-invoice-product-open .modal-backdrop.show ~ .modal-backdrop.show {
+	opacity: 0.72 !important;
+}
+
+/* Compact (+) next to Customer / Product — square icon buttons using same .btn-primary as Save Invoice */
+.btn.btn-primary.ifp-line-add-entity-btn {
+	width: 2rem;
+	min-width: 2rem;
+	height: 2rem;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.15rem;
+	line-height: 1;
+}
+.table-inv .btn.btn-primary.ifp-line-add-entity-btn {
+	height: 1.55rem;
+	width: 1.55rem;
+	min-width: 1.55rem;
+	font-size: 1rem;
+}
+
 
 
 

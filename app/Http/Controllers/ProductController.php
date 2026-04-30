@@ -138,7 +138,7 @@ class ProductController extends Controller
                 ]);
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
-            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest' || $request->expectsJson()) {
                 return response()->json([
                     'status'  => 'error',
                     'errors'  => $e->errors(),
@@ -207,8 +207,30 @@ class ProductController extends Controller
                 return redirect()->back()->with('error', $message)->withInput();
             }
 
-            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
-                return response()->json(['status' => 'success', 'message' => 'Product created successfully!']);
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest' || $request->expectsJson()) {
+                $newId = DB::table('tbl_product')->where('Code', $autoProductCode)->value('ID');
+                $prodRow = $newId ? DB::table('tbl_product')->where('ID', $newId)->first() : null;
+                $payload = ['status' => 'success', 'message' => 'Product created successfully!'];
+                if ($prodRow) {
+                    $isFixed = in_array(strtolower(trim((string) ($prodRow->IsFixedRate ?? '0'))), ['1', 'true', 'yes', 'y', 'on'], true) ? 1 : 0;
+                    $payload['product'] = [
+                        'id'                      => (int) $prodRow->ID,
+                        'label'                   => (string) ($prodRow->Name ?? $prodRow->Code ?? ('Product #' . $prodRow->ID)),
+                        'rate'                    => (float) ($prodRow->SalePrice ?? 0),
+                        'gst'                     => 0,
+                        'hscode'                  => (string) ($prodRow->HsCode ?? ''),
+                        'sale_information'        => (string) ($prodRow->SaleInformation ?? ''),
+                        'uom_id'                  => $prodRow->UomID ?? '',
+                        'sale_type_id'            => $prodRow->SaleTypeID ?? '',
+                        'sale_type_to_rate_id'    => $prodRow->SaleTypeToRateID ?? '',
+                        'sro_schedule_id'         => $prodRow->SroScheduleID ?? '',
+                        'sro_item_id'             => $prodRow->SroItemID ?? '',
+                        'tp_rate'                 => (float) ($prodRow->TPRate ?? 0),
+                        'is_fixed_rate'           => $isFixed,
+                    ];
+                }
+
+                return response()->json($payload);
             }
             return redirect()
                 ->route('products.index')

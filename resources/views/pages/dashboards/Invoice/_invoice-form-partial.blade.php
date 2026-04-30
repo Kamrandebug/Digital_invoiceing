@@ -83,9 +83,11 @@
         @if($isReadonly)
             <div class="form-control form-control-sm bg-light">{{ $invoice->CustomerDisplayName ?? '-' }}</div>
         @else
+            <div class="d-flex gap-1 align-items-center ifp-customer-select-wrap">
             <select name="CustomerID"
                     id="{{ $uid }}_CustomerID"
-                    class="{{ $selClass }} @error('CustomerID') is-invalid @enderror"
+                    class="{{ $selClass }} @error('CustomerID') is-invalid @enderror flex-grow-1"
+                    style="min-width:0;"
                     required>
                 <option value="">— Select Customer —</option>
                 @foreach($customers as $cust)
@@ -100,6 +102,8 @@
                     </option>
                 @endforeach
             </select>
+            <button type="button" class="btn btn-sm btn-primary ifp-line-add-entity-btn flex-shrink-0" id="{{ $uid }}_newCustomerBtn" title="New customer" aria-label="New customer"><i class="ri-add-line"></i></button>
+            </div>
             @error('CustomerID')<div class="invalid-feedback">{{ $message }}</div>@enderror
         @endif
     </div>
@@ -288,7 +292,8 @@
                         @if($isReadonly)
                             <span class="small">{{ $item->ProductName ?? '-' }}</span>
                         @else
-                            <select name="items[{{ $idx }}][ProductID]" class="{{ $selClass }} ifp-product">
+                            <div class="d-flex gap-1 align-items-start ifp-product-select-wrap">
+                            <select name="items[{{ $idx }}][ProductID]" class="{{ $selClass }} ifp-product flex-grow-1" style="min-width:0;">
                                 <option value="">— Select —</option>
                                 @foreach($products as $prod)
                                     <option value="{{ $prod->ID }}"
@@ -308,6 +313,8 @@
                                     </option>
                                 @endforeach
                             </select>
+                            <button type="button" class="btn btn-sm btn-primary ifp-line-add-entity-btn flex-shrink-0 ifp-new-product-btn" title="New product" aria-label="New product"><i class="ri-add-line"></i></button>
+                            </div>
                         @endif
                     </td>
                     <td class="ifp-col-desc">
@@ -439,7 +446,8 @@
                 {{-- Default empty row --}}
                 <tr class="ifp-row">
                     <td class="form-select-sm ifp-col-product">
-                        <select name="items[0][ProductID]" class="{{ $selClass }} ifp-product">
+                        <div class="d-flex gap-1 align-items-start ifp-product-select-wrap">
+                        <select name="items[0][ProductID]" class="{{ $selClass }} ifp-product flex-grow-1" style="min-width:0;">
                             <option value="">— Select —</option>
                             @foreach($products as $prod)
                                 <option value="{{ $prod->ID }}"
@@ -458,6 +466,8 @@
                                 </option>
                             @endforeach
                         </select>
+                        <button type="button" class="btn btn-sm btn-primary ifp-line-add-entity-btn flex-shrink-0 ifp-new-product-btn" title="New product" aria-label="New product"><i class="ri-add-line"></i></button>
+                        </div>
                     </td>
                     <td class="ifp-col-desc">
                         <input type="hidden" name="items[0][HsCode]" class="ifp-hscode" value=""><textarea name="items[0][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description"></textarea>
@@ -502,7 +512,7 @@
 
         @if(!$isReadonly)
         <div class="my-3">
-            <button type="button" class="btn btn-primary-light" id="{{ $uid }}_addRow">
+            <button type="button" class="btn btn-sm btn-primary" id="{{ $uid }}_addRow">
                 <i class="bi bi-plus-lg"></i> Add Product
             </button>
         </div>
@@ -617,6 +627,54 @@
 </form>
 @endif
 
+{{-- Full customer modal: same #customer_modal shell/ids as customers list (see _customer-form-partial submit → customer_modal_save_btn). --}}
+@if(!$isReadonly)
+<div class="modal fade ifp-customer-nested" id="customer_modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold" id="customer_modal_title">Customer</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="customer_modal_body">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted mb-0">Loading…</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal"><i class="fas fa-times"></i> Close</button>
+                <button type="button" class="btn btn-sm btn-primary d-none" id="customer_modal_save_btn">
+                    <i class="fas fa-save"></i> <span id="customer_modal_save_label">Save Customer</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{{-- Full product modal: same #product_modal shell/ids as products list (footer Save runs AJAX). --}}
+<div class="modal fade ifp-product-nested" id="product_modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold" id="product_modal_title">Product</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="product_modal_body">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted mb-0">Loading…</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal"><i class="fas fa-times"></i> Close</button>
+                <button type="button" class="btn btn-sm btn-primary d-none" id="product_modal_save_btn">
+                    <i class="fas fa-save"></i> <span id="product_modal_save_label">Save Product</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 {{-- ════ JavaScript (create / edit only) ════ --}}
 @if(!$isReadonly)
@@ -1271,7 +1329,7 @@
             );
         var descCell = '<td class="ifp-col-desc"><input type="hidden" name="items[' + idx + '][HsCode]" class="ifp-hscode" value=""><textarea name="items[' + idx + '][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description"></textarea></td>';
         tr.innerHTML =
-            '<td class="ifp-col-product"><select name="items[' + idx + '][ProductID]" class="' + selCls + ' ifp-product">' + optionsHTML + '</select></td>' +
+            '<td class="ifp-col-product"><div class="d-flex gap-1 align-items-start ifp-product-select-wrap"><select name="items[' + idx + '][ProductID]" class="' + selCls + ' ifp-product flex-grow-1" style="min-width:0;">' + optionsHTML + '</select><button type="button" class="btn btn-sm btn-primary ifp-line-add-entity-btn flex-shrink-0 ifp-new-product-btn" title="New product" aria-label="New product"><i class="ri-add-line"></i></button></div></td>' +
             descCell +
             '<td class="ifp-col-uom"><select name="items[' + idx + '][UomID]" class="' + selCls + ' ifp-uom" data-selected=""><option value="">Select UOM</option></select></td>' +
             taxSroCells +
@@ -1294,6 +1352,382 @@
         });
     }
     @endif
+
+    // ── Quick create Customer / Product (revert: remove this block with the modal HTML above) ──
+    var productQuickTargetRow = null;
+    function ifpCsrfToken() {
+        var m = document.querySelector('meta[name="csrf-token"]');
+        return m ? (m.getAttribute('content') || '') : '';
+    }
+    function ifpAppendCustomerOption(sel, c) {
+        if (!sel || !c || !c.id) return;
+        var id = String(c.id);
+        var exists = false;
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === id) { exists = true; break; }
+        }
+        if (!exists) {
+            var o = document.createElement('option');
+            o.value = id;
+            o.textContent = c.label || ('Customer #' + id);
+            o.setAttribute('data-is-filer', String(c.is_filer != null ? c.is_filer : 0));
+            o.setAttribute('data-sales-tax-withheld', String(c.sales_tax_withheld != null ? c.sales_tax_withheld : 0));
+            o.setAttribute('data-extra-tax-pct', String(c.extra_tax != null ? c.extra_tax : 0));
+            o.setAttribute('data-further-tax-pct', String(c.further_tax != null ? c.further_tax : 0));
+            o.setAttribute('data-fed-payable-pct', String(c.fed_payable != null ? c.fed_payable : 0));
+            sel.appendChild(o);
+        }
+        sel.value = id;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    function ifpBuildProductOptionEl(p) {
+        var id = String(p.id);
+        var o = document.createElement('option');
+        o.value = id;
+        o.textContent = p.label || ('Product #' + id);
+        o.setAttribute('data-rate', String(p.rate != null ? p.rate : 0));
+        o.setAttribute('data-gst', String(p.gst != null ? p.gst : 0));
+        o.setAttribute('data-hscode', String(p.hscode != null ? p.hscode : ''));
+        o.setAttribute('data-sale-information', String(p.sale_information != null ? p.sale_information : ''));
+        o.setAttribute('data-uom-id', String(p.uom_id != null ? p.uom_id : ''));
+        o.setAttribute('data-sale-type-id', String(p.sale_type_id != null ? p.sale_type_id : ''));
+        o.setAttribute('data-sale-type-to-rate-id', String(p.sale_type_to_rate_id != null ? p.sale_type_to_rate_id : ''));
+        o.setAttribute('data-sro-schedule-id', String(p.sro_schedule_id != null ? p.sro_schedule_id : ''));
+        o.setAttribute('data-sro-item-id', String(p.sro_item_id != null ? p.sro_item_id : ''));
+        o.setAttribute('data-tp-rate', String(p.tp_rate != null ? p.tp_rate : 0));
+        o.setAttribute('data-is-fixed-rate', String(p.is_fixed_rate != null ? p.is_fixed_rate : 0));
+        return o;
+    }
+    function ifpApplyNewProductToAllRows(p) {
+        if (!p || !p.id) return;
+        var id = String(p.id);
+        body.querySelectorAll('.ifp-product').forEach(function(sel) {
+            var exists = false;
+            for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === id) { exists = true; break; }
+            }
+            if (!exists) sel.appendChild(ifpBuildProductOptionEl(p));
+        });
+        var target = productQuickTargetRow && productQuickTargetRow.querySelector('.ifp-product');
+        productQuickTargetRow = null;
+        if (target) {
+            target.value = id;
+            target.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+    /** Move #customer_modal to document.body while invoice modal is open so the 2nd backdrop sits above the invoice layer (nested modal inside fullscreen invoice otherwise hides dimming). */
+    function ifpElevateCustomerModalToBody(modalEl) {
+        if (!modalEl || modalEl.dataset.ifpElevated === '1') return;
+        var invoiceEl = document.getElementById('invoice_modal');
+        if (!invoiceEl || !modalEl.closest('#invoice_modal')) return;
+        var parent = modalEl.parentNode;
+        if (!parent || parent === document.body) return;
+        var ph = document.createElement('div');
+        ph.id = 'ifp_customer_modal_ph';
+        ph.className = 'd-none';
+        ph.setAttribute('data-ifp-customer-anchor', '1');
+        parent.insertBefore(ph, modalEl);
+        document.body.appendChild(modalEl);
+        modalEl.classList.add('ifp-customer-over-invoice');
+        modalEl.dataset.ifpElevated = '1';
+        document.body.classList.add('ifp-invoice-customer-open');
+    }
+    function ifpRestoreCustomerModalFromBody(modalEl) {
+        document.body.classList.remove('ifp-invoice-customer-open');
+        if (!modalEl || modalEl.dataset.ifpElevated !== '1') return;
+        var ph = document.getElementById('ifp_customer_modal_ph');
+        modalEl.classList.remove('ifp-customer-over-invoice');
+        delete modalEl.dataset.ifpElevated;
+        if (ph && ph.parentNode) {
+            ph.parentNode.insertBefore(modalEl, ph);
+            ph.parentNode.removeChild(ph);
+        } else {
+            var invBody = document.getElementById('invoice_modal_body');
+            if (invBody) invBody.appendChild(modalEl);
+        }
+    }
+
+    function ifpInvoiceShowCustomerModalErrors(errors) {
+        var modalBody = document.getElementById('customer_modal_body');
+        if (!modalBody) return;
+        modalBody.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+        modalBody.querySelectorAll('.ajax-error-feedback').forEach(function(el) { el.remove(); });
+        var firstField = null;
+        Object.keys(errors || {}).forEach(function(field) {
+            var messages = errors[field];
+            var input = modalBody.querySelector('[name="' + field + '"]');
+            if (input && messages && messages.length) {
+                input.classList.add('is-invalid');
+                var feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback ajax-error-feedback';
+                feedback.style.display = 'block';
+                feedback.textContent = messages[0];
+                input.insertAdjacentElement('afterend', feedback);
+                if (!firstField) firstField = input;
+            }
+        });
+        if (firstField) {
+            firstField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstField.focus();
+        }
+    }
+
+    function openInvoiceCustomerModalCreate() {
+        var modalEl = document.getElementById('customer_modal');
+        var modalBody = document.getElementById('customer_modal_body');
+        var modalTitle = document.getElementById('customer_modal_title');
+        var saveBtn = document.getElementById('customer_modal_save_btn');
+        if (!modalEl || !modalBody || !saveBtn) return;
+        ifpElevateCustomerModalToBody(modalEl);
+        var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        if (modalTitle) modalTitle.textContent = 'Add Customer';
+        saveBtn.classList.remove('d-none');
+        var saveLabelEl = document.getElementById('customer_modal_save_label');
+        if (saveLabelEl) saveLabelEl.textContent = 'Save Customer';
+        modalBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted mb-0">Loading…</p></div>';
+        bsModal.show();
+        var url = @json(route('customers.modal')) + '?mode=create';
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': ifpCsrfToken()
+            },
+            credentials: 'same-origin'
+        })
+        .then(function(res) {
+            if (!res.ok) throw new Error('Server error: ' + res.status);
+            return res.text();
+        })
+        .then(function(html) {
+            modalBody.innerHTML = html;
+            var scripts = modalBody.getElementsByTagName('script');
+            Array.from(scripts).forEach(function(oldScript) {
+                var newScript = document.createElement('script');
+                if (oldScript.src) {
+                    newScript.src = oldScript.src;
+                    newScript.async = false;
+                } else {
+                    newScript.textContent = oldScript.textContent;
+                }
+                document.body.appendChild(newScript);
+            });
+            saveBtn.onclick = function() {
+                var form = modalBody.querySelector('form');
+                if (!form) return;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+                var formData = new FormData(form);
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': ifpCsrfToken()
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(function(res) {
+                    return res.json().then(function(data) { return { res: res, data: data }; });
+                })
+                .then(function(pair) {
+                    if (pair.data && pair.data.status === 'success') {
+                        bsModal.hide();
+                        if (pair.data.customer) {
+                            var mainCust = document.getElementById(uid + '_CustomerID');
+                            if (mainCust) ifpAppendCustomerOption(mainCust, pair.data.customer);
+                        }
+                        if (typeof showToast === 'function') {
+                            showToast('success', pair.data.message || 'Customer saved.');
+                        }
+                    } else {
+                        ifpInvoiceShowCustomerModalErrors(pair.data && pair.data.errors ? pair.data.errors : {});
+                        if (pair.data && pair.data.message && typeof showToast === 'function') {
+                            showToast('error', pair.data.message);
+                        }
+                    }
+                })
+                .catch(function() {
+                    if (typeof showToast === 'function') {
+                        showToast('error', 'Submission failed. Please try again.');
+                    }
+                })
+                .finally(function() {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> <span id="customer_modal_save_label">Save Customer</span>';
+                });
+            };
+        })
+        .catch(function(err) {
+            modalBody.innerHTML = '<div class="alert alert-danger m-3">Failed to load customer form.<br><small class="text-muted">' + String(err.message || err) + '</small></div>';
+        });
+    }
+
+    function ifpElevateProductModalToBody(modalEl) {
+        if (!modalEl || modalEl.dataset.ifpElevated === '1') return;
+        var invoiceEl = document.getElementById('invoice_modal');
+        if (!invoiceEl || !modalEl.closest('#invoice_modal')) return;
+        var parent = modalEl.parentNode;
+        if (!parent || parent === document.body) return;
+        var ph = document.createElement('div');
+        ph.id = 'ifp_product_modal_ph';
+        ph.className = 'd-none';
+        ph.setAttribute('data-ifp-product-anchor', '1');
+        parent.insertBefore(ph, modalEl);
+        document.body.appendChild(modalEl);
+        modalEl.classList.add('ifp-product-over-invoice');
+        modalEl.dataset.ifpElevated = '1';
+        document.body.classList.add('ifp-invoice-product-open');
+    }
+    function ifpRestoreProductModalFromBody(modalEl) {
+        document.body.classList.remove('ifp-invoice-product-open');
+        if (!modalEl || modalEl.dataset.ifpElevated !== '1') return;
+        var ph = document.getElementById('ifp_product_modal_ph');
+        modalEl.classList.remove('ifp-product-over-invoice');
+        delete modalEl.dataset.ifpElevated;
+        if (ph && ph.parentNode) {
+            ph.parentNode.insertBefore(modalEl, ph);
+            ph.parentNode.removeChild(ph);
+        } else {
+            var invBody = document.getElementById('invoice_modal_body');
+            if (invBody) invBody.appendChild(modalEl);
+        }
+    }
+    function ifpInvoiceShowProductModalErrors(errors) {
+        var modalBody = document.getElementById('product_modal_body');
+        if (!modalBody) return;
+        modalBody.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+        modalBody.querySelectorAll('.ajax-error-feedback').forEach(function(el) { el.remove(); });
+        var firstField = null;
+        Object.keys(errors || {}).forEach(function(field) {
+            var messages = errors[field];
+            var input = modalBody.querySelector('[name="' + field + '"]');
+            if (input && messages && messages.length) {
+                input.classList.add('is-invalid');
+                var feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback ajax-error-feedback';
+                feedback.style.display = 'block';
+                feedback.textContent = messages[0];
+                input.insertAdjacentElement('afterend', feedback);
+                if (!firstField) firstField = input;
+            }
+        });
+        if (firstField) {
+            firstField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstField.focus();
+        }
+    }
+    function openInvoiceProductModalCreate() {
+        var modalEl = document.getElementById('product_modal');
+        var modalBody = document.getElementById('product_modal_body');
+        var modalTitle = document.getElementById('product_modal_title');
+        var saveBtn = document.getElementById('product_modal_save_btn');
+        if (!modalEl || !modalBody || !saveBtn) return;
+        ifpElevateProductModalToBody(modalEl);
+        var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        if (modalTitle) modalTitle.textContent = 'Add Product';
+        saveBtn.classList.remove('d-none');
+        var saveLabelEl = document.getElementById('product_modal_save_label');
+        if (saveLabelEl) saveLabelEl.textContent = 'Save Product';
+        modalBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted mb-0">Loading…</p></div>';
+        bsModal.show();
+        var url = @json(route('products.modal')) + '?mode=create';
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': ifpCsrfToken()
+            },
+            credentials: 'same-origin'
+        })
+        .then(function(res) {
+            if (!res.ok) throw new Error('Server error: ' + res.status);
+            return res.text();
+        })
+        .then(function(html) {
+            modalBody.innerHTML = html;
+            var scripts = modalBody.getElementsByTagName('script');
+            Array.from(scripts).forEach(function(oldScript) {
+                var newScript = document.createElement('script');
+                if (oldScript.src) {
+                    newScript.src = oldScript.src;
+                    newScript.async = false;
+                } else {
+                    newScript.textContent = oldScript.textContent;
+                }
+                document.body.appendChild(newScript);
+            });
+            saveBtn.onclick = function() {
+                var form = modalBody.querySelector('form');
+                if (!form) return;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+                var formData = new FormData(form);
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': ifpCsrfToken()
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(function(res) {
+                    return res.json().then(function(data) { return { res: res, data: data }; });
+                })
+                .then(function(pair) {
+                    if (pair.data && pair.data.status === 'success') {
+                        bsModal.hide();
+                        if (pair.data.product) {
+                            ifpApplyNewProductToAllRows(pair.data.product);
+                        }
+                        if (typeof showToast === 'function') {
+                            showToast('success', pair.data.message || 'Product saved.');
+                        }
+                    } else {
+                        ifpInvoiceShowProductModalErrors(pair.data && pair.data.errors ? pair.data.errors : {});
+                        if (pair.data && pair.data.message && typeof showToast === 'function') {
+                            showToast('error', pair.data.message);
+                        }
+                    }
+                })
+                .catch(function() {
+                    if (typeof showToast === 'function') {
+                        showToast('error', 'Submission failed. Please try again.');
+                    }
+                })
+                .finally(function() {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> <span id="product_modal_save_label">Save Product</span>';
+                });
+            };
+        })
+        .catch(function(err) {
+            modalBody.innerHTML = '<div class="alert alert-danger m-3">Failed to load product form.<br><small class="text-muted">' + String(err.message || err) + '</small></div>';
+        });
+    }
+
+    document.getElementById(uid + '_newCustomerBtn')?.addEventListener('click', function() {
+        openInvoiceCustomerModalCreate();
+    });
+    var ifpCustomerModalRoot = document.getElementById('customer_modal');
+    if (ifpCustomerModalRoot) {
+        ifpCustomerModalRoot.addEventListener('hidden.bs.modal', function() {
+            ifpRestoreCustomerModalFromBody(ifpCustomerModalRoot);
+        });
+    }
+    body.addEventListener('click', function(ev) {
+        var b = ev.target.closest('.ifp-new-product-btn');
+        if (!b || !body.contains(b)) return;
+        productQuickTargetRow = b.closest('.ifp-row');
+        openInvoiceProductModalCreate();
+    });
+    var ifpProductModalRoot = document.getElementById('product_modal');
+    if (ifpProductModalRoot) {
+        ifpProductModalRoot.addEventListener('hidden.bs.modal', function() {
+            ifpRestoreProductModalFromBody(ifpProductModalRoot);
+        });
+    }
 
     // ── Bind existing rows + initial calc ──
     const customerSel = document.getElementById(uid + '_CustomerID');
