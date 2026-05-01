@@ -54,27 +54,6 @@ body{
     min-height: 100%;
 }
 
-.table-inv{
-	thead{
-		tr{
-			th{
-				padding: 5px !important;
-				font-size: 12px !important;
-			}
-		}
-	}
-	tbody{
-		tr{
-			td{
-				padding: 5px !important;
-				background: #eee !important;
-				border-bottom: solid 1px #fff !important;
-				font-size: 12px !important;
-			}
-		}
-	}
-}
-
 label{
 	font-size: 12px !important;
 	margin-bottom: 4px !important;
@@ -213,40 +192,41 @@ label{
 	margin-top: 0 !important;
 }
 
-.listing-table{
-	thead{
-		tr{
-			th{
-				font-size: 12px !important;
-                padding: 0.3rem !important;
-                font-weight: 400 !important;
-/*
-                background: var(--primary-color);
-                color: var(--custom-white);
-*/				
-				background: var(--bs-gray-300);
-                color: var(--bs-black);
-			}
-			
-			th:first-child{
-				padding-left: 15px !important;
-			}
-		}
-	}
-	
-	tbody{
-		tr{
-			td{
-				font-size: 12px !important;
-				font-weight: normal;
-				padding: 0.3rem !important;
-			}
-			
-			td:first-child{
-				padding-left: 15px !important;
-			}
-		}
-	}
+/* Invoice / listing data tables — valid CSS (flat); use with .listing-table */
+.listing-table thead tr th {
+	font-size: 12px !important;
+	padding: 0.3rem !important;
+	font-weight: 400 !important;
+	background: var(--bs-gray-300);
+	color: var(--bs-black);
+	font-family: inherit;
+}
+.listing-table thead tr th:first-child {
+	padding-left: 15px !important;
+}
+.listing-table tbody tr td {
+	font-size: 12px !important;
+	font-weight: normal;
+	padding: 0.1rem !important;
+	font-family: inherit;
+	background-color: rgb(255, 255, 255) !important;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+.listing-table tbody tr td:first-child {
+	padding-left: 15px !important;
+}
+
+/* Invoice line grid: same tbody cell paint as .listing-table (beats .table-inv tbody td alone) */
+.table-inv.listing-table tbody tr td {
+	font-size: 12px !important;
+	font-weight: normal;
+	padding: 0.1rem !important;
+	font-family: inherit;
+	background-color: rgb(255, 255, 255) !important;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+.table-inv.listing-table tbody tr td:first-child {
+	padding-left: 5px !important;
 }
 
 .btn-listing{
@@ -686,15 +666,29 @@ textarea.form-control {
 #invoice_modal_body .form-select.is-invalid:not([multiple]):not([size]) {
 	border-color: #dc3545 !important;
 }
+/* Line grid: match .table-inv in invoice partial + listing (not the ultra-tight 2px / ~0.1rem pad) */
 .ifp-modal-shell .table-inv .form-select:not([multiple]):not([size]),
 .ifp-modal-shell .table-inv .form-control:not(textarea),
 #invoice_modal_body .table-inv .form-select:not([multiple]):not([size]),
 #invoice_modal_body .table-inv .form-control:not(textarea) {
-	min-height: calc(1.25em + 4px + 2px) !important;
-	padding-top: 2px !important;
-	padding-bottom: 2px !important;
-	padding-left: 0.22rem !important;
-	padding-right: 0.22rem !important;
+	min-height: calc(1.2em + 0.4rem) !important;
+	padding: 0.2rem 0.35rem !important;
+	font-size: 12px !important;
+	font-family: inherit !important;
+	line-height: 1.35 !important;
+	box-sizing: border-box !important;
+}
+.ifp-modal-shell .table-inv .form-select:not([multiple]):not([size]),
+#invoice_modal_body .table-inv .form-select:not([multiple]):not([size]) {
+	padding-right: 1.15rem !important;
+	background-position: right 0.35rem center !important;
+	background-size: 10px 8px !important;
+}
+.ifp-modal-shell .table-inv textarea.form-control,
+#invoice_modal_body .table-inv textarea.form-control {
+	padding: 0.2rem 0.35rem !important;
+	margin: 0 !important;
+	min-height: 1.5rem !important;
 }
 
 /* Invoice modal: Tax & SRO — row button + nested modal (slot moved in/out of form) */
@@ -715,20 +709,21 @@ textarea.form-control {
 .ifp-modal-shell .ifp-col-tax-sro-header__title,
 #invoice_modal_body .ifp-col-tax-sro-header__title {
 	color: rgb(1, 26, 66);
-	font-size: 0.7rem;
+	font-size: 0.62rem;
 }
 .ifp-modal-shell .ifp-col-tax-sro-header__hint,
 #invoice_modal_body .ifp-col-tax-sro-header__hint {
 	font-weight: 500;
-	font-size: 0.58rem;
+	font-size: 0.54rem;
 	text-transform: none;
 	letter-spacing: 0.02em;
 	color: #8b95a5;
 }
 .ifp-modal-shell .ifp-col-tax-sro,
 #invoice_modal_body .ifp-col-tax-sro {
-	min-width: 6.75rem;
-	max-width: 10rem;
+	min-width: 14rem;
+	max-width: none;
+	width: 14%;
 	vertical-align: middle !important;
 }
 .ifp-modal-shell .ifp-tax-sro-readonly-card,
@@ -766,70 +761,90 @@ textarea.form-control {
 #invoice_modal_body button.ifp-tax-sro-open-btn {
 	background: transparent;
 	cursor: pointer;
-	display: flex;
+	display: inline-flex;
 	align-items: center;
-	gap: 0.35rem;
+	gap: 0.25rem;
 	width: 100%;
+	min-width: 0;
+	min-height: calc(1.2em + 0.4rem);
+	max-height: calc(1.2em + 0.4rem);
 	margin: 0;
-	padding: 0.4rem 0.45rem 0.4rem 0.5rem;
-	border-radius: 8px;
+	padding: 0.1rem 0.3rem;
+	border-radius: 5px;
 	border: 1px solid rgba(var(--primary-rgb), 0.22);
 	background: linear-gradient(180deg, rgba(var(--primary-rgb), 0.09) 0%, rgba(var(--primary-rgb), 0.03) 100%);
 	color: rgb(1, 26, 66);
 	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 	transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 	text-align: start;
+	box-sizing: border-box;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__icon,
 #invoice_modal_body .ifp-tax-sro-trigger__icon {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 1.25rem;
-	height: 1.25rem;
-	border-radius: 6px;
+	width: 1rem;
+	height: 1rem;
+	border-radius: 4px;
 	background: rgba(var(--primary-rgb), 0.12);
 	color: rgb(var(--primary-rgb));
-	font-size: 0.78rem;
+	font-size: 0.65rem;
 	flex-shrink: 0;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__text,
 #invoice_modal_body .ifp-tax-sro-trigger__text {
 	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	line-height: 1.15;
+	flex-direction: row;
+	align-items: center;
+	line-height: 1.2;
 	min-width: 0;
 	flex: 1;
 }
-.ifp-modal-shell .ifp-tax-sro-trigger__title,
-#invoice_modal_body .ifp-tax-sro-trigger__title {
-	font-size: 0.72rem;
-	font-weight: 700;
-	letter-spacing: 0.02em;
-}
 .ifp-modal-shell .ifp-tax-sro-trigger__sub,
 #invoice_modal_body .ifp-tax-sro-trigger__sub {
-	font-size: 0.58rem;
+	font-variant: JIS78;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.2rem;
+	min-width: 0;
+	flex: 1;
+	font-size: 0.65rem;
 	font-weight: 500;
 	color: #6c757d;
-	white-space: normal;
-	line-height: 1.15;
-	word-break: break-word;
-	overflow-wrap: anywhere;
+	line-height: 1.2;
 }
+.ifp-modal-shell .ifp-tax-sro-trigger__sep,
+#invoice_modal_body .ifp-tax-sro-trigger__sep {
+	flex-shrink: 0;
+	opacity: 0.45;
+	font-size: 0.5rem;
+	line-height: 1;
+}
+/* Sale type label gets more width; rate profile (e.g. "18%") stays narrower */
 .ifp-modal-shell .ifp-tax-sro-trigger__sale,
-#invoice_modal_body .ifp-tax-sro-trigger__sale,
+#invoice_modal_body .ifp-tax-sro-trigger__sale {
+	flex: 3 1 0;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
 .ifp-modal-shell .ifp-tax-sro-trigger__rate,
 #invoice_modal_body .ifp-tax-sro-trigger__rate {
-	white-space: normal;
-	word-break: break-word;
-	overflow-wrap: anywhere;
+	flex: 1 1 0;
+	min-width: 0;
+	max-width: 36%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__chev,
 #invoice_modal_body .ifp-tax-sro-trigger__chev {
 	flex-shrink: 0;
-	font-size: 1.05rem;
+	font-size: 0.8rem;
+	line-height: 1;
 	opacity: 0.45;
 }
 .ifp-modal-shell button.ifp-tax-sro-open-btn:hover,

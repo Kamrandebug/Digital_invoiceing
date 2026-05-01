@@ -48,7 +48,6 @@
 @elseif($isReadonly)
     <td class="ifp-col-tax-sro align-middle">
         <div class="ifp-tax-sro-readonly-pill">
-            <div class="fw-semibold small mb-1">Tax &amp; SRO</div>
             <div class="small text-truncate" title="{{ $item->SaleTypeDesc ?? $item->SaleTypeName ?? $item->SaleTypeID ?? '—' }}">
                 {{ $item->SaleTypeDesc ?? $item->SaleTypeName ?? $item->SaleTypeID ?? '—' }}
             </div>
@@ -66,10 +65,10 @@
         <button type="button" class="ifp-tax-sro-open-btn" title="Open Tax &amp; SRO in a dialog" aria-haspopup="dialog">
             <span class="ifp-tax-sro-trigger__icon" aria-hidden="true"><i class="ri-equalizer-line"></i></span>
             <span class="ifp-tax-sro-trigger__text">
-                <span class="ifp-tax-sro-trigger__title">Tax &amp; SRO</span>
                 <span class="ifp-tax-sro-trigger__sub">
-                    <span class="ifp-tax-sro-trigger__sale d-block">{{ $saleTypeLabel !== '' ? $saleTypeLabel : 'Sale type —' }}</span>
-                    <span class="ifp-tax-sro-trigger__rate d-block">{{ $saleRateLabel !== '' ? $saleRateLabel : 'Rate profile —' }}</span>
+                    <span class="ifp-tax-sro-trigger__sale">{{ $saleTypeLabel !== '' ? $saleTypeLabel : 'Sale type —' }}</span>
+                    <span class="ifp-tax-sro-trigger__sep" aria-hidden="true">·</span>
+                    <span class="ifp-tax-sro-trigger__rate">{{ $saleRateLabel !== '' ? $saleRateLabel : 'Rate profile —' }}</span>
                 </span>
             </span>
             <i class="ri-arrow-right-s-line ifp-tax-sro-trigger__chev" aria-hidden="true"></i>

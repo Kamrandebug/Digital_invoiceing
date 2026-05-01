@@ -181,12 +181,45 @@
     </div>
 </div>
 
-    {{-- ══ Line Items Table ══ --}}
+    {{-- ══ Line Items Table ══ (match Invoice listing-table: font, header, row dividers) --}}
     <style>
-        /* Compact spacing for invoice detail table only; maximize usable cell width */
-        .table-inv { border-collapse: collapse; border-spacing: 0; }
-        .table-inv th,
-        .table-inv td { padding: 0.1rem 0.14rem !important; vertical-align: middle; }
+        /* Tbody cells: 0.1rem pad + white bg (match .listing-table); thead keeps 0.3rem */
+        .table-inv {
+            border-collapse: collapse;
+            border-spacing: 0;
+            --ifp-inv-cell-fs: 12px;
+            --ifp-inv-head-pad: 0.3rem;
+            --ifp-inv-head-bg: var(--bs-gray-300, #dee2e6);
+            --ifp-inv-head-fg: var(--bs-black, #000);
+            --ifp-inv-row-border: rgba(0, 0, 0, 0.08);
+        }
+        .table-inv thead th {
+            font-size: var(--ifp-inv-cell-fs) !important;
+            font-weight: 400 !important;
+            font-family: inherit;
+            padding: var(--ifp-inv-head-pad) !important;
+            vertical-align: middle;
+            background: var(--ifp-inv-head-bg) !important;
+            color: var(--ifp-inv-head-fg) !important;
+            border: none !important;
+            border-bottom: 1px solid var(--bs-border-color, #dee2e6) !important;
+        }
+        .table-inv thead th:first-child {
+            padding-left: 15px !important;
+        }
+        .table-inv tbody td {
+            font-size: 12px !important;
+            font-weight: normal;
+            font-family: inherit;
+            padding: 0.1rem !important;
+            vertical-align: middle;
+            background-color: rgb(255, 255, 255) !important;
+            border: none !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+        }
+        .table-inv tbody td:first-child {
+            padding-left: 5px !important;
+        }
         .table-inv th.ifp-col-product,
         .table-inv td.ifp-col-product { min-width: 170px; width: 13%; }
         .table-inv th.ifp-col-desc,
@@ -194,7 +227,7 @@
         .table-inv th.ifp-col-uom,
         .table-inv td.ifp-col-uom { min-width: 130px; width: 10%; }
         .table-inv th.ifp-col-tax-sro,
-        .table-inv td.ifp-col-tax-sro { min-width: 145px; width: 10%; }
+        .table-inv td.ifp-col-tax-sro { min-width: 220px; width: 14%; max-width: none; }
         .table-inv th.ifp-col-qty,
         .table-inv td.ifp-col-qty { min-width: 64px; width: 4%; }
         .table-inv th.ifp-col-amount,
@@ -216,9 +249,28 @@
         .table-inv th.ifp-col-actions,
         .table-inv td.ifp-col-actions { min-width: 48px; width: 3%; }
         .table-inv .form-control,
-        .table-inv .form-select { padding: 0.12rem 0.18rem; margin: 0; min-height: 1.42rem; font-size: 0.765rem; box-sizing: border-box; min-width: 0; width: 100%; }
-        .table-inv .form-select { padding-right: 1rem; background-position: right 0.2rem center; background-size: 10px 8px; }
-        .table-inv textarea.form-control { padding: 0.12rem 0.18rem; margin: 0; min-height: 1.42rem; }
+        .table-inv .form-select {
+            padding: 0.2rem 0.35rem;
+            margin: 0;
+            min-height: calc(1.2em + 0.4rem);
+            font-size: var(--ifp-inv-cell-fs) !important;
+            font-family: inherit !important;
+            line-height: 1.35;
+            box-sizing: border-box;
+            min-width: 0;
+            width: 100%;
+        }
+        .table-inv .form-control-sm,
+        .table-inv .form-select-sm {
+            font-size: var(--ifp-inv-cell-fs) !important;
+            min-height: calc(1.2em + 0.35rem);
+        }
+        .table-inv .form-select { padding-right: 1.15rem; background-position: right 0.35rem center; background-size: 10px 8px; }
+        .table-inv textarea.form-control {
+            padding: 0.2rem 0.35rem;
+            margin: 0;
+            min-height: 1.5rem;
+        }
         .table-inv input[type="number"] { min-width: 0; padding-right: 0.14rem; text-align: right; font-variant-numeric: tabular-nums; }
         .table-inv input[type="number"]::-webkit-outer-spin-button,
         .table-inv input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -241,7 +293,7 @@
         .table-inv .btn-icon { padding: 0.16rem 0.26rem; margin: 0; }
     </style>
     <div class="col-xl-12">
-        <table class="table nowrap {{ $isReadonly ? '' : 'text-nowrap' }} table-borderless border mt-3 table-inv">
+        <table class="table table-inv listing-table invoices-table mt-3 {{ $isReadonly ? '' : 'text-nowrap' }}">
             <thead>
                 <tr>
                     <th class="ifp-col-product">Product / Services</th>
@@ -773,6 +825,10 @@
         rateLine.textContent = (saleRateText && saleRateText.toLowerCase().indexOf('select') !== 0) ? saleRateText : 'Rate profile —';
         saleLine.setAttribute('title', saleLine.textContent);
         rateLine.setAttribute('title', rateLine.textContent);
+        var openBtn = row.querySelector('.ifp-tax-sro-open-btn');
+        if (openBtn) {
+            openBtn.setAttribute('title', saleLine.textContent + ' · ' + rateLine.textContent + ' — Open Tax & SRO');
+        }
     }
 
     // ── Row calculation ──
@@ -1269,7 +1325,7 @@
             ? (`<td class="ifp-col-tax-sro align-middle">
                     <button type="button" class="ifp-tax-sro-open-btn" title="Open Tax &amp; SRO in a dialog" aria-haspopup="dialog">
                         <span class="ifp-tax-sro-trigger__icon" aria-hidden="true"><i class="ri-equalizer-line"></i></span>
-                        <span class="ifp-tax-sro-trigger__text"><span class="ifp-tax-sro-trigger__title">Tax &amp; SRO</span><span class="ifp-tax-sro-trigger__sub"><span class="ifp-tax-sro-trigger__sale d-block">Sale type —</span><span class="ifp-tax-sro-trigger__rate d-block">Rate profile —</span></span></span>
+                        <span class="ifp-tax-sro-trigger__text"><span class="ifp-tax-sro-trigger__sub"><span class="ifp-tax-sro-trigger__sale">Sale type —</span><span class="ifp-tax-sro-trigger__sep" aria-hidden="true">·</span><span class="ifp-tax-sro-trigger__rate">Rate profile —</span></span></span>
                         <i class="ri-arrow-right-s-line ifp-tax-sro-trigger__chev" aria-hidden="true"></i>
                     </button>
                     <div class="ifp-tax-sro-slot d-none">

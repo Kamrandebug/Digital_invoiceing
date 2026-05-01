@@ -52,6 +52,21 @@
                         <span class="side-menu__label">Invoices</span>
 					</a>
 				</li>
+                <li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
+                    <a href="javascript:void(0);" class="side-menu__item">
+                        <i class="ri-bar-chart-2-line menu-icon"></i>
+                        <span class="side-menu__label">Reports</span>
+                        <i class="ri-arrow-right-s-line side-menu__angle"></i>
+                    </a>
+                    <ul class="slide-menu child1" style="{{ request()->routeIs('reports.*') ? 'display:block;' : '' }}">
+                        <li class="slide side-menu__label1">
+                            <a href="javascript:void(0)">Reports</a>
+                        </li>
+                        <li class="slide {{ request()->routeIs('reports.sale') ? 'active' : '' }}">
+                            <a href="{{ route('reports.sale') }}" class="side-menu__item">Sale Report</a>
+                        </li>
+                    </ul>
+                </li>
                <?php /*?> <li class="slide has-sub">
                     <a href="javascript:void(0);" class="side-menu__item">
                         <svg xmlns="http://www.w3.org/2000/svg" class="side-menu__icon" viewBox="0 0 256 256">
