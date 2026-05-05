@@ -318,7 +318,7 @@ class InvoiceController extends Controller
                     'ExtraTax' => $item['ExtraTax'] ?? ($request->ExtraTax ?? 0),
                     'FurtherTax' => $item['FurtherTax'] ?? ($request->FurtherTax ?? 0),
                     'FedPayable' => $item['FedPayable'] ?? ($request->FedPayable ?? 0),
-                    'Total' => $item['Total'] ?? 0,
+                    'TotalValues' => $item['Total'] ?? 0,
                     // 'SubTotal'           => $request->SubTotal         ?? 0,
                     'Notes' => $request->Notes ?? null,
                     'DiscountAllowed' => $request->DiscountAllowed ?? '0',

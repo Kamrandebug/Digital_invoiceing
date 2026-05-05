@@ -167,9 +167,9 @@ class InvoiceModel extends Model
                 'h.Notes',
                 // Grab totals directly from the header table instead of calculating them
                 'h.SubTotal',
-                'h.DiscountAmount as TotalDiscount',
-                'h.GSTAmount      as TotalGST',
-                'h.Total          as TotalAmount',
+                'h.DiscountAmount AS TotalDiscount',
+                'h.SalesTaxApplicable      AS TotalGST',
+                'h.TotalValues      AS TotalAmount',
                 'h.FbrTransactionID',
                 'h.FbrResponseJson',
                 'h.CreatedOn',
@@ -285,7 +285,9 @@ class InvoiceModel extends Model
             JOIN (
                 SELECT  t.ID, HsCode,fho.`description` AS Uom_Desc,fttc.`transactioN_DESC` AS SaleTypeDesc,
                         fsttr.`ratE_DESC` AS SaleTypeToRateDesc, fss.`srO_DESC` AS SroScheduleDesc,
-                        fsi.`srO_ITEM_DESC` AS SroItemSerialNo,ProductDescription,RequestID
+                        fsi.`srO_ITEM_DESC` AS SroItemSerialNo,ProductDescription,
+                        t.`ValueSalesExcludingST`,IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS `FixedNotifiedValueOrRetailPrice`,
+                        t.`SalesTaxApplicable`,t.`TotalValues`, t.RequestID
                 FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
                 LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fho ON (fho.`uoM_ID` = t.UomID AND fho.hs_CODE = t.HsCode)
                 LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc ON (fttc.`transactioN_TYPE_ID` = t.SaleTypeID)
@@ -299,29 +301,42 @@ class InvoiceModel extends Model
                 uu.SaleTypeDesc       = u.SaleTypeDesc,
                 uu.SaleTypeToRateDesc = u.SaleTypeToRateDesc,
                 uu.SroScheduleDesc    = u.SroScheduleDesc,
-                uu.SroItemSerialNo    = u.SroItemSerialNo
+                uu.SroItemSerialNo    = u.SroItemSerialNo,
+                uu.`ValueSalesExcludingST` = u.`ValueSalesExcludingST`,
+                uu.`FixedNotifiedValueOrRetailPrice` = u.`FixedNotifiedValueOrRetailPrice`,
+                uu.`SalesTaxApplicable` = u.`SalesTaxApplicable`,
+                uu.`TotalValues` = u.`TotalValues`
                 ", [$requestID]);
 
         DB::connection('landlord')->statement("
             INSERT INTO {$tenantDbQuoted}.tbl_sales_invoice_header (ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT TID AS ID,InvoiceID,1 AS InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,''AS BuyerNTNCNIC,''AS BuyerBusinessName,''AS BuyerProvince,''AS BuyerAddress,''AS InvoiceRefNo,''AS BuyerRegistrationType,''AS ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
-            FROM {$tenantDbQuoted}.tbl_temp_invoice_detail
-            WHERE RequestID = ?
-            Group BY RequestID
+            SELECT t.TID AS ID,t.InvoiceID,1 AS InvoiceNumber,t.InvoiceType,t.InvoiceDate,t.DocNo,t.DocNo2,t.DocNo3,t.CustomerID,
+            c.`NTN` AS BuyerNTNCNIC,c.`BusinessName` AS BuyerBusinessName,c.County AS BuyerProvince, c.`Address` AS BuyerAddress,
+            ''AS InvoiceRefNo,c.IsFiler AS BuyerRegistrationType,
+            ''AS ScenarioId,SUM(t.TotalValues) AS TotalValues,SUM(t.ValueSalesExcludingST) AS ValueSalesExcludingST,
+            SUM(t.FixedNotifiedValueOrRetailPrice) AS FixedNotifiedValueOrRetailPrice,SUM(t.SalesTaxApplicable) AS SalesTaxApplicable,
+            t.SalesTaxWithheldAtSource,
+            SUM(t.ExtraTax) AS ExtraTax,SUM(t.FurtherTax) AS FurtherTax,SUM(t.FedPayable) AS FedPayable,SUM(t.Discount) AS Discount,
+            t.Statusi,t.CreatedBy,t.CreatedOn,t.UpdatedBy,t.UpdatedOn
+            FROM {$tenantDbQuoted}.tbl_temp_invoice_detail t
+            INNER JOIN {$tenantDbQuoted}.`tbl_customer` c ON (c.ID = t.CustomerID)
+            WHERE t.RequestID = ?
+            GROUP BY t.RequestID
         ", [$requestID]);
 
         DB::connection('landlord')->statement("
-            INSERT INTO {$tenantDbQuoted}.`tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.Weight,
+            INSERT INTO {$tenantDbQuoted}.`tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,GSTAmount,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.Weight,t.GSTAmount,
                 t.HsCode, t.ProductDescription AS SaleInformation,t.UomID, t.Uom_Desc AS Uom_Desc,
                 t.SaleTypeID, t.SaleTypeDesc AS SaleTypeDesc,
                 t.SaleTypeToRateID, t.SaleTypeToRateDesc AS SaleTypeToRateDesc,
                 t.SroScheduleID, IFNULL(t.SroScheduleDesc,'') AS SroScheduleDesc,
                 t.SroItemID, IFNULL(t.SroItemSerialNo,'') AS SroItemSerialNo,
                 IFNULL(t.TotalValues,0.00),
-                IFNULL(t.Amount,0.00) AS ValueSalesExcludingST,
-                IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS FixedNotifiedValueOrRetailPrice,
-                IFNULL(t.GSTAmount,0.00) AS SalesTaxApplicable,
+                IFNULL(t.ValueSalesExcludingST,0.00) AS ValueSalesExcludingST,
+                -- IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS FixedNotifiedValueOrRetailPrice,
+                IFNULL(t.FixedNotifiedValueOrRetailPrice,0.00) AS FixedNotifiedValueOrRetailPrice,
+                IFNULL(t.SalesTaxApplicable,0.00) AS SalesTaxApplicable,
 	            IFNULL(t.SalesTaxWithheldAtSource,0.00),IFNULL(t.ExtraTax,0.00), IFNULL(t.FurtherTax,0.00), IFNULL(t.FedPayable,0.00), IFNULL(t.Discount,0.00),
                 1 AS `Status`,
                 t.CreatedBy, t.CreatedOn, t.UpdatedBy, t.UpdatedOn

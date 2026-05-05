@@ -4,15 +4,47 @@
 @section('styles')
 <style>
     .sale-report-toolbar .btn { white-space: nowrap; }
+    /* Override themecss/custom.css (14px !important on .form-select / .form-control) */
+    #saleReportFilterForm .form-label,
+    #saleReportFilterForm .form-label.small,
+    #saleReportFilterForm .form-select,
+    #saleReportFilterForm .form-select.form-select-sm,
+    #saleReportFilterForm .form-control,
+    #saleReportFilterForm .form-control.form-control-sm,
+    #saleReportFilterForm .btn,
+    #saleReportFilterForm select option {
+        font-size: 12px !important;
+    }
+    /* Match native selects to date inputs (same border as .form-control in themecss/custom.css) */
+    #saleReportFilterForm .form-select:not([multiple]):not([size]),
+    #saleReportFilterForm .form-select.form-select-sm {
+        border: 1px solid var(--cm-border-color, #dee2e6) !important;
+        border-radius: 5px;
+        background-color: var(--cm-input-bg, var(--bs-body-bg, #fff));
+    }
+    #saleReportFilterForm .form-select:not([multiple]):not([size]):focus {
+        border-color: rgb(var(--primary-rgb)) !important;
+        box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+        outline: none;
+    }
     #saleReportTable th[data-col],
     #saleReportTable td[data-col] { transition: opacity 0.15s ease; }
     #saleReportTable col.hidden-col { visibility: collapse; width: 0 !important; }
-    /* Match <td> font family and size to <th> */
     #saleReportTable thead th,
-    #saleReportTable tbody td,
     #saleReportTable tfoot td {
         font-family: var(--bs-body-font-family, inherit);
-        font-size: 0.875rem;
+        font-size: 12px !important;
+    }
+    #saleReportTable tbody td {
+        font-family: var(--bs-body-font-family, inherit);
+        font-size: 12px !important;
+        font-weight: 400;
+    }
+    #saleReportTable tfoot td {
+        background-color: transparent !important;
+        --bs-table-bg: transparent;
+        --bs-table-accent-bg: transparent;
+        font-weight: 700;
     }
     @media print {
         .no-print { display: none !important; }
@@ -170,8 +202,8 @@
                             <td data-col="desc">{{ \Illuminate\Support\Str::limit($r->line_description ?? '', 80) }}</td>
                             <td data-col="hscode">{{ $r->HsCode ?? '—' }}</td>
                             <td data-col="uom">{{ $r->Uom_Desc ?? '—' }}</td>
-                            <td class="text-end" data-col="qty">{{ number_format((float) ($r->Quantity ?? 0), 4) }}</td>
-                            <td class="text-end" data-col="rate">{{ number_format((float) ($r->Rate ?? 0), 4) }}</td>
+                            <td class="text-end" data-col="qty">{{ number_format((float) ($r->Quantity ?? 0), 0) }}</td>
+                            <td class="text-end" data-col="rate">{{ number_format((float) ($r->Rate ?? 0), 2) }}</td>
                             <td class="text-end" data-col="amount">{{ number_format((float) ($r->Amount ?? 0), 2) }}</td>
                             <td class="text-end" data-col="disc">{{ number_format((float) ($r->DiscountAmount ?? 0), 2) }}</td>
                             <td class="text-end" data-col="gst">{{ number_format((float) ($r->GSTAmount ?? 0), 2) }}</td>
@@ -186,10 +218,10 @@
                         </tr>
                     @endforelse
                 </tbody>
-                <tfoot class="table-secondary fw-semibold">
+                <tfoot>
                     <tr>
                         <td data-col="docno" colspan="8" class="text-end">Totals ({{ (int) ($totals->line_count ?? 0) }} lines)</td>
-                        <td class="text-end" data-col="qty">{{ number_format((float) ($totals->qty ?? 0), 4) }}</td>
+                        <td class="text-end" data-col="qty">{{ number_format((float) ($totals->qty ?? 0), 0) }}</td>
                         <td data-col="rate"></td>
                         <td class="text-end" data-col="amount">{{ number_format((float) ($totals->amount ?? 0), 2) }}</td>
                         <td class="text-end" data-col="disc">{{ number_format((float) ($totals->discount ?? 0), 2) }}</td>

@@ -55,6 +55,11 @@
     }
 
     $fbrLogoUrl = asset('images/fbr/fbr-digital-invoicing-badge.svg');
+    $fbrTxId = trim((string) data_get($invoice, 'FbrTransactionID', ''));
+    $qrPx = 320;
+    $qrSource = $fbrTxId !== ''
+        ? 'https://api.qrserver.com/v1/create-qr-code/?size='.$qrPx.'x'.$qrPx.'&ecc=M&data='.urlencode($fbrTxId)
+        : '';
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -89,68 +94,77 @@
         table.items th { background: #f5f5f5; font-size: 11px; }
         table.items td { font-size: 11px; }
         table.items .num { text-align: right; }
-        .totals { margin-top: 16px; margin-left: auto; width: 280px; }
+        .after-table-summary {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .totals { margin-top: 0; margin-left: auto; width: 280px; flex-shrink: 0; }
         .totals table { width: 100%; border-collapse: collapse; }
         .totals th { text-align: right; padding: 4px 12px 4px 0; font-weight: 600; }
         .totals td { text-align: right; padding: 4px 0; }
         .totals tr.grand th, .totals tr.grand td { font-size: 14px; font-weight: bold; border-top: 2px solid #333; padding-top: 8px; }
         .notes { margin-top: 20px; padding: 8px; background: #f9f9f9; border-radius: 4px; font-size: 11px; white-space: pre-line; }
-        /* FBR: QR exactly 1.0\" × 1.0\" (spec); logo scaled to same height */
-        .fbr-digital-section { margin-top: 20px; clear: both; }
+        /* FBR: matching 1\" × 1\" slots for badge + QR (no captions) */
+        .fbr-digital-section { flex: 1 1 auto; min-width: 0; margin-top: 0; }
         .fbr-digital-title { font-size: 12px; font-weight: 700; margin-bottom: 10px; color: #1e3a5f; }
         .fbr-digital-row {
             display: flex;
             flex-direction: row;
-            align-items: flex-end;
-            justify-content: flex-end;
+            align-items: center;
+            justify-content: flex-start;
             flex-wrap: wrap;
             gap: 16px;
         }
-        .fbr-logo-wrap {
+        .fbr-badge-wrap {
             flex: 0 0 auto;
             border: 1px solid #d8e2f0;
             background: #fff;
             border-radius: 6px;
             padding: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .fbr-badge-slot {
+            width: 1in;
+            height: 1in;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .fbr-brand-logo {
-            height: 1in;
+            max-width: 1in;
+            max-height: 1in;
             width: auto;
-            max-width: 2.2in;
+            height: auto;
             display: block;
             object-fit: contain;
         }
-        .fbr-qr-box {
-            flex: 0 0 auto;
-            border: 1px solid #d8e2f0;
-            background: #f7fbff;
-            border-radius: 6px;
-            padding: 10px;
-            text-align: center;
-        }
-        .fbr-qr-label { font-size: 11px; font-weight: 700; margin-bottom: 8px; color: #1e3a5f; }
-        /* Physical 1\" × 1\" QR per FBR printing guidelines */
         .fbr-qr-image {
             width: 1in;
             height: 1in;
             min-width: 1in;
             min-height: 1in;
-            border: 1px solid #e5e7eb;
-            background: #fff;
-            padding: 2px;
             object-fit: contain;
             box-sizing: border-box;
+            display: block;
         }
-        .fbr-qr-txid {
-            margin-top: 8px;
-            font-size: 9px;
-            max-width: 2.4in;
-            word-break: break-all;
-            color: #374151;
+        .fbr-qr-placeholder {
+            width: 1in;
+            height: 1in;
+            min-width: 1in;
+            min-height: 1in;
+            border: 1px dashed #cbd5e1;
+            background: #f8fafc;
+            box-sizing: border-box;
         }
-        .fbr-qr-note { margin-top: 6px; font-size: 10px; color: #6b7280; max-width: 3in; }
         @media print {
-            .fbr-brand-logo { height: 1in; max-width: 2.2in; }
+            .fbr-brand-logo { max-width: 1in !important; max-height: 1in !important; }
             .fbr-qr-image { width: 1in !important; height: 1in !important; }
         }
     </style>
@@ -209,41 +223,33 @@
             </tbody>
         </table>
 
-        <div class="totals">
-            <table>
-                <tr><th>Sub Total</th><td>{{ number_format($headerSub, 2) }} PKR</td></tr>
-                <tr><th>Discount</th><td>{{ number_format($headerDisc, 2) }} PKR</td></tr>
-                <tr><th>GST</th><td>{{ number_format($headerGst, 2) }} PKR</td></tr>
-                <tr class="grand"><th>Total</th><td>{{ number_format($headerTotal, 2) }} PKR</td></tr>
-            </table>
-        </div>
-
-        @php
-            $fbrTxId = trim((string) ($invoice->FbrTransactionID ?? ''));
-            /* High-res source image scaled in CSS to 1\" print (≈300px for crisp output) */
-            $qrPx = 320;
-            $qrSource = $fbrTxId !== ''
-                ? 'https://api.qrserver.com/v1/create-qr-code/?size='.$qrPx.'x'.$qrPx.'&ecc=M&data='.urlencode($fbrTxId)
-                : '';
-        @endphp
-        <div class="fbr-digital-section">
-            <div class="fbr-digital-title">FBR Digital Invoice</div>
-            <div class="fbr-digital-row">
-                <div class="fbr-logo-wrap">
-                    <img src="{{ $fbrLogoUrl }}" alt="FBR Digital Invoicing System" class="fbr-brand-logo">
-                </div>
-                <div class="fbr-qr-box">
-                    <div class="fbr-qr-label">QR code (1.0&quot; × 1.0&quot;)</div>
-                    @if($fbrTxId !== '')
-                        <img src="{{ $qrSource }}" alt="FBR QR Code" class="fbr-qr-image" width="{{ $qrPx }}" height="{{ $qrPx }}">
-                        <div class="fbr-qr-txid">Transaction ID: {{ $fbrTxId }}</div>
-                    @else
-                        <div class="fbr-qr-placeholder" style="width:1in;min-width:1in;height:1in;min-height:1in;border:1px dashed #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:9px;color:#64748b;text-align:center;padding:4px;box-sizing:border-box;">
-                            QR after FBR post
+        <div class="after-table-summary">
+            <div class="fbr-digital-section">
+                <div class="fbr-digital-title">FBR Digital Invoice</div>
+                <div class="fbr-digital-row">
+                    <div class="fbr-badge-wrap">
+                        <div class="fbr-badge-slot">
+                            <img src="{{ $fbrLogoUrl }}" alt="FBR Digital Invoicing System" class="fbr-brand-logo">
                         </div>
-                        <div class="fbr-qr-note">QR will appear here once the invoice is posted to FBR.</div>
-                    @endif
+                    </div>
+                    <div class="fbr-badge-wrap">
+                        <div class="fbr-badge-slot">
+                            @if($fbrTxId !== '')
+                                <img src="{{ $qrSource }}" alt="" class="fbr-qr-image" width="{{ $qrPx }}" height="{{ $qrPx }}">
+                            @else
+                                <div class="fbr-qr-placeholder" aria-hidden="true"></div>
+                            @endif
+                        </div>
+                    </div>
                 </div>
+            </div>
+            <div class="totals">
+                <table>
+                    <tr><th>Sub Total</th><td>{{ number_format($headerSub, 2) }} PKR</td></tr>
+                    <tr><th>Discount</th><td>{{ number_format($headerDisc, 2) }} PKR</td></tr>
+                    <tr><th>GST</th><td>{{ number_format($headerGst, 2) }} PKR</td></tr>
+                    <tr class="grand"><th>Total</th><td>{{ number_format($headerTotal, 2) }} PKR</td></tr>
+                </table>
             </div>
         </div>
 
