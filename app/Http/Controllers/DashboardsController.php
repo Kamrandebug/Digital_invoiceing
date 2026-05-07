@@ -20,22 +20,32 @@ class DashboardsController extends Controller
         }
 
         $db = DB::connection('tenant');
-        $today = Carbon::today();
+        // Calendar day in app timezone (must match how users enter InvoiceDate; see config app.timezone).
+        $today = Carbon::now(config('app.timezone'))->startOfDay();
         $startOfMonth = $today->copy()->startOfMonth();
         $endOfMonth = $today->copy()->endOfMonth();
         $startOfYear = $today->copy()->startOfYear();
         $salesTrendStart = $today->copy()->subDays(13);
 
         $amountColumn = $this->detectInvoiceAmountColumn();
-        $statusInvoiceColumn = $this->hasColumn('tbl_sales_invoice_header', 'Statusi') ? 'Statusi' : null;
+        // Align with Invoice listing / InvoiceController: archived = Status 2. Prefer `Status` over legacy `Statusi`
+        // so rows with active Status but NULL Statusi are still counted (InvoiceModel persists Statusi from temp only).
+        $statusInvoiceColumn = null;
+        if ($this->hasColumn('tbl_sales_invoice_header', 'Status')) {
+            $statusInvoiceColumn = 'Status';
+        } elseif ($this->hasColumn('tbl_sales_invoice_header', 'Statusi')) {
+            $statusInvoiceColumn = 'Statusi';
+        }
         $statusCustomerColumn = $this->hasColumn('tbl_customer', 'Status') ? 'Status' : null;
         $archiveCustomerColumn = $this->hasColumn('tbl_customer', 'IsArchive') ? 'IsArchive' : null;
         $statusProductColumn = $this->hasColumn('tbl_product', 'Status') ? 'Status' : null;
         $invoiceCreatedOnColumn = $this->hasColumn('tbl_sales_invoice_header', 'CreatedOn') ? 'CreatedOn' : 'InvoiceDate';
 
-        $invoiceBase = $db->table('tbl_sales_invoice_header');
+        $invoiceHeaderTable = 'tbl_sales_invoice_header';
+        $invoiceBase = $db->table($invoiceHeaderTable);
+        // Qualify status column: joins (e.g. top customers → tbl_customer) also expose `Status`.
         if ($statusInvoiceColumn) {
-            $invoiceBase->where($statusInvoiceColumn, '!=', 2);
+            $invoiceBase->where($invoiceHeaderTable.'.'.$statusInvoiceColumn, '!=', 2);
         }
 
         $salesToday = 0.0;
@@ -109,7 +119,7 @@ class DashboardsController extends Controller
         }
 
         $statusRows = (clone $invoiceBase)
-            ->selectRaw('COALESCE(' . ($statusInvoiceColumn ?: '1') . ', 0) as status_code, COUNT(*) as total')
+            ->selectRaw('COALESCE(' . ($statusInvoiceColumn ? $invoiceHeaderTable.'.'.$statusInvoiceColumn : '1') . ', 0) as status_code, COUNT(*) as total')
             ->groupBy('status_code')
             ->orderBy('status_code')
             ->get();
@@ -130,14 +140,18 @@ class DashboardsController extends Controller
             $statusData = [0];
         }
 
+        $topCustomersSumExpr = $amountColumn !== null
+            ? "{$invoiceHeaderTable}.{$amountColumn}"
+            : '0';
+
         $topCustomers = (clone $invoiceBase)
-            ->leftJoin('tbl_customer as c', 'c.ID', '=', 'tbl_sales_invoice_header.CustomerID')
+            ->leftJoin('tbl_customer as c', 'c.ID', '=', $invoiceHeaderTable.'.CustomerID')
             ->selectRaw("
-                tbl_sales_invoice_header.CustomerID as customer_id,
-                COALESCE(NULLIF(c.BusinessName,''), NULLIF(CONCAT(COALESCE(c.FirstName,''), ' ', COALESCE(c.LastName,'')), ' '), CONCAT('Customer #', tbl_sales_invoice_header.CustomerID)) as customer_name,
-                COALESCE(SUM(" . ($amountColumn ?? '0') . "),0) as total_sales
+                {$invoiceHeaderTable}.CustomerID as customer_id,
+                COALESCE(NULLIF(c.BusinessName,''), NULLIF(CONCAT(COALESCE(c.FirstName,''), ' ', COALESCE(c.LastName,'')), ' '), CONCAT('Customer #', {$invoiceHeaderTable}.CustomerID)) as customer_name,
+                COALESCE(SUM({$topCustomersSumExpr}),0) as total_sales
             ")
-            ->groupBy('tbl_sales_invoice_header.CustomerID', 'customer_name')
+            ->groupBy($invoiceHeaderTable.'.CustomerID', 'customer_name')
             ->orderByDesc('total_sales')
             ->limit(5)
             ->get();
@@ -188,7 +202,9 @@ class DashboardsController extends Controller
 
     private function detectInvoiceAmountColumn(): ?string
     {
-        foreach (['NetAmount', 'TotalValues', 'ValueSalesExcludingST'] as $candidate) {
+        // InvoiceModel::persistInvoiceFromTemp writes TotalValues (not NetAmount). Prefer TotalValues first
+        // so KPI sums match stored invoices when both columns exist on the tenant schema.
+        foreach (['TotalValues', 'NetAmount', 'ValueSalesExcludingST'] as $candidate) {
             if ($this->hasColumn('tbl_sales_invoice_header', $candidate)) {
                 return $candidate;
             }

@@ -393,16 +393,13 @@ class InvoiceController extends Controller
             'items.*.Rate' => 'required|numeric|min:0',
         ]);
 
-        // 3. ✅ Only try block — the correct one (was lines 412-498)
         try {
             $requestId = (string) Str::uuid();
             $userId = auth()->id() ?? 1;
             $now = now()->toDateTimeString();
             $docNo = $request->input('DocNo') ?: $invoice->DocNo;
 
-            // 2. Insert new line items into temp (Wait, we should insert header updates too!)
-            // The Model's edit_transaction UPDATEs the header FROM the temp table.
-            // So we must populate the temp table with the NEW header values.
+            // Populate tbl_temp_invoice_detail like save_transaction; InvoiceModel persists header + lines from temp.
             $docNo2 = $request->input('DocNo2');
             $docNo3 = $request->input('DocNo3');
             foreach ($request->items as $item) {
@@ -438,7 +435,7 @@ class InvoiceController extends Controller
                     'ExtraTax' => $item['ExtraTax'] ?? ($request->ExtraTax ?? 0),
                     'FurtherTax' => $item['FurtherTax'] ?? ($request->FurtherTax ?? 0),
                     'FedPayable' => $item['FedPayable'] ?? ($request->FedPayable ?? 0),
-                    'Total' => $item['Total'] ?? 0,
+                    'TotalValues' => $item['Total'] ?? 0,
                     // 'SubTotal'           => $request->SubTotal         ?? 0,
                     'Notes' => $request->Notes ?? null,
                     'DiscountAllowed' => $request->DiscountAllowed ?? '0',
@@ -453,52 +450,8 @@ class InvoiceController extends Controller
                 ]);
             }
 
-            // 2a. Since Model::edit_transaction ONLY updates the header,
-            // we must manually handle the details replacement here in the controller
-            // OR rely on the model to do it (which it currently doesn't).
-            // Assuming we must fix the logic to work with the *current* model limitations:
-
-            // Clear old details
-            DB::table('tbl_sales_invoice_detail')->where('InvoiceID', $id)->delete();
-
-            // Insert new details directly (mirroring what save_transaction does in Model)
-            foreach ($request->items as $item) {
-                DB::table('tbl_sales_invoice_detail')->insert([
-                    'InvoiceID' => $id,
-                    'InvoiceDate' => $request->InvoiceDate,
-                    'CustomerID' => $request->CustomerID,
-                    'ProductID' => $item['ProductID'] ?? 0,
-                    'Details' => $item['Details'] ?? null,
-                    'HsCode' => $item['HsCode'] ?? null,
-                    'UomID' => $item['UomID'] ?? null,
-                    'SaleTypeID' => $item['SaleTypeID'] ?? null,
-                    'SaleTypeToRateID' => $item['SaleTypeToRateID'] ?? null,
-                    'SroScheduleID' => $item['SroScheduleID'] ?? null,
-                    'SroItemID' => $item['SroItemID'] ?? null,
-                    'TPRate' => $item['TPRate'] ?? 0,
-                    'Quantity' => $item['Quantity'],
-                    'Rate' => $item['Rate'],
-                    'Amount' => $item['Amount'] ?? 0,
-                    'DiscountPercentage' => $item['DiscountPercentage'] ?? '0',
-                    'DiscountAmount' => $item['DiscountAmount'] ?? 0,
-                    'GstPercentage' => $item['GstPercentage'] ?? '0',
-                    'GSTAmount' => $item['GSTAmount'] ?? 0,
-                    'SalesTaxWithheldAtSource' => $item['SalesTaxWithheldAtSource'] ?? ($request->SalesTaxWithheldAtSource ?? 0),
-                    'ExtraTax' => $item['ExtraTax'] ?? ($request->ExtraTax ?? 0),
-                    'FurtherTax' => $item['FurtherTax'] ?? ($request->FurtherTax ?? 0),
-                    'FedPayable' => $item['FedPayable'] ?? ($request->FedPayable ?? 0),
-                    'Type' => 'SI',
-                    'Status' => 1,
-                    'CreatedBy' => $userId,
-                    'CreatedOn' => $now,
-                    'UpdatedBy' => $userId,
-                    'UpdatedOn' => $now,
-                    'UMQuantity' => 1,
-                    'UMRate' => 1,
-                    'UMFactorRate' => 1,
-                    'Unit' => $item['Unit'] ?? 0,
-                ]);
-            }
+            // InvoiceModel::edit_transaction validates temp, deletes existing header/lines for TID, then
+            // persists header + detail from tbl_temp_invoice_detail (same path as save_transaction).
 
             // Call model (validates temp, replaces header + lines from temp)
             $editResult = InvoiceModel::edit_transaction($requestId);
