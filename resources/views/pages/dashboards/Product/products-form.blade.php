@@ -12,8 +12,18 @@
     $formAction = $isCreate ? route('products.save_transaction') : ($isEdit ? route('products.edit_transaction', $product->ID) : '#');
     $categories = $categories ?? collect();
     $units = $units ?? collect();
-    $pfpSelectedCategory = old('Category', $product->CategoryID ?? $product->Category ?? '');
-    $pfpSelectedUnit = old('Unit', $product->Unit ?? '');
+    $defaultCategoryId = $defaultCategoryId ?? null;
+    $defaultUnitId = $defaultUnitId ?? null;
+    $catFromProduct = $product->CategoryID ?? $product->Category ?? null;
+    $catFallback = ($catFromProduct !== null && $catFromProduct !== '' && (string) $catFromProduct !== '0')
+        ? $catFromProduct
+        : ($defaultCategoryId ?? '');
+    $pfpSelectedCategory = old('Category', $catFallback);
+    $unitFromProduct = $product->Unit ?? null;
+    $unitFallback = ($unitFromProduct !== null && $unitFromProduct !== '' && (int) $unitFromProduct !== 0)
+        ? $unitFromProduct
+        : ($defaultUnitId ?? '');
+    $pfpSelectedUnit = old('Unit', $unitFallback);
 @endphp
 
 @section('styles')

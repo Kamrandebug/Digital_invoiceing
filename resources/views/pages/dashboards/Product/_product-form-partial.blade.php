@@ -15,8 +15,18 @@
     $taxDisplayLabels = isset($taxDisplayLabels) && is_array($taxDisplayLabels) ? $taxDisplayLabels : null;
     $categories = $categories ?? collect();
     $units = $units ?? collect();
-    $pfpSelectedCategory = old('Category', $product->CategoryID ?? $product->Category ?? '');
-    $pfpSelectedUnit = old('Unit', $product->Unit ?? '');
+    $defaultCategoryId = $defaultCategoryId ?? null;
+    $defaultUnitId = $defaultUnitId ?? null;
+    $catFromProduct = $product ? ($product->CategoryID ?? $product->Category ?? null) : null;
+    $catFallback = ($catFromProduct !== null && $catFromProduct !== '' && (string) $catFromProduct !== '0')
+        ? $catFromProduct
+        : ($defaultCategoryId ?? '');
+    $pfpSelectedCategory = old('Category', $catFallback);
+    $unitFromProduct = $product ? ($product->Unit ?? null) : null;
+    $unitFallback = ($unitFromProduct !== null && $unitFromProduct !== '' && (int) $unitFromProduct !== 0)
+        ? $unitFromProduct
+        : ($defaultUnitId ?? '');
+    $pfpSelectedUnit = old('Unit', $unitFallback);
 @endphp
 
 @once

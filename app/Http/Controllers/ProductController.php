@@ -65,10 +65,12 @@ class ProductController extends Controller
     public function create()
     {
         return view('pages.dashboards.Product.products-form', [
-            'mode'       => 'create',
-            'product'    => new ProductModel(),
-            'categories' => $this->lookupCategories(),
-            'units'      => $this->lookupUnits(),
+            'mode'               => 'create',
+            'product'            => new ProductModel(),
+            'categories'         => $this->lookupCategories(),
+            'units'              => $this->lookupUnits(),
+            'defaultCategoryId'  => $this->defaultCategoryId(),
+            'defaultUnitId'      => $this->defaultUnitId(),
         ]);
     }
 
@@ -287,12 +289,14 @@ class ProductController extends Controller
         }
 
         return view('pages.dashboards.Product._product-form-partial', [
-            'mode'             => $mode,
-            'product'          => $product ?? new ProductModel(),
-            'inModal'          => true,
-            'taxDisplayLabels' => $taxDisplayLabels,
-            'categories'       => $this->lookupCategories(),
-            'units'            => $this->lookupUnits(),
+            'mode'               => $mode,
+            'product'            => $product ?? new ProductModel(),
+            'inModal'            => true,
+            'taxDisplayLabels'   => $taxDisplayLabels,
+            'categories'         => $this->lookupCategories(),
+            'units'              => $this->lookupUnits(),
+            'defaultCategoryId'  => $this->defaultCategoryId(),
+            'defaultUnitId'      => $this->defaultUnitId(),
         ]);
     }
 
@@ -316,10 +320,12 @@ class ProductController extends Controller
         $this->hydrateCategoryUnitDisplayNames($productModel);
 
         return view('pages.dashboards.Product.products-form', [
-            'mode'       => 'show',
-            'product'    => $productModel,
-            'categories' => $this->lookupCategories(),
-            'units'      => $this->lookupUnits(),
+            'mode'               => 'show',
+            'product'            => $productModel,
+            'categories'         => $this->lookupCategories(),
+            'units'              => $this->lookupUnits(),
+            'defaultCategoryId'  => $this->defaultCategoryId(),
+            'defaultUnitId'      => $this->defaultUnitId(),
         ]);
     }
 
@@ -341,10 +347,12 @@ class ProductController extends Controller
         $productModel->exists = true;
 
         return view('pages.dashboards.Product.products-form', [
-            'mode'       => 'edit',
-            'product'    => $productModel,
-            'categories' => $this->lookupCategories(),
-            'units'      => $this->lookupUnits(),
+            'mode'               => 'edit',
+            'product'            => $productModel,
+            'categories'         => $this->lookupCategories(),
+            'units'              => $this->lookupUnits(),
+            'defaultCategoryId'  => $this->defaultCategoryId(),
+            'defaultUnitId'      => $this->defaultUnitId(),
         ]);
     }
 
@@ -1637,12 +1645,16 @@ class ProductController extends Controller
         }
 
         try {
-            return DB::table($table)
-                ->where(function ($q) {
-                    $q->where('Statusi', 1)->orWhereNull('Statusi');
-                })
-                ->orderBy('CategoryName')
-                ->get();
+            $q = DB::table($table)
+                ->where(function ($query) {
+                    $query->where('Statusi', 1)->orWhereNull('Statusi');
+                });
+            if ($this->tableHasColumn($table, 'IsDefault')) {
+                $q->orderByDesc('IsDefault');
+            }
+            $q->orderBy('CategoryName');
+
+            return $q->get();
         } catch (\Throwable $e) {
             \Log::warning('lookupCategories failed', ['e' => $e->getMessage()]);
 
@@ -1658,16 +1670,73 @@ class ProductController extends Controller
         }
 
         try {
-            return DB::table($table)
-                ->where(function ($q) {
-                    $q->where('Statusi', 1)->orWhereNull('Statusi');
-                })
-                ->orderBy('UnitName')
-                ->get();
+            $q = DB::table($table)
+                ->where(function ($query) {
+                    $query->where('Statusi', 1)->orWhereNull('Statusi');
+                });
+            if ($this->tableHasColumn($table, 'IsDefault')) {
+                $q->orderByDesc('IsDefault');
+            }
+            $q->orderBy('UnitName');
+
+            return $q->get();
         } catch (\Throwable $e) {
             \Log::warning('lookupUnits failed', ['e' => $e->getMessage()]);
 
             return collect();
+        }
+    }
+
+    private function defaultCategoryId(): ?int
+    {
+        $table = $this->categoryLookupTable();
+        if ($table === null || ! $this->tableHasColumn($table, 'IsDefault')) {
+            return null;
+        }
+
+        try {
+            $row = DB::table($table)
+                ->where(function ($query) {
+                    $query->where('Statusi', 1)->orWhereNull('Statusi');
+                })
+                ->where('IsDefault', 1)
+                ->orderBy('id')
+                ->first(['id']);
+
+            return ($row && isset($row->id)) ? (int) $row->id : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function defaultUnitId(): ?int
+    {
+        $table = $this->unitLookupTable();
+        if ($table === null || ! $this->tableHasColumn($table, 'IsDefault')) {
+            return null;
+        }
+
+        try {
+            $row = DB::table($table)
+                ->where(function ($query) {
+                    $query->where('Statusi', 1)->orWhereNull('Statusi');
+                })
+                ->where('IsDefault', 1)
+                ->orderBy('id')
+                ->first(['id']);
+
+            return ($row && isset($row->id)) ? (int) $row->id : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function tableHasColumn(string $table, string $column): bool
+    {
+        try {
+            return Schema::hasColumn($table, $column);
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 
