@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -63,7 +64,12 @@ class ProductController extends Controller
      */
     public function create()
     {
-        return view('pages.dashboards.Product.products-form', ['mode' => 'create', 'product' => new ProductModel()]);
+        return view('pages.dashboards.Product.products-form', [
+            'mode'       => 'create',
+            'product'    => new ProductModel(),
+            'categories' => $this->lookupCategories(),
+            'units'      => $this->lookupUnits(),
+        ]);
     }
 
     /**
@@ -273,6 +279,8 @@ class ProductController extends Controller
             $product->SROSchedule     = $product->SroScheduleID   ?? null;
             $product->SROItem         = $product->SroItemID       ?? null;
 
+            $this->hydrateCategoryUnitDisplayNames($product);
+
             if ($mode === 'show') {
                 $taxDisplayLabels = $this->resolveProductTaxDisplayLabels($product);
             }
@@ -283,6 +291,8 @@ class ProductController extends Controller
             'product'          => $product ?? new ProductModel(),
             'inModal'          => true,
             'taxDisplayLabels' => $taxDisplayLabels,
+            'categories'       => $this->lookupCategories(),
+            'units'            => $this->lookupUnits(),
         ]);
     }
 
@@ -303,7 +313,14 @@ class ProductController extends Controller
         $productModel->setRawAttributes((array)$product, true);
         $productModel->exists = true;
 
-        return view('pages.dashboards.Product.products-form', ['mode' => 'show', 'product' => $productModel]);
+        $this->hydrateCategoryUnitDisplayNames($productModel);
+
+        return view('pages.dashboards.Product.products-form', [
+            'mode'       => 'show',
+            'product'    => $productModel,
+            'categories' => $this->lookupCategories(),
+            'units'      => $this->lookupUnits(),
+        ]);
     }
 
     /**
@@ -323,7 +340,12 @@ class ProductController extends Controller
         $productModel->setRawAttributes((array)$product, true);
         $productModel->exists = true;
 
-        return view('pages.dashboards.Product.products-form', ['mode' => 'edit', 'product' => $productModel]);
+        return view('pages.dashboards.Product.products-form', [
+            'mode'       => 'edit',
+            'product'    => $productModel,
+            'categories' => $this->lookupCategories(),
+            'units'      => $this->lookupUnits(),
+        ]);
     }
 
     /**
@@ -1475,6 +1497,259 @@ class ProductController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * JSON: categories + units for selects (tbl_category, tbl_Unit).
+     */
+    public function lookupsCategoriesUnits()
+    {
+        return response()->json([
+            'status'     => 'success',
+            'categories' => $this->lookupCategories()->map(fn ($r) => [
+                'id'   => (int) $r->id,
+                'name' => (string) ($r->CategoryName ?? ''),
+            ])->values(),
+            'units' => $this->lookupUnits()->map(fn ($r) => [
+                'id'   => (int) $r->id,
+                'name' => (string) ($r->UnitName ?? ''),
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Quick-add category (product form / modal).
+     */
+    public function storeQuickCategory(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'CategoryName' => ['required', 'string', 'min:1', 'max:100'],
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'status'  => 'error',
+                'errors'  => $e->errors(),
+                'message' => 'Please fix the highlighted fields.',
+            ], 422);
+        }
+
+        $table = $this->categoryLookupTable();
+        if ($table === null) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Category table (tbl_category) not found on this company database. Create it on the tenant DB or run migrations.',
+            ], 422);
+        }
+
+        $userId = auth()->id();
+        $now    = now()->toDateTimeString();
+        $nextId = $this->nextTablePrimaryKey($table);
+
+        try {
+            DB::table($table)->insert([
+                'id'           => $nextId,
+                'CategoryName' => trim($validated['CategoryName']),
+                'Statusi'      => 1,
+                'CreatedBy'    => $userId,
+                'UpdateBy'     => $userId,
+                'UpdatedOn'    => $now,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('storeQuickCategory failed', ['e' => $e->getMessage()]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Could not save category.',
+            ], 500);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'item'   => [
+                'id'   => $nextId,
+                'name' => trim($validated['CategoryName']),
+            ],
+        ]);
+    }
+
+    /**
+     * Quick-add unit of measure (product form / modal).
+     */
+    public function storeQuickUnit(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'UnitName' => ['required', 'string', 'min:1', 'max:100'],
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'status'  => 'error',
+                'errors'  => $e->errors(),
+                'message' => 'Please fix the highlighted fields.',
+            ], 422);
+        }
+
+        $table = $this->unitLookupTable();
+        if ($table === null) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Unit table (tbl_Unit) not found on this company database. Create it on the tenant DB or run migrations.',
+            ], 422);
+        }
+
+        $userId = auth()->id();
+        $now    = now()->toDateTimeString();
+        $nextId = $this->nextTablePrimaryKey($table);
+
+        try {
+            DB::table($table)->insert([
+                'id'        => $nextId,
+                'UnitName'  => trim($validated['UnitName']),
+                'Statusi'   => 1,
+                'CreatedBy' => $userId,
+                'UpdateBy'  => $userId,
+                'UpdatedOn' => $now,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('storeQuickUnit failed', ['e' => $e->getMessage()]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Could not save unit.',
+            ], 500);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'item'   => [
+                'id'   => $nextId,
+                'name' => trim($validated['UnitName']),
+            ],
+        ]);
+    }
+
+    private function lookupCategories()
+    {
+        $table = $this->categoryLookupTable();
+        if ($table === null) {
+            return collect();
+        }
+
+        try {
+            return DB::table($table)
+                ->where(function ($q) {
+                    $q->where('Statusi', 1)->orWhereNull('Statusi');
+                })
+                ->orderBy('CategoryName')
+                ->get();
+        } catch (\Throwable $e) {
+            \Log::warning('lookupCategories failed', ['e' => $e->getMessage()]);
+
+            return collect();
+        }
+    }
+
+    private function lookupUnits()
+    {
+        $table = $this->unitLookupTable();
+        if ($table === null) {
+            return collect();
+        }
+
+        try {
+            return DB::table($table)
+                ->where(function ($q) {
+                    $q->where('Statusi', 1)->orWhereNull('Statusi');
+                })
+                ->orderBy('UnitName')
+                ->get();
+        } catch (\Throwable $e) {
+            \Log::warning('lookupUnits failed', ['e' => $e->getMessage()]);
+
+            return collect();
+        }
+    }
+
+    /**
+     * First matching physical table name (handles Windows/Linux case differences).
+     *
+     * @param  list<string>  $candidates
+     */
+    private function firstExistingTable(array $candidates): ?string
+    {
+        foreach ($candidates as $name) {
+            try {
+                if (Schema::hasTable($name)) {
+                    return $name;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    private function categoryLookupTable(): ?string
+    {
+        return $this->firstExistingTable(['tbl_category', 'tbl_Category', 'Tbl_category']);
+    }
+
+    private function unitLookupTable(): ?string
+    {
+        return $this->firstExistingTable(['tbl_Unit', 'tbl_unit', 'Tbl_Unit', 'tbl_units']);
+    }
+
+    /**
+     * Fill CategoryName / UnitName on the product for read-only views when tbl_product only stores IDs.
+     */
+    private function hydrateCategoryUnitDisplayNames(ProductModel $product): void
+    {
+        $attrs = $product->getAttributes();
+
+        $catId = $attrs['CategoryID'] ?? $attrs['categoryid'] ?? $attrs['Category'] ?? $product->CategoryID ?? $product->Category ?? null;
+        if ($catId !== null && $catId !== '' && (string) $catId !== '0') {
+            $existing = $attrs['CategoryName'] ?? $attrs['categoryname'] ?? $product->CategoryName ?? '';
+            if ($existing === null || $existing === '') {
+                $table = $this->categoryLookupTable();
+                if ($table) {
+                    try {
+                        $name = DB::table($table)->where('id', $catId)->value('CategoryName');
+                        if ($name !== null && $name !== '') {
+                            $product->CategoryName = $name;
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::debug('hydrateCategoryUnitDisplayNames category', ['e' => $e->getMessage()]);
+                    }
+                }
+            }
+        }
+
+        $unitId = $attrs['Unit'] ?? $attrs['unit'] ?? $product->Unit ?? null;
+        if ($unitId !== null && $unitId !== '' && (int) $unitId !== 0) {
+            $existingUnit = $attrs['UnitName'] ?? $attrs['unitname'] ?? $product->UnitName ?? '';
+            if ($existingUnit === null || $existingUnit === '') {
+                $table = $this->unitLookupTable();
+                if ($table) {
+                    try {
+                        $name = DB::table($table)->where('id', $unitId)->value('UnitName');
+                        if ($name !== null && $name !== '') {
+                            $product->UnitName = $name;
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::debug('hydrateCategoryUnitDisplayNames unit', ['e' => $e->getMessage()]);
+                    }
+                }
+            }
+        }
+    }
+
+    private function nextTablePrimaryKey(string $table): int
+    {
+        $max = DB::table($table)->max('id');
+
+        return $max ? (int) $max + 1 : 1;
     }
 
     /**

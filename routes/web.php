@@ -87,6 +87,9 @@ Route::middleware(['auth', 'tenant'])->prefix('products')->name('products.')->gr
     Route::get('/sale-type-to-rates', [ProductController::class, 'saleTypeToRates'])->name('sale-type-to-rates');
     Route::get('/sro-schedules', [ProductController::class, 'sroSchedules'])->name('sro-schedules');
     Route::get('/sro-items', [ProductController::class, 'sroItems'])->name('sro-items');
+    Route::get('/lookups/categories-units', [ProductController::class, 'lookupsCategoriesUnits'])->name('lookups.categories-units');
+    Route::post('/lookups/category', [ProductController::class, 'storeQuickCategory'])->middleware('tenant.role:owner,admin,accountant')->name('lookups.category-store');
+    Route::post('/lookups/unit', [ProductController::class, 'storeQuickUnit'])->middleware('tenant.role:owner,admin,accountant')->name('lookups.unit-store');
 
     Route::get('/export/csv', [ProductController::class, 'exportCSV'])->name('exportCSV');
     Route::get('/modal', [ProductController::class, 'modal'])->name('modal');

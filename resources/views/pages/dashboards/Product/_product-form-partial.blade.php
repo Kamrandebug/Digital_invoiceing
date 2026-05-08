@@ -13,10 +13,41 @@
     $formAction = $isCreate ? route('products.save_transaction') : ($isEdit ? route('products.edit_transaction', $product->ID) : '#');
     $uid = 'pfp_' . $mode . '_' . ($product->ID ?? 'new');
     $taxDisplayLabels = isset($taxDisplayLabels) && is_array($taxDisplayLabels) ? $taxDisplayLabels : null;
+    $categories = $categories ?? collect();
+    $units = $units ?? collect();
+    $pfpSelectedCategory = old('Category', $product->CategoryID ?? $product->Category ?? '');
+    $pfpSelectedUnit = old('Unit', $product->Unit ?? '');
 @endphp
 
 @once
-
+<style>
+/* Quick-add dialogs above parent product/invoice modals + dimmed backdrop */
+.modal.pfp-quick-lookup-modal { z-index: 2060; }
+.modal.pfp-quick-lookup-modal .modal-dialog {
+    max-width: 400px;
+}
+.modal.pfp-quick-lookup-modal .modal-content {
+    border: none;
+    box-shadow: 0 0.75rem 2rem rgba(15, 23, 42, 0.28);
+    border-radius: 0.5rem;
+}
+.modal.pfp-quick-lookup-modal .modal-header {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+.modal.pfp-quick-lookup-modal .modal-body {
+    padding: 0.75rem 1rem;
+}
+.modal.pfp-quick-lookup-modal .modal-body .form-label {
+    margin-bottom: 0.35rem;
+    font-size: 0.875rem;
+}
+.modal.pfp-quick-lookup-modal .modal-footer {
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
+}
+.modal-backdrop.pfp-quick-lookup-backdrop { z-index: 2055; }
+</style>
 @endonce
 @if(!$isCreate && $product)
 <div class="_pfp-info-badge {{ $isReadonly ? 'show-mode' : 'edit-mode' }}">
@@ -81,12 +112,34 @@
                         <div class="col-md-6">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Category</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->CategoryName ?? $product->Category ?? '-' }}</div>
-                            @else<select name="Category" class="form-select @error('Category') is-invalid @enderror"><option value="">Select Category</option></select>@error('Category')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
+                            @else
+                            <div class="d-flex gap-1 align-items-center">
+                                <select name="Category" id="{{ $uid }}_Category" class="form-select @error('Category') is-invalid @enderror flex-grow-1" style="min-width:0;">
+                                    <option value="">Select Category</option>
+                                    @foreach($categories as $cat)
+                                        <option value="{{ $cat->id }}" {{ (string) $pfpSelectedCategory === (string) $cat->id ? 'selected' : '' }}>{{ $cat->CategoryName }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" class="btn btn-sm btn-primary pfp-line-add-entity-btn flex-shrink-0" id="{{ $uid }}_newCategoryBtn" title="New category" aria-label="New category"><i class="ri-add-line"></i></button>
+                            </div>
+                            @error('Category')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            @endif
                         </div>
                         <div class="col-md-6">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Unit</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->UnitName ?? $product->Unit ?? '-' }}</div>
-                            @else<select name="Unit" class="form-select @error('Unit') is-invalid @enderror"><option value="0">Select Unit</option></select>@error('Unit')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
+                            @else
+                            <div class="d-flex gap-1 align-items-center">
+                                <select name="Unit" id="{{ $uid }}_Unit" class="form-select @error('Unit') is-invalid @enderror flex-grow-1" style="min-width:0;">
+                                    <option value="">Select Unit</option>
+                                    @foreach($units as $un)
+                                        <option value="{{ $un->id }}" {{ (string) $pfpSelectedUnit === (string) $un->id ? 'selected' : '' }}>{{ $un->UnitName }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" class="btn btn-sm btn-primary pfp-line-add-entity-btn flex-shrink-0" id="{{ $uid }}_newUnitBtn" title="New unit" aria-label="New unit"><i class="ri-add-line"></i></button>
+                            </div>
+                            @error('Unit')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            @endif
                         </div>
                         <div class="col-md-3">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Current Qty</label>
@@ -245,12 +298,240 @@
 
 @if(!$isReadonly)
 </form>
+
+{{-- Quick-add: category / unit (moved to body on open for correct backdrop + centering) --}}
+<div class="modal fade pfp-quick-lookup-modal" id="{{ $uid }}_category_quick_modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold mb-0">Add Category</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none py-2 mb-2 small" id="{{ $uid }}_category_quick_err"></div>
+                <label class="form-label mb-1">Category name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="{{ $uid }}_category_quick_name" maxlength="100" placeholder="Category name" autocomplete="off">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-primary" id="{{ $uid }}_category_quick_save">Save Category</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade pfp-quick-lookup-modal" id="{{ $uid }}_unit_quick_modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold mb-0">Add Unit</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none py-2 mb-2 small" id="{{ $uid }}_unit_quick_err"></div>
+                <label class="form-label mb-1">Unit name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="{{ $uid }}_unit_quick_name" maxlength="100" placeholder="e.g. PCS, KG" autocomplete="off">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-primary" id="{{ $uid }}_unit_quick_save">Save Unit</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endif
 
 <script>
 (function() {
+    var pfpUid = @json($uid);
     var form = document.getElementById('product_modal_form');
     if (!form) return;
+
+    function pfpCsrfToken() {
+        var inp = form && form.querySelector('input[name="_token"]');
+        if (inp && inp.value) return inp.value;
+        var m = document.querySelector('meta[name="csrf-token"]');
+        return m ? (m.getAttribute('content') || '') : '';
+    }
+    function pfpFetchHeaders() {
+        var tok = pfpCsrfToken();
+        return {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': tok
+        };
+    }
+    function pfpElevateQuickModal(el) {
+        if (!el || el.dataset.pfpElevated === '1') return;
+        el._pfpParent = el.parentNode;
+        el._pfpNext = el.nextSibling;
+        document.body.appendChild(el);
+        el.dataset.pfpElevated = '1';
+    }
+    function pfpRestoreQuickModal(el) {
+        if (!el || el.dataset.pfpElevated !== '1') return;
+        var p = el._pfpParent;
+        if (p) {
+            if (el._pfpNext && el._pfpNext.parentNode === p) p.insertBefore(el, el._pfpNext);
+            else p.appendChild(el);
+        }
+        delete el._pfpParent;
+        delete el._pfpNext;
+        delete el.dataset.pfpElevated;
+    }
+    function pfpAppendSelectOption(select, id, label) {
+        if (!select || id == null || id === '') return;
+        var sid = String(id);
+        for (var i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === sid) {
+                select.value = sid;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                return;
+            }
+        }
+        var o = document.createElement('option');
+        o.value = sid;
+        o.textContent = label || sid;
+        select.appendChild(o);
+        select.value = sid;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    function pfpShowQuickErr(el, msg) {
+        if (!el) return;
+        if (!msg) {
+            el.classList.add('d-none');
+            el.textContent = '';
+            return;
+        }
+        el.textContent = msg;
+        el.classList.remove('d-none');
+    }
+    var catSel = document.getElementById(pfpUid + '_Category');
+    var unitSel = document.getElementById(pfpUid + '_Unit');
+    var catModalEl = document.getElementById(pfpUid + '_category_quick_modal');
+    var unitModalEl = document.getElementById(pfpUid + '_unit_quick_modal');
+    var catErrEl = document.getElementById(pfpUid + '_category_quick_err');
+    var unitErrEl = document.getElementById(pfpUid + '_unit_quick_err');
+    var catNameInput = document.getElementById(pfpUid + '_category_quick_name');
+    var unitNameInput = document.getElementById(pfpUid + '_unit_quick_name');
+
+    [catModalEl, unitModalEl].forEach(function(el) {
+        if (!el) return;
+        el.addEventListener('show.bs.modal', function() {
+            pfpElevateQuickModal(el);
+            setTimeout(function() {
+                var bd = document.querySelector('.modal-backdrop:last-of-type');
+                if (bd) bd.classList.add('pfp-quick-lookup-backdrop');
+            }, 0);
+        });
+        el.addEventListener('hidden.bs.modal', function() {
+            pfpRestoreQuickModal(el);
+        });
+    });
+
+    document.getElementById(pfpUid + '_newCategoryBtn')?.addEventListener('click', function() {
+        pfpShowQuickErr(catErrEl, '');
+        if (catNameInput) catNameInput.value = '';
+        if (catModalEl) bootstrap.Modal.getOrCreateInstance(catModalEl, { backdrop: true, keyboard: true }).show();
+    });
+    document.getElementById(pfpUid + '_newUnitBtn')?.addEventListener('click', function() {
+        pfpShowQuickErr(unitErrEl, '');
+        if (unitNameInput) unitNameInput.value = '';
+        if (unitModalEl) bootstrap.Modal.getOrCreateInstance(unitModalEl, { backdrop: true, keyboard: true }).show();
+    });
+
+    document.getElementById(pfpUid + '_category_quick_save')?.addEventListener('click', function() {
+        var name = (catNameInput && catNameInput.value) ? catNameInput.value.trim() : '';
+        if (!name) {
+            pfpShowQuickErr(catErrEl, 'Category name is required.');
+            return;
+        }
+        pfpShowQuickErr(catErrEl, '');
+        var tok = pfpCsrfToken();
+        if (!tok) {
+            pfpShowQuickErr(catErrEl, 'Security token missing. Refresh the page and try again.');
+            return;
+        }
+        var fd = new FormData();
+        fd.append('CategoryName', name);
+        fd.append('_token', tok);
+        fetch(@json(route('products.lookups.category-store')), {
+            method: 'POST',
+            headers: pfpFetchHeaders(),
+            body: fd,
+            credentials: 'same-origin'
+        })
+        .then(function(res) {
+            return res.text().then(function(text) {
+                var data = {};
+                try { data = text ? JSON.parse(text) : {}; } catch (e) {}
+                return { res: res, data: data };
+            });
+        })
+        .then(function(pair) {
+            if (pair.res.status === 419) {
+                pfpShowQuickErr(catErrEl, 'Session expired (CSRF). Refresh the page and try again.');
+                return;
+            }
+            if (pair.res.ok && pair.data && pair.data.status === 'success' && pair.data.item) {
+                pfpAppendSelectOption(catSel, pair.data.item.id, pair.data.item.name);
+                if (catModalEl) bootstrap.Modal.getInstance(catModalEl)?.hide();
+                return;
+            }
+            var msg = (pair.data && pair.data.message) ? pair.data.message : 'Could not save.';
+            if (pair.data && pair.data.errors && pair.data.errors.CategoryName && pair.data.errors.CategoryName[0]) {
+                msg = pair.data.errors.CategoryName[0];
+            }
+            pfpShowQuickErr(catErrEl, msg);
+        })
+        .catch(function() { pfpShowQuickErr(catErrEl, 'Network error.'); });
+    });
+
+    document.getElementById(pfpUid + '_unit_quick_save')?.addEventListener('click', function() {
+        var name = (unitNameInput && unitNameInput.value) ? unitNameInput.value.trim() : '';
+        if (!name) {
+            pfpShowQuickErr(unitErrEl, 'Unit name is required.');
+            return;
+        }
+        pfpShowQuickErr(unitErrEl, '');
+        var tok = pfpCsrfToken();
+        if (!tok) {
+            pfpShowQuickErr(unitErrEl, 'Security token missing. Refresh the page and try again.');
+            return;
+        }
+        var fd = new FormData();
+        fd.append('UnitName', name);
+        fd.append('_token', tok);
+        fetch(@json(route('products.lookups.unit-store')), {
+            method: 'POST',
+            headers: pfpFetchHeaders(),
+            body: fd,
+            credentials: 'same-origin'
+        })
+        .then(function(res) {
+            return res.text().then(function(text) {
+                var data = {};
+                try { data = text ? JSON.parse(text) : {}; } catch (e) {}
+                return { res: res, data: data };
+            });
+        })
+        .then(function(pair) {
+            if (pair.res.status === 419) {
+                pfpShowQuickErr(unitErrEl, 'Session expired (CSRF). Refresh the page and try again.');
+                return;
+            }
+            if (pair.res.ok && pair.data && pair.data.status === 'success' && pair.data.item) {
+                pfpAppendSelectOption(unitSel, pair.data.item.id, pair.data.item.name);
+                if (unitModalEl) bootstrap.Modal.getInstance(unitModalEl)?.hide();
+                return;
+            }
+            var msg = (pair.data && pair.data.message) ? pair.data.message : 'Could not save.';
+            if (pair.data && pair.data.errors && pair.data.errors.UnitName && pair.data.errors.UnitName[0]) {
+                msg = pair.data.errors.UnitName[0];
+            }
+            pfpShowQuickErr(unitErrEl, msg);
+        })
+        .catch(function() { pfpShowQuickErr(unitErrEl, 'Network error.'); });
+    });
 
     // Focus the first invalid field (if any)
     var firstInvalid = form.querySelector('.is-invalid');
