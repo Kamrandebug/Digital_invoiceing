@@ -194,7 +194,7 @@ class ProductModel extends Model
                 SroItemID,SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
             )
             SELECT
-                VoucherID,`Name`,`Code`,`Type`,1 AS CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,
+                VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,Weight,Image,
                 HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
                 SaleTypeToRate,fsttr.`ratE_DESC` AS SaleTypeToRateDesc,SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
                 SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
@@ -263,7 +263,7 @@ class ProductModel extends Model
         DB::connection('landlord')->statement("
             UPDATE {$tenantDbQuoted}.tbl_product uu
             JOIN (
-                SELECT t.TID, VoucherID,`Name`,`Code`,`Type`,1 AS CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,
+                SELECT t.TID, VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,Weight,Image,
                 HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
                 SaleTypeToRate, fsttr.`ratE_DESC` AS SaleTypeToRateDesc, SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
                 SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,UpdatedBy,UpdatedOn,RequestID
