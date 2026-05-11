@@ -50,13 +50,131 @@
 }
 .modal.pfp-quick-lookup-modal .modal-body .form-label {
     margin-bottom: 0.35rem;
-    font-size: 0.875rem;
+    font-size: 12px;
 }
 .modal.pfp-quick-lookup-modal .modal-footer {
     padding: 0.5rem 1rem;
     border-top: 1px solid var(--bs-border-color, #dee2e6);
 }
 .modal-backdrop.pfp-quick-lookup-backdrop { z-index: 2055; }
+
+/* Product form modal: left tabs 20%, main pane 80% (md and up) */
+@media (min-width: 768px) {
+    ._pfp-tabs-row > ._pfp-nav-col {
+        flex: 0 0 20%;
+        max-width: 20%;
+    }
+    ._pfp-tabs-row > ._pfp-tab-pane-col {
+        flex: 0 0 80%;
+        max-width: 80%;
+    }
+}
+
+/* Tax & SRO: four-column listbox picker (matches app form-control / form-select sizing) */
+._pfp-tax-sro-split {
+    --_pfp-tax-list-h: 92px; /* ~5 visible rows at 12px / 1.35 line-height */
+}
+._pfp-tax-sro-fields {
+    padding: 0.75rem;
+    background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+._pfp-tax-sro-listbox-area {
+    background-color: var(--bs-body-bg, #fff);
+}
+._pfp-tax-picker-row {
+    min-height: calc(var(--_pfp-tax-list-h) + 3.85rem); /* column header + search + list */
+}
+._pfp-tax-listbox-search {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+}
+._pfp-tax-listbox-col {
+    border-right: 1px solid var(--bs-border-color, #dee2e6);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+._pfp-tax-listbox-col:last-child {
+    border-right: none;
+}
+@media (max-width: 991.98px) {
+    ._pfp-tax-listbox-col:nth-child(2) {
+        border-right: none;
+    }
+    ._pfp-tax-listbox-col:nth-child(1),
+    ._pfp-tax-listbox-col:nth-child(2) {
+        border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    }
+}
+._pfp-tax-column-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: center;
+    padding: 0.5rem 0.35rem;
+    background-color: var(--bs-secondary-bg, #f8f9fa);
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    color: var(--bs-secondary-color, #6c757d);
+    flex-shrink: 0;
+}
+._pfp-tax-listbox {
+    width: 100%;
+    min-height: var(--_pfp-tax-list-h);
+    font-size: 12px;
+    line-height: 1.35;
+    padding: 0.25rem 0.35rem;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    accent-color: #985ffd;
+}
+._pfp-tax-listbox:focus {
+    box-shadow: inset 0 0 0 1px #985ffde6 !important;
+    outline: 0;
+}
+._pfp-tax-listbox-search::selection,
+._pfp-tax-listbox-search::-moz-selection {
+    background-color: #985ffde6;
+    color: #fff;
+}
+/* Theme selection (override OS / WebKit blue when listbox is focused) */
+._pfp-tax-listbox option:checked,
+._pfp-tax-listbox:focus option:checked {
+    background-color: #985ffde6 !important;
+    background-image: none !important;
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+}
+._pfp-tax-listbox option:hover {
+    background-color: var(--bs-secondary-bg, #e9ecef);
+}
+._pfp-tax-listbox option:checked:hover,
+._pfp-tax-listbox:focus option:checked:hover {
+    background-color: #985ffde6 !important;
+    background-image: none !important;
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+}
+._pfp-tax-listbox option:active,
+._pfp-tax-listbox:focus option:active {
+    background-color: #985ffde6 !important;
+    background-image: none !important;
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+}
+._pfp-tax-listbox option:focus,
+._pfp-tax-listbox:focus option:focus {
+    background-color: #985ffde6 !important;
+    background-image: none !important;
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+}
+/* Empty value: hidden placeholder (not counted as a visible row in supporting UAs) */
+._pfp-tax-listbox option[data-pfp-placeholder="1"] {
+    display: none;
+}
 </style>
 @endonce
 @if(!$isCreate && $product)
@@ -87,14 +205,14 @@
 
 <div class="{{ $isReadonly ? 'show-mode' : '' }}">
     <div class="row _pfp-tabs-row">
-        <div class="col-md-3 _pfp-nav">
+        <div class="col-12 _pfp-nav-col _pfp-nav">
             <nav class="nav flex-column" role="tablist">
                 <a class="nav-link active" data-bs-toggle="tab" href="#{{ $uid }}_basic" role="tab"><i class="fas fa-box-open"></i> Basic</a>
                 <a class="nav-link" data-bs-toggle="tab" href="#{{ $uid }}_pricing" role="tab"><i class="fas fa-dollar-sign"></i> Pricing</a>
-                <a class="nav-link" data-bs-toggle="tab" href="#{{ $uid }}_tax" role="tab"><i class="fas fa-receipt"></i> Tax</a>
+                <a class="nav-link" data-bs-toggle="tab" href="#{{ $uid }}_tax" role="tab"><i class="fas fa-receipt"></i> Tax &amp; SRO</a>
             </nav>
         </div>
-        <div class="col-md-9">
+        <div class="col-12 _pfp-tab-pane-col">
             <div class="tab-content">
                 {{-- Tab: Basic --}}
                 <div class="tab-pane fade show active _pfp-tab-pane" id="{{ $uid }}_basic" role="tabpanel">
@@ -202,104 +320,133 @@
                     </div>
                 </div>
 
-                {{-- Tab: Tax --}}
+                {{-- Tab: Tax & SRO --}}
                 <div class="tab-pane fade _pfp-tab-pane" id="{{ $uid }}_tax" role="tabpanel">
-                    <h6 class="_pfp-section-title"><i class="fas fa-receipt"></i> Tax</h6>
-                    <div class="row g-2">
-                        <div class="col-md-3">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">HS Code</label>
-                            @if($isReadonly)
+                    <h6 class="_pfp-section-title"><i class="fas fa-receipt"></i> Tax &amp; SRO</h6>
+                    @if($isReadonly)
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="_pfp-detail-label">HS Code</label>
                                 <div class="_pfp-detail-value">{{ $product->HsCode ?? '-' }}</div>
-                            @else
-                                <input type="text"
-                                       name="HsCode"
-                                       class="form-control @error('HsCode') is-invalid @enderror"
-                                       value="{{ old('HsCode', $product->HsCode ?? '') }}"
-                                       placeholder="e.g. 8517.12">
-                                @error('HsCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            @endif
-                        </div>
-                        <div class="col-md-3">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">UOM</label>
-                            @if($isReadonly)
+                            </div>
+                            <div class="col-md-4">
+                                <label class="_pfp-detail-label">UOM</label>
                                 <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['uom'] ?? '—') : ($product->UOM ?? '-') }}</div>
-                            @else
-                                <select name="UOM"
-                                        class="form-select @error('UOM') is-invalid @enderror"
-                                        data-selected="{{ old('UOM', $product->UOM ?? '') }}">
-                                    <option value="">Select UOM</option>
-                                </select>
-                                @error('UOM')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            @endif
-                        </div>
-                        <div class="col-md-3">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Sale Type</label>
-                            @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sale_type'] ?? '—') : ($product->SaleType ?? '-') }}</div>
-                            @else
-                                <select name="SaleType"
-                                        class="form-select @error('SaleType') is-invalid @enderror"
-                                        data-selected="{{ old('SaleType', $product->SaleType ?? '') }}"
-                                        @if($isCreate && (string) old('SaleType', $product->SaleType ?? '') === '')
-                                        data-apply-default-sale-type="1"
-                                        @endif>
-                                    <option value="">Loading...</option>
-                                </select>
-                                @error('SaleType')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            @endif
-                        </div>
-                        <div class="col-md-3">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Sale Type To Rate</label>
-                            @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sale_type_to_rate'] ?? '—') : ($product->SaleTypeToRate ?? '-') }}</div>
-                            @else
-                                <select name="SaleTypeToRate"
-                                        class="form-select @error('SaleTypeToRate') is-invalid @enderror"
-                                        data-selected="{{ old('SaleTypeToRate', $product->SaleTypeToRate ?? '') }}">
-                                    <option value="">Select Sale Type first</option>
-                                </select>
-                                @error('SaleTypeToRate')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            @endif
-                        </div>
-                        <div class="col-md-3">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">SRO Schedule</label>
-                            @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sro_schedule'] ?? '—') : ($product->SROSchedule ?? '-') }}</div>
-                            @else
-                                <select name="SROSchedule"
-                                        class="form-select @error('SROSchedule') is-invalid @enderror"
-                                        data-selected="{{ old('SROSchedule', $product->SROSchedule ?? '') }}">
-                                    <option value="">Select Sale Type To Rate first</option>
-                                </select>
-                                @error('SROSchedule')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            @endif
-                        </div>
-                        <div class="col-md-3">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">SRO Item</label>
-                            @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sro_item'] ?? '—') : ($product->SROItem ?? '-') }}</div>
-                            @else
-                                <select name="SROItem"
-                                        class="form-select @error('SROItem') is-invalid @enderror"
-                                        data-selected="{{ old('SROItem', $product->SROItem ?? '') }}">
-                                    <option value="">Select SRO Schedule first</option>
-                                </select>
-                                @error('SROItem')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            @endif
-                        </div>
-                        <div class="col-12">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Sale Information</label>
-                            @if($isReadonly)
+                            </div>
+                            <div class="col-12">
+                                <label class="_pfp-detail-label">Description</label>
                                 <div class="_pfp-detail-value">{{ $product->SaleInformation ?? '-' }}</div>
-                            @else
-                                <textarea name="SaleInformation"
-                                          class="form-control @error('SaleInformation') is-invalid @enderror"
-                                          rows="5"
-                                          placeholder="Sale info">{{ old('SaleInformation', $product->SaleInformation ?? '') }}</textarea>
-                                @error('SaleInformation')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            @endif
+                            </div>
+                            <div class="col-12"><hr class="my-2"></div>
+                            <div class="col-md-3">
+                                <label class="_pfp-detail-label">Sale type</label>
+                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sale_type'] ?? '—') : ($product->SaleType ?? '-') }}</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="_pfp-detail-label">Sale type to rate</label>
+                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sale_type_to_rate'] ?? '—') : ($product->SaleTypeToRate ?? '-') }}</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="_pfp-detail-label">SRO schedule</label>
+                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sro_schedule'] ?? '—') : ($product->SROSchedule ?? '-') }}</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="_pfp-detail-label">SRO item</label>
+                                <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sro_item'] ?? '—') : ($product->SROItem ?? '-') }}</div>
+                            </div>
                         </div>
-                    </div>
+                    @else
+                        <div class="_pfp-tax-sro-split border rounded overflow-hidden">
+                            {{-- Top: HS code, UOM, sale information (description) --}}
+                            <div class="_pfp-tax-sro-fields border-bottom">
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label">HS Code</label>
+                                        <input type="text"
+                                               name="HsCode"
+                                               class="form-control @error('HsCode') is-invalid @enderror"
+                                               value="{{ old('HsCode', $product->HsCode ?? '') }}"
+                                               placeholder="e.g. 8517.12">
+                                        @error('HsCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">UOM</label>
+                                        <select name="UOM"
+                                                class="form-select @error('UOM') is-invalid @enderror"
+                                                data-selected="{{ old('UOM', $product->UOM ?? '') }}">
+                                            <option value="">Select UOM</option>
+                                        </select>
+                                        @error('UOM')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-md-4 d-none d-md-block"></div>
+                                    <div class="col-12">
+                                        <label class="form-label">Description</label>
+                                        <textarea name="SaleInformation"
+                                                  class="form-control @error('SaleInformation') is-invalid @enderror"
+                                                  rows="4"
+                                                  placeholder="Sale information / description">{{ old('SaleInformation', $product->SaleInformation ?? '') }}</textarea>
+                                        @error('SaleInformation')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- Bottom: four filterable listboxes (size 5 + scroll) --}}
+                            <div class="_pfp-tax-sro-listbox-area">
+                                <div class="row g-0 _pfp-tax-picker-row">
+                                    <div class="col-6 col-lg-4 _pfp-tax-listbox-col">
+                                        <div class="_pfp-tax-column-header">Sale type</div>
+                                        <input type="search" class="form-control form-control-sm _pfp-tax-listbox-search" data-pfp-filter-select="SaleType" placeholder="Search…" autocomplete="off" aria-label="Search sale types">
+                                        <select name="SaleType"
+                                                class="form-select _pfp-tax-listbox @error('SaleType') is-invalid @enderror"
+                                                size="5"
+                                                aria-label="Sale type — choose from list or search"
+                                                data-selected="{{ old('SaleType', $product->SaleType ?? '') }}"
+                                                @if($isCreate && (string) old('SaleType', $product->SaleType ?? '') === '')
+                                                data-apply-default-sale-type="1"
+                                                @endif>
+                                            <option value="" hidden data-pfp-placeholder="1" selected title="Please select sale type">Please select sale type</option>
+                                        </select>
+                                        @error('SaleType')<div class="invalid-feedback d-block px-1 small">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-6 col-lg-3 _pfp-tax-listbox-col">
+                                        <div class="_pfp-tax-column-header">Sale type to rate</div>
+                                        <input type="search" class="form-control form-control-sm _pfp-tax-listbox-search" data-pfp-filter-select="SaleTypeToRate" placeholder="Search…" autocomplete="off" aria-label="Search sale type to rate">
+                                        <select name="SaleTypeToRate"
+                                                class="form-select _pfp-tax-listbox @error('SaleTypeToRate') is-invalid @enderror"
+                                                size="5"
+                                                aria-label="Sale type to rate — choose from list or search"
+                                                data-selected="{{ old('SaleTypeToRate', $product->SaleTypeToRate ?? '') }}">
+                                            <option value="" hidden data-pfp-placeholder="1" selected title="Please select sale type to rate">Please select sale type to rate</option>
+                                        </select>
+                                        @error('SaleTypeToRate')<div class="invalid-feedback d-block px-1 small">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-6 col-lg-3 _pfp-tax-listbox-col">
+                                        <div class="_pfp-tax-column-header">SRO schedule</div>
+                                        <input type="search" class="form-control form-control-sm _pfp-tax-listbox-search" data-pfp-filter-select="SROSchedule" placeholder="Search…" autocomplete="off" aria-label="Search SRO schedule">
+                                        <select name="SROSchedule"
+                                                class="form-select _pfp-tax-listbox @error('SROSchedule') is-invalid @enderror"
+                                                size="5"
+                                                aria-label="SRO schedule — choose from list or search"
+                                                data-selected="{{ old('SROSchedule', $product->SROSchedule ?? '') }}">
+                                            <option value="" hidden data-pfp-placeholder="1" selected title="Please select SRO schedule">Please select SRO schedule</option>
+                                        </select>
+                                        @error('SROSchedule')<div class="invalid-feedback d-block px-1 small">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-6 col-lg-2 _pfp-tax-listbox-col">
+                                        <div class="_pfp-tax-column-header">SRO item</div>
+                                        <input type="search" class="form-control form-control-sm _pfp-tax-listbox-search" data-pfp-filter-select="SROItem" placeholder="Search…" autocomplete="off" aria-label="Search SRO item">
+                                        <select name="SROItem"
+                                                class="form-select _pfp-tax-listbox @error('SROItem') is-invalid @enderror"
+                                                size="5"
+                                                aria-label="SRO item — choose from list or search"
+                                                data-selected="{{ old('SROItem', $product->SROItem ?? '') }}">
+                                            <option value="" hidden data-pfp-placeholder="1" selected title="Please select SRO item">Please select SRO item</option>
+                                        </select>
+                                        @error('SROItem')<div class="invalid-feedback d-block px-1 small">{{ $message }}</div>@enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -567,6 +714,174 @@
     var sroScheduleSelect   = form.querySelector('select[name="SROSchedule"]');
     var sroItemSelect       = form.querySelector('select[name="SROItem"]');
 
+    function pfpTaxAppendHiddenPlaceholder(selectEl, labelText) {
+        if (!selectEl) return null;
+        var o = document.createElement('option');
+        o.value = '';
+        o.textContent = labelText;
+        o.setAttribute('data-pfp-placeholder', '1');
+        o.setAttribute('hidden', 'hidden');
+        if (labelText) o.setAttribute('title', labelText);
+        selectEl.appendChild(o);
+        return o;
+    }
+    function pfpTaxSelectHiddenPlaceholder(sel) {
+        if (!sel) return;
+        for (var i = 0; i < sel.options.length; i++) {
+            var o = sel.options[i];
+            if (o.getAttribute('data-pfp-placeholder') === '1') {
+                o.selected = true;
+            } else {
+                o.selected = false;
+            }
+        }
+    }
+    function pfpTaxDeselectPlaceholder(sel) {
+        if (!sel) return;
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].getAttribute('data-pfp-placeholder') === '1') {
+                sel.options[i].selected = false;
+            }
+        }
+    }
+
+    /** Native listbox UAs often ignore option:checked CSS; inline + !important matches theme when a row is chosen. */
+    var PFP_TAX_LB_ROW_BG = '#985ffde6';
+    var PFP_TAX_LB_ROW_FG = '#fff';
+    function pfpTaxPaintSelectedOption(sel) {
+        if (!sel || !sel.classList || !sel.classList.contains('_pfp-tax-listbox')) return;
+        var selVal = String(sel.value || '');
+        for (var i = 0; i < sel.options.length; i++) {
+            var opt = sel.options[i];
+            if (opt.getAttribute('data-pfp-placeholder') === '1') {
+                opt.style.removeProperty('background-color');
+                opt.style.removeProperty('color');
+                opt.style.removeProperty('-webkit-text-fill-color');
+                continue;
+            }
+            opt.style.removeProperty('background-color');
+            opt.style.removeProperty('color');
+            opt.style.removeProperty('-webkit-text-fill-color');
+            if (selVal !== '' && String(opt.value) === selVal) {
+                opt.style.setProperty('background-color', PFP_TAX_LB_ROW_BG, 'important');
+                opt.style.setProperty('color', PFP_TAX_LB_ROW_FG, 'important');
+                opt.style.setProperty('-webkit-text-fill-color', PFP_TAX_LB_ROW_FG, 'important');
+            }
+        }
+    }
+
+    function taxListboxFilterInput(name) {
+        return form.querySelector('input._pfp-tax-listbox-search[data-pfp-filter-select="' + name + '"]');
+    }
+    function clearTaxListboxFilter(name) {
+        var inp = taxListboxFilterInput(name);
+        if (inp) inp.value = '';
+    }
+    function applyTaxListboxFilter(sel) {
+        if (!sel) return;
+        var inp = taxListboxFilterInput(sel.name);
+        var q = (inp && inp.value) ? String(inp.value).trim().toLowerCase() : '';
+        var selVal = String(sel.value || '');
+        for (var i = 0; i < sel.options.length; i++) {
+            var opt = sel.options[i];
+            if (opt.getAttribute('data-pfp-placeholder') === '1') {
+                opt.hidden = true;
+                continue;
+            }
+            var displayLabel = ((opt.textContent || '') + '').trim();
+            var label = displayLabel.toLowerCase();
+            var ov = String(opt.value || '');
+            var show = q === '' || label.indexOf(q) !== -1;
+            if (ov !== '' && ov === selVal) show = true;
+            if (ov === '') {
+                show = q === '' || label.indexOf(q) !== -1;
+            }
+            opt.hidden = !show;
+            if (displayLabel) {
+                opt.setAttribute('title', displayLabel);
+            } else {
+                opt.removeAttribute('title');
+            }
+        }
+    }
+    function bindTaxListboxSearch(name, sel) {
+        var inp = taxListboxFilterInput(name);
+        if (!inp || !sel) return;
+        function run() {
+            applyTaxListboxFilter(sel);
+            flashTaxListboxSelection(sel);
+        }
+        inp.addEventListener('input', run);
+        inp.addEventListener('search', run);
+    }
+
+    function flashTaxListboxSelection(sel) {
+        if (!sel) return;
+        applyTaxListboxFilter(sel);
+        var wantRaw = sel.getAttribute('data-selected');
+        if (wantRaw === null || wantRaw === undefined) wantRaw = sel.value || '';
+        var want = String(wantRaw);
+        if (want === '') {
+            pfpTaxSelectHiddenPlaceholder(sel);
+            scrollTaxListboxToSelected(sel);
+            pfpTaxPaintSelectedOption(sel);
+            return;
+        }
+        var sv = String(want);
+        var found = false;
+        for (var i = 0; i < sel.options.length; i++) {
+            var o = sel.options[i];
+            if (o.getAttribute('data-pfp-placeholder') === '1') continue;
+            if (String(o.value) === sv) {
+                sel.selectedIndex = i;
+                sel.value = sv;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            pfpTaxSelectHiddenPlaceholder(sel);
+        } else {
+            pfpTaxDeselectPlaceholder(sel);
+        }
+        scrollTaxListboxToSelected(sel);
+        pfpTaxPaintSelectedOption(sel);
+    }
+
+    function scrollTaxListboxToSelected(sel) {
+        if (!sel) return;
+        requestAnimationFrame(function() {
+            try {
+                var i = sel.selectedIndex;
+                if (i >= 0 && sel.options[i]) {
+                    var o = sel.options[i];
+                    if (o.getAttribute('data-pfp-placeholder') !== '1') {
+                        o.scrollIntoView({ block: 'nearest' });
+                    }
+                }
+            } catch (e) {}
+            pfpTaxPaintSelectedOption(sel);
+        });
+    }
+
+    function bindTaxListboxRowPaint(sel) {
+        if (!sel || sel.dataset.pfpTaxRowPaint === '1') return;
+        sel.dataset.pfpTaxRowPaint = '1';
+        function paint() {
+            requestAnimationFrame(function() { pfpTaxPaintSelectedOption(sel); });
+        }
+        ['mouseup', 'keyup', 'blur', 'change'].forEach(function(ev) { sel.addEventListener(ev, paint); });
+    }
+
+    bindTaxListboxSearch('SaleType', saleTypeSelect);
+    bindTaxListboxSearch('SaleTypeToRate', saleTypeToRateSelect);
+    bindTaxListboxSearch('SROSchedule', sroScheduleSelect);
+    bindTaxListboxSearch('SROItem', sroItemSelect);
+    bindTaxListboxRowPaint(saleTypeSelect);
+    bindTaxListboxRowPaint(saleTypeToRateSelect);
+    bindTaxListboxRowPaint(sroScheduleSelect);
+    bindTaxListboxRowPaint(sroItemSelect);
+
     function syncFixedValueUi() {
         if (!isFixedValueCheckbox || !fixedNotifiedValueInput) return;
         var checked = !!isFixedValueCheckbox.checked;
@@ -634,19 +949,21 @@
     function loadSaleTypes() {
         if (!saleTypeSelect) return;
 
+        clearTaxListboxFilter('SaleType');
         var selected = saleTypeSelect.getAttribute('data-selected') || '';
         saleTypeSelect.innerHTML = '';
-        var placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = 'Select Sale Type';
-        saleTypeSelect.appendChild(placeholder);
+        pfpTaxAppendHiddenPlaceholder(saleTypeSelect, 'Please select sale type');
+        pfpTaxSelectHiddenPlaceholder(saleTypeSelect);
 
         fetch("{{ route('products.sale-types') }}", {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
             .then(function (res) { return res.json(); })
             .then(function (data) {
-                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) {
+                    flashTaxListboxSelection(saleTypeSelect);
+                    return;
+                }
 
                 data.items.forEach(function (item) {
                     var opt = document.createElement('option');
@@ -679,6 +996,15 @@
                 if (selVal) {
                     loadSaleTypeToRates(selVal);
                 }
+                if (saleTypeSelect.value) {
+                    saleTypeSelect.setAttribute('data-selected', String(saleTypeSelect.value));
+                }
+                if (!saleTypeSelect.value) {
+                    pfpTaxSelectHiddenPlaceholder(saleTypeSelect);
+                } else {
+                    pfpTaxDeselectPlaceholder(saleTypeSelect);
+                }
+                flashTaxListboxSelection(saleTypeSelect);
             })
             .catch(function () {});
     }
@@ -687,14 +1013,14 @@
     function loadSaleTypeToRates(transactionTypeId) {
         if (!saleTypeToRateSelect) return;
 
+        clearTaxListboxFilter('SaleTypeToRate');
         var selected = saleTypeToRateSelect.getAttribute('data-selected') || '';
         saleTypeToRateSelect.innerHTML = '';
-        var placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = 'Select Sale Type To Rate';
-        saleTypeToRateSelect.appendChild(placeholder);
+        pfpTaxAppendHiddenPlaceholder(saleTypeToRateSelect, 'Please select sale type to rate');
 
         if (!transactionTypeId) {
+            pfpTaxSelectHiddenPlaceholder(saleTypeToRateSelect);
+            flashTaxListboxSelection(saleTypeToRateSelect);
             return;
         }
 
@@ -703,7 +1029,10 @@
         })
             .then(function (res) { return res.json(); })
             .then(function (data) {
-                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) {
+                    flashTaxListboxSelection(saleTypeToRateSelect);
+                    return;
+                }
 
                 data.items.forEach(function (item) {
                     var opt = document.createElement('option');
@@ -719,6 +1048,15 @@
                 if (rateVal && sroScheduleSelect) {
                     loadSroSchedules(rateVal);
                 }
+                if (saleTypeToRateSelect.value) {
+                    saleTypeToRateSelect.setAttribute('data-selected', String(saleTypeToRateSelect.value));
+                }
+                if (!saleTypeToRateSelect.value) {
+                    pfpTaxSelectHiddenPlaceholder(saleTypeToRateSelect);
+                } else {
+                    pfpTaxDeselectPlaceholder(saleTypeToRateSelect);
+                }
+                flashTaxListboxSelection(saleTypeToRateSelect);
             })
             .catch(function () {});
     }
@@ -727,14 +1065,14 @@
     function loadSroSchedules(rateId) {
         if (!sroScheduleSelect) return;
 
+        clearTaxListboxFilter('SROSchedule');
         var selected = sroScheduleSelect.getAttribute('data-selected') || '';
         sroScheduleSelect.innerHTML = '';
-        var placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = 'Select SRO Schedule';
-        sroScheduleSelect.appendChild(placeholder);
+        pfpTaxAppendHiddenPlaceholder(sroScheduleSelect, 'Please select SRO schedule');
 
         if (!rateId) {
+            pfpTaxSelectHiddenPlaceholder(sroScheduleSelect);
+            flashTaxListboxSelection(sroScheduleSelect);
             return;
         }
 
@@ -743,7 +1081,10 @@
         })
             .then(function (res) { return res.json(); })
             .then(function (data) {
-                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) {
+                    flashTaxListboxSelection(sroScheduleSelect);
+                    return;
+                }
 
                 data.items.forEach(function (item) {
                     var opt = document.createElement('option');
@@ -759,6 +1100,15 @@
                 if (sroVal && sroItemSelect) {
                     loadSroItems(sroVal);
                 }
+                if (sroScheduleSelect.value) {
+                    sroScheduleSelect.setAttribute('data-selected', String(sroScheduleSelect.value));
+                }
+                if (!sroScheduleSelect.value) {
+                    pfpTaxSelectHiddenPlaceholder(sroScheduleSelect);
+                } else {
+                    pfpTaxDeselectPlaceholder(sroScheduleSelect);
+                }
+                flashTaxListboxSelection(sroScheduleSelect);
             })
             .catch(function () {});
     }
@@ -767,14 +1117,14 @@
     function loadSroItems(sroId) {
         if (!sroItemSelect) return;
 
+        clearTaxListboxFilter('SROItem');
         var selected = sroItemSelect.getAttribute('data-selected') || '';
         sroItemSelect.innerHTML = '';
-        var placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = 'Select SRO Item';
-        sroItemSelect.appendChild(placeholder);
+        pfpTaxAppendHiddenPlaceholder(sroItemSelect, 'Please select SRO item');
 
         if (!sroId) {
+            pfpTaxSelectHiddenPlaceholder(sroItemSelect);
+            flashTaxListboxSelection(sroItemSelect);
             return;
         }
 
@@ -783,7 +1133,10 @@
         })
             .then(function (res) { return res.json(); })
             .then(function (data) {
-                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) {
+                    flashTaxListboxSelection(sroItemSelect);
+                    return;
+                }
 
                 data.items.forEach(function (item) {
                     var opt = document.createElement('option');
@@ -794,6 +1147,15 @@
                     }
                     sroItemSelect.appendChild(opt);
                 });
+                if (sroItemSelect.value) {
+                    sroItemSelect.setAttribute('data-selected', String(sroItemSelect.value));
+                }
+                if (!sroItemSelect.value) {
+                    pfpTaxSelectHiddenPlaceholder(sroItemSelect);
+                } else {
+                    pfpTaxDeselectPlaceholder(sroItemSelect);
+                }
+                flashTaxListboxSelection(sroItemSelect);
             })
             .catch(function () {});
     }
@@ -823,6 +1185,10 @@
     if (saleTypeSelect) {
         loadSaleTypes();
         saleTypeSelect.addEventListener('change', function () {
+            clearTaxListboxFilter('SaleTypeToRate');
+            clearTaxListboxFilter('SROSchedule');
+            clearTaxListboxFilter('SROItem');
+            saleTypeSelect.setAttribute('data-selected', saleTypeSelect.value || '');
             var transactionTypeId = saleTypeSelect.value || '';
             if (saleTypeToRateSelect) {
                 saleTypeToRateSelect.setAttribute('data-selected', '');
@@ -830,25 +1196,25 @@
             if (sroScheduleSelect) {
                 sroScheduleSelect.setAttribute('data-selected', '');
                 sroScheduleSelect.innerHTML = '';
-                var opt = document.createElement('option');
-                opt.value = '';
-                opt.textContent = 'Select Sale Type To Rate first';
-                sroScheduleSelect.appendChild(opt);
+                pfpTaxAppendHiddenPlaceholder(sroScheduleSelect, 'Please select sale type to rate');
+                pfpTaxSelectHiddenPlaceholder(sroScheduleSelect);
             }
             if (sroItemSelect) {
                 sroItemSelect.setAttribute('data-selected', '');
                 sroItemSelect.innerHTML = '';
-                var opt = document.createElement('option');
-                opt.value = '';
-                opt.textContent = 'Select SRO Schedule first';
-                sroItemSelect.appendChild(opt);
+                pfpTaxAppendHiddenPlaceholder(sroItemSelect, 'Please select SRO schedule');
+                pfpTaxSelectHiddenPlaceholder(sroItemSelect);
             }
             loadSaleTypeToRates(transactionTypeId);
+            flashTaxListboxSelection(saleTypeSelect);
         });
     }
 
     if (saleTypeToRateSelect) {
         saleTypeToRateSelect.addEventListener('change', function () {
+            clearTaxListboxFilter('SROSchedule');
+            clearTaxListboxFilter('SROItem');
+            saleTypeToRateSelect.setAttribute('data-selected', saleTypeToRateSelect.value || '');
             var rateId = saleTypeToRateSelect.value || '';
             if (sroScheduleSelect) {
                 sroScheduleSelect.setAttribute('data-selected', '');
@@ -856,22 +1222,41 @@
             if (sroItemSelect) {
                 sroItemSelect.setAttribute('data-selected', '');
                 sroItemSelect.innerHTML = '';
-                var opt = document.createElement('option');
-                opt.value = '';
-                opt.textContent = 'Select SRO Schedule first';
-                sroItemSelect.appendChild(opt);
+                pfpTaxAppendHiddenPlaceholder(sroItemSelect, 'Please select SRO schedule');
+                pfpTaxSelectHiddenPlaceholder(sroItemSelect);
             }
             loadSroSchedules(rateId);
+            flashTaxListboxSelection(saleTypeToRateSelect);
         });
     }
 
     if (sroScheduleSelect) {
         sroScheduleSelect.addEventListener('change', function () {
+            clearTaxListboxFilter('SROItem');
+            sroScheduleSelect.setAttribute('data-selected', sroScheduleSelect.value || '');
             var sroId = sroScheduleSelect.value || '';
             if (sroItemSelect) {
                 sroItemSelect.setAttribute('data-selected', '');
             }
             loadSroItems(sroId);
+            flashTaxListboxSelection(sroScheduleSelect);
+        });
+    }
+
+    if (sroItemSelect) {
+        sroItemSelect.addEventListener('change', function () {
+            sroItemSelect.setAttribute('data-selected', sroItemSelect.value || '');
+            flashTaxListboxSelection(sroItemSelect);
+        });
+    }
+
+    var taxTabNav = document.querySelector('a[href="#' + pfpUid + '_tax"]');
+    if (taxTabNav) {
+        taxTabNav.addEventListener('shown.bs.tab', function() {
+            flashTaxListboxSelection(saleTypeSelect);
+            flashTaxListboxSelection(saleTypeToRateSelect);
+            flashTaxListboxSelection(sroScheduleSelect);
+            flashTaxListboxSelection(sroItemSelect);
         });
     }
 

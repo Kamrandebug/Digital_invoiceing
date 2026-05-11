@@ -48,7 +48,7 @@
 }
 .modal.pfp-quick-lookup-modal .modal-body .form-label {
     margin-bottom: 0.35rem;
-    font-size: 0.875rem;
+    font-size: 12px;
 }
 .modal.pfp-quick-lookup-modal .modal-footer {
     padding: 0.5rem 1rem;
@@ -135,7 +135,7 @@
                 <i class="fas fa-edit"></i> Edit Product Details
             @else
                 <i class="fas fa-box"></i> Product Profile
-                <div class="mt-2" style="font-size: 14px; color: #666; font-weight: normal;">
+                <div class="mt-2" style="font-size: 12px; color: #666; font-weight: normal;">
                     <span class="badge bg-secondary"><i class="fas fa-fingerprint"></i> Req ID: {{ $product->RequestID ?? 'N/A' }}</span>
                 </div>
             @endif

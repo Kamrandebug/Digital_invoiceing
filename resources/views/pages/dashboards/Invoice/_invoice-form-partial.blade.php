@@ -290,6 +290,116 @@
             padding: 0.2rem 0.35rem;
             line-height: 1.1;
         }
+        /* Invoice line Tax & SRO nested modal: four listboxes (compact mode) — align with product modal */
+        .ifp-tax-sro-fields .ifp-tax-sro-listbox-area {
+            --ifp-inv-tax-list-h: 92px;
+            background: var(--bs-body-bg, #fff);
+        }
+        .ifp-tax-sro-fields .ifp-tax-picker-row {
+            min-height: calc(var(--ifp-inv-tax-list-h) + 3.85rem);
+        }
+        .ifp-tax-sro-fields .ifp-tax-listbox-search {
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+            font-size: 12px !important;
+        }
+        .ifp-tax-sro-fields .ifp-tax-listbox-col {
+            border-right: 1px solid var(--bs-border-color, #dee2e6);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .ifp-tax-sro-fields .ifp-tax-listbox-col:last-child {
+            border-right: none;
+        }
+        @media (max-width: 991.98px) {
+            .ifp-tax-sro-fields .ifp-tax-listbox-col:nth-child(2) {
+                border-right: none;
+            }
+            .ifp-tax-sro-fields .ifp-tax-listbox-col:nth-child(1),
+            .ifp-tax-sro-fields .ifp-tax-listbox-col:nth-child(2) {
+                border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+            }
+        }
+        .ifp-tax-sro-fields .ifp-tax-column-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-align: center;
+            padding: 0.5rem 0.35rem;
+            background-color: var(--bs-secondary-bg, #f8f9fa);
+            border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+            color: var(--bs-secondary-color, #6c757d);
+            flex-shrink: 0;
+        }
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox {
+            width: 100%;
+            min-height: var(--ifp-inv-tax-list-h);
+            font-size: 12px !important;
+            line-height: 1.35;
+            padding: 0.25rem 0.35rem;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            accent-color: #985ffd;
+        }
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus {
+            box-shadow: inset 0 0 0 1px #985ffde6 !important;
+            outline: 0;
+        }
+        .ifp-tax-sro-fields .ifp-tax-listbox-search::selection,
+        .ifp-tax-sro-fields .ifp-tax-listbox-search::-moz-selection {
+            background-color: #985ffde6;
+            color: #fff;
+        }
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox option:checked,
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus option:checked {
+            background-color: #985ffde6 !important;
+            background-image: none !important;
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
+        }
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox option:hover {
+            background-color: var(--bs-secondary-bg, #e9ecef);
+        }
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox option:checked:hover,
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus option:checked:hover {
+            background-color: #985ffde6 !important;
+            background-image: none !important;
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
+        }
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox option:active,
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus option:active {
+            background-color: #985ffde6 !important;
+            background-image: none !important;
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
+        }
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox option:focus,
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus option:focus {
+            background-color: #985ffde6 !important;
+            background-image: none !important;
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
+        }
+        .ifp-tax-sro-fields .ifp-inv-tax-listbox option[data-ifp-placeholder="1"] {
+            display: none;
+        }
+        .ifp-tax-sro-fields-lower .ifp-tax-sro-lbl {
+            font-size: 12px;
+        }
+        /* Nested Tax & SRO modal: title-case labels (override custom.css uppercase on #invoice_modal_body .ifp-tax-sro-lbl) */
+        #invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
+        .ifp-modal-shell .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl {
+            text-transform: none;
+            letter-spacing: 0.01em;
+        }
+        .ifp-tax-sro-fields-lower .form-control {
+            font-size: 12px !important;
+        }
         .table-inv .btn-icon { padding: 0.16rem 0.26rem; margin: 0; }
     </style>
     <div class="col-xl-12">
@@ -775,6 +885,11 @@
                 var row = btn.closest('.ifp-row');
                 if (row) openTaxSroModalForRow(row);
             });
+            taxSroModalEl.addEventListener('shown.bs.modal', function() {
+                var host = taxSroSlotHost;
+                var row = host ? host.closest('.ifp-row') : null;
+                ifpTaxFlashAllListboxes(row);
+            });
             taxSroModalEl.addEventListener('hidden.bs.modal', function() {
                 var slot = taxSroModalBody.querySelector('.ifp-tax-sro-slot');
                 var host = taxSroSlotHost;
@@ -804,6 +919,187 @@
             return taxSroSlotNode.querySelector(selector);
         }
         return null;
+    }
+
+    function ifpTaxUseListboxUi(sel) {
+        return !!(IFP_TAX_COMPACT && sel && sel.classList && sel.classList.contains('ifp-inv-tax-listbox'));
+    }
+    function ifpTaxSlotFromSelect(sel) {
+        return sel ? sel.closest('.ifp-tax-sro-slot') : null;
+    }
+    function ifpTaxFilterInputFor(sel) {
+        var slot = ifpTaxSlotFromSelect(sel);
+        if (!slot || !sel.dataset || !sel.dataset.ifpPair) return null;
+        return slot.querySelector('input.ifp-tax-listbox-search[data-ifp-pair="' + sel.dataset.ifpPair + '"]');
+    }
+    function ifpTaxClearFilter(sel) {
+        var inp = ifpTaxFilterInputFor(sel);
+        if (inp) inp.value = '';
+    }
+    function ifpTaxAppendHiddenPlaceholder(sel, labelText) {
+        if (!sel || !ifpTaxUseListboxUi(sel)) return null;
+        var o = document.createElement('option');
+        o.value = '';
+        o.textContent = labelText;
+        o.setAttribute('data-ifp-placeholder', '1');
+        o.setAttribute('hidden', 'hidden');
+        if (labelText) o.setAttribute('title', labelText);
+        sel.appendChild(o);
+        return o;
+    }
+    function ifpTaxSelectHiddenPlaceholder(sel) {
+        if (!sel) return;
+        for (var i = 0; i < sel.options.length; i++) {
+            var o = sel.options[i];
+            if (o.getAttribute('data-ifp-placeholder') === '1') {
+                o.selected = true;
+            } else {
+                o.selected = false;
+            }
+        }
+    }
+    function ifpTaxDeselectPlaceholder(sel) {
+        if (!sel) return;
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].getAttribute('data-ifp-placeholder') === '1') {
+                sel.options[i].selected = false;
+            }
+        }
+    }
+    /** Native listbox: paint chosen row (CSS alone is ignored on many Windows UAs). */
+    var IFP_TAX_LB_ROW_BG = '#985ffde6';
+    var IFP_TAX_LB_ROW_FG = '#fff';
+    function ifpTaxPaintSelectedOption(sel) {
+        if (!sel || !ifpTaxUseListboxUi(sel)) return;
+        var selVal = String(sel.value || '');
+        for (var i = 0; i < sel.options.length; i++) {
+            var opt = sel.options[i];
+            if (opt.getAttribute('data-ifp-placeholder') === '1') {
+                opt.style.removeProperty('background-color');
+                opt.style.removeProperty('color');
+                opt.style.removeProperty('-webkit-text-fill-color');
+                continue;
+            }
+            opt.style.removeProperty('background-color');
+            opt.style.removeProperty('color');
+            opt.style.removeProperty('-webkit-text-fill-color');
+            if (selVal !== '' && String(opt.value) === selVal) {
+                opt.style.setProperty('background-color', IFP_TAX_LB_ROW_BG, 'important');
+                opt.style.setProperty('color', IFP_TAX_LB_ROW_FG, 'important');
+                opt.style.setProperty('-webkit-text-fill-color', IFP_TAX_LB_ROW_FG, 'important');
+            }
+        }
+    }
+    function ifpTaxApplyListboxFilter(sel) {
+        if (!sel || !ifpTaxUseListboxUi(sel)) return;
+        var inp = ifpTaxFilterInputFor(sel);
+        var q = (inp && inp.value) ? String(inp.value).trim().toLowerCase() : '';
+        var selVal = String(sel.value || '');
+        for (var i = 0; i < sel.options.length; i++) {
+            var opt = sel.options[i];
+            if (opt.getAttribute('data-ifp-placeholder') === '1') {
+                opt.hidden = true;
+                continue;
+            }
+            var displayLabel = ((opt.textContent || '') + '').trim();
+            var label = displayLabel.toLowerCase();
+            var ov = String(opt.value || '');
+            var show = q === '' || label.indexOf(q) !== -1;
+            if (ov !== '' && ov === selVal) show = true;
+            if (ov === '') {
+                show = q === '' || label.indexOf(q) !== -1;
+            }
+            opt.hidden = !show;
+            if (displayLabel) opt.setAttribute('title', displayLabel);
+            else opt.removeAttribute('title');
+        }
+    }
+    function ifpTaxFlashListboxSelection(sel) {
+        if (!sel || !ifpTaxUseListboxUi(sel)) return;
+        ifpTaxApplyListboxFilter(sel);
+        var wantRaw = sel.getAttribute('data-selected');
+        if (wantRaw === null || wantRaw === undefined) wantRaw = sel.value || '';
+        var want = String(wantRaw);
+        if (want === '') {
+            ifpTaxSelectHiddenPlaceholder(sel);
+            ifpTaxScrollListboxToSelected(sel);
+            ifpTaxPaintSelectedOption(sel);
+            return;
+        }
+        var sv = String(want);
+        var found = false;
+        for (var i = 0; i < sel.options.length; i++) {
+            var o = sel.options[i];
+            if (o.getAttribute('data-ifp-placeholder') === '1') continue;
+            if (String(o.value) === sv) {
+                sel.selectedIndex = i;
+                sel.value = sv;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            ifpTaxSelectHiddenPlaceholder(sel);
+        } else {
+            ifpTaxDeselectPlaceholder(sel);
+        }
+        ifpTaxScrollListboxToSelected(sel);
+        ifpTaxPaintSelectedOption(sel);
+    }
+    function ifpTaxScrollListboxToSelected(sel) {
+        if (!sel || !ifpTaxUseListboxUi(sel)) return;
+        requestAnimationFrame(function() {
+            try {
+                var i = sel.selectedIndex;
+                if (i >= 0 && sel.options[i]) {
+                    var o = sel.options[i];
+                    if (o.getAttribute('data-ifp-placeholder') !== '1') {
+                        o.scrollIntoView({ block: 'nearest' });
+                    }
+                }
+            } catch (e) {}
+            ifpTaxPaintSelectedOption(sel);
+        });
+    }
+    function ifpTaxBindListboxRowPaint(sel) {
+        if (!sel || !ifpTaxUseListboxUi(sel) || sel.dataset.ifpTaxRowPaint === '1') return;
+        sel.dataset.ifpTaxRowPaint = '1';
+        function paint() {
+            requestAnimationFrame(function() { ifpTaxPaintSelectedOption(sel); });
+        }
+        ['mouseup', 'keyup', 'blur', 'change'].forEach(function(ev) { sel.addEventListener(ev, paint); });
+    }
+    function ifpTaxBindListboxSearch(sel) {
+        var inp = ifpTaxFilterInputFor(sel);
+        if (!inp || !sel || !ifpTaxUseListboxUi(sel)) return;
+        if (inp.dataset.ifpTaxSearchBound === '1') return;
+        inp.dataset.ifpTaxSearchBound = '1';
+        function run() {
+            ifpTaxApplyListboxFilter(sel);
+            ifpTaxFlashListboxSelection(sel);
+        }
+        inp.addEventListener('input', run);
+        inp.addEventListener('search', run);
+    }
+    function ifpTaxBindAllListboxSearches(row) {
+        if (!IFP_TAX_COMPACT) return;
+        ['.ifp-sale-type', '.ifp-sale-type-to-rate', '.ifp-sro-schedule', '.ifp-sro-item'].forEach(function(sel) {
+            var el = rowEl(row, sel);
+            if (el && ifpTaxUseListboxUi(el)) {
+                ifpTaxBindListboxSearch(el);
+                ifpTaxBindListboxRowPaint(el);
+            }
+        });
+    }
+    function ifpTaxFlashAllListboxes(row) {
+        if (!IFP_TAX_COMPACT || !row) return;
+        ['.ifp-sale-type', '.ifp-sale-type-to-rate', '.ifp-sro-schedule', '.ifp-sro-item'].forEach(function(sel) {
+            var el = rowEl(row, sel);
+            if (el && ifpTaxUseListboxUi(el)) {
+                ifpTaxApplyListboxFilter(el);
+                ifpTaxFlashListboxSelection(el);
+            }
+        });
     }
 
     function updateTaxSroTriggerSummary(row) {
@@ -1130,18 +1426,45 @@
         var sel = rowEl(row, '.ifp-sale-type');
         if (!sel) return;
         var selected = sel.getAttribute('data-selected') || '';
+        ifpTaxClearFilter(sel);
+        if (IFP_TAX_COMPACT) {
+            ifpTaxClearFilter(rowEl(row, '.ifp-sale-type-to-rate'));
+            ifpTaxClearFilter(rowEl(row, '.ifp-sro-schedule'));
+            ifpTaxClearFilter(rowEl(row, '.ifp-sro-item'));
+        }
         sel.innerHTML = '';
-        var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select Sale Type'; sel.appendChild(ph);
+        if (ifpTaxUseListboxUi(sel)) {
+            ifpTaxAppendHiddenPlaceholder(sel, 'Please select sale type');
+            ifpTaxSelectHiddenPlaceholder(sel);
+        } else {
+            var ph0 = document.createElement('option');
+            ph0.value = '';
+            ph0.textContent = 'Select Sale Type';
+            sel.appendChild(ph0);
+        }
         fetch(INV_SALE_TYPES_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) {
+                    if (ifpTaxUseListboxUi(sel)) {
+                        if (!sel.value) ifpTaxSelectHiddenPlaceholder(sel);
+                        else ifpTaxDeselectPlaceholder(sel);
+                        ifpTaxFlashListboxSelection(sel);
+                    }
+                    updateTaxSroTriggerSummary(row);
+                    return;
+                }
                 data.items.forEach(function(item) {
                     var opt = document.createElement('option');
                     opt.value = item.id; opt.textContent = item.text;
                     if (selected && String(selected) === String(item.id)) opt.selected = true;
                     sel.appendChild(opt);
                 });
+                if (ifpTaxUseListboxUi(sel)) {
+                    if (!sel.value) ifpTaxSelectHiddenPlaceholder(sel);
+                    else ifpTaxDeselectPlaceholder(sel);
+                    ifpTaxFlashListboxSelection(sel);
+                }
                 var v = sel.value;
                 updateTaxSroTriggerSummary(row);
                 if (v) loadSaleTypeToRatesForRow(row, v);
@@ -1153,13 +1476,27 @@
         var sel = rowEl(row, '.ifp-sale-type-to-rate');
         if (!sel) return;
         var selected = sel.getAttribute('data-selected') || '';
+        ifpTaxClearFilter(sel);
         sel.innerHTML = '';
-        var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select Sale Type To Rate'; sel.appendChild(ph);
-        if (!transactionTypeId) return;
+        if (ifpTaxUseListboxUi(sel)) {
+            ifpTaxAppendHiddenPlaceholder(sel, 'Please select sale type to rate');
+            ifpTaxSelectHiddenPlaceholder(sel);
+        } else {
+            var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select Sale Type To Rate'; sel.appendChild(ph);
+        }
+        if (!transactionTypeId) {
+            if (ifpTaxUseListboxUi(sel)) ifpTaxFlashListboxSelection(sel);
+            updateTaxSroTriggerSummary(row);
+            return;
+        }
         fetch(INV_SALE_TYPE_RATES + '?transaction_type_id=' + encodeURIComponent(transactionTypeId), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) {
+                    if (ifpTaxUseListboxUi(sel)) ifpTaxFlashListboxSelection(sel);
+                    updateTaxSroTriggerSummary(row);
+                    return;
+                }
                 data.items.forEach(function(item) {
                     var opt = document.createElement('option');
                     opt.value = item.id; opt.textContent = item.text;
@@ -1172,6 +1509,11 @@
                     if (selected && String(selected) === String(item.id)) opt.selected = true;
                     sel.appendChild(opt);
                 });
+                if (ifpTaxUseListboxUi(sel)) {
+                    if (!sel.value) ifpTaxSelectHiddenPlaceholder(sel);
+                    else ifpTaxDeselectPlaceholder(sel);
+                    ifpTaxFlashListboxSelection(sel);
+                }
                 var v = sel.value;
                 if (v) {
                     var opt = sel.options[sel.selectedIndex];
@@ -1196,19 +1538,36 @@
         var sel = rowEl(row, '.ifp-sro-schedule');
         if (!sel) return;
         var selected = sel.getAttribute('data-selected') || '';
+        ifpTaxClearFilter(sel);
         sel.innerHTML = '';
-        var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select SRO Schedule'; sel.appendChild(ph);
-        if (!rateId) return;
+        if (ifpTaxUseListboxUi(sel)) {
+            ifpTaxAppendHiddenPlaceholder(sel, 'Please select SRO schedule');
+            ifpTaxSelectHiddenPlaceholder(sel);
+        } else {
+            var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select SRO Schedule'; sel.appendChild(ph);
+        }
+        if (!rateId) {
+            if (ifpTaxUseListboxUi(sel)) ifpTaxFlashListboxSelection(sel);
+            return;
+        }
         fetch(INV_SRO_SCHEDULES + '?rate_id=' + encodeURIComponent(rateId), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) {
+                    if (ifpTaxUseListboxUi(sel)) ifpTaxFlashListboxSelection(sel);
+                    return;
+                }
                 data.items.forEach(function(item) {
                     var opt = document.createElement('option');
                     opt.value = item.id; opt.textContent = item.text;
                     if (selected && String(selected) === String(item.id)) opt.selected = true;
                     sel.appendChild(opt);
                 });
+                if (ifpTaxUseListboxUi(sel)) {
+                    if (!sel.value) ifpTaxSelectHiddenPlaceholder(sel);
+                    else ifpTaxDeselectPlaceholder(sel);
+                    ifpTaxFlashListboxSelection(sel);
+                }
                 var v = sel.value;
                 if (v) loadSroItemsForRow(row, v);
             })
@@ -1219,19 +1578,36 @@
         var sel = rowEl(row, '.ifp-sro-item');
         if (!sel) return;
         var selected = sel.getAttribute('data-selected') || '';
+        ifpTaxClearFilter(sel);
         sel.innerHTML = '';
-        var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select SRO Item'; sel.appendChild(ph);
-        if (!sroId) return;
+        if (ifpTaxUseListboxUi(sel)) {
+            ifpTaxAppendHiddenPlaceholder(sel, 'Please select SRO item');
+            ifpTaxSelectHiddenPlaceholder(sel);
+        } else {
+            var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select SRO Item'; sel.appendChild(ph);
+        }
+        if (!sroId) {
+            if (ifpTaxUseListboxUi(sel)) ifpTaxFlashListboxSelection(sel);
+            return;
+        }
         fetch(INV_SRO_ITEMS + '?sro_id=' + encodeURIComponent(sroId), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                if (!data || data.status !== 'success' || !Array.isArray(data.items)) return;
+                if (!data || data.status !== 'success' || !Array.isArray(data.items)) {
+                    if (ifpTaxUseListboxUi(sel)) ifpTaxFlashListboxSelection(sel);
+                    return;
+                }
                 data.items.forEach(function(item) {
                     var opt = document.createElement('option');
                     opt.value = item.id; opt.textContent = item.text;
                     if (selected && String(selected) === String(item.id)) opt.selected = true;
                     sel.appendChild(opt);
                 });
+                if (ifpTaxUseListboxUi(sel)) {
+                    if (!sel.value) ifpTaxSelectHiddenPlaceholder(sel);
+                    else ifpTaxDeselectPlaceholder(sel);
+                    ifpTaxFlashListboxSelection(sel);
+                }
             })
             .catch(function() {});
     }
@@ -1254,18 +1630,38 @@
                 var rtInp = rowEl(row, '.ifp-rate-type');
                 if (saleTypeToRateSel) {
                     saleTypeToRateSel.setAttribute('data-selected', '');
+                    ifpTaxClearFilter(saleTypeToRateSel);
                     saleTypeToRateSel.innerHTML = '';
-                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type first'; saleTypeToRateSel.appendChild(o);
+                    if (ifpTaxUseListboxUi(saleTypeToRateSel)) {
+                        ifpTaxAppendHiddenPlaceholder(saleTypeToRateSel, 'Please select sale type to rate');
+                        ifpTaxSelectHiddenPlaceholder(saleTypeToRateSel);
+                    } else {
+                        var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type first'; saleTypeToRateSel.appendChild(o);
+                    }
                 }
                 if (rtInp) rtInp.value = '';
                 updateTaxSroTriggerSummary(row);
                 if (sroScheduleSel) {
+                    sroScheduleSel.setAttribute('data-selected', '');
+                    ifpTaxClearFilter(sroScheduleSel);
                     sroScheduleSel.innerHTML = '';
-                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type To Rate first'; sroScheduleSel.appendChild(o);
+                    if (ifpTaxUseListboxUi(sroScheduleSel)) {
+                        ifpTaxAppendHiddenPlaceholder(sroScheduleSel, 'Please select sale type to rate');
+                        ifpTaxSelectHiddenPlaceholder(sroScheduleSel);
+                    } else {
+                        var o2 = document.createElement('option'); o2.value = ''; o2.textContent = 'Select Sale Type To Rate first'; sroScheduleSel.appendChild(o2);
+                    }
                 }
                 if (sroItemSel) {
+                    sroItemSel.setAttribute('data-selected', '');
+                    ifpTaxClearFilter(sroItemSel);
                     sroItemSel.innerHTML = '';
-                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select SRO Schedule first'; sroItemSel.appendChild(o);
+                    if (ifpTaxUseListboxUi(sroItemSel)) {
+                        ifpTaxAppendHiddenPlaceholder(sroItemSel, 'Please select SRO schedule');
+                        ifpTaxSelectHiddenPlaceholder(sroItemSel);
+                    } else {
+                        var o3 = document.createElement('option'); o3.value = ''; o3.textContent = 'Select SRO Schedule first'; sroItemSel.appendChild(o3);
+                    }
                 }
                 loadSaleTypeToRatesForRow(row, v);
             });
@@ -1291,12 +1687,25 @@
                 }
                 if (sroScheduleSel) {
                     sroScheduleSel.setAttribute('data-selected', '');
+                    ifpTaxClearFilter(sroScheduleSel);
                     sroScheduleSel.innerHTML = '';
-                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type To Rate first'; sroScheduleSel.appendChild(o);
+                    if (ifpTaxUseListboxUi(sroScheduleSel)) {
+                        ifpTaxAppendHiddenPlaceholder(sroScheduleSel, 'Please select SRO schedule');
+                        ifpTaxSelectHiddenPlaceholder(sroScheduleSel);
+                    } else {
+                        var o = document.createElement('option'); o.value = ''; o.textContent = 'Select Sale Type To Rate first'; sroScheduleSel.appendChild(o);
+                    }
                 }
                 if (sroItemSel) {
+                    sroItemSel.setAttribute('data-selected', '');
+                    ifpTaxClearFilter(sroItemSel);
                     sroItemSel.innerHTML = '';
-                    var o = document.createElement('option'); o.value = ''; o.textContent = 'Select SRO Schedule first'; sroItemSel.appendChild(o);
+                    if (ifpTaxUseListboxUi(sroItemSel)) {
+                        ifpTaxAppendHiddenPlaceholder(sroItemSel, 'Please select SRO schedule');
+                        ifpTaxSelectHiddenPlaceholder(sroItemSel);
+                    } else {
+                        var o2 = document.createElement('option'); o2.value = ''; o2.textContent = 'Select SRO Schedule first'; sroItemSel.appendChild(o2);
+                    }
                 }
                 loadSroSchedulesForRow(row, v);
             });
@@ -1305,9 +1714,11 @@
             sroScheduleSel.addEventListener('change', function() {
                 var v = sroScheduleSel.value || '';
                 if (sroItemSel) sroItemSel.setAttribute('data-selected', '');
+                if (sroItemSel) ifpTaxClearFilter(sroItemSel);
                 loadSroItemsForRow(row, v);
             });
         }
+        ifpTaxBindAllListboxSearches(row);
     }
 
     // ── Add Row ──
@@ -1332,21 +1743,25 @@
                         <div class="ifp-tax-sro-fields">
                             <div class="ifp-tax-sro-fields__head">Classification &amp; SRO</div>
                             <div class="ifp-tax-sro-fields__body">
-                                <div class="row g-2">
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_st_${idx}">Sale type</label><select id="${uid}_st_${idx}" name="items[${idx}][SaleTypeID]" class="${selCls} ifp-sale-type" data-selected=""><option value="">Loading…</option></select></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_str_${idx}">Sale type to rate</label><select id="${uid}_str_${idx}" name="items[${idx}][SaleTypeToRateID]" class="${selCls} ifp-sale-type-to-rate" data-selected=""><option value="">Select sale type first</option></select><input type="hidden" name="items[${idx}][RateType]" class="ifp-rate-type" value=""></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_sros_${idx}">SRO schedule</label><select id="${uid}_sros_${idx}" name="items[${idx}][SroScheduleID]" class="${selCls} ifp-sro-schedule" data-selected=""><option value="">Select rate profile first</option></select></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_sroi_${idx}">SRO item</label><select id="${uid}_sroi_${idx}" name="items[${idx}][SroItemID]" class="${selCls} ifp-sro-item" data-selected=""><option value="">Select SRO schedule first</option></select></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifiler_${idx}">Is filer</label><input type="hidden" name="items[${idx}][IsFiler]" class="ifp-is-filer" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifiler_${idx}" class="form-check-input ifp-is-filer-cb m-0" disabled></div></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifr_${idx}">Is fixed</label><input type="hidden" name="items[${idx}][IsFixedRate]" class="ifp-is-fixed-rate" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifr_${idx}" class="form-check-input ifp-is-fixed-rate-cb m-0" disabled></div></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_lr_${idx}">Rate</label><input type="number" step="0.000001" id="${uid}_lr_${idx}" name="items[${idx}][Rate]" class="form-control ifp-rate" value="0" min="0"></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_fr_${idx}">Fixed rate</label><input type="number" step="0.01" id="${uid}_fr_${idx}" name="items[${idx}][TPRate]" class="form-control ifp-fixed-rate" value="0" readonly></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_dp_${idx}">Discount %</label><input type="number" step="0.01" id="${uid}_dp_${idx}" name="items[${idx}][DiscountPercentage]" class="form-control ifp-disc-pct" value="0" min="0" max="100"></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_gst_${idx}">GST rate %</label><input type="number" step="0.01" id="${uid}_gst_${idx}" name="items[${idx}][GstPercentage]" class="form-control ifp-gst-pct" value="0" min="0"></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_stw_${idx}">Sales tax withheld at source</label><input type="number" step="0.01" id="${uid}_stw_${idx}" name="items[${idx}][SalesTaxWithheldAtSource]" class="form-control ifp-sales-tax-withheld" value="0" readonly></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_etp_${idx}">Extra tax %</label><input type="number" step="0.01" id="${uid}_etp_${idx}" class="form-control ifp-extra-tax-pct" value="0" readonly></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ftp_${idx}">Further tax %</label><input type="number" step="0.01" id="${uid}_ftp_${idx}" class="form-control ifp-further-tax-pct" value="0" readonly></div></div>
-                                    <div class="col-6"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_fpp_${idx}">FED payable %</label><input type="number" step="0.01" id="${uid}_fpp_${idx}" class="form-control ifp-fed-payable-pct" value="0" readonly></div></div>
+                                <div class="ifp-tax-sro-listbox-area border-bottom mb-2 pb-2 px-2 pt-2">
+                                    <div class="row g-0 ifp-tax-picker-row">
+                                        <div class="col-6 col-lg-4 ifp-tax-listbox-col"><div class="ifp-tax-column-header">Sale type</div><input type="search" class="form-control form-control-sm ifp-tax-listbox-search" data-ifp-pair="st" placeholder="Search…" autocomplete="off" aria-label="Search sale types"><select id="${uid}_st_${idx}" name="items[${idx}][SaleTypeID]" class="${selCls} ifp-inv-tax-listbox ifp-sale-type" data-ifp-pair="st" size="5" aria-label="Sale type" data-selected=""><option value="" hidden data-ifp-placeholder="1" selected title="Please select sale type">Please select sale type</option></select></div>
+                                        <div class="col-6 col-lg-3 ifp-tax-listbox-col"><div class="ifp-tax-column-header">Sale type to rate</div><input type="search" class="form-control form-control-sm ifp-tax-listbox-search" data-ifp-pair="str" placeholder="Search…" autocomplete="off" aria-label="Search sale type to rate"><select id="${uid}_str_${idx}" name="items[${idx}][SaleTypeToRateID]" class="${selCls} ifp-inv-tax-listbox ifp-sale-type-to-rate" data-ifp-pair="str" size="5" aria-label="Sale type to rate" data-selected=""><option value="" hidden data-ifp-placeholder="1" selected title="Please select sale type to rate">Please select sale type to rate</option></select><input type="hidden" name="items[${idx}][RateType]" class="ifp-rate-type" value=""></div>
+                                        <div class="col-6 col-lg-3 ifp-tax-listbox-col"><div class="ifp-tax-column-header">SRO schedule</div><input type="search" class="form-control form-control-sm ifp-tax-listbox-search" data-ifp-pair="sros" placeholder="Search…" autocomplete="off" aria-label="Search SRO schedule"><select id="${uid}_sros_${idx}" name="items[${idx}][SroScheduleID]" class="${selCls} ifp-inv-tax-listbox ifp-sro-schedule" data-ifp-pair="sros" size="5" aria-label="SRO schedule" data-selected=""><option value="" hidden data-ifp-placeholder="1" selected title="Please select SRO schedule">Please select SRO schedule</option></select></div>
+                                        <div class="col-6 col-lg-2 ifp-tax-listbox-col"><div class="ifp-tax-column-header">SRO item</div><input type="search" class="form-control form-control-sm ifp-tax-listbox-search" data-ifp-pair="sroi" placeholder="Search…" autocomplete="off" aria-label="Search SRO item"><select id="${uid}_sroi_${idx}" name="items[${idx}][SroItemID]" class="${selCls} ifp-inv-tax-listbox ifp-sro-item" data-ifp-pair="sroi" size="5" aria-label="SRO item" data-selected=""><option value="" hidden data-ifp-placeholder="1" selected title="Please select SRO item">Please select SRO item</option></select></div>
+                                    </div>
+                                </div>
+                                <div class="row g-2 px-2 pb-2 ifp-tax-sro-fields-lower">
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifiler_${idx}">Is Filer</label><input type="hidden" name="items[${idx}][IsFiler]" class="ifp-is-filer" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifiler_${idx}" class="form-check-input ifp-is-filer-cb m-0" disabled></div></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_lr_${idx}">Rate</label><input type="number" step="0.000001" id="${uid}_lr_${idx}" name="items[${idx}][Rate]" class="form-control ifp-rate" value="0" min="0"></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_gst_${idx}">GST Rate %</label><input type="number" step="0.01" id="${uid}_gst_${idx}" name="items[${idx}][GstPercentage]" class="form-control ifp-gst-pct" value="0" min="0"></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifr_${idx}">Is Fixed</label><input type="hidden" name="items[${idx}][IsFixedRate]" class="ifp-is-fixed-rate" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifr_${idx}" class="form-check-input ifp-is-fixed-rate-cb m-0" disabled></div></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_fr_${idx}">Fixed Rate</label><input type="number" step="0.01" id="${uid}_fr_${idx}" name="items[${idx}][TPRate]" class="form-control ifp-fixed-rate" value="0" readonly></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_dp_${idx}">Discount %</label><input type="number" step="0.01" id="${uid}_dp_${idx}" name="items[${idx}][DiscountPercentage]" class="form-control ifp-disc-pct" value="0" min="0" max="100"></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_etp_${idx}">Extra Tax %</label><input type="number" step="0.01" id="${uid}_etp_${idx}" class="form-control ifp-extra-tax-pct" value="0" readonly></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ftp_${idx}">Further Tax %</label><input type="number" step="0.01" id="${uid}_ftp_${idx}" class="form-control ifp-further-tax-pct" value="0" readonly></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_fpp_${idx}">FED Payable %</label><input type="number" step="0.01" id="${uid}_fpp_${idx}" class="form-control ifp-fed-payable-pct" value="0" readonly></div></div>
+                                    <div class="col-12"><div class="ifp-tax-sro-field mb-0 ifp-tax-sro-field--last"><label class="ifp-tax-sro-lbl" for="${uid}_stw_${idx}">Sales Tax Withheld at Source</label><input type="number" step="0.01" id="${uid}_stw_${idx}" name="items[${idx}][SalesTaxWithheldAtSource]" class="form-control ifp-sales-tax-withheld" value="0" readonly></div></div>
                                 </div>
                             </div>
                         </div>
