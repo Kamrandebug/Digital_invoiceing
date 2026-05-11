@@ -341,46 +341,47 @@
             line-height: 1.35;
             padding: 0.25rem 0.35rem;
             border: none;
-            border-radius: 0;
+            border-radius: 5px;
             box-shadow: none;
-            accent-color: #985ffd;
+            accent-color: rgb(var(--primary-rgb));
         }
         .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus {
-            box-shadow: inset 0 0 0 1px #985ffde6 !important;
+            box-shadow: inset 0 0 0 2px rgba(var(--primary-rgb), 0.35) !important;
             outline: 0;
         }
         .ifp-tax-sro-fields .ifp-tax-listbox-search::selection,
         .ifp-tax-sro-fields .ifp-tax-listbox-search::-moz-selection {
-            background-color: #985ffde6;
+            background-color: rgb(var(--primary-rgb));
             color: #fff;
         }
         .ifp-tax-sro-fields .ifp-inv-tax-listbox option:checked,
         .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus option:checked {
-            background-color: #985ffde6 !important;
+            background-color: rgb(var(--primary-rgb)) !important;
             background-image: none !important;
             color: #fff !important;
             -webkit-text-fill-color: #fff !important;
+            font-weight: 500;
         }
         .ifp-tax-sro-fields .ifp-inv-tax-listbox option:hover {
             background-color: var(--bs-secondary-bg, #e9ecef);
         }
         .ifp-tax-sro-fields .ifp-inv-tax-listbox option:checked:hover,
         .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus option:checked:hover {
-            background-color: #985ffde6 !important;
+            background-color: rgb(var(--primary-rgb)) !important;
             background-image: none !important;
             color: #fff !important;
             -webkit-text-fill-color: #fff !important;
         }
         .ifp-tax-sro-fields .ifp-inv-tax-listbox option:active,
         .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus option:active {
-            background-color: #985ffde6 !important;
+            background-color: rgb(var(--primary-rgb)) !important;
             background-image: none !important;
             color: #fff !important;
             -webkit-text-fill-color: #fff !important;
         }
         .ifp-tax-sro-fields .ifp-inv-tax-listbox option:focus,
         .ifp-tax-sro-fields .ifp-inv-tax-listbox:focus option:focus {
-            background-color: #985ffde6 !important;
+            background-color: rgb(var(--primary-rgb)) !important;
             background-image: none !important;
             color: #fff !important;
             -webkit-text-fill-color: #fff !important;
@@ -966,8 +967,14 @@
             }
         }
     }
-    /** Native listbox: paint chosen row (CSS alone is ignored on many Windows UAs). */
-    var IFP_TAX_LB_ROW_BG = '#985ffde6';
+    function ifpTaxListboxThemeRgbBg() {
+        try {
+            var raw = getComputedStyle(document.documentElement).getPropertyValue('--primary-rgb').trim();
+            if (raw) return 'rgb(' + raw + ')';
+        } catch (e) {}
+        return 'rgb(111, 66, 193)';
+    }
+    /** Native listbox: paint chosen row (same solid as .btn-primary / save buttons) */
     var IFP_TAX_LB_ROW_FG = '#fff';
     function ifpTaxPaintSelectedOption(sel) {
         if (!sel || !ifpTaxUseListboxUi(sel)) return;
@@ -984,7 +991,7 @@
             opt.style.removeProperty('color');
             opt.style.removeProperty('-webkit-text-fill-color');
             if (selVal !== '' && String(opt.value) === selVal) {
-                opt.style.setProperty('background-color', IFP_TAX_LB_ROW_BG, 'important');
+                opt.style.setProperty('background-color', ifpTaxListboxThemeRgbBg(), 'important');
                 opt.style.setProperty('color', IFP_TAX_LB_ROW_FG, 'important');
                 opt.style.setProperty('-webkit-text-fill-color', IFP_TAX_LB_ROW_FG, 'important');
             }

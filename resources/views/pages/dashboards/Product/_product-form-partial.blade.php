@@ -126,47 +126,48 @@
     line-height: 1.35;
     padding: 0.25rem 0.35rem;
     border: none;
-    border-radius: 0;
+    border-radius: 5px;
     box-shadow: none;
-    accent-color: #985ffd;
+    accent-color: rgb(var(--primary-rgb));
 }
 ._pfp-tax-listbox:focus {
-    box-shadow: inset 0 0 0 1px #985ffde6 !important;
+    box-shadow: inset 0 0 0 2px rgba(var(--primary-rgb), 0.35) !important;
     outline: 0;
 }
 ._pfp-tax-listbox-search::selection,
 ._pfp-tax-listbox-search::-moz-selection {
-    background-color: #985ffde6;
+    background-color: rgb(var(--primary-rgb));
     color: #fff;
 }
 /* Theme selection (override OS / WebKit blue when listbox is focused) */
 ._pfp-tax-listbox option:checked,
 ._pfp-tax-listbox:focus option:checked {
-    background-color: #985ffde6 !important;
+    background-color: rgb(var(--primary-rgb)) !important;
     background-image: none !important;
     color: #fff !important;
     -webkit-text-fill-color: #fff !important;
+    font-weight: 500;
 }
 ._pfp-tax-listbox option:hover {
     background-color: var(--bs-secondary-bg, #e9ecef);
 }
 ._pfp-tax-listbox option:checked:hover,
 ._pfp-tax-listbox:focus option:checked:hover {
-    background-color: #985ffde6 !important;
+    background-color: rgb(var(--primary-rgb)) !important;
     background-image: none !important;
     color: #fff !important;
     -webkit-text-fill-color: #fff !important;
 }
 ._pfp-tax-listbox option:active,
 ._pfp-tax-listbox:focus option:active {
-    background-color: #985ffde6 !important;
+    background-color: rgb(var(--primary-rgb)) !important;
     background-image: none !important;
     color: #fff !important;
     -webkit-text-fill-color: #fff !important;
 }
 ._pfp-tax-listbox option:focus,
 ._pfp-tax-listbox:focus option:focus {
-    background-color: #985ffde6 !important;
+    background-color: rgb(var(--primary-rgb)) !important;
     background-image: none !important;
     color: #fff !important;
     -webkit-text-fill-color: #fff !important;
@@ -745,8 +746,15 @@
         }
     }
 
-    /** Native listbox UAs often ignore option:checked CSS; inline + !important matches theme when a row is chosen. */
-    var PFP_TAX_LB_ROW_BG = '#985ffde6';
+    function pfpTaxListboxThemeRgbBg() {
+        try {
+            var raw = getComputedStyle(document.documentElement).getPropertyValue('--primary-rgb').trim();
+            if (raw) return 'rgb(' + raw + ')';
+        } catch (e) {}
+        return 'rgb(111, 66, 193)';
+    }
+
+    /** Native listbox UAs often ignore option:checked CSS; inline + !important matches primary button fill */
     var PFP_TAX_LB_ROW_FG = '#fff';
     function pfpTaxPaintSelectedOption(sel) {
         if (!sel || !sel.classList || !sel.classList.contains('_pfp-tax-listbox')) return;
@@ -763,7 +771,7 @@
             opt.style.removeProperty('color');
             opt.style.removeProperty('-webkit-text-fill-color');
             if (selVal !== '' && String(opt.value) === selVal) {
-                opt.style.setProperty('background-color', PFP_TAX_LB_ROW_BG, 'important');
+                opt.style.setProperty('background-color', pfpTaxListboxThemeRgbBg(), 'important');
                 opt.style.setProperty('color', PFP_TAX_LB_ROW_FG, 'important');
                 opt.style.setProperty('-webkit-text-fill-color', PFP_TAX_LB_ROW_FG, 'important');
             }

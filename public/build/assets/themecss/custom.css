@@ -621,84 +621,88 @@ textarea.form-control {
 		max-width: 80%;
 	}
 }
-/* Product tax listboxes (native size>1): theme + text selection */
+/* Product tax listboxes: selection matches primary button (rgb(var(--primary-rgb))), white label text */
 select.form-select._pfp-tax-listbox {
-	accent-color: #985ffd;
+	accent-color: rgb(var(--primary-rgb));
+	border-radius: 5px;
 }
 select.form-select._pfp-tax-listbox:focus {
-	box-shadow: inset 0 0 0 1px #985ffde6 !important;
+	box-shadow: inset 0 0 0 2px rgba(var(--primary-rgb), 0.35) !important;
 	outline: none;
 }
 input._pfp-tax-listbox-search::selection,
 input._pfp-tax-listbox-search::-moz-selection {
-	background-color: #985ffde6;
+	background-color: rgb(var(--primary-rgb));
 	color: #fff;
 }
 select.form-select._pfp-tax-listbox option:checked,
 select.form-select._pfp-tax-listbox:focus option:checked {
-	background-color: #985ffde6 !important;
+	background-color: rgb(var(--primary-rgb)) !important;
 	background-image: none !important;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
+	font-weight: 500;
 }
 select.form-select._pfp-tax-listbox option:checked:hover,
 select.form-select._pfp-tax-listbox:focus option:checked:hover {
-	background-color: #985ffde6 !important;
+	background-color: rgb(var(--primary-rgb)) !important;
 	background-image: none !important;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
 }
 select.form-select._pfp-tax-listbox option:active,
 select.form-select._pfp-tax-listbox:focus option:active {
-	background-color: #985ffde6 !important;
+	background-color: rgb(var(--primary-rgb)) !important;
 	background-image: none !important;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
 }
 select.form-select._pfp-tax-listbox option:focus,
 select.form-select._pfp-tax-listbox:focus option:focus {
-	background-color: #985ffde6 !important;
+	background-color: rgb(var(--primary-rgb)) !important;
 	background-image: none !important;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
 }
-/* Invoice line Tax & SRO nested modal: listbox + search selection (same as product) */
+/* Invoice Tax & SRO nested modal listboxes (same button theme) */
 select.form-select.ifp-inv-tax-listbox {
-	accent-color: #985ffd;
+	accent-color: rgb(var(--primary-rgb));
+	border-radius: 5px;
 }
 select.form-select.ifp-inv-tax-listbox:focus {
-	box-shadow: inset 0 0 0 1px #985ffde6 !important;
+	box-shadow: inset 0 0 0 2px rgba(var(--primary-rgb), 0.35) !important;
 	outline: none;
 }
 input.ifp-tax-listbox-search::selection,
 input.ifp-tax-listbox-search::-moz-selection {
-	background-color: #985ffde6;
+	background-color: rgb(var(--primary-rgb));
 	color: #fff;
 }
 select.form-select.ifp-inv-tax-listbox option:checked,
 select.form-select.ifp-inv-tax-listbox:focus option:checked {
-	background-color: #985ffde6 !important;
+	background-color: rgb(var(--primary-rgb)) !important;
 	background-image: none !important;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
+	font-weight: 500;
 }
 select.form-select.ifp-inv-tax-listbox option:checked:hover,
 select.form-select.ifp-inv-tax-listbox:focus option:checked:hover {
-	background-color: #985ffde6 !important;
+	background-color: rgb(var(--primary-rgb)) !important;
 	background-image: none !important;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
 }
 select.form-select.ifp-inv-tax-listbox option:active,
 select.form-select.ifp-inv-tax-listbox:focus option:active {
-	background-color: #985ffde6 !important;
+	background-color: rgb(var(--primary-rgb)) !important;
 	background-image: none !important;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
 }
 select.form-select.ifp-inv-tax-listbox option:focus,
 select.form-select.ifp-inv-tax-listbox:focus option:focus {
-	background-color: #985ffde6 !important;
+	background-color: rgb(var(--primary-rgb)) !important;
 	background-image: none !important;
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
