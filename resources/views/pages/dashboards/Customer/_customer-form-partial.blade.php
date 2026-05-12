@@ -87,9 +87,12 @@
         background: var(--cm-input-bg, #fff);
         border: 1px solid var(--cm-border-color, #dee2e6);
         border-radius: 4px;
-        min-height: 36px;
+        min-height: 38px;
         color: var(--cm-text-main, #212529);
         word-break: break-word;
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
     }
     ._cfp-required::after { content: " *"; color: #dc3545; }
 
@@ -142,8 +145,9 @@
 @endonce
 
 
-{{-- ── Info Badge (edit / show modes only) ────────────────────── --}}
+{{-- ── Info Badge (edit / show) — full page only; hidden in AJAX modal (metadata); Edit shortcut kept in view modal --}}
 @if(!$isCreate && $customer)
+    @if(!$inModal)
 <div class="_cfp-info-badge {{ $isView ? 'show-mode' : 'edit-mode' }}">
     <div class="row align-items-center g-2">
         <div class="col-auto"><strong><i class="fas fa-id-badge"></i> ID:</strong> #{{ $customer->ID }}</div>
@@ -156,23 +160,24 @@
             </span>
         </div>
         @if($isView)
-<div class="col text-end">
-    @if($inModal)
+        <div class="col text-end">
+            <a href="{{ route('customers.edit', $customer->ID) }}"
+               class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
+                <i class="fas fa-edit"></i> Edit Customer
+            </a>
+        </div>
+        @endif
+    </div>
+</div>
+    @elseif($isView)
+    <div class="d-flex justify-content-end mb-2">
         <button type="button"
                 class="btn btn-light btn-sm fw-bold text-primary shadow-sm"
                 onclick="openCustomerModal('edit', {{ $customer->ID }})">
             <i class="fas fa-edit"></i> Edit Customer
         </button>
-    @else
-        <a href="{{ route('customers.edit', $customer->ID) }}"
-           class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
-            <i class="fas fa-edit"></i> Edit Customer
-        </a>
-    @endif
-</div>
-@endif
     </div>
-</div>
+    @endif
 @endif
 
 
@@ -187,6 +192,8 @@
 
 <div class="row justify-content-center">
 	<div class="col-md-12">
+		<div class="_pfp-tab-panel-shell border rounded overflow-hidden mb-3">
+			<div class="_pfp-tab-panel-body">
 		<div class="row g-2">
 			{{-- Title --}}
 			<div class="col-md-3">
@@ -194,12 +201,14 @@
 				@if($isReadonly)
 					<div class="_cfp-detail-value">{{ $customer->Title ?? '-' }}</div>
 				@else
-					<select name="Title" class="form-select form-select-sm @error('Title') is-invalid @enderror">
-						<option value="">Select</option>
-						@foreach(['Mr','Mrs','Miss','Dr','Prof','Engr'] as $t)
-							<option value="{{ $t }}" {{ old('Title', $customer->Title ?? '') == $t ? 'selected' : '' }}>{{ $t }}</option>
-						@endforeach
-					</select>
+					<div class="d-flex gap-1 align-items-center w-100">
+						<select name="Title" class="form-select @error('Title') is-invalid @enderror flex-grow-1" style="min-width:0;">
+							<option value="">Select</option>
+							@foreach(['Mr','Mrs','Miss','Dr','Prof','Engr'] as $t)
+								<option value="{{ $t }}" {{ old('Title', $customer->Title ?? '') == $t ? 'selected' : '' }}>{{ $t }}</option>
+							@endforeach
+						</select>
+					</div>
 					@error('Title')<div class="invalid-feedback">{{ $message }}</div>@enderror
 				@endif
 			</div>
@@ -313,8 +322,11 @@
 					@error('Website')<div class="invalid-feedback">{{ $message }}</div>@enderror
 				@endif
 			</div>
-			
-			<div class="col-md-12 mt-4">
+		</div>
+			</div>
+		</div>
+
+			<div class="mt-3">
 				<ul class="nav nav-tabs" id="myTab" role="tablist">
 				  <li class="nav-item" role="presentation">
 					<button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">Address</button>
@@ -328,18 +340,27 @@
 				</ul>
 				<div class="tab-content" id="myTabContent">
 				  <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
-					<div class="row g-4">
-						<div class="col-md-6">
+					@php
+						$sameAsBillingView = $isReadonly && filter_var($customer->SameAsBilling ?? false, FILTER_VALIDATE_BOOLEAN);
+					@endphp
+					<div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+						<div class="_pfp-tab-panel-body">
+					<div class="row g-4 align-items-start">
+						<div class="{{ $sameAsBillingView ? 'col-12' : 'col-md-6' }}">
 							<div class="row g-2">
 								<div class="col-md-12">
-									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }} float-start">Street Address</label>
-									<div class="form-check float-end">
-										<input type="hidden" name="SameAsBilling" value="0">
-										<input class="form-check-input" type="checkbox" name="SameAsBilling" id="{{ $uid }}_SameAsBilling" value="1" {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
-										<label class="form-check-label" for="{{ $uid }}_SameAsBilling">Same as Primary Address</label>
+									<div class="d-flex justify-content-between align-items-start gap-2 flex-wrap w-100 mb-1">
+										<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }} mb-0">Street Address</label>
+										@if(!$isReadonly)
+											<div class="form-check mb-0 flex-shrink-0">
+												<input type="hidden" name="SameAsBilling" value="0">
+												<input class="form-check-input" type="checkbox" name="SameAsBilling" id="{{ $uid }}_SameAsBilling" value="1" {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
+												<label class="form-check-label" for="{{ $uid }}_SameAsBilling">Same as Primary Address</label>
+											</div>
+										@endif
 									</div>
 									@if($isReadonly)
-										<div class="_cfp-detail-value clearfix">{{ $customer->Address ?? '-' }}</div>
+										<div class="_cfp-detail-value">{{ $customer->Address ?? '-' }}</div>
 									@else
 										<textarea name="Address" rows="2"
 												  class="form-control form-control-sm @error('Address') is-invalid @enderror"
@@ -348,7 +369,7 @@
 									@endif
 								</div>
 
-								<div class="col-md-3">
+								<div class="col-6 col-lg-3">
 									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">City</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->City ?? '-' }}</div>
@@ -360,24 +381,25 @@
 									@endif
 								</div>
 
-								<div class="col-md-3">
+								<div class="col-6 col-lg-3">
 									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">State / Province</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->County ?? '-' }}</div>
 									@else
-										<select name="County"
-												class="form-select form-select-sm @error('County') is-invalid @enderror"
-												required>
-											<option value="">Select State/Province</option>
-											@foreach($provinces as $prov)
-												<option value="{{ $prov }}" {{ old('County', $customer->County ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
-											@endforeach
-										</select>
+										<div class="d-flex gap-1 align-items-center w-100">
+											<select name="County" id="{{ $uid }}_County"
+													class="form-select @error('County') is-invalid @enderror flex-grow-1" style="min-width:0;" required>
+												<option value="">Select State/Province</option>
+												@foreach($provinces as $prov)
+													<option value="{{ $prov }}" {{ old('County', $customer->County ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
+												@endforeach
+											</select>
+										</div>
 										@error('County')<div class="invalid-feedback">{{ $message }}</div>@enderror
 									@endif
 								</div>
 
-								<div class="col-md-3">
+								<div class="col-6 col-lg-3">
 									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Postal Code</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->PostalCode ?? '-' }}</div>
@@ -389,7 +411,7 @@
 									@endif
 								</div>
 
-								<div class="col-md-3">
+								<div class="col-6 col-lg-3">
 									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Country</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->Country ?? '-' }}</div>
@@ -402,9 +424,36 @@
 								</div>
 
 							</div>
-						</div>  
+							@if($sameAsBillingView)
+								<p class="small text-muted mt-2 mb-0"><i class="fas fa-link me-1"></i>Billing address is the same as the primary address above.</p>
+							@endif
+						</div>
+						@unless($sameAsBillingView)
 						<div class="col-md-6">
-							
+							@if($isReadonly)
+									<div class="row g-2">
+										<div class="col-md-12">
+											<div class="_cfp-detail-label">Street Address (billing)</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingAddress ?? '-' }}</div>
+										</div>
+										<div class="col-6 col-lg-3">
+											<div class="_cfp-detail-label">City</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingCity ?? '-' }}</div>
+										</div>
+										<div class="col-6 col-lg-3">
+											<div class="_cfp-detail-label">State / Province</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingCounty ?? '-' }}</div>
+										</div>
+										<div class="col-6 col-lg-3">
+											<div class="_cfp-detail-label">Postal Code</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingPostalCode ?? '-' }}</div>
+										</div>
+										<div class="col-6 col-lg-3">
+											<div class="_cfp-detail-label">Country</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingCountry ?? '-' }}</div>
+										</div>
+									</div>
+							@else
 							<div id="{{ $uid }}_billingFields" class="row g-2" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'display:none' : '' }}">
 
 								<div class="col-md-12">
@@ -425,14 +474,15 @@
 
 								<div class="col-md-3">
 									<label class="form-label _cfp-required">State / Province</label>
-									<select name="BillingCounty" id="{{ $uid }}_BillingCounty"
-											class="form-select form-select-sm @error('BillingCounty') is-invalid @enderror"
-											required>
-										<option value="">Select State/Province</option>
-										@foreach($provinces as $prov)
-											<option value="{{ $prov }}" {{ old('BillingCounty', $customer->BillingCounty ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
-										@endforeach
-									</select>
+									<div class="d-flex gap-1 align-items-center w-100">
+										<select name="BillingCounty" id="{{ $uid }}_BillingCounty"
+												class="form-select @error('BillingCounty') is-invalid @enderror flex-grow-1" style="min-width:0;" required>
+											<option value="">Select State/Province</option>
+											@foreach($provinces as $prov)
+												<option value="{{ $prov }}" {{ old('BillingCounty', $customer->BillingCounty ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
+											@endforeach
+										</select>
+									</div>
 									@error('BillingCounty')<div class="invalid-feedback">{{ $message }}</div>@enderror
 								</div>
 
@@ -452,10 +502,16 @@
 									@error('BillingCountry')<div class="invalid-feedback">{{ $message }}</div>@enderror
 								</div>
 							</div>
-						</div>  
+							@endif
+						</div>
+						@endunless
+					</div>
+						</div>
 					</div>
 				  </div>
 				  <div class="tab-pane fade" id="profile-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
+					<div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+						<div class="_pfp-tab-panel-body">
 					<div class="row g-2">
 						<div class="col-md-4">
 							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
@@ -582,8 +638,12 @@
 						@endif
 
 					</div>
+						</div>
+					</div>
 				  </div>
 				  <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
+					<div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+						<div class="_pfp-tab-panel-body">
 					<div class="row g-2">
 					<div class="col-md-12">
 						<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Notes</label>
@@ -600,15 +660,19 @@
 					@if(!$isReadonly)
 					<div class="col-md-4">
 						<label class="form-label">Status</label>
-						<select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror">
-							<option value="1" {{ old('Status', $customer->Status ?? '1') != '0' ? 'selected' : '' }}>Active</option>
-							<option value="0" {{ old('Status', $customer->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
-						</select>
+						<div class="d-flex gap-1 align-items-center w-100">
+							<select name="Status" class="form-select @error('Status') is-invalid @enderror flex-grow-1" style="min-width:0;">
+								<option value="1" {{ old('Status', $customer->Status ?? '1') != '0' ? 'selected' : '' }}>Active</option>
+								<option value="0" {{ old('Status', $customer->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
+							</select>
+						</div>
 						@error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
 					</div>
 					@endif
 
 				</div>
+						</div>
+					</div>
 				  </div>
 				</div>
 			</div>
@@ -704,7 +768,7 @@
         const panel = document.getElementById(uid + '_billingFields');
         if (!cb || !panel) return;
 
-        const inputs = panel.querySelectorAll('input:not([type=hidden]), textarea');
+        const inputs = panel.querySelectorAll('input:not([type=hidden]), textarea, select');
         
         // Define map of Destination ID Suffix -> Source Name
         const map = {
@@ -737,8 +801,8 @@
                 const srcEl = document.querySelector('form#' + uid + '_form [name="' + src + '"]');
                 if (dstEl && srcEl) {
                     dstEl.value = srcEl.value;
-                    // Trigger input event on destination to handle any dependent logic (like validation cleanup)
-                    dstEl.dispatchEvent(new Event('input')); 
+                    dstEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    dstEl.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             });
         }
@@ -750,9 +814,9 @@
             Object.values(map).forEach(srcName => {
                 const srcEl = form.querySelector('[name="' + srcName + '"]');
                 if (srcEl) {
-                    srcEl.addEventListener('input', () => {
-                        if (cb.checked) syncValues();
-                    });
+                    const run = () => { if (cb.checked) syncValues(); };
+                    srcEl.addEventListener('input', run);
+                    srcEl.addEventListener('change', run);
                 }
             });
             form.dataset.syncAttached = 'true';

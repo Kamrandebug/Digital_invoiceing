@@ -86,10 +86,12 @@ class InvoiceModel extends Model
     public static function Load_Product()
     {
         // Product dropdown for invoice: include tax/FBR fields for auto-fill on line item.
-        $query = "SELECT ID, Name AS ProductName, SalePrice, 0 AS GstPercentage,
-                  HsCode, SaleInformation, UomID, SaleTypeID, SaleTypeToRateID, SroScheduleID, SroItemID, TPRate, IsFixedRate
-                  FROM tbl_product
-                  WHERE Status = 1";
+        $query = "SELECT p.ID, p.Name AS ProductName, p.SalePrice, 0 AS GstPercentage,
+                  p.HsCode, p.SaleInformation, p.UomID,
+                  (SELECT u.UnitName FROM tbl_Unit u WHERE u.id = p.UomID LIMIT 1) AS UomName,
+                  p.SaleTypeID, p.SaleTypeToRateID, p.SroScheduleID, p.SroItemID, p.TPRate, p.IsFixedRate
+                  FROM tbl_product p
+                  WHERE p.Status = 1";
 
         return $query;
     }

@@ -221,6 +221,19 @@ class ProductController extends Controller
                 $payload = ['status' => 'success', 'message' => 'Product created successfully!'];
                 if ($prodRow) {
                     $isFixed = in_array(strtolower(trim((string) ($prodRow->IsFixedRate ?? '0'))), ['1', 'true', 'yes', 'y', 'on'], true) ? 1 : 0;
+                    $uomLabel = '';
+                    $uomId = $prodRow->UomID ?? null;
+                    if ($uomId !== null && $uomId !== '' && (string) $uomId !== '0') {
+                        foreach (['tbl_Unit', 'tbl_unit', 'Tbl_Unit'] as $ut) {
+                            try {
+                                $uomLabel = (string) (DB::table($ut)->where('id', $uomId)->value('UnitName') ?? '');
+                                if ($uomLabel !== '') {
+                                    break;
+                                }
+                            } catch (\Throwable $e) {
+                            }
+                        }
+                    }
                     $payload['product'] = [
                         'id'                      => (int) $prodRow->ID,
                         'label'                   => (string) ($prodRow->Name ?? $prodRow->Code ?? ('Product #' . $prodRow->ID)),
@@ -229,6 +242,7 @@ class ProductController extends Controller
                         'hscode'                  => (string) ($prodRow->HsCode ?? ''),
                         'sale_information'        => (string) ($prodRow->SaleInformation ?? ''),
                         'uom_id'                  => $prodRow->UomID ?? '',
+                        'uom_label'               => $uomLabel,
                         'sale_type_id'            => $prodRow->SaleTypeID ?? '',
                         'sale_type_to_rate_id'    => $prodRow->SaleTypeToRateID ?? '',
                         'sro_schedule_id'         => $prodRow->SroScheduleID ?? '',

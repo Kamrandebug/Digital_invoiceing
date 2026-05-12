@@ -707,6 +707,21 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	color: #fff !important;
 	-webkit-text-fill-color: #fff !important;
 }
+/* Shared tab content card: Product modal (Basic/Pricing/Tax) + Customer modal — BS theme vars */
+._pfp-tab-panel-shell {
+	border: 1px solid var(--bs-border-color, #dee2e6);
+	border-radius: 0.5rem;
+	overflow: hidden;
+	box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+	background-color: var(--bs-body-bg, #fff);
+}
+._pfp-tab-panel-body {
+	padding: 0.75rem 0.85rem;
+	background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+._pfp-tax-sro-split.border.rounded {
+	box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
 ._pfp-tab-pane { padding: 16px 0; }
 ._pfp-section-title { font-size: 12px; font-weight: 600; color: rgb(var(--primary-rgb)) !important; margin-bottom: 12px; }
 .show-mode ._pfp-section-title { color: #17a2b8; }
@@ -806,6 +821,66 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	padding: 0.2rem 0.35rem !important;
 	margin: 0 !important;
 	min-height: 1.5rem !important;
+}
+
+/* Customer modal + standalone form: same .form-control / .form-select sizing as Product modal (Category / Unit) */
+#customer_modal_body .form-control:not(textarea),
+#customer_modal_body textarea.form-control,
+#customer_modal_body .form-select:not([multiple]):not([size]),
+#customer_modal_body .form-select[multiple],
+#customer_modal_body .form-select[size]:not([size="1"]),
+.customer-form-container .form-control:not(textarea),
+.customer-form-container textarea.form-control,
+.customer-form-container .form-select:not([multiple]):not([size]),
+.customer-form-container .form-select[multiple],
+.customer-form-container .form-select[size]:not([size="1"]) {
+	font-size: 12px !important;
+}
+#customer_modal_body label.form-label,
+.customer-form-container label.form-label {
+	font-size: 12px !important;
+}
+#customer_modal_body .form-select:not([multiple]):not([size]):focus,
+.customer-form-container .form-select:not([multiple]):not([size]):focus {
+	border-color: rgb(var(--primary-rgb)) !important;
+	box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+	outline: none;
+}
+#customer_modal_body .form-select.is-invalid:not([multiple]):not([size]),
+.customer-form-container .form-select.is-invalid:not([multiple]):not([size]) {
+	border-color: #dc3545 !important;
+}
+
+/* Customer form — Address / Financial / Additional tab buttons only (#myTab): font + backgrounds */
+#customer_modal_body #myTab.nav-tabs > .nav-item > .nav-link,
+.customer-form-container #myTab.nav-tabs > .nav-item > .nav-link {
+	font-family: "Space Grotesk", sans-serif !important;
+	font-size: 12px !important;
+	font-weight: 500;
+	color: rgb(1, 26, 66);
+	background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+#customer_modal_body #myTab.nav-tabs > .nav-item > .nav-link.active,
+.customer-form-container #myTab.nav-tabs > .nav-item > .nav-link.active {
+	color: #fff !important;
+	background-color: rgb(var(--primary-rgb)) !important;
+}
+
+/* Customer modal / full-page customer form — readonly detail cells: block box, no flex stretch (match Product _pfp-detail-value) */
+#customer_modal_body .show-mode ._cfp-detail-value,
+.customer-form-container.show-mode ._cfp-detail-value {
+	display: block !important;
+	width: 100%;
+	height: auto !important;
+	min-height: calc(1.5em + 10px + 2px);
+	box-sizing: border-box;
+	font-family: "Space Grotesk", sans-serif !important;
+	font-size: 12px !important;
+	font-weight: 400;
+	line-height: 1.5;
+	padding: 5px 11px;
+	white-space: normal;
+	word-break: break-word;
 }
 
 /* Invoice modal: Tax & SRO — row button + nested modal (slot moved in/out of form) */
@@ -1131,6 +1206,76 @@ body.ifp-invoice-product-open .modal-backdrop.show ~ .modal-backdrop.show {
 	width: 1.55rem;
 	min-width: 1.55rem;
 	font-size: 1rem;
+}
+
+/* ── Header: selected tenant pill (aligned with light theme + primary accent; dark mode aware) ── */
+.app-header-tenant-pill {
+	font-family: verdana !important;
+	font-size: 12px !important;
+	background: linear-gradient(180deg, #ffffff 0%, rgba(var(--primary-rgb), 0.07) 100%);
+	border: 1px solid rgba(var(--primary-rgb), 0.22);
+	box-shadow:
+		0 1px 2px rgba(15, 23, 42, 0.06),
+		inset 0 1px 0 rgba(255, 255, 255, 0.92);
+	color: inherit;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.app-header-tenant-pill:hover {
+	border-color: rgba(var(--primary-rgb), 0.42);
+	box-shadow:
+		0 4px 16px rgba(var(--primary-rgb), 0.16),
+		inset 0 1px 0 rgba(255, 255, 255, 1);
+	transform: translateY(-1px);
+}
+.app-header-tenant-pill__icon {
+	width: 28px;
+	height: 28px;
+	min-width: 28px;
+	background: rgba(var(--primary-rgb), 0.12) !important;
+	color: rgb(var(--primary-rgb)) !important;
+	border: 1px solid rgba(var(--primary-rgb), 0.28);
+}
+.app-header-tenant-pill__icon i {
+	font-size: 12px !important;
+	line-height: 1 !important;
+}
+.app-header-tenant-pill__label {
+	font-family: verdana !important;
+	font-size: 12px !important;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #64748b;
+}
+.app-header-tenant-pill__name {
+	font-family: verdana !important;
+	font-size: 12px !important;
+	font-weight: 600;
+	max-width: 180px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: #0f172a;
+}
+html[data-theme-mode="dark"] .app-header-tenant-pill {
+	background: linear-gradient(180deg, rgba(30, 41, 59, 0.92) 0%, rgba(var(--primary-rgb), 0.14) 100%);
+	border-color: rgba(255, 255, 255, 0.1);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+html[data-theme-mode="dark"] .app-header-tenant-pill:hover {
+	border-color: rgba(var(--primary-rgb), 0.5);
+	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+html[data-theme-mode="dark"] .app-header-tenant-pill__label {
+	color: rgba(226, 232, 240, 0.65);
+}
+html[data-theme-mode="dark"] .app-header-tenant-pill__name {
+	color: #f1f5f9;
+}
+html[data-theme-mode="dark"] .app-header-tenant-pill__icon {
+	background: rgba(var(--primary-rgb), 0.22) !important;
+	color: #f5f3ff !important;
+	border-color: rgba(var(--primary-rgb), 0.38);
 }
 
 

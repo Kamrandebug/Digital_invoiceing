@@ -179,21 +179,22 @@
 </style>
 @endonce
 @if(!$isCreate && $product)
+    @if(!$inModal)
 <div class="_pfp-info-badge {{ $isReadonly ? 'show-mode' : 'edit-mode' }}">
     <div class="row align-items-center g-2">
         <div class="col-auto"><strong><i class="fas fa-id-badge"></i> ID:</strong> #{{ $product->ID }}</div>
         <div class="col-auto"><strong><i class="fas fa-barcode"></i> Code:</strong> {{ $product->Code ?? 'N/A' }}</div>
         <div class="col-auto"><strong><i class="fas fa-tag"></i> Price:</strong> PKR {{ number_format($product->SalePrice ?? 0, 2) }}</div>
         <div class="col-auto"><strong><i class="fas fa-boxes"></i> Qty:</strong> {{ $product->CurrentQuantity ?? 0 }}</div>
-        @if($isReadonly && $inModal)
-        <div class="col text-end">
-            <button type="button" class="btn btn-light btn-sm fw-bold text-primary" onclick="openProductModal('edit', {{ $product->ID }})">
-                <i class="fas fa-edit"></i> Edit Product
-            </button>
-        </div>
-        @endif
     </div>
 </div>
+    @elseif($isReadonly)
+    <div class="d-flex justify-content-end mb-2">
+        <button type="button" class="btn btn-light btn-sm fw-bold text-primary" onclick="openProductModal('edit', {{ $product->ID }})">
+            <i class="fas fa-edit"></i> Edit Product
+        </button>
+    </div>
+    @endif
 @endif
 
 @if(!$isReadonly)
@@ -218,6 +219,8 @@
                 {{-- Tab: Basic --}}
                 <div class="tab-pane fade show active _pfp-tab-pane" id="{{ $uid }}_basic" role="tabpanel">
                     <h6 class="_pfp-section-title"><i class="fas fa-box-open"></i> Basic Information</h6>
+                    <div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+                        <div class="_pfp-tab-panel-body">
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Product Name</label>
@@ -276,11 +279,15 @@
                             @else<input type="number" step="0.000001" name="CurrentQuantity" class="form-control @error('CurrentQuantity') is-invalid @enderror" value="{{ old('CurrentQuantity', $product->CurrentQuantity ?? '0') }}">@error('CurrentQuantity')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
                         </div>
                     </div>
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Tab: Pricing --}}
                 <div class="tab-pane fade _pfp-tab-pane" id="{{ $uid }}_pricing" role="tabpanel">
                     <h6 class="_pfp-section-title"><i class="fas fa-dollar-sign"></i> Pricing</h6>
+                    <div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+                        <div class="_pfp-tab-panel-body">
                     <div class="row g-2">
                         <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Sale Price (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->SalePrice ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="SalePrice" class="form-control @error('SalePrice') is-invalid @enderror" value="{{ old('SalePrice', $product->SalePrice ?? '0.00') }}" required>@error('SalePrice')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
                         <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Cost (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Cost ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Cost" class="form-control @error('Cost') is-invalid @enderror" value="{{ old('Cost', $product->Cost ?? '0.00') }}">@error('Cost')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
@@ -319,12 +326,16 @@
                             @endif
                         </div>
                     </div>
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Tab: Tax & SRO --}}
                 <div class="tab-pane fade _pfp-tab-pane" id="{{ $uid }}_tax" role="tabpanel">
                     <h6 class="_pfp-section-title"><i class="fas fa-receipt"></i> Tax &amp; SRO</h6>
                     @if($isReadonly)
+                        <div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+                            <div class="_pfp-tab-panel-body">
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="_pfp-detail-label">HS Code</label>
@@ -354,6 +365,8 @@
                             <div class="col-md-3">
                                 <label class="_pfp-detail-label">SRO item</label>
                                 <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['sro_item'] ?? '—') : ($product->SROItem ?? '-') }}</div>
+                            </div>
+                        </div>
                             </div>
                         </div>
                     @else
