@@ -288,8 +288,9 @@ class InvoiceModel extends Model
                 SELECT  t.ID, HsCode,fho.`description` AS Uom_Desc,fttc.`transactioN_DESC` AS SaleTypeDesc,
                         fsttr.`ratE_DESC` AS SaleTypeToRateDesc, fss.`srO_DESC` AS SroScheduleDesc,
                         fsi.`srO_ITEM_DESC` AS SroItemSerialNo,ProductDescription,
-                        t.`ValueSalesExcludingST`,IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS `FixedNotifiedValueOrRetailPrice`,
-                        t.`SalesTaxApplicable`,t.`TotalValues`, t.RequestID
+                        t.Amount AS `ValueSalesExcludingST`,
+                        IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS `FixedNotifiedValueOrRetailPrice`,
+                        t.GSTAmount AS `SalesTaxApplicable`,t.`TotalValues`, t.RequestID
                 FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
                 LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fho ON (fho.`uoM_ID` = t.UomID AND fho.hs_CODE = t.HsCode)
                 LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc ON (fttc.`transactioN_TYPE_ID` = t.SaleTypeID)
