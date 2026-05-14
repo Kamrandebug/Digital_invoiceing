@@ -849,15 +849,42 @@ saveBtn.onclick = function () {
         setPrintFrameSrc(orient);
     });
 
+    /** Chrome "Save as PDF" uses the parent tab title when printing an iframe — sync both, then restore parent. */
+    function buildGDPrintSaveTitle(invoiceId) {
+        var d = new Date();
+        var ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+        return 'GD-DI-' + ymd + '-' + String(invoiceId).padStart(2, '0');
+    }
+
     document.getElementById('invoice_print_do_print').addEventListener('click', function () {
         var frame = document.getElementById('invoice_print_frame');
-        if (frame && frame.contentWindow) {
-            try {
-                frame.contentWindow.focus();
-                frame.contentWindow.print();
-            } catch (e) {
-                showToast('error', 'Could not open print dialog. Try printing from the browser (Ctrl+P).');
+        if (!frame || !frame.contentWindow) return;
+        var iw = frame.contentWindow;
+        var parentTitle = document.title;
+        try {
+            var printTitle = (_printModalInvoiceId && iw.document)
+                ? buildGDPrintSaveTitle(_printModalInvoiceId)
+                : parentTitle;
+            if (iw.document && _printModalInvoiceId) {
+                iw.document.title = printTitle;
             }
+            document.title = printTitle;
+            var restored = false;
+            function restoreTabTitle() {
+                if (restored) return;
+                restored = true;
+                document.title = parentTitle;
+                try {
+                    iw.removeEventListener('afterprint', restoreTabTitle);
+                } catch (e2) {}
+            }
+            iw.addEventListener('afterprint', restoreTabTitle);
+            setTimeout(restoreTabTitle, 180000);
+            iw.focus();
+            iw.print();
+        } catch (e) {
+            document.title = parentTitle;
+            showToast('error', 'Could not open print dialog. Try printing from the browser (Ctrl+P).');
         }
     });
 

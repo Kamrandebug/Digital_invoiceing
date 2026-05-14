@@ -173,10 +173,24 @@ class InvoiceController extends Controller
             $orientation = 'portrait';
         }
 
+        $seller = DB::table('tbl_business_info')
+            ->where('IsArchive', 0)
+            ->orderBy('ID')
+            ->first();
+
+        $buyer = null;
+        if (! empty($invoice->CustomerID)) {
+            $buyer = DB::table('tbl_customer')
+                ->where('ID', $invoice->CustomerID)
+                ->first();
+        }
+
         return view('pages.dashboards.Invoice.invoice-print', [
             'invoice' => $invoice,
             'items' => $items,
             'orientation' => $orientation,
+            'seller' => $seller,
+            'buyer' => $buyer,
         ]);
     }
 

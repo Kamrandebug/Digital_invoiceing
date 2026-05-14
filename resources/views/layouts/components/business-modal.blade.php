@@ -34,7 +34,7 @@
             .then(function (html) {
                 bodyEl.innerHTML = html;
                 titleEl.textContent = (mode === 'edit' ? 'Update Business' : 'Business Info');
-                if (mode === 'edit') attachBusinessFormSubmit(bodyEl);
+                if (mode !== 'show') attachBusinessFormSubmit(bodyEl);
             })
             .catch(function () {
                 bodyEl.innerHTML = '<div class="p-4 text-danger text-center">Failed to load form.</div>';

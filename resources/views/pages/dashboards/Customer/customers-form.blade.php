@@ -315,6 +315,7 @@
         @if($isEdit)
             @method('PUT')
         @endif
+        <input type="hidden" name="CustomerFormContext" value="{{ $isCreate ? 'create' : 'edit-' . ($customer->ID ?? '') }}">
     @endif
 
         {{-- Basic Info --}}
@@ -600,13 +601,13 @@
                     <div class="col-md-12">
                         <label class="checkbox-label">
                             <input type="checkbox" name="SameAsBilling" id="SameAsBilling" value="1" 
-                                   {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
+                                   {{ old('SameAsBilling', $customer->SameAsBilling ?? '1') == '1' ? 'checked' : '' }}>
                             <span>Same as Primary Address</span>
                         </label>
                     </div>
                 </div>
                 
-                <div id="billingAddressFields" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'display:none' : '' }}">
+                <div id="billingAddressFields" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '1') == '1' ? 'display:none' : '' }}">
                     <div class="row mt-3">
                         <div class="col-md-12">
                             <div class="mb-3">
@@ -732,6 +733,33 @@
                     </div>
                 </div>
             </div>
+
+            <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="IsFiler" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Tax Filer Status</label>
+                        @if($isReadonly)
+                            <div class="detail-value">
+                                @if(isset($customer->IsFiler) && $customer->IsFiler)
+                                    <i class="fas fa-check-circle text-success"></i> Tax Filer
+                                @else
+                                    <i class="fas fa-times-circle text-danger"></i> Non-Filer
+                                @endif
+                            </div>
+                        @else
+                            <div class="checkbox-label">
+                                <input type="hidden" name="IsFiler" value="0">
+                                <input type="checkbox" name="IsFiler" id="IsFiler" value="1" 
+                                       {{ old('IsFiler', $customer->IsFiler ?? '1') == '1' ? 'checked' : '' }}>
+                                <span>Is Tax Filer?</span>
+                            </div>
+                            @error('IsFiler')
+                                <div class="invalid-feedback d-block"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        @endif
+                    </div>
+                </div>
+            </div>
             
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-4">
@@ -771,29 +799,6 @@
                             @enderror
                         @endif
                     </div>
-                </div>
-                
-                <div class="col-md-4">
-                    <label for="IsFiler" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Tax Filer Status</label>
-                    @if($isReadonly)
-                        <div class="detail-value">
-                            @if(isset($customer->IsFiler) && $customer->IsFiler)
-                                <i class="fas fa-check-circle text-success"></i> Tax Filer
-                            @else
-                                <i class="fas fa-times-circle text-danger"></i> Non-Filer
-                            @endif
-                        </div>
-                    @else
-                        <div class="checkbox-label">
-                            <input type="hidden" name="IsFiler" value="0">
-                            <input type="checkbox" name="IsFiler" id="IsFiler" value="1" 
-                                   {{ old('IsFiler', $customer->IsFiler ?? '1') == '1' ? 'checked' : '' }}>
-                            <span>Is Tax Filer?</span>
-                        </div>
-                        @error('IsFiler')
-                            <div class="invalid-feedback d-block"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                        @enderror
-                    @endif
                 </div>
             </div>
 
@@ -914,6 +919,72 @@
                 </div>
             </div>
             @endif
+        </div>
+
+        {{-- Section Customer WHT (after Additional Information) --}}
+        <div class="form-section">
+            <h3 class="form-section-title">
+                <i class="fas fa-file-invoice-dollar"></i> Customer WHT
+            </h3>
+            @php
+                $_pageFormCtx = $isCreate ? 'create' : 'edit-' . ($customer->ID ?? '');
+                $_pageUseOldTax = !$isReadonly && (string) old('CustomerFormContext') === (string) $_pageFormCtx;
+                $_pageAdvTaxStored = (int) ($customer->IsAdvanceTax ?? $customer->IsAdvancedTax ?? 0) === 1;
+                $_pageAdvTaxOn = $_pageUseOldTax ? ((int) old('IsAdvancedTax') === 1) : $_pageAdvTaxStored;
+                $_pageAdvStoredRate = $customer->AdvanceTax ?? $customer->AdvanceTaxRate;
+                $_pageAdvRateDefaultOn = $_pageAdvStoredRate !== null && $_pageAdvStoredRate !== '' ? number_format((float) $_pageAdvStoredRate, 2, '.', '') : '';
+                $_pageAdvRateVal = $_pageAdvTaxOn
+                    ? ($_pageUseOldTax ? old('AdvanceTaxRate', $_pageAdvRateDefaultOn) : $_pageAdvRateDefaultOn)
+                    : '0.00';
+            @endphp
+            <div class="row g-2 {{ $isReadonly ? 'mb-3' : '' }}">
+                <div class="col-12 col-md-6 col-lg-5">
+                    <div class="mb-3">
+                        <label for="AdvanceTaxRate" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Advance Tax %</label>
+                        @if($isReadonly)
+                            <div class="input-group flex-nowrap">
+                                <span class="input-group-text bg-light py-2 px-2 d-flex align-items-center justify-content-center flex-shrink-0">
+                                    @if($_pageAdvTaxOn)
+                                        <i class="fas fa-check-square text-success" title="Advanced tax on"></i>
+                                    @else
+                                        <i class="fas fa-square text-muted" title="Advanced tax off"></i>
+                                    @endif
+                                </span>
+                                <span class="form-control bg-light text-body d-flex align-items-center flex-grow-1">
+                                    @if($_pageAdvTaxOn)
+                                        {{ number_format((float) ($customer->AdvanceTaxRate ?? $customer->AdvanceTax ?? 0), 2) }}
+                                    @else
+                                        —
+                                    @endif
+                                </span>
+                            </div>
+                        @else
+                            <div class="input-group flex-nowrap">
+                                <span class="input-group-text bg-white py-2 px-2 d-flex align-items-center justify-content-center flex-shrink-0">
+                                    <input type="hidden" name="IsAdvancedTax" value="0">
+                                    <input type="checkbox" name="IsAdvancedTax" id="IsAdvancedTax" value="1"
+                                           class="form-check-input m-0 flex-shrink-0"
+                                           title="Enable advance tax"
+                                           aria-label="Enable advance tax"
+                                           {{ $_pageAdvTaxOn ? 'checked' : '' }}>
+                                </span>
+                                <input type="number" step="0.01" min="0"
+                                       class="form-control ps-3 @error('AdvanceTaxRate') is-invalid @enderror @error('IsAdvancedTax') is-invalid @enderror"
+                                       id="AdvanceTaxRate" name="AdvanceTaxRate"
+                                       value="{{ $_pageAdvRateVal }}"
+                                       placeholder="0.00"
+                                       {{ $_pageAdvTaxOn ? '' : 'readonly' }}>
+                            </div>
+                            @error('IsAdvancedTax')
+                                <div class="invalid-feedback d-block"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                            @error('AdvanceTaxRate')
+                                <div class="invalid-feedback d-block"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
         
         {{-- Actions --}}
@@ -1087,6 +1158,22 @@
             window.syncNonFilerTaxFieldsVisibility();
             isFilerCb.addEventListener('change', window.syncNonFilerTaxFieldsVisibility);
         }
+
+        window.syncAdvancedTaxFieldsVisibility = function () {
+            const cb = document.getElementById('IsAdvancedTax');
+            const rate = document.getElementById('AdvanceTaxRate');
+            if (!cb || !rate) return;
+            rate.readOnly = !cb.checked;
+            if (!cb.checked) {
+                rate.value = '0.00';
+                rate.classList.remove('is-invalid');
+            }
+        };
+        const advTaxCb = document.getElementById('IsAdvancedTax');
+        if (advTaxCb) {
+            window.syncAdvancedTaxFieldsVisibility();
+            advTaxCb.addEventListener('change', window.syncAdvancedTaxFieldsVisibility);
+        }
     });
     
     // Scroll to error
@@ -1114,11 +1201,15 @@
         if (!document.querySelector('.alert-danger')) {
             inputs.forEach(input => {
                 if (input.type === 'hidden' || input.type === 'password') return;
-                
+
                 const key = storagePrefix + input.name;
                 const storedValue = localStorage.getItem(key);
-                
+
                 if (storedValue !== null) {
+                    /* On edit, WHT must reflect DB — skip stale draft for these */
+                    if (formMode === 'edit' && (input.name === 'AdvanceTaxRate' || input.name === 'IsAdvancedTax')) {
+                        return;
+                    }
                     if (input.type === 'checkbox' || input.type === 'radio') {
                         const shouldBeChecked = (storedValue === 'true');
                         if (input.checked !== shouldBeChecked) {

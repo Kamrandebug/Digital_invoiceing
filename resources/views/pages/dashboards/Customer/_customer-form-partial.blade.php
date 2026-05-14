@@ -186,6 +186,7 @@
 <form action="{{ $formAction }}" method="POST" id="{{ $uid }}_form" novalidate autocomplete="off">
     @csrf
     @if($isEdit) @method('PUT') @endif
+    <input type="hidden" name="CustomerFormContext" value="{{ $isCreate ? 'create' : 'edit-' . ($customer->ID ?? '') }}">
 @endif
 
 <div class="{{ $isView ? 'show-mode' : '' }}">
@@ -337,6 +338,9 @@
 				  <li class="nav-item" role="presentation">
 					<button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">Additional Information</button>
 				  </li>
+				  <li class="nav-item" role="presentation">
+					<button class="nav-link" id="g236-tab" data-bs-toggle="tab" data-bs-target="#g236-tab-pane" type="button" role="tab" aria-controls="g236-tab-pane" aria-selected="false">Customer WHT</button>
+				  </li>
 				</ul>
 				<div class="tab-content" id="myTabContent">
 				  <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
@@ -354,7 +358,7 @@
 										@if(!$isReadonly)
 											<div class="form-check mb-0 flex-shrink-0">
 												<input type="hidden" name="SameAsBilling" value="0">
-												<input class="form-check-input" type="checkbox" name="SameAsBilling" id="{{ $uid }}_SameAsBilling" value="1" {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
+												<input class="form-check-input" type="checkbox" name="SameAsBilling" id="{{ $uid }}_SameAsBilling" value="1" {{ old('SameAsBilling', $customer->SameAsBilling ?? '1') == '1' ? 'checked' : '' }}>
 												<label class="form-check-label" for="{{ $uid }}_SameAsBilling">Same as Primary Address</label>
 											</div>
 										@endif
@@ -454,7 +458,7 @@
 										</div>
 									</div>
 							@else
-							<div id="{{ $uid }}_billingFields" class="row g-2" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'display:none' : '' }}">
+							<div id="{{ $uid }}_billingFields" class="row g-2" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '1') == '1' ? 'display:none' : '' }}">
 
 								<div class="col-md-12">
 									<label class="form-label">Street Address</label>
@@ -552,7 +556,8 @@
 								@error('CNIC')<div class="invalid-feedback">{{ $message }}</div>@enderror
 							@endif
 						</div>
-
+					</div>
+					<div class="row g-2">
 						<div class="col-md-4">
 							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Tax Filer Status</label>
 							@if($isReadonly)
@@ -573,7 +578,8 @@
 								</div>
 							@endif
 						</div>
-
+					</div>
+					<div class="row g-2">
 						@if($isReadonly)
 							@if(empty($customer->IsFiler))
 								<div class="col-12 mt-2">
@@ -671,6 +677,64 @@
 					@endif
 
 				</div>
+						</div>
+					</div>
+				  </div>
+				  <div class="tab-pane fade" id="g236-tab-pane" role="tabpanel" aria-labelledby="g236-tab" tabindex="0">
+					<div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+						<div class="_pfp-tab-panel-body">
+							@php
+								$_cfpFormCtx = $isCreate ? 'create' : 'edit-' . ($customer->ID ?? '');
+								$_cfpUseOldTax = !$isReadonly && (string) old('CustomerFormContext') === (string) $_cfpFormCtx;
+								$_advTaxStored = (int) ($customer->IsAdvanceTax ?? $customer->IsAdvancedTax ?? 0) === 1;
+								$_advTaxOn = $_cfpUseOldTax ? ((int) old('IsAdvancedTax') === 1) : $_advTaxStored;
+								$_advStoredRate = $customer->AdvanceTax ?? $customer->AdvanceTaxRate;
+								$_advRateDefaultOn = $_advStoredRate !== null && $_advStoredRate !== '' ? number_format((float) $_advStoredRate, 2, '.', '') : '';
+								$_advRateVal = $_advTaxOn
+									? ($_cfpUseOldTax ? old('AdvanceTaxRate', $_advRateDefaultOn) : $_advRateDefaultOn)
+									: '0.00';
+							@endphp
+							<div class="row g-2">
+								<div class="col-12 col-md-6 col-lg-5">
+									<label for="{{ $uid }}_AdvanceTaxRate" class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Advance Tax %</label>
+									@if($isReadonly)
+										<div class="input-group input-group-sm flex-nowrap">
+											<span class="input-group-text bg-light py-1 px-2 d-flex align-items-center justify-content-center flex-shrink-0">
+												@if($_advTaxOn)
+													<i class="fas fa-check-square text-success" title="Advanced tax on"></i>
+												@else
+													<i class="fas fa-square text-muted" title="Advanced tax off"></i>
+												@endif
+											</span>
+											<span class="form-control form-control-sm bg-light text-body d-flex align-items-center flex-grow-1" style="min-height:calc(1.5em + .5rem + 2px);">
+												@if($_advTaxOn)
+													{{ number_format((float) ($customer->AdvanceTaxRate ?? $customer->AdvanceTax ?? 0), 2) }}
+												@else
+													—
+												@endif
+											</span>
+										</div>
+									@else
+										<div class="input-group input-group-sm flex-nowrap">
+											<span class="input-group-text bg-white py-1 px-2 d-flex align-items-center justify-content-center flex-shrink-0">
+												<input type="hidden" name="IsAdvancedTax" value="0">
+												<input class="form-check-input m-0 flex-shrink-0" type="checkbox"
+													   name="IsAdvancedTax" id="{{ $uid }}_IsAdvancedTax" value="1"
+													   title="Enable advance tax"
+													   aria-label="Enable advance tax"
+													   {{ $_advTaxOn ? 'checked' : '' }}>
+											</span>
+											<input type="number" name="AdvanceTaxRate" id="{{ $uid }}_AdvanceTaxRate" step="0.01" min="0"
+												   class="form-control form-control-sm ps-3 @error('AdvanceTaxRate') is-invalid @enderror @error('IsAdvancedTax') is-invalid @enderror"
+												   value="{{ $_advRateVal }}"
+												   placeholder="0.00"
+												   {{ $_advTaxOn ? '' : 'readonly' }}>
+										</div>
+										@error('IsAdvancedTax')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+										@error('AdvanceTaxRate')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+									@endif
+								</div>
+							</div>
 						</div>
 					</div>
 				  </div>
@@ -845,6 +909,19 @@
     document.getElementById(uid + '_IsFiler')?.addEventListener('change', syncNonFilerTaxFields);
     syncNonFilerTaxFields();
 
+    function syncAdvancedTaxFields() {
+        const cb = document.getElementById(uid + '_IsAdvancedTax');
+        const rate = document.getElementById(uid + '_AdvanceTaxRate');
+        if (!cb || !rate) return;
+        rate.readOnly = !cb.checked;
+        if (!cb.checked) {
+            rate.value = '0.00';
+            rate.classList.remove('is-invalid');
+        }
+    }
+    document.getElementById(uid + '_IsAdvancedTax')?.addEventListener('change', syncAdvancedTaxFields);
+    syncAdvancedTaxFields();
+
     /* Scroll to first error */
     window.addEventListener('load', () => {
         const err = document.querySelector('.is-invalid');
@@ -872,6 +949,8 @@
         @if(!$isCreate)
         if (!document.querySelector('.is-invalid')) {
             inputs.forEach(inp => {
+                /* WHT fields must match DB on edit — do not overwrite with stale draft */
+                if (inp.name === 'AdvanceTaxRate' || inp.name === 'IsAdvancedTax') return;
                 const val = localStorage.getItem(prefix + inp.name);
                 if (val === null) return;
                 if (inp.type === 'checkbox' || inp.type === 'radio') {

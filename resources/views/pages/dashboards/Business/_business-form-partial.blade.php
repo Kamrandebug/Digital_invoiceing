@@ -40,7 +40,7 @@
 @endonce
 
 @if(!$isReadonly)
-<form action="{{ $formAction }}" method="POST" id="{{ $uid }}_form" novalidate autocomplete="off">
+<form action="{{ $formAction }}" method="POST" id="{{ $uid }}_form" enctype="multipart/form-data" novalidate autocomplete="off">
     @csrf
     @if($isEdit) @method('PUT') @endif
 @endif
@@ -88,8 +88,8 @@
                     @endif
                 </div>
 
-                {{-- 4. Address --}}
-                <div class="col-md-12">
+                {{-- 4. Address (half) + Logo (half) --}}
+                <div class="col-md-6">
                     <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Address</label>
                     @if($isReadonly)
                         <div class="_cfp-detail-value">{{ $record->Address ?? '-' }}</div>
@@ -98,6 +98,33 @@
                                   class="form-control form-control-sm @error('Address') is-invalid @enderror"
                                   placeholder="Business address" required>{{ old('Address', $record->Address ?? '') }}</textarea>
                         @error('Address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    @endif
+                </div>
+
+                <div class="col-md-6">
+                    <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Business logo</label>
+                    @if($isReadonly)
+                        @if(!empty($record->ImageUrl))
+                            <div class="_cfp-detail-value p-2">
+                                <img src="{{ asset('storage/' . ltrim($record->ImageUrl, '/')) }}" alt="Business logo" class="img-fluid" style="max-height: 96px;">
+                            </div>
+                        @else
+                            <div class="_cfp-detail-value">-</div>
+                        @endif
+                    @else
+                        @php
+                            $logoPath = old('ImageUrl', $record->ImageUrl ?? '');
+                        @endphp
+                        @if($logoPath !== '')
+                            <div class="mb-2">
+                                <img src="{{ asset('storage/' . ltrim($logoPath, '/')) }}" alt="Current logo" class="img-thumbnail" style="max-height: 80px;">
+                            </div>
+                        @endif
+                        <input type="hidden" name="ImageUrl" value="{{ e($logoPath) }}">
+                        <input type="file" name="BusinessLogo" accept="image/jpeg,image/png,image/gif,image/webp"
+                               class="form-control form-control-sm @error('BusinessLogo') is-invalid @enderror">
+                        @error('BusinessLogo')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="form-text">Optional. Used on invoices and prints.</div>
                     @endif
                 </div>
 
