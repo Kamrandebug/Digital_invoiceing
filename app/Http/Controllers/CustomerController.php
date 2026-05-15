@@ -289,6 +289,8 @@ try {
                         'extra_tax'            => $custRow->ExtraTax ?? 0,
                         'further_tax'          => $custRow->FurtherTax ?? 0,
                         'fed_payable'          => $custRow->FedPayable ?? 0,
+                        'is_advance_tax'       => (int) ($custRow->IsAdvanceTax ?? 0) === 1 ? 1 : 0,
+                        'advance_tax'          => (float) ($custRow->AdvanceTax ?? 0),
                     ];
                 }
 

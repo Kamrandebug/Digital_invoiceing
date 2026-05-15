@@ -107,7 +107,9 @@ class InvoiceController extends Controller
                 ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
                 ->select(
                     'h.*',
-                    InvoiceModel::sqlCustomerDisplayName()
+                    InvoiceModel::sqlCustomerDisplayName(),
+                    DB::raw('COALESCE(cust.IsAdvanceTax, 0) as CustomerIsAdvanceTax'),
+                    DB::raw('COALESCE(cust.AdvanceTax, 0) as CustomerAdvanceTax'),
                 )
                 ->where('h.ID', $id)
                 ->where('h.Status', '!=', 2)
@@ -200,9 +202,16 @@ class InvoiceController extends Controller
 
     public function show($id)
     {
-        $invoice = DB::table('tbl_sales_invoice_header')
-            ->where('ID', $id)
-            ->where('Status', '!=', 2)
+        $invoice = DB::table('tbl_sales_invoice_header as h')
+            ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
+            ->select(
+                'h.*',
+                InvoiceModel::sqlCustomerDisplayName(),
+                DB::raw('COALESCE(cust.IsAdvanceTax, 0) as CustomerIsAdvanceTax'),
+                DB::raw('COALESCE(cust.AdvanceTax, 0) as CustomerAdvanceTax'),
+            )
+            ->where('h.ID', $id)
+            ->where('h.Status', '!=', 2)
             ->first();
 
         if (! $invoice) {
@@ -236,9 +245,16 @@ class InvoiceController extends Controller
 
     public function edit($id)
     {
-        $invoice = DB::table('tbl_sales_invoice_header')
-            ->where('ID', $id)
-            ->where('Status', '!=', 2)
+        $invoice = DB::table('tbl_sales_invoice_header as h')
+            ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
+            ->select(
+                'h.*',
+                InvoiceModel::sqlCustomerDisplayName(),
+                DB::raw('COALESCE(cust.IsAdvanceTax, 0) as CustomerIsAdvanceTax'),
+                DB::raw('COALESCE(cust.AdvanceTax, 0) as CustomerAdvanceTax'),
+            )
+            ->where('h.ID', $id)
+            ->where('h.Status', '!=', 2)
             ->first();
 
         if (! $invoice) {

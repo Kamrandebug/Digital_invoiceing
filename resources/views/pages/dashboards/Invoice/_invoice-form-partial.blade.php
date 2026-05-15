@@ -99,6 +99,8 @@
                             data-extra-tax-pct="{{ $cust->ExtraTax ?? 0 }}"
                             data-further-tax-pct="{{ $cust->FurtherTax ?? 0 }}"
                             data-fed-payable-pct="{{ $cust->FedPayable ?? 0 }}"
+                            data-is-advance-tax="{{ (int) ($cust->IsAdvanceTax ?? 0) === 1 ? 1 : 0 }}"
+                            data-advance-tax-rate="{{ (float) ($cust->AdvanceTax ?? 0) }}"
                             {{ old('CustomerID', $invoice->CustomerID ?? '') == $cust->ID ? 'selected' : '' }}>
                         {{ trim($cust->BusinessName ?? '') ?: trim($cust->DisplayName ?? '') ?: trim(trim(($cust->FirstName ?? '') . ' ' . ($cust->LastName ?? ''))) ?: ('Customer #' . $cust->ID) }}
                     </option>
@@ -419,6 +421,71 @@
             max-width: 100%;
             min-width: 0;
         }
+        /* Invoice totals summary (align with invoice-print.blade.php) */
+        .ifp-invoice-totals-summary.table {
+            margin-left: auto;
+            width: 100%;
+            max-width: 22rem;
+            font-size: 12px;
+            border-collapse: separate !important;
+            border-spacing: 0;
+        }
+        /* Tighter row rhythm than default .table-sm (0.25rem) */
+        .ifp-invoice-totals-summary.table > :not(caption) > * > * {
+            padding-top: 0.12rem !important;
+            padding-bottom: 0.12rem !important;
+        }
+        .ifp-invoice-totals-summary tbody th,
+        .ifp-invoice-totals-summary tbody th .fw-medium,
+        .ifp-invoice-totals-summary tbody th span {
+            text-align: right;
+            vertical-align: middle;
+            font-weight: 600 !important;
+            font-size: 12px;
+            padding: 0.12rem 0.5rem 0.12rem 0 !important;
+            border: none;
+        }
+        .ifp-invoice-totals-summary td {
+            text-align: right;
+            vertical-align: middle;
+            padding: 0.1rem 0 !important;
+            border: none;
+            font-size: 12px;
+        }
+        .ifp-invoice-totals-summary .form-control,
+        .ifp-invoice-totals-summary .invoice-amount-input {
+            font-size: 12px !important;
+            line-height: 1.2 !important;
+            text-align: right !important;
+            font-variant-numeric: tabular-nums;
+            /* Match invoice line grid (.table-inv) control height (~24.2px); default .form-control is taller */
+            min-height: 24.2px !important;
+            height: 24.2px !important;
+            padding: 0.2rem 0.35rem !important;
+            box-sizing: border-box !important;
+        }
+        .ifp-invoice-totals-summary tr.ifp-totals-inc td .form-control,
+        .ifp-invoice-totals-summary tr.ifp-totals-grand td .form-control {
+            font-weight: 700 !important;
+        }
+        /* Plain single lines above + below Total Inc. All Taxes and Grand Total */
+        .ifp-invoice-totals-summary tr.ifp-totals-inc th,
+        .ifp-invoice-totals-summary tr.ifp-totals-inc td,
+        .ifp-invoice-totals-summary tr.ifp-totals-grand th,
+        .ifp-invoice-totals-summary tr.ifp-totals-grand td {
+            border: none !important;
+            border-top: 1px solid #222 !important;
+            border-bottom: 1px solid #222 !important;
+            font-size: 12px;
+            padding-top: 0.3rem !important;
+            padding-bottom: 0.3rem !important;
+        }
+        .ifp-invoice-totals-summary tr.ifp-totals-inc td {
+            font-weight: 700;
+        }
+        .ifp-invoice-totals-summary tr.ifp-totals-grand td {
+            font-weight: 700;
+        }
     </style>
     <div class="col-xl-12">
         <div class="ifp-inv-line-items-scroll">
@@ -726,10 +793,19 @@
                 return max(0, ($amt - $disc) + $gst);
             });
 
-            $viewSubTotal = $invoice->SubTotal ?? $calcSubTotal;
-            $viewDiscount = $invoice->TotalDiscount ?? $invoice->DiscountAmount ?? $calcDiscount;
-            $viewGst      = $invoice->TotalGST ?? $invoice->GSTAmount ?? $calcGst;
-            $viewGrand    = $invoice->TotalAmount ?? $invoice->Total ?? $calcTotal;
+            $viewSubTotal = $invoice ? ($invoice->SubTotal ?? $calcSubTotal) : $calcSubTotal;
+            $viewDiscount = $invoice ? ($invoice->TotalDiscount ?? $invoice->DiscountAmount ?? $calcDiscount) : $calcDiscount;
+            $viewGst      = $invoice ? ($invoice->TotalGST ?? $invoice->GSTAmount ?? $calcGst) : $calcGst;
+            $viewGrand    = $invoice ? ($invoice->TotalAmount ?? $invoice->Total ?? $calcTotal) : $calcTotal;
+
+            $buyerAdvanceOn = $invoice && (int) ($invoice->CustomerIsAdvanceTax ?? 0) === 1;
+            $buyerAdvanceRate = $invoice ? (float) ($invoice->CustomerAdvanceTax ?? 0) : 0.0;
+            $headerTotalInc = (float) $viewGrand;
+            $customerWht236g = ($buyerAdvanceOn && $buyerAdvanceRate > 0.000001)
+                ? round($headerTotalInc * ($buyerAdvanceRate / 100.0), 2)
+                : 0.0;
+            $grandTotalAllTaxes = round($headerTotalInc + $customerWht236g, 2);
+            $showWhtBlock = $buyerAdvanceOn && $buyerAdvanceRate > 0.000001;
         @endphp
         <div class="row mt-4">
             <div class="col-md-9">
@@ -748,10 +824,10 @@
             </div>
 
             <div class="col text-end">
-                <table class="table table-sm text-nowrap mb-0 table-borderless">
+                <table class="table table-sm text-nowrap mb-0 table-borderless ifp-invoice-totals-summary">
                     <tbody>
                         <tr>
-                            <th scope="row"><div class="fw-medium">Sub Total :</div></th>
+                            <th scope="row"><div class="fw-medium">Total Amount Excluding ST:</div></th>
                             <td>
                                 <input type="number" step="0.01" name="SubTotal" id="{{ $uid }}_SubTotal"
                                        class="form-control invoice-amount-input w-100"
@@ -759,7 +835,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th scope="row"><div class="fw-medium">Avail Discount :</div></th>
+                            <th scope="row"><div class="fw-medium">Discount:</div></th>
                             <td>
                                 <input type="number" step="0.01" name="TotalDiscount" id="{{ $uid }}_TotalDiscount"
                                        class="form-control invoice-amount-input w-100"
@@ -767,21 +843,60 @@
                             </td>
                         </tr>
                         <tr>
-                            <th scope="row"><div class="fw-medium">GST :</div></th>
+                            <th scope="row"><div class="fw-medium">Total Sales Tax:</div></th>
                             <td>
                                 <input type="number" step="0.01" name="TotalGST" id="{{ $uid }}_TotalGST"
                                        class="form-control invoice-amount-input w-100"
                                        value="{{ $isReadonly ? number_format((float) $viewGst, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
-                        <tr>
-                            <th scope="row"><div class="fs-14 fw-medium">Total :</div></th>
+                        <tr class="ifp-totals-inc">
+                            <th scope="row"><div class="fw-medium">Total Inc. All Taxes:</div></th>
                             <td>
                                 <input type="number" step="0.01" name="GrandTotal" id="{{ $uid }}_GrandTotal"
                                        class="form-control invoice-amount-input w-100 fw-bold"
                                        value="{{ $isReadonly ? number_format((float) $viewGrand, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
+                        @if($isReadonly)
+                            @if($showWhtBlock)
+                                <tr>
+                                    <th scope="row"><div class="fw-medium">Customer WHT 236G ({{ number_format($buyerAdvanceRate, 2) }}%):</div></th>
+                                    <td>
+                                        <input type="number" step="0.01" id="{{ $uid }}_CustomerWht236g"
+                                               class="form-control invoice-amount-input w-100"
+                                               value="{{ number_format($customerWht236g, 2) }}" readonly>
+                                    </td>
+                                </tr>
+                                <tr class="ifp-totals-grand">
+                                    <th scope="row"><div class="fw-medium">Grand Total:</div></th>
+                                    <td>
+                                        <input type="number" step="0.01" id="{{ $uid }}_GrandTotalWithWht"
+                                               class="form-control invoice-amount-input w-100 fw-bold"
+                                               value="{{ number_format($grandTotalAllTaxes, 2) }}" readonly>
+                                    </td>
+                                </tr>
+                            @endif
+                        @else
+                            <tr id="{{ $uid }}_tr_customer_wht" class="@if(!$showWhtBlock) d-none @endif">
+                                <th scope="row">
+                                    <div class="fw-medium">Customer WHT 236G (<span id="{{ $uid }}_wht_label_pct">{{ number_format($buyerAdvanceRate, 2) }}</span>%):</div>
+                                </th>
+                                <td>
+                                    <input type="number" step="0.01" id="{{ $uid }}_CustomerWht236g"
+                                           class="form-control invoice-amount-input w-100"
+                                           value="{{ $showWhtBlock ? number_format($customerWht236g, 2) : '0.00' }}" readonly>
+                                </td>
+                            </tr>
+                            <tr id="{{ $uid }}_tr_grand_with_wht" class="ifp-totals-grand @if(!$showWhtBlock) d-none @endif">
+                                <th scope="row"><div class="fw-medium">Grand Total:</div></th>
+                                <td>
+                                    <input type="number" step="0.01" id="{{ $uid }}_GrandTotalWithWht"
+                                           class="form-control invoice-amount-input w-100 fw-bold"
+                                           value="{{ $showWhtBlock ? number_format($grandTotalAllTaxes, 2) : '0.00' }}" readonly>
+                                </td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
@@ -1287,6 +1402,49 @@
         return { amount, discAmt, gstAmt, total };
     }
 
+    function ifpCustomerAdvanceMeta() {
+        const customerSel = document.getElementById(uid + '_CustomerID');
+        if (!customerSel || customerSel.selectedIndex < 0) {
+            return { on: false, rate: 0 };
+        }
+        const opt = customerSel.options[customerSel.selectedIndex];
+        if (!opt || !opt.value) {
+            return { on: false, rate: 0 };
+        }
+        const advOn = (opt.getAttribute('data-is-advance-tax') || '0') === '1';
+        const rate = parseFloat(opt.getAttribute('data-advance-tax-rate') || '0') || 0;
+        return { on: advOn && rate > 0.000001, rate: rate };
+    }
+
+    function ifpSyncWhtSummary(grandIncTaxes) {
+        const meta = ifpCustomerAdvanceMeta();
+        const wht = meta.on ? Math.round(grandIncTaxes * (meta.rate / 100) * 100) / 100 : 0;
+        const grandWithWht = Math.round((grandIncTaxes + wht) * 100) / 100;
+        const pctEl = document.getElementById(uid + '_wht_label_pct');
+        if (pctEl) {
+            pctEl.textContent = meta.rate.toFixed(2);
+        }
+        const whtEl = document.getElementById(uid + '_CustomerWht236g');
+        if (whtEl) {
+            whtEl.value = wht.toFixed(2);
+        }
+        const gtwEl = document.getElementById(uid + '_GrandTotalWithWht');
+        if (gtwEl) {
+            gtwEl.value = grandWithWht.toFixed(2);
+        }
+        const trWht = document.getElementById(uid + '_tr_customer_wht');
+        const trGrand = document.getElementById(uid + '_tr_grand_with_wht');
+        if (trWht && trGrand) {
+            if (meta.on) {
+                trWht.classList.remove('d-none');
+                trGrand.classList.remove('d-none');
+            } else {
+                trWht.classList.add('d-none');
+                trGrand.classList.add('d-none');
+            }
+        }
+    }
+
     // ── Summary totals ──
     function calcSummary() {
         let sub = 0, disc = 0, gst = 0, grand = 0;
@@ -1305,6 +1463,7 @@
         s('TotalDiscount', disc);
         s('TotalGST',      gst);
         s('GrandTotal',    grand);
+        ifpSyncWhtSummary(grand);
     }
 
     // ── Bind row events ──
@@ -2059,6 +2218,8 @@
             o.setAttribute('data-extra-tax-pct', String(c.extra_tax != null ? c.extra_tax : 0));
             o.setAttribute('data-further-tax-pct', String(c.further_tax != null ? c.further_tax : 0));
             o.setAttribute('data-fed-payable-pct', String(c.fed_payable != null ? c.fed_payable : 0));
+            o.setAttribute('data-is-advance-tax', String(c.is_advance_tax != null ? c.is_advance_tax : 0));
+            o.setAttribute('data-advance-tax-rate', String(c.advance_tax != null ? c.advance_tax : 0));
             sel.appendChild(o);
         }
         sel.value = id;
