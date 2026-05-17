@@ -67,7 +67,7 @@ body{
 	tbody{
 		tr{
 			td{
-				padding: 3px 1px !important;
+				padding: 5px !important;
 				background: #eee !important;
 				border-bottom: solid 1px #fff !important;
 				font-size: 12px !important;
@@ -497,14 +497,9 @@ label{
     border: solid 1px var(--input-border) !important;
 }
 
-.scroll-style{
-	overflow-x: scroll;
-	padding-bottom: 10px;
-}
 
-.modal-body {
-    background: var(--menu-bg);	
-}
+
+
 
 
 
