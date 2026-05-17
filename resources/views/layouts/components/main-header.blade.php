@@ -126,6 +126,27 @@
 			</li><?php */?>
 			<!-- End::header-element -->
 
+			@php
+				$selectedTenant = session('selected_tenant');
+				$selectedTenantName = is_array($selectedTenant) ? trim((string) ($selectedTenant['TenantName'] ?? '')) : '';
+			@endphp
+
+			@if($selectedTenantName !== '')
+			<li class="header-element d-none d-md-flex align-items-center">
+				<a href="{{ route('tenants.index') }}"
+				   class="app-header-tenant-pill d-flex align-items-center gap-2 px-3 py-2 rounded-pill text-decoration-none"
+				   title="Selected Tenant (click to switch)">
+					<span class="app-header-tenant-pill__icon avatar avatar-sm rounded-circle d-flex align-items-center justify-content-center">
+						<i class="ri-building-2-line"></i>
+					</span>
+					<span class="d-flex flex-column lh-1 text-start">
+						<span class="app-header-tenant-pill__label">WORKING TENANT</span>
+						<span class="app-header-tenant-pill__name">{{ $selectedTenantName }}</span>
+					</span>
+				</a>
+			</li>
+			@endif
+
 			<!-- Start::header-element -->
 			<li class="header-element header-theme-mode">
 				<!-- Start::header-link|layout-setting -->

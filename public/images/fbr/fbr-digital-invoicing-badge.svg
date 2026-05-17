@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="260" viewBox="0 0 200 260" role="img" aria-label="FBR Digital Invoicing System">
+  <rect width="200" height="260" fill="#ffffff" stroke="#c7d2e3" stroke-width="2" rx="8"/>
+  <text x="100" y="38" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="28" fill="#0b5">FBR</text>
+  <path d="M60 12 Q100 -4 140 12" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="128" cy="10" r="4" fill="#facc15"/>
+  <rect x="12" y="52" width="176" height="72" fill="#2563eb" rx="4"/>
+  <text x="100" y="98" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="36" fill="#ffffff">DIGITAL</text>
+  <text x="100" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#1e3a5f">INVOICING SYSTEM</text>
+  <text x="100" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#64748b">Official digital invoice branding</text>
+</svg>

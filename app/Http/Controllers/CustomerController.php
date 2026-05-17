@@ -93,6 +93,22 @@ class CustomerController extends Controller
                 'BillingPostalCode' => $request->PostalCode,
             ]);
         }
+
+        if ((int) $request->input('IsFiler', 0) === 1) {
+            $request->merge([
+                'SalesTaxWithheldAtSource' => null,
+                'ExtraTax' => '0.00',
+                'FurtherTax' => '0.00',
+                'FedPayable' => '0.00',
+            ]);
+        }
+
+        $request->merge([
+            'IsAdvancedTax' => $request->boolean('IsAdvancedTax') ? 1 : 0,
+        ]);
+        if ((int) $request->input('IsAdvancedTax') !== 1) {
+            $request->merge(['AdvanceTaxRate' => null]);
+        }
         
   // ── Validate ──────────────────────────────────────────
 try {
@@ -117,11 +133,17 @@ try {
         'BillingPostalCode' => ['nullable', 'string', 'regex:/^[0-9]{5}$/'],
         'BillingCountry'    => 'nullable|string|max:100',
         'SameAsBilling'     => 'nullable|boolean',
-        'NTN'               => ['nullable', 'string', 'regex:/^[0-9]{7}$/', 'unique:tbl_customer,NTN'],
+        'NTN'               => 'nullable|string|max:50',
         'SalesTaxNumber'    => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]{5,50}$/', 'unique:tbl_customer,SalesTaxNumber'],
         'IsFiler'           => 'nullable|boolean',
+        'IsAdvancedTax'     => 'nullable|boolean',
+        'AdvanceTaxRate'    => ['nullable', 'required_if:IsAdvancedTax,1', 'numeric', 'gt:0'],
         'CNIC'              => ['nullable', 'string', 'regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('tbl_customer', 'CNIC')],
         'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
+        'SalesTaxWithheldAtSource' => 'nullable|string|max:50',
+        'ExtraTax'          => 'nullable|numeric|min:0|max:999.99',
+        'FurtherTax'        => 'nullable|numeric|min:0|max:999.99',
+        'FedPayable'        => 'nullable|numeric|min:0|max:999.99',
         'Notes'             => 'nullable|string|max:500',
         'Status'            => 'nullable|integer|in:0,1',
     ], [
@@ -146,18 +168,18 @@ try {
         'BillingCity.regex'            => 'Billing city can only contain letters and spaces.',
         'BillingCounty.regex'          => 'Billing state/province can only contain letters and spaces.',
         'BillingPostalCode.regex'      => 'Billing postal code must be exactly 5 digits.',
-        'NTN.regex'                    => 'NTN must be exactly 7 digits.',
-        'NTN.unique'                   => 'This NTN is already registered.',
         'SalesTaxNumber.regex'         => 'Sales Tax Number format is invalid.',
         'SalesTaxNumber.unique'        => 'This Sales Tax Number is already registered.',
         'CNIC.regex'                   => 'CNIC must be in format: 12345-1234567-1',
         'CNIC.unique'                  => 'This CNIC is already registered.',
+        'AdvanceTaxRate.required_if'   => 'Advance tax rate is required when advanced tax is enabled.',
+        'AdvanceTaxRate.gt'            => 'Advance tax rate must be greater than 0.00.',
         'CreditLimit.numeric'          => 'Credit limit must be a valid number.',
         'CreditLimit.min'              => 'Credit limit cannot be negative.',
         'Status.in'                    => 'Invalid status value.',
     ]);
 } catch (\Illuminate\Validation\ValidationException $e) {
-    if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+    if ($request->header('X-Requested-With') === 'XMLHttpRequest' || $request->expectsJson()) {
         return response()->json([
             'status'  => 'error',
             'errors'  => $e->errors(),
@@ -175,6 +197,12 @@ try {
             
             $displayName = $request->DisplayName ?: $request->BusinessName;
             $fullBillingAddress = $request->BillingAddress . ', ' . $request->BillingCity . ', ' . $request->BillingCountry;
+
+            // Advanced tax → temp_customer (Add Customer modal + standalone create)
+            $isAdvancedTax = (int) $request->input('IsAdvancedTax', 0) === 1 ? 1 : 0;
+            $advanceTaxRate = $isAdvancedTax === 1
+                ? round((float) $request->input('AdvanceTaxRate', 0), 2)
+                : null;
 
             // Calculate ID
             $maxId = DB::table('temp_customer')->max('ID');
@@ -213,7 +241,13 @@ try {
                 'SalesTaxNumber'    => $request->SalesTaxNumber ?? '',
                 'CNIC'              => $request->CNIC,
                 'IsFiler'           => $request->input('IsFiler', 0),
+                'IsAdvanceTax'     => $isAdvancedTax,
+                'AdvanceTax'       => $advanceTaxRate,
                 'Notes'             => $request->Notes,
+                'SalesTaxWithheldAtSource' => $request->input('SalesTaxWithheldAtSource'),
+                'ExtraTax'          => (float) ($request->input('ExtraTax', 0) ?: 0),
+                'FurtherTax'        => (float) ($request->input('FurtherTax', 0) ?: 0),
+                'FedPayable'        => (float) ($request->input('FedPayable', 0) ?: 0),
                 'Status'            => (int) $request->input('Status', 1),
                 'CreatedBy'         => (int)$userId,
                 'CreatedOn'         => $now,
@@ -223,16 +257,45 @@ try {
                 'RequestID'         => $requestId,
             ];
 
-            // Insert into temp
+            // Insert into temp_customer (staging before Customer::save_transaction → tbl_customer)
             \Log::info('Inserting Customer Data', ['data' => $data]);
             DB::table('temp_customer')->insert($data);
 
             // Execute model transaction (runs query inside model)
-            Customer::save_transaction(['RequestID' => $requestId]);
-
+            $saveResult = Customer::save_transaction(['RequestID' => $requestId]);
+            if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+                $message = $saveResult['message'] ?? 'Unable to add customer.';
                 if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return response()->json(['status' => 'success', 'message' => 'Customer created successfully!']);
-        }
+                    return response()->json(['status' => 'error', 'message' => $message], 422);
+                }
+
+                return redirect()->back()->with('error', $message)->withInput();
+            }
+
+            if ($request->header('X-Requested-With') === 'XMLHttpRequest' || $request->expectsJson()) {
+                $newId = DB::table('tbl_customer')->where('AccountNo', $data['AccountNo'])->value('ID');
+                $custRow = $newId ? DB::table('tbl_customer')->where('ID', $newId)->first() : null;
+                $payload = ['status' => 'success', 'message' => 'Customer created successfully!'];
+                if ($custRow) {
+                    $label = trim($custRow->BusinessName ?? '')
+                        ?: trim($custRow->DisplayName ?? '')
+                        ?: trim(trim(($custRow->FirstName ?? '') . ' ' . ($custRow->LastName ?? '')))
+                        ?: ('Customer #' . $custRow->ID);
+                    $payload['customer'] = [
+                        'id'                   => (int) $custRow->ID,
+                        'label'                => $label,
+                        'is_filer'             => (int) ($custRow->IsFiler ?? 0) ? 1 : 0,
+                        'sales_tax_withheld'   => $custRow->SalesTaxWithheldAtSource ?? 0,
+                        'extra_tax'            => $custRow->ExtraTax ?? 0,
+                        'further_tax'          => $custRow->FurtherTax ?? 0,
+                        'fed_payable'          => $custRow->FedPayable ?? 0,
+                        'is_advance_tax'       => (int) ($custRow->IsAdvanceTax ?? 0) === 1 ? 1 : 0,
+                        'advance_tax'          => (float) ($custRow->AdvanceTax ?? 0),
+                    ];
+                }
+
+                return response()->json($payload);
+            }
         return redirect()->route('customers.index')->with('success', 'Customer created successfully!');
 
         } catch (\Exception $e) {
@@ -385,6 +448,22 @@ public function modal(Request $request, $id = null)
                 'BillingPostalCode' => $request->PostalCode,
             ]);
         }
+
+        if ((int) $request->input('IsFiler', 0) === 1) {
+            $request->merge([
+                'SalesTaxWithheldAtSource' => null,
+                'ExtraTax' => '0.00',
+                'FurtherTax' => '0.00',
+                'FedPayable' => '0.00',
+            ]);
+        }
+
+        $request->merge([
+            'IsAdvancedTax' => $request->boolean('IsAdvancedTax') ? 1 : 0,
+        ]);
+        if ((int) $request->input('IsAdvancedTax') !== 1) {
+            $request->merge(['AdvanceTaxRate' => null]);
+        }
         
      // ── Validate ──────────────────────────────────────────
 try {
@@ -409,12 +488,24 @@ try {
         'BillingPostalCode' => ['nullable', 'string', 'regex:/^[0-9]{5}$/'],
         'BillingCountry'    => 'nullable|string|max:100',
         'SameAsBilling'     => 'nullable|boolean',
-        'NTN'               => ['nullable', 'string', 'regex:/^[0-9]{7}$/', Rule::unique('tbl_customer', 'NTN')->ignore($id, 'ID')->whereNotNull('NTN')],
-        'SalesTaxNumber'    => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]{5,50}$/', Rule::unique('tbl_customer', 'SalesTaxNumber')->ignore($id, 'ID')->whereNotNull('SalesTaxNumber')],
+        'NTN'               => 'nullable|string|max:50',
+        'SalesTaxNumber'    => [
+            'nullable',
+            'string',
+            'max:50',
+            'regex:/^[A-Z0-9\-]{5,50}$/',
+            Rule::unique('tbl_customer', 'SalesTaxNumber')->where('Status', 1)->ignore((int) $id, 'ID'),
+        ],
         'IsFiler'           => 'nullable|boolean',
+        'IsAdvancedTax'     => 'nullable|boolean',
+        'AdvanceTaxRate'    => ['nullable', 'required_if:IsAdvancedTax,1', 'numeric', 'gt:0'],
         'CNIC'              => ['nullable', 'string', 'regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('tbl_customer', 'CNIC')->ignore($id, 'ID')],
         'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
         'PaymentTerms'      => 'nullable|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
+        'SalesTaxWithheldAtSource' => 'nullable|string|max:50',
+        'ExtraTax'          => 'nullable|numeric|min:0|max:999.99',
+        'FurtherTax'        => 'nullable|numeric|min:0|max:999.99',
+        'FedPayable'        => 'nullable|numeric|min:0|max:999.99',
         'Notes'             => 'nullable|string|max:500',
         'Status'            => 'nullable|integer|in:0,1',
     ], [
@@ -439,12 +530,12 @@ try {
         'BillingCity.regex'            => 'Billing city can only contain letters and spaces.',
         'BillingCounty.regex'          => 'Billing state/province can only contain letters and spaces.',
         'BillingPostalCode.regex'      => 'Billing postal code must be exactly 5 digits.',
-        'NTN.regex'                    => 'NTN must be exactly 7 digits.',
-        'NTN.unique'                   => 'This NTN is already registered.',
         'SalesTaxNumber.regex'         => 'Sales Tax Number format is invalid.',
         'SalesTaxNumber.unique'        => 'This Sales Tax Number is already registered.',
         'CNIC.regex'                   => 'CNIC must be in format: 12345-1234567-1',
         'CNIC.unique'                  => 'This CNIC is already registered.',
+        'AdvanceTaxRate.required_if'   => 'Advance tax rate is required when advanced tax is enabled.',
+        'AdvanceTaxRate.gt'            => 'Advance tax rate must be greater than 0.00.',
         'CreditLimit.numeric'          => 'Credit limit must be a valid number.',
         'CreditLimit.min'              => 'Credit limit cannot be negative.',
         'PaymentTerms.in'              => 'Invalid payment terms selected.',
@@ -472,6 +563,12 @@ try {
             $fullBillingAddress = $request->BillingAddress . ', ' . 
                                  $request->BillingCity . ', ' . 
                                  $request->BillingCountry;
+
+            // Advanced tax → temp_customer (Edit Customer modal + standalone edit)
+            $isAdvancedTax = (int) $request->input('IsAdvancedTax', 0) === 1 ? 1 : 0;
+            $advanceTaxRate = $isAdvancedTax === 1
+                ? round((float) $request->input('AdvanceTaxRate', 0), 2)
+                : null;
 
             // Prepare data for temp_customer (edit flow needs a row with TID = $id and RequestID)
             $data = [
@@ -505,7 +602,13 @@ try {
                 'SalesTaxNumber'    => $request->SalesTaxNumber ?? '',
                 'CNIC'              => $request->CNIC,
                 'IsFiler'           => $request->input('IsFiler', 0),
+                'IsAdvanceTax'     => $isAdvancedTax,
+                'AdvanceTax'       => $advanceTaxRate,
                 'Notes'             => $request->Notes,
+                'SalesTaxWithheldAtSource' => $request->input('SalesTaxWithheldAtSource'),
+                'ExtraTax'          => (float) ($request->input('ExtraTax', 0) ?: 0),
+                'FurtherTax'        => (float) ($request->input('FurtherTax', 0) ?: 0),
+                'FedPayable'        => (float) ($request->input('FedPayable', 0) ?: 0),
                 'Status'            => (int) $request->input('Status', 1),
                 'CreatedBy'         => (int)($customer->CreatedBy ?? $userId),
                 'CreatedOn'         => $customer->CreatedOn ?? $now,
@@ -515,14 +618,22 @@ try {
                 'RequestID'         => $requestId,
             ];
 
-            // Insert into temp (edit: no row with ID=$id exists in temp; we must insert one so model can read it)
+            // Insert into temp_customer (staging before Customer::edit_transaction → tbl_customer)
             $nextTempId = DB::table('temp_customer')->max('ID');
             $nextTempId = $nextTempId ? (int)$nextTempId + 1 : 1;
             $data['ID'] = $nextTempId;
             DB::table('temp_customer')->insert($data);
 
             // Execute model transaction (runs query inside model)
-            Customer::edit_transaction(['RequestID' => $requestId]);
+            $editResult = Customer::edit_transaction(['RequestID' => $requestId]);
+            if (is_array($editResult) && ($editResult['status'] ?? false) === false) {
+                $message = $editResult['message'] ?? 'Unable to update customer.';
+                if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json(['status' => 'error', 'message' => $message], 422);
+                }
+
+                return redirect()->back()->with('error', $message)->withInput();
+            }
 
            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
     return response()->json(['status' => 'success', 'message' => 'Customer created successfully!']);

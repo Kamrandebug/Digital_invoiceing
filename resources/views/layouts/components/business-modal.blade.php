@@ -1,17 +1,23 @@
 {{-- Global Business Info modal: open with openBusinessModal('edit', 1) from any page --}}
-<div class="modal fade" id="business_modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
+<div class="modal fade effect-fall" id="business_modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable business-info-modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h6 class="modal-title fw-semibold" id="business_modal_title">Update Business</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-0" id="business_modal_body">
+            <div class="modal-body" id="business_modal_body">
                 {{-- Content loaded via AJAX --}}
             </div>
         </div>
     </div>
 </div>
+<style>
+/* Narrower than modal-xl; wider than default modal-lg for multi-column form */
+#business_modal .business-info-modal-dialog {
+    max-width: min(52rem, calc(100vw - 2rem));
+}
+</style>
 <script>
 (function () {
     window.openBusinessModal = function (mode, id) {
@@ -34,7 +40,7 @@
             .then(function (html) {
                 bodyEl.innerHTML = html;
                 titleEl.textContent = (mode === 'edit' ? 'Update Business' : 'Business Info');
-                if (mode === 'edit') attachBusinessFormSubmit(bodyEl);
+                if (mode !== 'show') attachBusinessFormSubmit(bodyEl);
             })
             .catch(function () {
                 bodyEl.innerHTML = '<div class="p-4 text-danger text-center">Failed to load form.</div>';

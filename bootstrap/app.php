@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register the 'tenant' middleware alias
         $middleware->alias([
             'tenant' => \App\Http\Middleware\InitializeTenantContext::class,
+            'tenant.role' => \App\Http\Middleware\EnsureTenantRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

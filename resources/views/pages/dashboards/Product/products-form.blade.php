@@ -10,12 +10,52 @@
     $isCreate = ($mode === 'create');
     $pageTitle = $isCreate ? 'Add New Product' : ($isEdit ? 'Edit Product' : 'Product Details');
     $formAction = $isCreate ? route('products.save_transaction') : ($isEdit ? route('products.edit_transaction', $product->ID) : '#');
+    $categories = $categories ?? collect();
+    $units = $units ?? collect();
+    $defaultCategoryId = $defaultCategoryId ?? null;
+    $defaultUnitId = $defaultUnitId ?? null;
+    $catFromProduct = $product->CategoryID ?? $product->Category ?? null;
+    $catFallback = ($catFromProduct !== null && $catFromProduct !== '' && (string) $catFromProduct !== '0')
+        ? $catFromProduct
+        : ($defaultCategoryId ?? '');
+    $pfpSelectedCategory = old('Category', $catFallback);
+    $unitFromProduct = $product->Unit ?? null;
+    $unitFallback = ($unitFromProduct !== null && $unitFromProduct !== '' && (int) $unitFromProduct !== 0)
+        ? $unitFromProduct
+        : ($defaultUnitId ?? '');
+    $pfpSelectedUnit = old('Unit', $unitFallback);
 @endphp
 
 @section('styles')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
-
+<style>
+.modal.pfp-quick-lookup-modal { z-index: 2060; }
+.modal.pfp-quick-lookup-modal .modal-dialog {
+    max-width: 400px;
+}
+.modal.pfp-quick-lookup-modal .modal-content {
+    border: none;
+    box-shadow: 0 0.75rem 2rem rgba(15, 23, 42, 0.28);
+    border-radius: 0.5rem;
+}
+.modal.pfp-quick-lookup-modal .modal-header {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+.modal.pfp-quick-lookup-modal .modal-body {
+    padding: 0.75rem 1rem;
+}
+.modal.pfp-quick-lookup-modal .modal-body .form-label {
+    margin-bottom: 0.35rem;
+    font-size: 12px;
+}
+.modal.pfp-quick-lookup-modal .modal-footer {
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
+}
+.modal-backdrop.pfp-quick-lookup-backdrop { z-index: 2055; }
+</style>
 @endsection
 
 @section('content')
@@ -95,7 +135,7 @@
                 <i class="fas fa-edit"></i> Edit Product Details
             @else
                 <i class="fas fa-box"></i> Product Profile
-                <div class="mt-2" style="font-size: 14px; color: #666; font-weight: normal;">
+                <div class="mt-2" style="font-size: 12px; color: #666; font-weight: normal;">
                     <span class="badge bg-secondary"><i class="fas fa-fingerprint"></i> Req ID: {{ $product->RequestID ?? 'N/A' }}</span>
                 </div>
             @endif
@@ -135,13 +175,15 @@
 
                 <div class="col-md-3">
                     <div class="mb-3">
-                        <label for="Code" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Product Code</label>
+                        <label for="Code" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Product Code</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->Code ?? '-' }}</div>
                         @else
                             <input type="text" class="form-control @error('Code') is-invalid @enderror"
                                    id="Code" name="Code"
-                                   value="{{ old('Code', $product->Code ?? '') }}" placeholder="e.g. PROD-001" required>
+                                   value="{{ old('Code', $product->Code ?? '') }}"
+                                   placeholder="{{ $isCreate ? 'Auto-assigned if left blank' : '' }}"
+                                   autocomplete="off">
                             @error('Code')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -176,13 +218,15 @@
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->CategoryName ?? $product->Category ?? '-' }}</div>
                         @else
-                            <select name="Category" id="Category" class="form-select @error('Category') is-invalid @enderror" >
-                                <option value="">Select Category</option>
-                                {{-- Populate dynamically from your categories table --}}
-                                {{-- @foreach($categories as $cat)
-                                <option value="{{ $cat->ID }}" {{ old('Category', $product->Category ?? '') == $cat->ID ? 'selected' : '' }}>{{ $cat->Name }}</option>
-                                @endforeach --}}
-                            </select>
+                            <div class="d-flex gap-1 align-items-center">
+                                <select name="Category" id="Category" class="form-select @error('Category') is-invalid @enderror flex-grow-1" style="min-width:0;">
+                                    <option value="">Select Category</option>
+                                    @foreach($categories as $cat)
+                                        <option value="{{ $cat->id }}" {{ (string) $pfpSelectedCategory === (string) $cat->id ? 'selected' : '' }}>{{ $cat->CategoryName }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" class="btn btn-sm btn-primary pfp-line-add-entity-btn flex-shrink-0" id="productForm_newCategoryBtn" title="New category" aria-label="New category"><i class="fas fa-plus"></i></button>
+                            </div>
                             @error('Category')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -196,13 +240,15 @@
                         @if($isReadonly)
                             <div class="detail-value">{{ $product->UnitName ?? $product->Unit ?? '-' }}</div>
                         @else
-                            <select name="Unit" id="Unit" class="form-select @error('Unit') is-invalid @enderror">
-                                <option value="0">Select Unit</option>
-                                {{-- Populate dynamically --}}
-                                {{-- @foreach($units as $unit)
-                                <option value="{{ $unit->ID }}" {{ old('Unit', $product->Unit ?? '') == $unit->ID ? 'selected' : '' }}>{{ $unit->Name }}</option>
-                                @endforeach --}}
-                            </select>
+                            <div class="d-flex gap-1 align-items-center">
+                                <select name="Unit" id="Unit" class="form-select @error('Unit') is-invalid @enderror flex-grow-1" style="min-width:0;">
+                                    <option value="">Select Unit</option>
+                                    @foreach($units as $un)
+                                        <option value="{{ $un->id }}" {{ (string) $pfpSelectedUnit === (string) $un->id ? 'selected' : '' }}>{{ $un->UnitName }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" class="btn btn-sm btn-primary pfp-line-add-entity-btn flex-shrink-0" id="productForm_newUnitBtn" title="New unit" aria-label="New unit"><i class="fas fa-plus"></i></button>
+                            </div>
                             @error('Unit')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
@@ -371,7 +417,7 @@
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-3">
                     <div class="mb-3">
-                        <label for="TPRate" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">TP Rate</label>
+                        <label for="TPRate" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">eeOrRetailPrice</label>
                         @if($isReadonly)
                             <div class="detail-value">{{ number_format($product->TPRate ?? 0, 2) }}</div>
                         @else
@@ -632,6 +678,44 @@
 
     @if(!$isReadonly)
     </form>
+    <div class="modal fade pfp-quick-lookup-modal" id="productForm_category_quick_modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-semibold mb-0">Add Category</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none py-2 mb-2 small" id="productForm_category_quick_err"></div>
+                    <label class="form-label mb-1">Category name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-sm" id="productForm_category_quick_name" maxlength="100" placeholder="Category name" autocomplete="off">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="productForm_category_quick_save">Save Category</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade pfp-quick-lookup-modal" id="productForm_unit_quick_modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-semibold mb-0">Add Unit</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none py-2 mb-2 small" id="productForm_unit_quick_err"></div>
+                    <label class="form-label mb-1">Unit name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-sm" id="productForm_unit_quick_name" maxlength="100" placeholder="e.g. PCS, KG" autocomplete="off">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="productForm_unit_quick_save">Save Unit</button>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
 </div>
 
@@ -649,6 +733,196 @@
             firstError.focus();
         }
     });
+
+    (function () {
+        var form = document.getElementById('productForm');
+        function pfpCsrfToken() {
+            var inp = form && form.querySelector('input[name="_token"]');
+            if (inp && inp.value) return inp.value;
+            var m = document.querySelector('meta[name="csrf-token"]');
+            return m ? (m.getAttribute('content') || '') : '';
+        }
+        function pfpFetchHeaders() {
+            var tok = pfpCsrfToken();
+            return {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': tok
+            };
+        }
+        function pfpElevateQuickModal(el) {
+            if (!el || el.dataset.pfpElevated === '1') return;
+            el._pfpParent = el.parentNode;
+            el._pfpNext = el.nextSibling;
+            document.body.appendChild(el);
+            el.dataset.pfpElevated = '1';
+        }
+        function pfpRestoreQuickModal(el) {
+            if (!el || el.dataset.pfpElevated !== '1') return;
+            var p = el._pfpParent;
+            if (p) {
+                if (el._pfpNext && el._pfpNext.parentNode === p) p.insertBefore(el, el._pfpNext);
+                else p.appendChild(el);
+            }
+            delete el._pfpParent;
+            delete el._pfpNext;
+            delete el.dataset.pfpElevated;
+        }
+        function pfpAppendSelectOption(select, id, label) {
+            if (!select || id == null || id === '') return;
+            var sid = String(id);
+            for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === sid) {
+                    select.value = sid;
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    return;
+                }
+            }
+            var o = document.createElement('option');
+            o.value = sid;
+            o.textContent = label || sid;
+            select.appendChild(o);
+            select.value = sid;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        function pfpShowQuickErr(el, msg) {
+            if (!el) return;
+            if (!msg) {
+                el.classList.add('d-none');
+                el.textContent = '';
+                return;
+            }
+            el.textContent = msg;
+            el.classList.remove('d-none');
+        }
+        var catSel = document.getElementById('Category');
+        var unitSel = document.getElementById('Unit');
+        var catModalEl = document.getElementById('productForm_category_quick_modal');
+        var unitModalEl = document.getElementById('productForm_unit_quick_modal');
+        var catErrEl = document.getElementById('productForm_category_quick_err');
+        var unitErrEl = document.getElementById('productForm_unit_quick_err');
+        var catNameInput = document.getElementById('productForm_category_quick_name');
+        var unitNameInput = document.getElementById('productForm_unit_quick_name');
+
+        [catModalEl, unitModalEl].forEach(function(el) {
+            if (!el) return;
+            el.addEventListener('show.bs.modal', function() {
+                pfpElevateQuickModal(el);
+                setTimeout(function() {
+                    var bd = document.querySelector('.modal-backdrop:last-of-type');
+                    if (bd) bd.classList.add('pfp-quick-lookup-backdrop');
+                }, 0);
+            });
+            el.addEventListener('hidden.bs.modal', function() {
+                pfpRestoreQuickModal(el);
+            });
+        });
+
+        document.getElementById('productForm_newCategoryBtn')?.addEventListener('click', function() {
+            pfpShowQuickErr(catErrEl, '');
+            if (catNameInput) catNameInput.value = '';
+            if (catModalEl) bootstrap.Modal.getOrCreateInstance(catModalEl, { backdrop: true, keyboard: true }).show();
+        });
+        document.getElementById('productForm_newUnitBtn')?.addEventListener('click', function() {
+            pfpShowQuickErr(unitErrEl, '');
+            if (unitNameInput) unitNameInput.value = '';
+            if (unitModalEl) bootstrap.Modal.getOrCreateInstance(unitModalEl, { backdrop: true, keyboard: true }).show();
+        });
+
+        document.getElementById('productForm_category_quick_save')?.addEventListener('click', function() {
+            var name = (catNameInput && catNameInput.value) ? catNameInput.value.trim() : '';
+            if (!name) {
+                pfpShowQuickErr(catErrEl, 'Category name is required.');
+                return;
+            }
+            pfpShowQuickErr(catErrEl, '');
+            var tok = pfpCsrfToken();
+            if (!tok) {
+                pfpShowQuickErr(catErrEl, 'Security token missing. Refresh the page and try again.');
+                return;
+            }
+            var fd = new FormData();
+            fd.append('CategoryName', name);
+            fd.append('_token', tok);
+            fetch(@json(route('products.lookups.category-store')), {
+                method: 'POST',
+                headers: pfpFetchHeaders(),
+                body: fd,
+                credentials: 'same-origin'
+            })
+            .then(function(res) {
+                return res.text().then(function(text) {
+                    var data = {};
+                    try { data = text ? JSON.parse(text) : {}; } catch (e) {}
+                    return { res: res, data: data };
+                });
+            })
+            .then(function(pair) {
+                if (pair.res.status === 419) {
+                    pfpShowQuickErr(catErrEl, 'Session expired (CSRF). Refresh the page and try again.');
+                    return;
+                }
+                if (pair.res.ok && pair.data && pair.data.status === 'success' && pair.data.item) {
+                    pfpAppendSelectOption(catSel, pair.data.item.id, pair.data.item.name);
+                    if (catModalEl) bootstrap.Modal.getInstance(catModalEl)?.hide();
+                    return;
+                }
+                var msg = (pair.data && pair.data.message) ? pair.data.message : 'Could not save.';
+                if (pair.data && pair.data.errors && pair.data.errors.CategoryName && pair.data.errors.CategoryName[0]) {
+                    msg = pair.data.errors.CategoryName[0];
+                }
+                pfpShowQuickErr(catErrEl, msg);
+            })
+            .catch(function() { pfpShowQuickErr(catErrEl, 'Network error.'); });
+        });
+
+        document.getElementById('productForm_unit_quick_save')?.addEventListener('click', function() {
+            var name = (unitNameInput && unitNameInput.value) ? unitNameInput.value.trim() : '';
+            if (!name) {
+                pfpShowQuickErr(unitErrEl, 'Unit name is required.');
+                return;
+            }
+            pfpShowQuickErr(unitErrEl, '');
+            var tok = pfpCsrfToken();
+            if (!tok) {
+                pfpShowQuickErr(unitErrEl, 'Security token missing. Refresh the page and try again.');
+                return;
+            }
+            var fd = new FormData();
+            fd.append('UnitName', name);
+            fd.append('_token', tok);
+            fetch(@json(route('products.lookups.unit-store')), {
+                method: 'POST',
+                headers: pfpFetchHeaders(),
+                body: fd,
+                credentials: 'same-origin'
+            })
+            .then(function(res) {
+                return res.text().then(function(text) {
+                    var data = {};
+                    try { data = text ? JSON.parse(text) : {}; } catch (e) {}
+                    return { res: res, data: data };
+                });
+            })
+            .then(function(pair) {
+                if (pair.res.status === 419) {
+                    pfpShowQuickErr(unitErrEl, 'Session expired (CSRF). Refresh the page and try again.');
+                    return;
+                }
+                if (pair.res.ok && pair.data && pair.data.status === 'success' && pair.data.item) {
+                    pfpAppendSelectOption(unitSel, pair.data.item.id, pair.data.item.name);
+                    if (unitModalEl) bootstrap.Modal.getInstance(unitModalEl)?.hide();
+                    return;
+                }
+                var msg = (pair.data && pair.data.message) ? pair.data.message : 'Could not save.';
+                if (pair.data && pair.data.errors && pair.data.errors.UnitName && pair.data.errors.UnitName[0]) {
+                    msg = pair.data.errors.UnitName[0];
+                }
+                pfpShowQuickErr(unitErrEl, msg);
+            })
+            .catch(function() { pfpShowQuickErr(unitErrEl, 'Network error.'); });
+        });
+    })();
 
     /**
      * Auto-save draft

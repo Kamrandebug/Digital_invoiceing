@@ -9,9 +9,6 @@
 <!--<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">-->
 
 <style>
-	.btn-margin{
-		margin-top: 20px;
-	}
     #customersTable th.action-col,
     #customersTable td:last-child {
         min-width: 10rem;
@@ -81,7 +78,7 @@
 				<div class="row">
 					<div class="col-md-9">
 						{{-- Filters --}}
-						<form action="{{ route('customers.index') }}" method="GET" class="">
+						<form action="{{ route('customers.index') }}" method="GET" class="listing-filters-form">
 							<div class="row g-2">
 								<div class="col-md-4">
 									<div class="header-search d-md-block d-none">
@@ -101,20 +98,20 @@
 								<div class="col-md-8">
 									<div class="row g-2">
 										<div class="col-md-4">
-											<label>Start Date</label>
-											<div><input type="date" class="form-control form-control-sm"
-												name="start_date" id="startDate"
+											<label class="listing-filter-date-label" for="startDate">Start Date</label>
+											<input type="date" class="form-control form-control-sm" id="startDate"
+												name="start_date"
 												value="{{ request('start_date') }}"
-												onchange="debounceSearch()"></div>
+												onchange="debounceSearch()">
 										</div>
 										<div class="col-md-4">
-											<label>End Date</label>
-											<input type="date" class="form-control form-control-sm"
-												name="end_date" id="endDate"
+											<label class="listing-filter-date-label" for="endDate">End Date</label>
+											<input type="date" class="form-control form-control-sm" id="endDate"
+												name="end_date"
 												value="{{ request('end_date') }}"
 												onchange="debounceSearch()">
 										</div>
-										<div class="col">
+										<div class="col listing-filter-actions-col">
 											<button class="btn btn-sm btn-primary btn-margin" type="button" onclick="window.location.href='{{ route('customers.index') }}'"><i class="fas fa-times"></i> Clear Filters</button>
 										</div>
 									</div>

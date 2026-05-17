@@ -648,8 +648,8 @@
             <h3 class="cs_footer_widget_title cs_fs_21 cs_mb_21">Contact Info</h3>
             <ul class="cs_footer_medu cs_mp_0">
               <li>24/7 Support Center</li>
-              <li><a href="mailto:info@ai.godigital.pk" aria-label="Email send link">info@ai.godigital.pk </a></li>
-              <li><a href="tel:03008495952" aria-label="Phone call link">0300 849 59 52</a></li>
+              <li><a href="mailto:info@ai.godigital.pk" aria-label="Email send link">info@godigital.pk </a></li>
+              <li><a href="tel:032529555" aria-label="Phone call link">0325 29 555 21</a></li>
 <!--              <li>10 am - 12 pm, Everyday</li>-->
             </ul>
           </div>

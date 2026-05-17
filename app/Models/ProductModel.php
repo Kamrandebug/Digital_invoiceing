@@ -126,12 +126,12 @@ class ProductModel extends Model
     // Tenant catalog lives on the session-scoped tenant connection (not landlord).
     return DB::connection('tenant')->select($query, $bindings);
 }
+
     /**
-     * Execute save: insert from temp_product into tbl_product. No return; runs query inside.
+     * @throws \RuntimeException
      */
-    public static function save_transaction($validated)
+    private static function tenantDatabaseQuoted(): string
     {
-        $requestID = $validated['RequestID'] ?? '';
         $tenantDb = session('selected_tenant.dbname') ?: config('database.connections.tenant.database');
         $tenantDb = trim((string) $tenantDb);
 
@@ -139,7 +139,53 @@ class ProductModel extends Model
             throw new \RuntimeException('Invalid tenant database name in session.');
         }
 
-        $tenantDbQuoted = '`' . str_replace('`', '``', $tenantDb) . '`';
+        return '`' . str_replace('`', '``', $tenantDb) . '`';
+    }
+
+    /**
+     * Execute save: insert from temp_product into tbl_product.
+     * Returns status and error message when temp rows fail validation (same pattern as Customer).
+     */
+    public static function save_transaction($validated)
+    {
+        $requestID = $validated['RequestID'] ?? '';
+        $tenantDbQuoted = self::tenantDatabaseQuoted();
+
+        DB::connection('landlord')->statement("
+            UPDATE {$tenantDbQuoted}.`temp_product` uu
+            JOIN (
+                SELECT t.ID,
+                    CASE
+                        WHEN COALESCE(TRIM(t.`Name`), '') = '' THEN 'Invalid Product Name'
+                        WHEN COALESCE(TRIM(t.`Code`), '') = '' THEN 'Invalid Product Code'
+                        WHEN EXISTS (
+                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_product` p
+                            WHERE p.`Code` = BINARY t.`Code` AND p.`Status` <> 2
+                        ) THEN 'Product Code already exist'
+                        ELSE 'Pass'
+                    END AS ErrMsg
+                FROM {$tenantDbQuoted}.`temp_product` t
+                WHERE t.RequestID = ?
+            ) u ON (u.ID = uu.ID)
+            SET uu.ErrMsg = u.ErrMsg
+        ", [$requestID]);
+
+        $errorSummary = DB::connection('landlord')->selectOne("
+            SELECT
+                IFNULL(COUNT(*), 0) AS cnt,
+                GROUP_CONCAT(DISTINCT t.ErrMsg ORDER BY t.ErrMsg SEPARATOR ', ') AS ErrMsg
+            FROM {$tenantDbQuoted}.`temp_product` t
+            WHERE t.`ErrMsg` IS NOT NULL
+              AND t.`ErrMsg` <> 'Pass'
+              AND t.RequestID = ?
+        ", [$requestID]);
+
+        if ((int) ($errorSummary->cnt ?? 0) > 0) {
+            return [
+                'status' => false,
+                'message' => $errorSummary->ErrMsg ?: 'Unable to add product due to invalid data.',
+            ];
+        }
 
         DB::connection('landlord')->statement("
             INSERT INTO {$tenantDbQuoted}.tbl_product (
@@ -148,7 +194,7 @@ class ProductModel extends Model
                 SroItemID,SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
             )
             SELECT
-                VoucherID,`Name`,`Code`,`Type`,1 AS CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,
+                VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,Weight,Image,
                 HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
                 SaleTypeToRate,fsttr.`ratE_DESC` AS SaleTypeToRateDesc,SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
                 SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
@@ -160,27 +206,64 @@ class ProductModel extends Model
             LEFT JOIN `core_digital_invoicing`.`fbr_sro_item` fsi ON (fsi.`srO_ITEM_ID` = t.SroItem)
             WHERE t.RequestID = ?
         ", [$requestID]);
+
+        return [
+            'status' => true,
+            'message' => null,
+        ];
     }
 
     /**
-     * Execute edit: update tbl_product from temp_product. No return; runs query inside.
+     * Execute edit: update tbl_product from temp_product.
+     * Returns status and error message when temp rows fail validation (same pattern as Customer).
      */
     public static function edit_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
-        $tenantDb = session('selected_tenant.dbname') ?: config('database.connections.tenant.database');
-        $tenantDb = trim((string) $tenantDb);
+        $tenantDbQuoted = self::tenantDatabaseQuoted();
 
-        if ($tenantDb === '' || ! preg_match('/^[A-Za-z0-9_]+$/', $tenantDb)) {
-            throw new \RuntimeException('Invalid tenant database name in session.');
+        DB::connection('landlord')->statement("
+            UPDATE {$tenantDbQuoted}.`temp_product` uu
+            JOIN (
+                SELECT t.ID,
+                    CASE
+                        WHEN COALESCE(TRIM(t.`Name`), '') = '' THEN 'Invalid Product Name'
+                        WHEN COALESCE(TRIM(t.`Code`), '') = '' THEN 'Invalid Product Code'
+                        WHEN EXISTS (
+                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_product` p
+                            WHERE p.`Code` = BINARY t.`Code`
+                              AND p.`Status` <> 2
+                              AND p.`ID` <> t.TID
+                        ) THEN 'Product Code already exist'
+                        ELSE 'Pass'
+                    END AS ErrMsg
+                FROM {$tenantDbQuoted}.`temp_product` t
+                WHERE t.RequestID = ?
+            ) u ON (u.ID = uu.ID)
+            SET uu.ErrMsg = u.ErrMsg
+        ", [$requestID]);
+
+        $errorSummary = DB::connection('landlord')->selectOne("
+            SELECT
+                IFNULL(COUNT(*), 0) AS cnt,
+                GROUP_CONCAT(DISTINCT t.ErrMsg ORDER BY t.ErrMsg SEPARATOR ', ') AS ErrMsg
+            FROM {$tenantDbQuoted}.`temp_product` t
+            WHERE t.`ErrMsg` IS NOT NULL
+              AND t.`ErrMsg` <> 'Pass'
+              AND t.RequestID = ?
+        ", [$requestID]);
+
+        if ((int) ($errorSummary->cnt ?? 0) > 0) {
+            return [
+                'status' => false,
+                'message' => $errorSummary->ErrMsg ?: 'Unable to update product due to invalid data.',
+            ];
         }
-
-        $tenantDbQuoted = '`' . str_replace('`', '``', $tenantDb) . '`';
 
         DB::connection('landlord')->statement("
             UPDATE {$tenantDbQuoted}.tbl_product uu
             JOIN (
-                SELECT t.TID, VoucherID,`Name`,`Code`,`Type`,1 AS CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,
+                SELECT t.TID, VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,Weight,Image,
                 HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
                 SaleTypeToRate, fsttr.`ratE_DESC` AS SaleTypeToRateDesc, SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
                 SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,UpdatedBy,UpdatedOn,RequestID
@@ -220,6 +303,11 @@ class ProductModel extends Model
                 uu.UpdatedBy          = u.UpdatedBy,
                 uu.UpdatedOn          = u.UpdatedOn
         ", [$requestID]);
+
+        return [
+            'status' => true,
+            'message' => null,
+        ];
     }
 
     /**

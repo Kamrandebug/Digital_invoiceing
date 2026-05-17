@@ -3,6 +3,7 @@
 @extends('layouts.master')
 
 @section('styles')
+{{-- customer-management.css is loaded globally (layouts/components/styles.blade.php) for :root --cm-* and modal forms --}}
 <style>
     .fbr-summary-card.fbr-summary--invalid {
         background: #fff8f8 !important;
@@ -33,42 +34,6 @@
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.0/dist/css/bootstrap-datepicker3.min.css" rel="stylesheet">
-<style>
-    .filter-date-label {
-        font-size: 11px;
-        font-weight: 500;
-        color: #6c757d;
-        margin-bottom: 4px;
-    }
-    .filter-date-group .form-control {
-        border-radius: 6px;
-        font-size: 12px;
-        padding-top: 6px;
-        padding-bottom: 6px;
-    }
-    .filter-date-group .input-group-text {
-        border-radius: 6px 0 0 6px;
-        background: #f1f3f5;
-        border-right: 0;
-        font-size: 12px;
-        color: #6c757d;
-    }
-    .filter-date-group .form-control:not(:focus) {
-        border-left: 0;
-    }
-    .filter-date-group .form-control:focus {
-        box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
-    }
-    @media (max-width: 767.98px) {
-        .filter-date-group .input-group-text {
-            display: none;
-        }
-        .filter-date-group .form-control {
-            border-radius: 6px !important;
-            border-left: 1px solid #ced4da;
-        }
-    }
-</style>
 @endsection
 
 @section('content')
@@ -124,7 +89,7 @@
             <div class="card-body p-2">
                 <div class="row">
                     <div class="col-md-9">
-                        <form action="{{ route('invoices.index') }}" method="GET">
+                        <form action="{{ route('invoices.index') }}" method="GET" class="listing-filters-form">
                             <div class="row g-2">
                                 <div class="col-md-4">
                                     <div class="header-search d-md-block d-none">
@@ -170,7 +135,7 @@
                                                        placeholder="YYYY-MM-DD">
                                             </div>
                                         </div>
-                                        <div class="col">
+                                        <div class="col listing-filter-actions-col">
                                             <button class="btn btn-sm btn-primary btn-margin" type="button"
                                                     onclick="window.location.href='{{ route('invoices.index') }}'">
                                                 <i class="fas fa-times"></i> Clear Filters
@@ -883,15 +848,42 @@ saveBtn.onclick = function () {
         setPrintFrameSrc(orient);
     });
 
+    /** Chrome "Save as PDF" uses the parent tab title when printing an iframe — sync both, then restore parent. */
+    function buildGDPrintSaveTitle(invoiceId) {
+        var d = new Date();
+        var ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+        return 'GD-DI-' + ymd + '-' + String(invoiceId).padStart(2, '0');
+    }
+
     document.getElementById('invoice_print_do_print').addEventListener('click', function () {
         var frame = document.getElementById('invoice_print_frame');
-        if (frame && frame.contentWindow) {
-            try {
-                frame.contentWindow.focus();
-                frame.contentWindow.print();
-            } catch (e) {
-                showToast('error', 'Could not open print dialog. Try printing from the browser (Ctrl+P).');
+        if (!frame || !frame.contentWindow) return;
+        var iw = frame.contentWindow;
+        var parentTitle = document.title;
+        try {
+            var printTitle = (_printModalInvoiceId && iw.document)
+                ? buildGDPrintSaveTitle(_printModalInvoiceId)
+                : parentTitle;
+            if (iw.document && _printModalInvoiceId) {
+                iw.document.title = printTitle;
             }
+            document.title = printTitle;
+            var restored = false;
+            function restoreTabTitle() {
+                if (restored) return;
+                restored = true;
+                document.title = parentTitle;
+                try {
+                    iw.removeEventListener('afterprint', restoreTabTitle);
+                } catch (e2) {}
+            }
+            iw.addEventListener('afterprint', restoreTabTitle);
+            setTimeout(restoreTabTitle, 180000);
+            iw.focus();
+            iw.print();
+        } catch (e) {
+            document.title = parentTitle;
+            showToast('error', 'Could not open print dialog. Try printing from the browser (Ctrl+P).');
         }
     });
 
@@ -979,45 +971,101 @@ saveBtn.onclick = function () {
                                 if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
                             }
                         } else if (vr && typeof vr === 'object') {
-                            var errCode = vr.errorCode != null ? String(vr.errorCode) : '';
-                            var errText = vr.error != null ? String(vr.error) : '';
+                            var errCode = vr.errorCode != null && vr.errorCode !== '' ? String(vr.errorCode) : '';
+                            var errText = vr.error != null ? String(vr.error).trim() : '';
                             var st = vr.status != null ? String(vr.status) : '';
                             var stc = vr.statusCode != null ? String(vr.statusCode) : '';
-                            if (errCode || errText || st || stc) {
+                            var isValidResponse = stc === '00';
+
+                            var errorLines = [];
+                            if (errText) {
+                                errorLines.push(errCode ? ('[' + errCode + '] ' + errText) : errText);
+                            }
+                            if (Array.isArray(vr.invoiceStatuses)) {
+                                vr.invoiceStatuses.forEach(function (item) {
+                                    if (!item || typeof item !== 'object') return;
+                                    var lineErr = item.error != null ? String(item.error).trim() : '';
+                                    if (!lineErr) return;
+                                    var lineCode = item.errorCode != null && item.errorCode !== '' ? String(item.errorCode) : '';
+                                    var lineNo = item.itemSNo != null && item.itemSNo !== '' ? String(item.itemSNo) : '';
+                                    var head = [];
+                                    if (lineNo) head.push('Item ' + lineNo);
+                                    if (lineCode) head.push('[' + lineCode + ']');
+                                    errorLines.push(head.length ? (head.join(' ') + ' ' + lineErr) : lineErr);
+                                });
+                            }
+                            var combinedErrors = errorLines.join('\n').trim();
+
+                            var hasSummary = isValidResponse || errCode || errText || st || stc || combinedErrors;
+                            if (hasSummary) {
                                 summaryWrap.classList.remove('d-none');
-                                if (labelCode) labelCode.textContent = 'Error code';
-                                if (labelMessage) labelMessage.textContent = 'Status';
-                                if (labelDesc) labelDesc.textContent = 'Error details';
-                                if (summaryCode) summaryCode.value = errCode || '-';
-                                if (summaryMessage) {
-                                    var msgParts = [];
-                                    if (st) msgParts.push(st);
-                                    if (stc) msgParts.push('(' + stc + ')');
-                                    summaryMessage.value = msgParts.length ? msgParts.join(' ') : '-';
+                                if (isValidResponse) {
+                                    if (labelCode) labelCode.textContent = 'Code';
+                                    if (labelMessage) labelMessage.textContent = 'Status';
+                                    if (labelDesc) labelDesc.textContent = 'Message';
+                                    if (summaryCode) summaryCode.value = stc || '-';
+                                    if (summaryMessage) {
+                                        var okParts = [];
+                                        if (st) okParts.push(st);
+                                        if (stc) okParts.push('(' + stc + ')');
+                                        summaryMessage.value = okParts.length ? okParts.join(' ') : '-';
+                                    }
+                                    if (summaryDescription) {
+                                        summaryDescription.value = 'Invoice Successfully Posted to FBR';
+                                        summaryDescription.rows = 3;
+                                    }
+                                    if (summaryCard) summaryCard.classList.add('fbr-summary--valid');
+                                } else {
+                                    if (labelCode) labelCode.textContent = 'Error code';
+                                    if (labelMessage) labelMessage.textContent = 'Status';
+                                    if (labelDesc) labelDesc.textContent = 'Error details';
+                                    if (summaryCode) summaryCode.value = errCode || '-';
+                                    if (summaryMessage) {
+                                        var msgParts = [];
+                                        if (st) msgParts.push(st);
+                                        if (stc) msgParts.push('(' + stc + ')');
+                                        summaryMessage.value = msgParts.length ? msgParts.join(' ') : '-';
+                                    }
+                                    if (summaryDescription) {
+                                        summaryDescription.value = combinedErrors || '-';
+                                        if (combinedErrors) {
+                                            var ln = combinedErrors.split('\n').length;
+                                            summaryDescription.rows = Math.min(14, Math.max(3, ln + 1));
+                                        } else {
+                                            summaryDescription.rows = 3;
+                                        }
+                                    }
+                                    if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
                                 }
-                                if (summaryDescription) summaryDescription.value = errText || '-';
 
                                 if (summaryStrip && badgeStatus && badgeCode) {
                                     summaryStrip.classList.remove('d-none');
                                     summaryStrip.classList.add('d-flex');
-                                    var stLower = st.toLowerCase();
-                                    if (stLower === 'invalid') {
-                                        badgeStatus.textContent = 'Invalid';
-                                        badgeStatus.className = 'badge rounded-pill bg-danger-subtle text-danger-emphasis';
-                                        if (summaryCard) summaryCard.classList.add('fbr-summary--invalid');
-                                    } else if (stLower === 'valid') {
+                                    if (isValidResponse) {
                                         badgeStatus.textContent = 'Valid';
                                         badgeStatus.className = 'badge rounded-pill bg-success-subtle text-success-emphasis';
-                                        if (summaryCard) summaryCard.classList.add('fbr-summary--valid');
-                                    } else if (st) {
-                                        badgeStatus.textContent = st;
-                                        badgeStatus.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
-                                    }
-                                    if (errCode) {
-                                        badgeCode.textContent = 'Error ' + errCode;
-                                        badgeCode.className = 'badge rounded-pill bg-dark-subtle text-dark-emphasis';
-                                    } else if (stc) {
-                                        badgeCode.textContent = 'Code ' + stc;
+                                        badgeCode.textContent = stc ? stc : '';
+                                        badgeCode.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
+                                    } else {
+                                        var stLower = st.toLowerCase();
+                                        if (stLower === 'invalid') {
+                                            badgeStatus.textContent = 'Invalid';
+                                            badgeStatus.className = 'badge rounded-pill bg-danger-subtle text-danger-emphasis';
+                                        } else if (stLower === 'valid') {
+                                            badgeStatus.textContent = 'Valid';
+                                            badgeStatus.className = 'badge rounded-pill bg-success-subtle text-success-emphasis';
+                                        } else if (st) {
+                                            badgeStatus.textContent = st;
+                                            badgeStatus.className = 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis';
+                                        }
+                                        if (errCode) {
+                                            badgeCode.textContent = 'Error ' + errCode;
+                                            badgeCode.className = 'badge rounded-pill bg-dark-subtle text-dark-emphasis';
+                                        } else if (stc) {
+                                            badgeCode.textContent = 'Code ' + stc;
+                                        } else {
+                                            badgeCode.textContent = '';
+                                        }
                                     }
                                 }
                             }

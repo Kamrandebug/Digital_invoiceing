@@ -50,6 +50,8 @@ class BusinessInfoController extends Controller
                 'SalesTaxNumber'=> ['nullable', 'string', 'max:50', 'unique:tbl_business_info,SalesTaxNumber'],
                 'CNIC'         => ['nullable', 'string', 'max:50', 'unique:tbl_business_info,CNIC'],
                 'Notes'        => ['nullable', 'string', 'max:500'],
+                'BusinessLogo' => ['nullable', 'image', 'max:4096'],
+                'ImageUrl'     => ['nullable', 'string', 'max:500'],
                 'Sandbox_access_token' => ['nullable', 'string', 'max:1000'],
                 'iris_access_token'    => ['nullable', 'string', 'max:1000'],
             ]);
@@ -72,6 +74,8 @@ class BusinessInfoController extends Controller
             $displayName = $request->BusinessName
                 ?: trim(($request->FirstName ?? '') . ' ' . ($request->LastName ?? ''));
 
+            $imageUrl = $this->resolveBusinessImageUrl($request, null);
+
             // Next temp ID
             $maxId  = DB::table('temp_business_info')->max('ID');
             $nextId = $maxId ? $maxId + 1 : 1;
@@ -90,6 +94,7 @@ class BusinessInfoController extends Controller
                 'Phone'         => $request->Phone ?? '',
                 'Website'       => $request->Website ?? '',
                 'Address'       => $request->Address,
+                'ImageUrl'      => $imageUrl,
                 'Province'      => $request->Province ?? '',
                 'NTN'           => $request->NTN,
                 'SalesTaxNumber'=> $request->SalesTaxNumber ?? '',
@@ -187,6 +192,8 @@ class BusinessInfoController extends Controller
                 'SalesTaxNumber'=> ['nullable', 'string', 'max:50', Rule::unique('tbl_business_info', 'SalesTaxNumber')->ignore($id, 'ID')->whereNotNull('SalesTaxNumber')],
                 'CNIC'         => ['nullable', 'string', 'max:50', Rule::unique('tbl_business_info', 'CNIC')->ignore($id, 'ID')],
                 'Notes'        => ['nullable', 'string', 'max:500'],
+                'BusinessLogo' => ['nullable', 'image', 'max:4096'],
+                'ImageUrl'     => ['nullable', 'string', 'max:500'],
                 'Sandbox_access_token' => ['nullable', 'string', 'max:1000'],
                 'iris_access_token'    => ['nullable', 'string', 'max:1000'],
             ]);
@@ -209,6 +216,8 @@ class BusinessInfoController extends Controller
             $displayName = $request->BusinessName
                 ?: trim(($request->FirstName ?? '') . ' ' . ($request->LastName ?? ''));
 
+            $imageUrl = $this->resolveBusinessImageUrl($request, $existing->ImageUrl ?? null);
+
             $data = [
                 'TID'           => $id,
                 'AccountNo'     => $existing->AccountNo ?? ('BIZ-' . str_pad($id, 6, '0', STR_PAD_LEFT)),
@@ -221,6 +230,7 @@ class BusinessInfoController extends Controller
                 'Phone'         => $request->Phone ?? '',
                 'Website'       => $request->Website ?? '',
                 'Address'       => $request->Address,
+                'ImageUrl'      => $imageUrl,
                 'Province'      => $request->Province ?? '',
                 'NTN'           => $request->NTN,
                 'SalesTaxNumber'=> $request->SalesTaxNumber ?? '',
@@ -299,6 +309,28 @@ class BusinessInfoController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error archiving business info: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Stored path relative to the public disk (e.g. business_logos/abc.jpg).
+     */
+    protected function resolveBusinessImageUrl(Request $request, ?string $existingFromDb): ?string
+    {
+        if ($request->hasFile('BusinessLogo')) {
+            return $request->file('BusinessLogo')->store('business_logos', 'public');
+        }
+
+        $posted = trim((string) $request->input('ImageUrl', ''));
+        if ($posted !== '') {
+            $normalized = ltrim(str_replace('\\', '/', $posted), '/');
+            if (str_contains($normalized, '..')) {
+                return $existingFromDb;
+            }
+
+            return $normalized;
+        }
+
+        return $existingFromDb;
     }
 }
 

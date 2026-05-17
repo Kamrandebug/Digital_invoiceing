@@ -53,6 +53,7 @@ class InvoiceModel extends Model
         'CreatedOn',
         'UpdatedBy',
         'UpdatedOn',
+        'ErrMsg',
     ];
 
     protected $casts = [
@@ -75,7 +76,8 @@ class InvoiceModel extends Model
     public static function Load_Customer()
     {
         // Raw SQL string used to populate the Customer dropdown
-        $query = "SELECT ID, DisplayName, FirstName, LastName, BusinessName
+        $query = "SELECT ID, DisplayName, FirstName, LastName, BusinessName, IsFiler, SalesTaxWithheldAtSource, ExtraTax, FurtherTax, FedPayable,
+                         IsAdvanceTax, AdvanceTax
                   FROM tbl_customer
                   WHERE Status = 1";
 
@@ -85,10 +87,12 @@ class InvoiceModel extends Model
     public static function Load_Product()
     {
         // Product dropdown for invoice: include tax/FBR fields for auto-fill on line item.
-        $query = "SELECT ID, Name AS ProductName, SalePrice, 0 AS GstPercentage,
-                  HsCode, SaleInformation, UomID, SaleTypeID, SaleTypeToRateID, SroScheduleID, SroItemID
-                  FROM tbl_product
-                  WHERE Status = 1";
+        $query = "SELECT p.ID, p.Name AS ProductName, p.SalePrice, 0 AS GstPercentage,
+                  p.HsCode, p.SaleInformation, p.UomID,
+                  (SELECT u.UnitName FROM tbl_Unit u WHERE u.id = p.UomID LIMIT 1) AS UomName,
+                  p.SaleTypeID, p.SaleTypeToRateID, p.SroScheduleID, p.SroItemID, p.TPRate, p.IsFixedRate
+                  FROM tbl_product p
+                  WHERE p.Status = 1";
 
         return $query;
     }
@@ -166,9 +170,9 @@ class InvoiceModel extends Model
                 'h.Notes',
                 // Grab totals directly from the header table instead of calculating them
                 'h.SubTotal',
-                'h.DiscountAmount as TotalDiscount',
-                'h.GSTAmount      as TotalGST',
-                'h.Total          as TotalAmount',
+                'h.DiscountAmount AS TotalDiscount',
+                'h.SalesTaxApplicable      AS TotalGST',
+                'h.TotalValues      AS TotalAmount',
                 'h.FbrTransactionID',
                 'h.FbrResponseJson',
                 'h.CreatedOn',
@@ -208,15 +212,10 @@ class InvoiceModel extends Model
     // ══════════════════════════════════════════════════════════
 
     /**
-     * Execute save: run multiple queries (header + detail) from tbl_temp_invoice_detail for the given RequestID.
-     * No return; add more DB::unprepared() calls here for any extra queries you need.
+     * @throws \RuntimeException
      */
-    public static function save_transaction($requestID)
+    private static function tenantDatabaseQuoted(): string
     {
-        $requestID = trim((string) $requestID);
-        if ($requestID === '') {
-            throw new \RuntimeException('RequestID is required for save_transaction.');
-        }
         $tenantDb = session('selected_tenant.dbname') ?: config('database.connections.tenant.database');
         $tenantDb = trim((string) $tenantDb);
 
@@ -224,14 +223,75 @@ class InvoiceModel extends Model
             throw new \RuntimeException('Invalid tenant database name in session.');
         }
 
-        $tenantDbQuoted = '`' . str_replace('`', '``', $tenantDb) . '`';
+        return '`' . str_replace('`', '``', $tenantDb) . '`';
+    }
 
+    /**
+     * @return array{status: bool, message: string}|null null when validation passes
+     */
+    private static function runTempInvoiceValidation(string $requestID, string $tenantDbQuoted): ?array
+    {
+        DB::connection('landlord')->statement("
+            UPDATE {$tenantDbQuoted}.`tbl_temp_invoice_detail` uu
+            JOIN (
+                SELECT t.ID,
+                    CASE
+                        WHEN COALESCE(TRIM(t.DocNo), '') = '' THEN 'Invalid Document Number'
+                        WHEN t.CustomerID IS NULL OR t.CustomerID <= 0 THEN 'Invalid Customer'
+                        WHEN NOT EXISTS (
+                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_customer` c
+                            WHERE c.ID = t.CustomerID AND c.Status = 1
+                        ) THEN 'Invalid Customer'
+                        WHEN t.ProductID IS NULL OR t.ProductID <= 0 THEN 'Invalid Product'
+                        WHEN NOT EXISTS (
+                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_product` p
+                            WHERE p.ID = t.ProductID AND p.Status = 1
+                        ) THEN 'Invalid Product'
+                        WHEN EXISTS (
+                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_sales_invoice_header` h
+                            WHERE BINARY h.DocNo = BINARY t.DocNo
+                              AND IFNULL(h.Status, 0) <> 2
+                              AND h.ID <> t.TID
+                        ) THEN 'Document No already exist'
+                        ELSE 'Pass'
+                    END AS ErrMsg
+                FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
+                WHERE t.RequestID = ?
+            ) u ON u.ID = uu.ID
+            SET uu.ErrMsg = u.ErrMsg
+        ", [$requestID]);
+
+        $errorSummary = DB::connection('landlord')->selectOne("
+            SELECT
+                IFNULL(COUNT(*), 0) AS cnt,
+                GROUP_CONCAT(DISTINCT t.ErrMsg ORDER BY t.ErrMsg SEPARATOR ', ') AS ErrMsg
+            FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
+            WHERE t.ErrMsg IS NOT NULL
+              AND t.ErrMsg <> 'Pass'
+              AND t.RequestID = ?
+        ", [$requestID]);
+
+        if ((int) ($errorSummary->cnt ?? 0) > 0) {
+            return [
+                'status' => false,
+                'message' => $errorSummary->ErrMsg ?: 'Unable to save invoice due to invalid data.',
+            ];
+        }
+
+        return null;
+    }
+
+    private static function persistInvoiceFromTemp(string $requestID, string $tenantDbQuoted): void
+    {
         DB::connection('landlord')->statement("
             UPDATE {$tenantDbQuoted}.tbl_temp_invoice_detail uu
             JOIN (
                 SELECT  t.ID, HsCode,fho.`description` AS Uom_Desc,fttc.`transactioN_DESC` AS SaleTypeDesc,
                         fsttr.`ratE_DESC` AS SaleTypeToRateDesc, fss.`srO_DESC` AS SroScheduleDesc,
-                        fsi.`srO_ITEM_DESC` AS SroItemSerialNo,ProductDescription,RequestID
+                        fsi.`srO_ITEM_DESC` AS SroItemSerialNo,ProductDescription,
+                        t.Amount AS `ValueSalesExcludingST`,
+                        IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS `FixedNotifiedValueOrRetailPrice`,
+                        t.GSTAmount AS `SalesTaxApplicable`,t.`TotalValues`, t.RequestID
                 FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
                 LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fho ON (fho.`uoM_ID` = t.UomID AND fho.hs_CODE = t.HsCode)
                 LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc ON (fttc.`transactioN_TYPE_ID` = t.SaleTypeID)
@@ -245,52 +305,114 @@ class InvoiceModel extends Model
                 uu.SaleTypeDesc       = u.SaleTypeDesc,
                 uu.SaleTypeToRateDesc = u.SaleTypeToRateDesc,
                 uu.SroScheduleDesc    = u.SroScheduleDesc,
-                uu.SroItemSerialNo    = u.SroItemSerialNo
+                uu.SroItemSerialNo    = u.SroItemSerialNo,
+                uu.`ValueSalesExcludingST` = u.`ValueSalesExcludingST`,
+                uu.`FixedNotifiedValueOrRetailPrice` = u.`FixedNotifiedValueOrRetailPrice`,
+                uu.`SalesTaxApplicable` = u.`SalesTaxApplicable`,
+                uu.`TotalValues` = u.`TotalValues`
                 ", [$requestID]);
 
-        // -- 1. Insert into tbl_sales_invoice_header
-        DB::unprepared("
-            INSERT INTO tbl_sales_invoice_header (ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT TID AS ID,InvoiceID,1 AS InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,''AS BuyerNTNCNIC,''AS BuyerBusinessName,''AS BuyerProvince,''AS BuyerAddress,''AS InvoiceRefNo,''AS BuyerRegistrationType,''AS ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
-            FROM tbl_temp_invoice_detail
-            WHERE RequestID = '$requestID'
-            Group BY RequestID
-        ");
+        DB::connection('landlord')->statement("
+            INSERT INTO {$tenantDbQuoted}.tbl_sales_invoice_header (ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT t.TID AS ID,t.InvoiceID,1 AS InvoiceNumber,t.InvoiceType,t.InvoiceDate,t.DocNo,t.DocNo2,t.DocNo3,t.CustomerID,
+            c.`NTN` AS BuyerNTNCNIC,c.`BusinessName` AS BuyerBusinessName,c.County AS BuyerProvince, c.`Address` AS BuyerAddress,
+            ''AS InvoiceRefNo,c.IsFiler AS BuyerRegistrationType,
+            ''AS ScenarioId,SUM(t.TotalValues) AS TotalValues,SUM(t.ValueSalesExcludingST) AS ValueSalesExcludingST,
+            SUM(t.FixedNotifiedValueOrRetailPrice) AS FixedNotifiedValueOrRetailPrice,SUM(t.SalesTaxApplicable) AS SalesTaxApplicable,
+            t.SalesTaxWithheldAtSource,
+            SUM(t.ExtraTax) AS ExtraTax,SUM(t.FurtherTax) AS FurtherTax,SUM(t.FedPayable) AS FedPayable,SUM(t.Discount) AS Discount,
+            t.Statusi,t.CreatedBy,t.CreatedOn,t.UpdatedBy,t.UpdatedOn
+            FROM {$tenantDbQuoted}.tbl_temp_invoice_detail t
+            INNER JOIN {$tenantDbQuoted}.`tbl_customer` c ON (c.ID = t.CustomerID)
+            WHERE t.RequestID = ?
+            GROUP BY t.RequestID
+        ", [$requestID]);
 
-        // -- 2. Insert into tbl_sales_invoice_detail
-        DB::unprepared("
-            INSERT INTO `tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.Weight, 
-                t.HsCode, t.ProductDescription AS SaleInformation,t.UomID, t.Uom_Desc AS Uom_Desc, 
-                t.SaleTypeID, t.SaleTypeDesc AS SaleTypeDesc, 
-                t.SaleTypeToRateID, t.SaleTypeToRateDesc AS SaleTypeToRateDesc, 
-                t.SroScheduleID, IFNULL(t.SroScheduleDesc,'') AS SroScheduleDesc, 
-                t.SroItemID, IFNULL(t.SroItemSerialNo,'') AS SroItemSerialNo, 
-                IFNULL(t.TotalValues,0.00), 
-                IFNULL(t.Amount,0.00) AS ValueSalesExcludingST, 
-                IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS FixedNotifiedValueOrRetailPrice, 
-                IFNULL(t.GSTAmount,0.00) AS SalesTaxApplicable, 
+        DB::connection('landlord')->statement("
+            INSERT INTO {$tenantDbQuoted}.`tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,GSTAmount,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.Weight,t.GSTAmount,
+                t.HsCode, t.ProductDescription AS SaleInformation,t.UomID, t.Uom_Desc AS Uom_Desc,
+                t.SaleTypeID, t.SaleTypeDesc AS SaleTypeDesc,
+                t.SaleTypeToRateID, t.SaleTypeToRateDesc AS SaleTypeToRateDesc,
+                t.SroScheduleID, IFNULL(t.SroScheduleDesc,'') AS SroScheduleDesc,
+                t.SroItemID, IFNULL(t.SroItemSerialNo,'') AS SroItemSerialNo,
+                IFNULL(t.TotalValues,0.00),
+                IFNULL(t.ValueSalesExcludingST,0.00) AS ValueSalesExcludingST,
+                -- IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS FixedNotifiedValueOrRetailPrice,
+                IFNULL(t.FixedNotifiedValueOrRetailPrice,0.00) AS FixedNotifiedValueOrRetailPrice,
+                IFNULL(t.SalesTaxApplicable,0.00) AS SalesTaxApplicable,
 	            IFNULL(t.SalesTaxWithheldAtSource,0.00),IFNULL(t.ExtraTax,0.00), IFNULL(t.FurtherTax,0.00), IFNULL(t.FedPayable,0.00), IFNULL(t.Discount,0.00),
                 1 AS `Status`,
                 t.CreatedBy, t.CreatedOn, t.UpdatedBy, t.UpdatedOn
-            FROM `tbl_temp_invoice_detail` t
-            WHERE t.RequestID = '$requestID'
-        ");
+            FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
+            WHERE t.RequestID = ?
+        ", [$requestID]);
     }
 
+    /**
+     * Execute save: validate temp rows, then insert header + detail from tbl_temp_invoice_detail for the given RequestID.
+     *
+     * @return array{status: bool, message: ?string}
+     */
+    public static function save_transaction($requestID)
+    {
+        $requestID = trim((string) $requestID);
+        if ($requestID === '') {
+            throw new \RuntimeException('RequestID is required for save_transaction.');
+        }
+
+        $tenantDbQuoted = self::tenantDatabaseQuoted();
+        $validationError = self::runTempInvoiceValidation($requestID, $tenantDbQuoted);
+        if ($validationError !== null) {
+            return $validationError;
+        }
+
+        self::persistInvoiceFromTemp($requestID, $tenantDbQuoted);
+
+        return [
+            'status' => true,
+            'message' => null,
+        ];
+    }
+
+    /**
+     * Validate temp rows, remove existing header/lines for this edit, then persist from temp (same as save path).
+     *
+     * @return array{status: bool, message: ?string}
+     */
     public static function edit_transaction($requestID)
     {
-        DB::unprepared("
+        $requestID = trim((string) $requestID);
+        if ($requestID === '') {
+            throw new \RuntimeException('RequestID is required for edit_transaction.');
+        }
 
-            DELETE FROM tbl_sales_invoice_detail WHERE InvoiceID IN (SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = '$requestID');
-        ");
+        $tenantDbQuoted = self::tenantDatabaseQuoted();
+        $validationError = self::runTempInvoiceValidation($requestID, $tenantDbQuoted);
+        if ($validationError !== null) {
+            return $validationError;
+        }
 
-        DB::unprepared("
+        DB::connection('landlord')->statement("
+            DELETE FROM {$tenantDbQuoted}.tbl_sales_invoice_detail
+            WHERE InvoiceID IN (
+                SELECT TID FROM {$tenantDbQuoted}.tbl_temp_invoice_detail WHERE RequestID = ?
+            )
+        ", [$requestID]);
 
-           DELETE FROM tbl_sales_invoice_header WHERE ID IN (SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = '$requestID');
-        ");
+        DB::connection('landlord')->statement("
+            DELETE FROM {$tenantDbQuoted}.tbl_sales_invoice_header
+            WHERE ID IN (
+                SELECT TID FROM {$tenantDbQuoted}.tbl_temp_invoice_detail WHERE RequestID = ?
+            )
+        ", [$requestID]);
 
-        self::save_transaction($requestID);
+        self::persistInvoiceFromTemp($requestID, $tenantDbQuoted);
+
+        return [
+            'status' => true,
+            'message' => null,
+        ];
     }
 
     public static function delete_transaction($requestID)
@@ -316,6 +438,20 @@ class InvoiceModel extends Model
      */
     public static function post_to_fbr(int $headerId): array
     {
+        // PHP default max_execution_time (often 60s) can kill the script before Guzzle's timeout throws.
+        // Allow the HTTP client enough wall time; Guzzle still enforces connect/request timeouts.
+        $fbrTimeout = (float) config('services.fbr.timeout', 120);
+        if ($fbrTimeout < 1) {
+            $fbrTimeout = 120;
+        }
+        $phpMaxExec = (int) config('services.fbr.max_execution_time', (int) ceil($fbrTimeout + 90));
+        if ($phpMaxExec < 120) {
+            $phpMaxExec = 180;
+        }
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($phpMaxExec);
+        }
+
         $header = DB::table('tbl_sales_invoice_header')
             ->where('ID', $headerId)
             ->where('Status', '!=', 2)
@@ -346,7 +482,7 @@ SELECT
         '"buyerProvince" : ', JSON_QUOTE(IFNULL(c.County, '')), ',',
         '"buyerAddress" : ', JSON_QUOTE(IFNULL(c.Address, '')), ',',
         '"invoiceRefNo" : ', JSON_QUOTE(''), ',',
-        '"scenarioId" : ', JSON_QUOTE(IF(c.IsFiler = 1, 'SN001', 'SN002')), ',',
+        -- '"scenarioId" : ', JSON_QUOTE(IF(c.IsFiler = 1, 'SN001', 'SN002')), ',',
         '"buyerRegistrationType" : ', JSON_QUOTE(IF(c.IsFiler = 1, 'Registered', 'Unregistered')), ',',
         '"items":[',
         IFNULL((
@@ -379,7 +515,7 @@ SELECT
         ), ''),
         ']}'
     ) AS payloadstring,
-    b.Sandbox_access_token AS access_token
+    b.iris_access_token AS access_token
 FROM tbl_sales_invoice_header h
 CROSS JOIN (
     SELECT bi.* FROM tbl_business_info bi WHERE bi.IsArchive = 0 ORDER BY bi.ID ASC LIMIT 1
@@ -415,7 +551,13 @@ SQL;
             ];
         }
 
-        $url = config('services.fbr.post_url');
+        $url = trim((string) config('services.fbr.post_url'));
+        if ($url === '') {
+            return [
+                'success' => false,
+                'message' => 'FBR POST URL is not configured. Set FBR_POST_URL.',
+            ];
+        }
         $jsonBody = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($jsonBody === false) {
             return ['success' => false, 'message' => 'Failed to JSON-encode payload for FBR.'];
@@ -460,9 +602,28 @@ SQL;
                 ->withBody($jsonBody, 'application/json')
                 ->post($url);
         } catch (\Throwable $e) {
-            Log::error('FBR post_to_fbr HTTP exception', ['id' => $headerId, 'error' => $e->getMessage()]);
+            Log::error('FBR post_to_fbr HTTP exception', [
+                'id' => $headerId,
+                'error' => $e->getMessage(),
+                'type' => $e::class,
+            ]);
 
-            return ['success' => false, 'message' => 'FBR request failed: ' . $e->getMessage()];
+            $technical = $e->getMessage();
+            $friendly = 'The FBR service did not respond in time or the connection failed. Please try again in a few minutes.';
+            if (
+                str_contains($technical, 'timed out')
+                || str_contains($technical, 'Operation timed out')
+                || str_contains($technical, 'cURL error 28')
+                || str_contains($technical, 'Connection timed out')
+            ) {
+                $userMsg = $friendly;
+            } elseif (config('app.debug')) {
+                $userMsg = 'FBR request failed: ' . $technical;
+            } else {
+                $userMsg = 'Could not reach FBR right now. Please try again later.';
+            }
+
+            return ['success' => false, 'message' => $userMsg];
         }
 
         $rawBody = (string) $httpResponse->body();

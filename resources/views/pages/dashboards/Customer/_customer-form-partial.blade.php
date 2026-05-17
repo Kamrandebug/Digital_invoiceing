@@ -87,9 +87,12 @@
         background: var(--cm-input-bg, #fff);
         border: 1px solid var(--cm-border-color, #dee2e6);
         border-radius: 4px;
-        min-height: 36px;
+        min-height: 38px;
         color: var(--cm-text-main, #212529);
         word-break: break-word;
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
     }
     ._cfp-required::after { content: " *"; color: #dc3545; }
 
@@ -142,8 +145,9 @@
 @endonce
 
 
-{{-- ── Info Badge (edit / show modes only) ────────────────────── --}}
+{{-- ── Info Badge (edit / show) — full page only; hidden in AJAX modal (metadata); Edit shortcut kept in view modal --}}
 @if(!$isCreate && $customer)
+    @if(!$inModal)
 <div class="_cfp-info-badge {{ $isView ? 'show-mode' : 'edit-mode' }}">
     <div class="row align-items-center g-2">
         <div class="col-auto"><strong><i class="fas fa-id-badge"></i> ID:</strong> #{{ $customer->ID }}</div>
@@ -156,23 +160,24 @@
             </span>
         </div>
         @if($isView)
-<div class="col text-end">
-    @if($inModal)
+        <div class="col text-end">
+            <a href="{{ route('customers.edit', $customer->ID) }}"
+               class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
+                <i class="fas fa-edit"></i> Edit Customer
+            </a>
+        </div>
+        @endif
+    </div>
+</div>
+    @elseif($isView)
+    <div class="d-flex justify-content-end mb-2">
         <button type="button"
                 class="btn btn-light btn-sm fw-bold text-primary shadow-sm"
                 onclick="openCustomerModal('edit', {{ $customer->ID }})">
             <i class="fas fa-edit"></i> Edit Customer
         </button>
-    @else
-        <a href="{{ route('customers.edit', $customer->ID) }}"
-           class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
-            <i class="fas fa-edit"></i> Edit Customer
-        </a>
-    @endif
-</div>
-@endif
     </div>
-</div>
+    @endif
 @endif
 
 
@@ -181,12 +186,15 @@
 <form action="{{ $formAction }}" method="POST" id="{{ $uid }}_form" novalidate autocomplete="off">
     @csrf
     @if($isEdit) @method('PUT') @endif
+    <input type="hidden" name="CustomerFormContext" value="{{ $isCreate ? 'create' : 'edit-' . ($customer->ID ?? '') }}">
 @endif
 
 <div class="{{ $isView ? 'show-mode' : '' }}">
 
 <div class="row justify-content-center">
 	<div class="col-md-12">
+		<div class="_pfp-tab-panel-shell border rounded overflow-hidden mb-3">
+			<div class="_pfp-tab-panel-body">
 		<div class="row g-2">
 			{{-- Title --}}
 			<div class="col-md-3">
@@ -194,12 +202,14 @@
 				@if($isReadonly)
 					<div class="_cfp-detail-value">{{ $customer->Title ?? '-' }}</div>
 				@else
-					<select name="Title" class="form-select form-select-sm @error('Title') is-invalid @enderror">
-						<option value="">Select</option>
-						@foreach(['Mr','Mrs','Miss','Dr','Prof','Engr'] as $t)
-							<option value="{{ $t }}" {{ old('Title', $customer->Title ?? '') == $t ? 'selected' : '' }}>{{ $t }}</option>
-						@endforeach
-					</select>
+					<div class="d-flex gap-1 align-items-center w-100">
+						<select name="Title" class="form-select @error('Title') is-invalid @enderror flex-grow-1" style="min-width:0;">
+							<option value="">Select</option>
+							@foreach(['Mr','Mrs','Miss','Dr','Prof','Engr'] as $t)
+								<option value="{{ $t }}" {{ old('Title', $customer->Title ?? '') == $t ? 'selected' : '' }}>{{ $t }}</option>
+							@endforeach
+						</select>
+					</div>
 					@error('Title')<div class="invalid-feedback">{{ $message }}</div>@enderror
 				@endif
 			</div>
@@ -313,8 +323,11 @@
 					@error('Website')<div class="invalid-feedback">{{ $message }}</div>@enderror
 				@endif
 			</div>
-			
-			<div class="col-md-12 mt-4">
+		</div>
+			</div>
+		</div>
+
+			<div class="mt-3">
 				<ul class="nav nav-tabs" id="myTab" role="tablist">
 				  <li class="nav-item" role="presentation">
 					<button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane" aria-selected="true">Address</button>
@@ -325,21 +338,33 @@
 				  <li class="nav-item" role="presentation">
 					<button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false">Additional Information</button>
 				  </li>
+				  <li class="nav-item" role="presentation">
+					<button class="nav-link" id="g236-tab" data-bs-toggle="tab" data-bs-target="#g236-tab-pane" type="button" role="tab" aria-controls="g236-tab-pane" aria-selected="false">Customer WHT</button>
+				  </li>
 				</ul>
 				<div class="tab-content" id="myTabContent">
 				  <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
-					<div class="row g-4">
-						<div class="col-md-6">
+					@php
+						$sameAsBillingView = $isReadonly && filter_var($customer->SameAsBilling ?? false, FILTER_VALIDATE_BOOLEAN);
+					@endphp
+					<div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+						<div class="_pfp-tab-panel-body">
+					<div class="row g-4 align-items-start">
+						<div class="{{ $sameAsBillingView ? 'col-12' : 'col-md-6' }}">
 							<div class="row g-2">
 								<div class="col-md-12">
-									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }} float-start">Street Address</label>
-									<div class="form-check float-end">
-										<input type="hidden" name="SameAsBilling" value="0">
-										<input class="form-check-input" type="checkbox" name="SameAsBilling" id="{{ $uid }}_SameAsBilling" value="1" {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
-										<label class="form-check-label" for="{{ $uid }}_SameAsBilling">Same as Primary Address</label>
+									<div class="d-flex justify-content-between align-items-start gap-2 flex-wrap w-100 mb-1">
+										<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }} mb-0">Street Address</label>
+										@if(!$isReadonly)
+											<div class="form-check mb-0 flex-shrink-0">
+												<input type="hidden" name="SameAsBilling" value="0">
+												<input class="form-check-input" type="checkbox" name="SameAsBilling" id="{{ $uid }}_SameAsBilling" value="1" {{ old('SameAsBilling', $customer->SameAsBilling ?? '1') == '1' ? 'checked' : '' }}>
+												<label class="form-check-label" for="{{ $uid }}_SameAsBilling">Same as Primary Address</label>
+											</div>
+										@endif
 									</div>
 									@if($isReadonly)
-										<div class="_cfp-detail-value clearfix">{{ $customer->Address ?? '-' }}</div>
+										<div class="_cfp-detail-value">{{ $customer->Address ?? '-' }}</div>
 									@else
 										<textarea name="Address" rows="2"
 												  class="form-control form-control-sm @error('Address') is-invalid @enderror"
@@ -348,7 +373,7 @@
 									@endif
 								</div>
 
-								<div class="col-md-3">
+								<div class="col-6 col-lg-3">
 									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">City</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->City ?? '-' }}</div>
@@ -360,24 +385,25 @@
 									@endif
 								</div>
 
-								<div class="col-md-3">
+								<div class="col-6 col-lg-3">
 									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">State / Province</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->County ?? '-' }}</div>
 									@else
-										<select name="County"
-												class="form-select form-select-sm @error('County') is-invalid @enderror"
-												required>
-											<option value="">Select State/Province</option>
-											@foreach($provinces as $prov)
-												<option value="{{ $prov }}" {{ old('County', $customer->County ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
-											@endforeach
-										</select>
+										<div class="d-flex gap-1 align-items-center w-100">
+											<select name="County" id="{{ $uid }}_County"
+													class="form-select @error('County') is-invalid @enderror flex-grow-1" style="min-width:0;" required>
+												<option value="">Select State/Province</option>
+												@foreach($provinces as $prov)
+													<option value="{{ $prov }}" {{ old('County', $customer->County ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
+												@endforeach
+											</select>
+										</div>
 										@error('County')<div class="invalid-feedback">{{ $message }}</div>@enderror
 									@endif
 								</div>
 
-								<div class="col-md-3">
+								<div class="col-6 col-lg-3">
 									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Postal Code</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->PostalCode ?? '-' }}</div>
@@ -389,7 +415,7 @@
 									@endif
 								</div>
 
-								<div class="col-md-3">
+								<div class="col-6 col-lg-3">
 									<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Country</label>
 									@if($isReadonly)
 										<div class="_cfp-detail-value">{{ $customer->Country ?? '-' }}</div>
@@ -402,10 +428,37 @@
 								</div>
 
 							</div>
-						</div>  
+							@if($sameAsBillingView)
+								<p class="small text-muted mt-2 mb-0"><i class="fas fa-link me-1"></i>Billing address is the same as the primary address above.</p>
+							@endif
+						</div>
+						@unless($sameAsBillingView)
 						<div class="col-md-6">
-							
-							<div id="{{ $uid }}_billingFields" class="row g-2" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'display:none' : '' }}">
+							@if($isReadonly)
+									<div class="row g-2">
+										<div class="col-md-12">
+											<div class="_cfp-detail-label">Street Address (billing)</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingAddress ?? '-' }}</div>
+										</div>
+										<div class="col-6 col-lg-3">
+											<div class="_cfp-detail-label">City</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingCity ?? '-' }}</div>
+										</div>
+										<div class="col-6 col-lg-3">
+											<div class="_cfp-detail-label">State / Province</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingCounty ?? '-' }}</div>
+										</div>
+										<div class="col-6 col-lg-3">
+											<div class="_cfp-detail-label">Postal Code</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingPostalCode ?? '-' }}</div>
+										</div>
+										<div class="col-6 col-lg-3">
+											<div class="_cfp-detail-label">Country</div>
+											<div class="_cfp-detail-value">{{ $customer->BillingCountry ?? '-' }}</div>
+										</div>
+									</div>
+							@else
+							<div id="{{ $uid }}_billingFields" class="row g-2" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '1') == '1' ? 'display:none' : '' }}">
 
 								<div class="col-md-12">
 									<label class="form-label">Street Address</label>
@@ -425,14 +478,15 @@
 
 								<div class="col-md-3">
 									<label class="form-label _cfp-required">State / Province</label>
-									<select name="BillingCounty" id="{{ $uid }}_BillingCounty"
-											class="form-select form-select-sm @error('BillingCounty') is-invalid @enderror"
-											required>
-										<option value="">Select State/Province</option>
-										@foreach($provinces as $prov)
-											<option value="{{ $prov }}" {{ old('BillingCounty', $customer->BillingCounty ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
-										@endforeach
-									</select>
+									<div class="d-flex gap-1 align-items-center w-100">
+										<select name="BillingCounty" id="{{ $uid }}_BillingCounty"
+												class="form-select @error('BillingCounty') is-invalid @enderror flex-grow-1" style="min-width:0;" required>
+											<option value="">Select State/Province</option>
+											@foreach($provinces as $prov)
+												<option value="{{ $prov }}" {{ old('BillingCounty', $customer->BillingCounty ?? '') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
+											@endforeach
+										</select>
+									</div>
 									@error('BillingCounty')<div class="invalid-feedback">{{ $message }}</div>@enderror
 								</div>
 
@@ -452,10 +506,16 @@
 									@error('BillingCountry')<div class="invalid-feedback">{{ $message }}</div>@enderror
 								</div>
 							</div>
-						</div>  
+							@endif
+						</div>
+						@endunless
+					</div>
+						</div>
 					</div>
 				  </div>
 				  <div class="tab-pane fade" id="profile-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
+					<div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+						<div class="_pfp-tab-panel-body">
 					<div class="row g-2">
 						<div class="col-md-4">
 							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
@@ -496,7 +556,8 @@
 								@error('CNIC')<div class="invalid-feedback">{{ $message }}</div>@enderror
 							@endif
 						</div>
-
+					</div>
+					<div class="row g-2">
 						<div class="col-md-4">
 							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Tax Filer Status</label>
 							@if($isReadonly)
@@ -517,10 +578,78 @@
 								</div>
 							@endif
 						</div>
+					</div>
+					<div class="row g-2">
+						@if($isReadonly)
+							@if(empty($customer->IsFiler))
+								<div class="col-12 mt-2">
+									<div class="row g-2">
+										<div class="col-md-3">
+											<span class="_cfp-detail-label">Sales tax withheld at source</span>
+											<div class="_cfp-detail-value">{{ $customer->SalesTaxWithheldAtSource ?? '—' }}</div>
+										</div>
+										<div class="col-md-3">
+											<span class="_cfp-detail-label">Extra tax</span>
+											<div class="_cfp-detail-value">{{ number_format((float) ($customer->ExtraTax ?? 0), 2) }}</div>
+										</div>
+										<div class="col-md-3">
+											<span class="_cfp-detail-label">Further tax</span>
+											<div class="_cfp-detail-value">{{ number_format((float) ($customer->FurtherTax ?? 0), 2) }}</div>
+										</div>
+										<div class="col-md-3">
+											<span class="_cfp-detail-label">FED payable</span>
+											<div class="_cfp-detail-value">{{ number_format((float) ($customer->FedPayable ?? 0), 2) }}</div>
+										</div>
+									</div>
+								</div>
+							@else
+								<div class="col-12 mt-2">
+									<p class="text-muted small mb-0"><i class="fas fa-info-circle"></i> Withholding / extra / further / FED stored as <strong>0.00</strong> for tax filers.</p>
+								</div>
+							@endif
+						@else
+							<div id="{{ $uid }}_nonFilerTaxRow" class="col-12 mt-1 {{ (string) old('IsFiler', $customer->IsFiler ?? '1') === '1' ? 'd-none' : '' }}">
+								<p class="text-muted small mb-2">For <strong>non-tax filers</strong> only. Hidden when &quot;Is Tax Filer?&quot; is checked (defaults 0.00).</p>
+								<div class="row g-2">
+									<div class="col-md-3">
+										<label class="form-label" for="{{ $uid }}_SalesTaxWithheldAtSource">Sales tax withheld at source</label>
+										<input type="text" name="SalesTaxWithheldAtSource" id="{{ $uid }}_SalesTaxWithheldAtSource" maxlength="50"
+											   class="form-control form-control-sm @error('SalesTaxWithheldAtSource') is-invalid @enderror"
+											   value="{{ old('SalesTaxWithheldAtSource', $customer->SalesTaxWithheldAtSource ?? '') }}" placeholder="Optional">
+										@error('SalesTaxWithheldAtSource')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									</div>
+									<div class="col-md-3">
+										<label class="form-label" for="{{ $uid }}_ExtraTax">Extra tax</label>
+										<input type="number" step="0.01" min="0" max="999.99" name="ExtraTax" id="{{ $uid }}_ExtraTax"
+											   class="form-control form-control-sm @error('ExtraTax') is-invalid @enderror"
+											   value="{{ old('ExtraTax', isset($customer->ExtraTax) ? number_format((float) $customer->ExtraTax, 2, '.', '') : '0.00') }}">
+										@error('ExtraTax')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									</div>
+									<div class="col-md-3">
+										<label class="form-label" for="{{ $uid }}_FurtherTax">Further tax</label>
+										<input type="number" step="0.01" min="0" max="999.99" name="FurtherTax" id="{{ $uid }}_FurtherTax"
+											   class="form-control form-control-sm @error('FurtherTax') is-invalid @enderror"
+											   value="{{ old('FurtherTax', isset($customer->FurtherTax) ? number_format((float) $customer->FurtherTax, 2, '.', '') : '0.00') }}">
+										@error('FurtherTax')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									</div>
+									<div class="col-md-3">
+										<label class="form-label" for="{{ $uid }}_FedPayable">FED payable</label>
+										<input type="number" step="0.01" min="0" max="999.99" name="FedPayable" id="{{ $uid }}_FedPayable"
+											   class="form-control form-control-sm @error('FedPayable') is-invalid @enderror"
+											   value="{{ old('FedPayable', isset($customer->FedPayable) ? number_format((float) $customer->FedPayable, 2, '.', '') : '0.00') }}">
+										@error('FedPayable')<div class="invalid-feedback">{{ $message }}</div>@enderror
+									</div>
+								</div>
+							</div>
+						@endif
 
+					</div>
+						</div>
 					</div>
 				  </div>
 				  <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
+					<div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+						<div class="_pfp-tab-panel-body">
 					<div class="row g-2">
 					<div class="col-md-12">
 						<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Notes</label>
@@ -537,15 +666,77 @@
 					@if(!$isReadonly)
 					<div class="col-md-4">
 						<label class="form-label">Status</label>
-						<select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror">
-							<option value="1" {{ old('Status', $customer->Status ?? '1') != '0' ? 'selected' : '' }}>Active</option>
-							<option value="0" {{ old('Status', $customer->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
-						</select>
+						<div class="d-flex gap-1 align-items-center w-100">
+							<select name="Status" class="form-select @error('Status') is-invalid @enderror flex-grow-1" style="min-width:0;">
+								<option value="1" {{ old('Status', $customer->Status ?? '1') != '0' ? 'selected' : '' }}>Active</option>
+								<option value="0" {{ old('Status', $customer->Status ?? '') == '0' ? 'selected' : '' }}>Inactive</option>
+							</select>
+						</div>
 						@error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
 					</div>
 					@endif
 
 				</div>
+						</div>
+					</div>
+				  </div>
+				  <div class="tab-pane fade" id="g236-tab-pane" role="tabpanel" aria-labelledby="g236-tab" tabindex="0">
+					<div class="_pfp-tab-panel-shell border rounded overflow-hidden">
+						<div class="_pfp-tab-panel-body">
+							@php
+								$_cfpFormCtx = $isCreate ? 'create' : 'edit-' . ($customer->ID ?? '');
+								$_cfpUseOldTax = !$isReadonly && (string) old('CustomerFormContext') === (string) $_cfpFormCtx;
+								$_advTaxStored = (int) ($customer->IsAdvanceTax ?? $customer->IsAdvancedTax ?? 0) === 1;
+								$_advTaxOn = $_cfpUseOldTax ? ((int) old('IsAdvancedTax') === 1) : $_advTaxStored;
+								$_advStoredRate = $customer->AdvanceTax ?? $customer->AdvanceTaxRate;
+								$_advRateDefaultOn = $_advStoredRate !== null && $_advStoredRate !== '' ? number_format((float) $_advStoredRate, 2, '.', '') : '';
+								$_advRateVal = $_advTaxOn
+									? ($_cfpUseOldTax ? old('AdvanceTaxRate', $_advRateDefaultOn) : $_advRateDefaultOn)
+									: '0.00';
+							@endphp
+							<div class="row g-2">
+								<div class="col-12 col-md-6 col-lg-5">
+									<label for="{{ $uid }}_AdvanceTaxRate" class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Advance Tax %</label>
+									@if($isReadonly)
+										<div class="input-group input-group-sm flex-nowrap">
+											<span class="input-group-text bg-light py-1 px-2 d-flex align-items-center justify-content-center flex-shrink-0">
+												@if($_advTaxOn)
+													<i class="fas fa-check-square text-success" title="Advanced tax on"></i>
+												@else
+													<i class="fas fa-square text-muted" title="Advanced tax off"></i>
+												@endif
+											</span>
+											<span class="form-control form-control-sm bg-light text-body d-flex align-items-center flex-grow-1" style="min-height:calc(1.5em + .5rem + 2px);">
+												@if($_advTaxOn)
+													{{ number_format((float) ($customer->AdvanceTaxRate ?? $customer->AdvanceTax ?? 0), 2) }}
+												@else
+													—
+												@endif
+											</span>
+										</div>
+									@else
+										<div class="input-group input-group-sm flex-nowrap">
+											<span class="input-group-text bg-white py-1 px-2 d-flex align-items-center justify-content-center flex-shrink-0">
+												<input type="hidden" name="IsAdvancedTax" value="0">
+												<input class="form-check-input m-0 flex-shrink-0" type="checkbox"
+													   name="IsAdvancedTax" id="{{ $uid }}_IsAdvancedTax" value="1"
+													   title="Enable advance tax"
+													   aria-label="Enable advance tax"
+													   {{ $_advTaxOn ? 'checked' : '' }}>
+											</span>
+											<input type="number" name="AdvanceTaxRate" id="{{ $uid }}_AdvanceTaxRate" step="0.01" min="0"
+												   class="form-control form-control-sm ps-3 @error('AdvanceTaxRate') is-invalid @enderror @error('IsAdvancedTax') is-invalid @enderror"
+												   value="{{ $_advRateVal }}"
+												   placeholder="0.00"
+												   {{ $_advTaxOn ? '' : 'readonly' }}>
+										</div>
+										@error('IsAdvancedTax')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+										@error('AdvanceTaxRate')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+									@endif
+								</div>
+							</div>
+						</div>
+					</div>
 				  </div>
 				</div>
 			</div>
@@ -641,7 +832,7 @@
         const panel = document.getElementById(uid + '_billingFields');
         if (!cb || !panel) return;
 
-        const inputs = panel.querySelectorAll('input:not([type=hidden]), textarea');
+        const inputs = panel.querySelectorAll('input:not([type=hidden]), textarea, select');
         
         // Define map of Destination ID Suffix -> Source Name
         const map = {
@@ -674,8 +865,8 @@
                 const srcEl = document.querySelector('form#' + uid + '_form [name="' + src + '"]');
                 if (dstEl && srcEl) {
                     dstEl.value = srcEl.value;
-                    // Trigger input event on destination to handle any dependent logic (like validation cleanup)
-                    dstEl.dispatchEvent(new Event('input')); 
+                    dstEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    dstEl.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             });
         }
@@ -687,9 +878,9 @@
             Object.values(map).forEach(srcName => {
                 const srcEl = form.querySelector('[name="' + srcName + '"]');
                 if (srcEl) {
-                    srcEl.addEventListener('input', () => {
-                        if (cb.checked) syncValues();
-                    });
+                    const run = () => { if (cb.checked) syncValues(); };
+                    srcEl.addEventListener('input', run);
+                    srcEl.addEventListener('change', run);
                 }
             });
             form.dataset.syncAttached = 'true';
@@ -697,6 +888,39 @@
     }
     document.getElementById(uid + '_SameAsBilling')?.addEventListener('change', toggleBilling);
     toggleBilling();
+
+    function syncNonFilerTaxFields() {
+        const cb = document.getElementById(uid + '_IsFiler');
+        const row = document.getElementById(uid + '_nonFilerTaxRow');
+        if (!cb || !row) return;
+        const hide = !!cb.checked;
+        row.classList.toggle('d-none', hide);
+        if (hide) {
+            const s = document.getElementById(uid + '_SalesTaxWithheldAtSource');
+            const ex = document.getElementById(uid + '_ExtraTax');
+            const fu = document.getElementById(uid + '_FurtherTax');
+            const fe = document.getElementById(uid + '_FedPayable');
+            if (s) s.value = '';
+            if (ex) ex.value = '0.00';
+            if (fu) fu.value = '0.00';
+            if (fe) fe.value = '0.00';
+        }
+    }
+    document.getElementById(uid + '_IsFiler')?.addEventListener('change', syncNonFilerTaxFields);
+    syncNonFilerTaxFields();
+
+    function syncAdvancedTaxFields() {
+        const cb = document.getElementById(uid + '_IsAdvancedTax');
+        const rate = document.getElementById(uid + '_AdvanceTaxRate');
+        if (!cb || !rate) return;
+        rate.readOnly = !cb.checked;
+        if (!cb.checked) {
+            rate.value = '0.00';
+            rate.classList.remove('is-invalid');
+        }
+    }
+    document.getElementById(uid + '_IsAdvancedTax')?.addEventListener('change', syncAdvancedTaxFields);
+    syncAdvancedTaxFields();
 
     /* Scroll to first error */
     window.addEventListener('load', () => {
@@ -725,6 +949,8 @@
         @if(!$isCreate)
         if (!document.querySelector('.is-invalid')) {
             inputs.forEach(inp => {
+                /* WHT fields must match DB on edit — do not overwrite with stale draft */
+                if (inp.name === 'AdvanceTaxRate' || inp.name === 'IsAdvancedTax') return;
                 const val = localStorage.getItem(prefix + inp.name);
                 if (val === null) return;
                 if (inp.type === 'checkbox' || inp.type === 'radio') {

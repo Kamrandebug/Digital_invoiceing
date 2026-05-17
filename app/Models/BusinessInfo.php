@@ -58,7 +58,7 @@ class BusinessInfo extends Model
         DB::unprepared("
             INSERT INTO tbl_business_info (
                 AccountNo, Title, FirstName, LastName, BusinessName,
-                Email, Mobile, Phone, Website, Address, Province,
+                Email, Mobile, Phone, Website, Address, ImageUrl, Province,
                 NTN, SalesTaxNumber, CNIC, IsFiler, Notes,
                 Sandbox_access_token, iris_access_token,
                 Status, IsDashboard, IsArchive,
@@ -66,7 +66,7 @@ class BusinessInfo extends Model
             )
             SELECT
                 AccountNo, Title, FirstName, LastName, BusinessName,
-                Email, Mobile, Phone, Website, Address, Province,
+                Email, Mobile, Phone, Website, Address, ImageUrl, Province,
                 NTN, SalesTaxNumber, CNIC, IsFiler, Notes,
                 Sandbox_access_token, iris_access_token,
                 Status, IsDashboard, IsArchive,
@@ -92,7 +92,7 @@ class BusinessInfo extends Model
                 SELECT
                     TID,
                     AccountNo, Title, FirstName, LastName, BusinessName,
-                    Email, Mobile, Phone, Website, Address, Province,
+                    Email, Mobile, Phone, Website, Address, ImageUrl, Province,
                     NTN, SalesTaxNumber, CNIC, IsFiler, Notes,
                     Sandbox_access_token, iris_access_token,
                     Status, IsDashboard, IsArchive,
@@ -111,6 +111,7 @@ class BusinessInfo extends Model
                 bi.Phone          = u.Phone,
                 bi.Website        = u.Website,
                 bi.Address        = u.Address,
+                bi.ImageUrl       = u.ImageUrl,
                 bi.Province       = u.Province,
                 bi.NTN            = u.NTN,
                 bi.SalesTaxNumber = u.SalesTaxNumber,

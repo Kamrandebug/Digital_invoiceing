@@ -315,6 +315,7 @@
         @if($isEdit)
             @method('PUT')
         @endif
+        <input type="hidden" name="CustomerFormContext" value="{{ $isCreate ? 'create' : 'edit-' . ($customer->ID ?? '') }}">
     @endif
 
         {{-- Basic Info --}}
@@ -600,13 +601,13 @@
                     <div class="col-md-12">
                         <label class="checkbox-label">
                             <input type="checkbox" name="SameAsBilling" id="SameAsBilling" value="1" 
-                                   {{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'checked' : '' }}>
+                                   {{ old('SameAsBilling', $customer->SameAsBilling ?? '1') == '1' ? 'checked' : '' }}>
                             <span>Same as Primary Address</span>
                         </label>
                     </div>
                 </div>
                 
-                <div id="billingAddressFields" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '0') == '1' ? 'display:none' : '' }}">
+                <div id="billingAddressFields" style="{{ old('SameAsBilling', $customer->SameAsBilling ?? '1') == '1' ? 'display:none' : '' }}">
                     <div class="row mt-3">
                         <div class="col-md-12">
                             <div class="mb-3">
@@ -732,6 +733,33 @@
                     </div>
                 </div>
             </div>
+
+            <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="IsFiler" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Tax Filer Status</label>
+                        @if($isReadonly)
+                            <div class="detail-value">
+                                @if(isset($customer->IsFiler) && $customer->IsFiler)
+                                    <i class="fas fa-check-circle text-success"></i> Tax Filer
+                                @else
+                                    <i class="fas fa-times-circle text-danger"></i> Non-Filer
+                                @endif
+                            </div>
+                        @else
+                            <div class="checkbox-label">
+                                <input type="hidden" name="IsFiler" value="0">
+                                <input type="checkbox" name="IsFiler" id="IsFiler" value="1" 
+                                       {{ old('IsFiler', $customer->IsFiler ?? '1') == '1' ? 'checked' : '' }}>
+                                <span>Is Tax Filer?</span>
+                            </div>
+                            @error('IsFiler')
+                                <div class="invalid-feedback d-block"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        @endif
+                    </div>
+                </div>
+            </div>
             
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-4">
@@ -772,30 +800,83 @@
                         @endif
                     </div>
                 </div>
-                
-                <div class="col-md-4">
-                    <label for="IsFiler" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Tax Filer Status</label>
-                    @if($isReadonly)
-                        <div class="detail-value">
-                            @if(isset($customer->IsFiler) && $customer->IsFiler)
-                                <i class="fas fa-check-circle text-success"></i> Tax Filer
-                            @else
-                                <i class="fas fa-times-circle text-danger"></i> Non-Filer
-                            @endif
-                        </div>
-                    @else
-                        <div class="checkbox-label">
-                            <input type="hidden" name="IsFiler" value="0">
-                            <input type="checkbox" name="IsFiler" id="IsFiler" value="1" 
-                                   {{ old('IsFiler', $customer->IsFiler ?? '1') == '1' ? 'checked' : '' }}>
-                            <span>Is Tax Filer?</span>
-                        </div>
-                        @error('IsFiler')
-                            <div class="invalid-feedback d-block"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                        @enderror
-                    @endif
-                </div>
             </div>
+
+            @if($isReadonly)
+                @if(empty($customer->IsFiler))
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <span class="detail-label">Sales tax withheld at source</span>
+                            <div class="detail-value">{{ $customer->SalesTaxWithheldAtSource ?? '—' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="detail-label">Extra tax</span>
+                            <div class="detail-value">{{ number_format((float) ($customer->ExtraTax ?? 0), 2) }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="detail-label">Further tax</span>
+                            <div class="detail-value">{{ number_format((float) ($customer->FurtherTax ?? 0), 2) }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="detail-label">FED payable</span>
+                            <div class="detail-value">{{ number_format((float) ($customer->FedPayable ?? 0), 2) }}</div>
+                        </div>
+                    </div>
+                @else
+                    <p class="text-muted small mb-0"><i class="fas fa-info-circle"></i> Withholding / extra / further / FED amounts are stored as <strong>0.00</strong> for tax filers.</p>
+                @endif
+            @else
+                <div id="nonFilerTaxFieldsRow" class="row mb-1 {{ (string) old('IsFiler', isset($customer) ? ($customer->IsFiler ?? '1') : '1') === '1' ? 'd-none' : '' }}">
+                    <div class="col-12">
+                        <p class="text-muted small mb-2">These fields apply to <strong>non-tax filers</strong> only. They are hidden when &quot;Is Tax Filer?&quot; is checked and default to 0.00.</p>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="SalesTaxWithheldAtSource" class="form-label">Sales tax withheld at source</label>
+                            <input type="text" class="form-control @error('SalesTaxWithheldAtSource') is-invalid @enderror"
+                                   id="SalesTaxWithheldAtSource" name="SalesTaxWithheldAtSource" maxlength="50"
+                                   value="{{ old('SalesTaxWithheldAtSource', $customer->SalesTaxWithheldAtSource ?? '') }}"
+                                   placeholder="Optional">
+                            @error('SalesTaxWithheldAtSource')
+                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="ExtraTax" class="form-label">Extra tax</label>
+                            <input type="number" step="0.01" min="0" max="999.99" class="form-control @error('ExtraTax') is-invalid @enderror"
+                                   id="ExtraTax" name="ExtraTax"
+                                   value="{{ old('ExtraTax', isset($customer->ExtraTax) ? number_format((float) $customer->ExtraTax, 2, '.', '') : '0.00') }}">
+                            @error('ExtraTax')
+                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="FurtherTax" class="form-label">Further tax</label>
+                            <input type="number" step="0.01" min="0" max="999.99" class="form-control @error('FurtherTax') is-invalid @enderror"
+                                   id="FurtherTax" name="FurtherTax"
+                                   value="{{ old('FurtherTax', isset($customer->FurtherTax) ? number_format((float) $customer->FurtherTax, 2, '.', '') : '0.00') }}">
+                            @error('FurtherTax')
+                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="FedPayable" class="form-label">FED payable</label>
+                            <input type="number" step="0.01" min="0" max="999.99" class="form-control @error('FedPayable') is-invalid @enderror"
+                                   id="FedPayable" name="FedPayable"
+                                   value="{{ old('FedPayable', isset($customer->FedPayable) ? number_format((float) $customer->FedPayable, 2, '.', '') : '0.00') }}">
+                            @error('FedPayable')
+                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
         
         {{-- Additional Info --}}
@@ -838,6 +919,72 @@
                 </div>
             </div>
             @endif
+        </div>
+
+        {{-- Section Customer WHT (after Additional Information) --}}
+        <div class="form-section">
+            <h3 class="form-section-title">
+                <i class="fas fa-file-invoice-dollar"></i> Customer WHT
+            </h3>
+            @php
+                $_pageFormCtx = $isCreate ? 'create' : 'edit-' . ($customer->ID ?? '');
+                $_pageUseOldTax = !$isReadonly && (string) old('CustomerFormContext') === (string) $_pageFormCtx;
+                $_pageAdvTaxStored = (int) ($customer->IsAdvanceTax ?? $customer->IsAdvancedTax ?? 0) === 1;
+                $_pageAdvTaxOn = $_pageUseOldTax ? ((int) old('IsAdvancedTax') === 1) : $_pageAdvTaxStored;
+                $_pageAdvStoredRate = $customer->AdvanceTax ?? $customer->AdvanceTaxRate;
+                $_pageAdvRateDefaultOn = $_pageAdvStoredRate !== null && $_pageAdvStoredRate !== '' ? number_format((float) $_pageAdvStoredRate, 2, '.', '') : '';
+                $_pageAdvRateVal = $_pageAdvTaxOn
+                    ? ($_pageUseOldTax ? old('AdvanceTaxRate', $_pageAdvRateDefaultOn) : $_pageAdvRateDefaultOn)
+                    : '0.00';
+            @endphp
+            <div class="row g-2 {{ $isReadonly ? 'mb-3' : '' }}">
+                <div class="col-12 col-md-6 col-lg-5">
+                    <div class="mb-3">
+                        <label for="AdvanceTaxRate" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Advance Tax %</label>
+                        @if($isReadonly)
+                            <div class="input-group flex-nowrap">
+                                <span class="input-group-text bg-light py-2 px-2 d-flex align-items-center justify-content-center flex-shrink-0">
+                                    @if($_pageAdvTaxOn)
+                                        <i class="fas fa-check-square text-success" title="Advanced tax on"></i>
+                                    @else
+                                        <i class="fas fa-square text-muted" title="Advanced tax off"></i>
+                                    @endif
+                                </span>
+                                <span class="form-control bg-light text-body d-flex align-items-center flex-grow-1">
+                                    @if($_pageAdvTaxOn)
+                                        {{ number_format((float) ($customer->AdvanceTaxRate ?? $customer->AdvanceTax ?? 0), 2) }}
+                                    @else
+                                        —
+                                    @endif
+                                </span>
+                            </div>
+                        @else
+                            <div class="input-group flex-nowrap">
+                                <span class="input-group-text bg-white py-2 px-2 d-flex align-items-center justify-content-center flex-shrink-0">
+                                    <input type="hidden" name="IsAdvancedTax" value="0">
+                                    <input type="checkbox" name="IsAdvancedTax" id="IsAdvancedTax" value="1"
+                                           class="form-check-input m-0 flex-shrink-0"
+                                           title="Enable advance tax"
+                                           aria-label="Enable advance tax"
+                                           {{ $_pageAdvTaxOn ? 'checked' : '' }}>
+                                </span>
+                                <input type="number" step="0.01" min="0"
+                                       class="form-control ps-3 @error('AdvanceTaxRate') is-invalid @enderror @error('IsAdvancedTax') is-invalid @enderror"
+                                       id="AdvanceTaxRate" name="AdvanceTaxRate"
+                                       value="{{ $_pageAdvRateVal }}"
+                                       placeholder="0.00"
+                                       {{ $_pageAdvTaxOn ? '' : 'readonly' }}>
+                            </div>
+                            @error('IsAdvancedTax')
+                                <div class="invalid-feedback d-block"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                            @error('AdvanceTaxRate')
+                                <div class="invalid-feedback d-block"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                            @enderror
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
         
         {{-- Actions --}}
@@ -970,6 +1117,24 @@
         }
     };
     
+    window.syncNonFilerTaxFieldsVisibility = function () {
+        const isFiler = document.getElementById('IsFiler');
+        const row = document.getElementById('nonFilerTaxFieldsRow');
+        if (!isFiler || !row) return;
+        const hide = !!isFiler.checked;
+        row.classList.toggle('d-none', hide);
+        if (hide) {
+            const s = document.getElementById('SalesTaxWithheldAtSource');
+            const ex = document.getElementById('ExtraTax');
+            const fu = document.getElementById('FurtherTax');
+            const fe = document.getElementById('FedPayable');
+            if (s) s.value = '';
+            if (ex) ex.value = '0.00';
+            if (fu) fu.value = '0.00';
+            if (fe) fe.value = '0.00';
+        }
+    };
+
     document.addEventListener('DOMContentLoaded', function() {
         // Initial state check
         window.toggleBillingFields();
@@ -987,6 +1152,28 @@
                 el.addEventListener('input', window.syncBillingAddress);
             }
         });
+
+        const isFilerCb = document.getElementById('IsFiler');
+        if (isFilerCb) {
+            window.syncNonFilerTaxFieldsVisibility();
+            isFilerCb.addEventListener('change', window.syncNonFilerTaxFieldsVisibility);
+        }
+
+        window.syncAdvancedTaxFieldsVisibility = function () {
+            const cb = document.getElementById('IsAdvancedTax');
+            const rate = document.getElementById('AdvanceTaxRate');
+            if (!cb || !rate) return;
+            rate.readOnly = !cb.checked;
+            if (!cb.checked) {
+                rate.value = '0.00';
+                rate.classList.remove('is-invalid');
+            }
+        };
+        const advTaxCb = document.getElementById('IsAdvancedTax');
+        if (advTaxCb) {
+            window.syncAdvancedTaxFieldsVisibility();
+            advTaxCb.addEventListener('change', window.syncAdvancedTaxFieldsVisibility);
+        }
     });
     
     // Scroll to error
@@ -1014,11 +1201,15 @@
         if (!document.querySelector('.alert-danger')) {
             inputs.forEach(input => {
                 if (input.type === 'hidden' || input.type === 'password') return;
-                
+
                 const key = storagePrefix + input.name;
                 const storedValue = localStorage.getItem(key);
-                
+
                 if (storedValue !== null) {
+                    /* On edit, WHT must reflect DB — skip stale draft for these */
+                    if (formMode === 'edit' && (input.name === 'AdvanceTaxRate' || input.name === 'IsAdvancedTax')) {
+                        return;
+                    }
                     if (input.type === 'checkbox' || input.type === 'radio') {
                         const shouldBeChecked = (storedValue === 'true');
                         if (input.checked !== shouldBeChecked) {

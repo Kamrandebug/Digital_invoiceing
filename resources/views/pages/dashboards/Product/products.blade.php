@@ -63,7 +63,7 @@
             <div class="card-body p-2">
                 <div class="row">
                     <div class="col-md-9">
-                        <form method="GET" action="{{ route('products.index') }}" id="filterForm">
+                        <form method="GET" action="{{ route('products.index') }}" id="filterForm" class="listing-filters-form">
                             <div class="row g-2">
                                 <div class="col-md-4">
                                     <div class="header-search d-md-block d-none">
@@ -81,16 +81,16 @@
                                 <div class="col-md-8">
                                     <div class="row g-2">
                                         <div class="col-md-4">
-                                            <label>Start Date</label>
-                                            <input type="date" class="form-control form-control-sm"
+                                            <label class="listing-filter-date-label" for="products_filter_start_date">Start Date</label>
+                                            <input type="date" class="form-control form-control-sm" id="products_filter_start_date"
                                                 name="start_date" value="{{ request('start_date') }}">
                                         </div>
                                         <div class="col-md-4">
-                                            <label>End Date</label>
-                                            <input type="date" class="form-control form-control-sm"
+                                            <label class="listing-filter-date-label" for="products_filter_end_date">End Date</label>
+                                            <input type="date" class="form-control form-control-sm" id="products_filter_end_date"
                                                 name="end_date" value="{{ request('end_date') }}">
                                         </div>
-                                        <div class="col">
+                                        <div class="col listing-filter-actions-col">
 <!--
                                             <button class="btn btn-sm btn-primary btn-margin" type="submit">
                                                 <i class="fas fa-search"></i> Search

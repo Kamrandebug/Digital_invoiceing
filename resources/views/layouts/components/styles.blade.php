@@ -27,4 +27,5 @@
 
 <link rel="stylesheet" href="{{asset('build/assets/themecss/fontawesome/css/all.min.css')}}">
 <link rel="stylesheet" href="{{asset('build/assets/themecss/custom.css')}}">
+<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
         
