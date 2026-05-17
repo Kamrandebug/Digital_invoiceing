@@ -48,7 +48,7 @@
                 $invTypeVal = $invoice->InvoiceType ?? '';
                 $sel = $invTypes->first(function($x) use ($invTypeVal) { return (string)($x->docTypeId ?? '') === (string)$invTypeVal; });
             @endphp
-            <div class="form-control form-control-sm bg-light">{{ $sel ? ($sel->docDescription ?? $invoice->InvoiceType) : ($invoice->InvoiceType ?? '-') }}</div>
+            <div class="form-control form-control-xl bg-light">{{ $sel ? ($sel->docDescription ?? $invoice->InvoiceType) : ($invoice->InvoiceType ?? '-') }}</div>
         @else
             @php
                 $invTypeSelected = old('InvoiceType', $invoice->InvoiceType ?? null);
@@ -62,7 +62,7 @@
             @endphp
             <select name="InvoiceType"
                     id="{{ $uid }}_InvoiceType"
-                    class="form-select form-select-sm @error('InvoiceType') is-invalid @enderror">
+                    class="form-select form-select @error('InvoiceType') is-invalid @enderror">
                 <option value="">— Select —</option>
                 @foreach($invoiceTypes ?? [] as $it)
                     <option value="{{ $it->docTypeId }}" {{ (string)$invTypeSelected === (string)$it->docTypeId ? 'selected' : '' }}>
@@ -76,11 +76,11 @@
     <div class="col-md-3">
         <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
         @if($isReadonly)
-            <div class="form-control form-control-sm bg-light">{{ $invoice->CustomerDisplayName ?? '-' }}</div>
+            <div class="form-control form-control-xl bg-light">{{ $invoice->CustomerDisplayName ?? '-' }}</div>
         @else
             <select name="CustomerID"
                     id="{{ $uid }}_CustomerID"
-                    class="form-select form-select-sm @error('CustomerID') is-invalid @enderror"
+                    class="form-select form-select @error('CustomerID') is-invalid @enderror"
                     required>
                 <option value="">— Select Customer —</option>
                 @foreach($customers as $cust)
@@ -95,12 +95,12 @@
     <div class="col-md-3">
         <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
         @if($isReadonly)
-            <div class="form-control form-control-sm bg-light">{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : '-' }}</div>
+            <div class="form-control form-control-xl bg-light">{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : '-' }}</div>
         @else
             <input type="date"
                    name="InvoiceDate"
                    id="{{ $uid }}_InvoiceDate"
-                   class="form-control form-control-sm @error('InvoiceDate') is-invalid @enderror"
+                   class="form-control form-control-xl @error('InvoiceDate') is-invalid @enderror"
                    value="{{ old('InvoiceDate', $invoice->InvoiceDate ?? date('Y-m-d')) }}"
                    required>
             @error('InvoiceDate')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -109,7 +109,7 @@
     <div class="col-md-3">
         @if($isEdit)
         <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
-        <select name="Status" class="form-select form-select-sm @error('Status') is-invalid @enderror" required>
+        <select name="Status" class="form-select form-select @error('Status') is-invalid @enderror" required>
             <option value="1" {{ old('Status', $invoice->Status ?? 1) == 1 ? 'selected' : '' }}>Active</option>
             <option value="2" {{ old('Status', $invoice->Status ?? 1) == 2 ? 'selected' : '' }}>Archive</option>
         </select>
@@ -125,11 +125,11 @@
     <div class="col-md-3">
         <label class="form-label fw-semibold">Doc No.</label>
         @if($isReadonly)
-            <div class="form-control form-control-sm bg-light">{{ $invoice->DocNo ?? '-' }}</div>
+            <div class="form-control form-control-xl bg-light">{{ $invoice->DocNo ?? '-' }}</div>
         @else
             <input type="text"
                    name="DocNo"
-                   class="form-control form-control-sm @error('DocNo') is-invalid @enderror"
+                   class="form-control form-control-xl @error('DocNo') is-invalid @enderror"
                    value="{{ old('DocNo', $invoice->DocNo ?? '') }}"
                    placeholder="Auto-generated">
             @error('DocNo')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -138,11 +138,11 @@
     <div class="col-md-3">
         <label class="form-label fw-semibold">Doc No2</label>
         @if($isReadonly)
-            <div class="form-control form-control-sm bg-light">{{ $invoice->DocNo2 ?? '-' }}</div>
+            <div class="form-control form-control-xl bg-light">{{ $invoice->DocNo2 ?? '-' }}</div>
         @else
             <input type="text"
                    name="DocNo2"
-                   class="form-control form-control-sm @error('DocNo2') is-invalid @enderror"
+                   class="form-control form-control-xl @error('DocNo2') is-invalid @enderror"
                    value="{{ old('DocNo2', $invoice->DocNo2 ?? '') }}"
                    placeholder="Optional">
             @error('DocNo2')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -151,11 +151,11 @@
     <div class="col-md-3">
         <label class="form-label fw-semibold">Doc No3</label>
         @if($isReadonly)
-            <div class="form-control form-control-sm bg-light">{{ $invoice->DocNo3 ?? '-' }}</div>
+            <div class="form-control form-control-xl bg-light">{{ $invoice->DocNo3 ?? '-' }}</div>
         @else
             <input type="text"
                    name="DocNo3"
-                   class="form-control form-control-sm @error('DocNo3') is-invalid @enderror"
+                   class="form-control form-control-xl @error('DocNo3') is-invalid @enderror"
                    value="{{ old('DocNo3', $invoice->DocNo3 ?? '') }}"
                    placeholder="Optional">
             @error('DocNo3')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -185,9 +185,13 @@
             line-height: 1.25;
         }
         .table-inv .btn-icon { padding: 0.2rem 0.35rem; margin: 0; }
+		.form-select{
+			padding:  8px 8px 9px 8px !important;
+		}
     </style>
     <div class="col-xl-12">
-        <table class="table nowrap {{ $isReadonly ? '' : 'text-nowrap' }} table-borderless border mt-3 table-inv">
+        <div class="scroll-style">
+			<table class="table nowrap {{ $isReadonly ? '' : 'text-nowrap' }} table-borderless border mt-3 table-inv">
             <thead>
                 <tr>
                     <th>Product / Services</th>
@@ -398,7 +402,7 @@
 
             </tbody>
         </table>
-
+		</div>
         @if(!$isReadonly)
         <div class="my-3">
             <button type="button" class="btn btn-primary-light" id="{{ $uid }}_addRow">
