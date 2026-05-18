@@ -155,6 +155,9 @@
                 page-break-inside: avoid !important;
                 break-inside: avoid-page !important;
             }
+            table.items thead th {
+                font-size: 10px !important;
+            }
         }
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #222; margin: 0; padding: 0; }
@@ -266,12 +269,12 @@
         table.items { width: 100%; border-collapse: collapse; margin: 16px 0; table-layout: fixed; }
         /* Column widths: description = HS code + product description text */
         table.items col.col-idx { width: 4%; }
-        table.items col.col-desc { width: 24%; }
+        table.items col.col-desc { width: 22%; }
         table.items col.col-qty { width: 8%; }
         table.items col.col-uom { width: 10%; }
         table.items col.col-rate { width: 9%; }
         table.items col.col-value { width: 9%; }
-        table.items col.col-fixed { width: 8%; }
+        table.items col.col-fixed { width: 10%; }
         table.items col.col-taxrate { width: 8%; }
         table.items col.col-tax { width: 9%; }
         table.items col.col-inclusive { width: 11%; }
@@ -279,16 +282,21 @@
         table.items.items--no-fixed col.col-desc { width: 29%; }
         table.items.items--no-fixed col.col-inclusive { width: 14%; }
         table.items th, table.items td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; box-sizing: border-box; }
-        table.items th {
+        table.items thead th,
+        table.items thead th.num,
+        table.items thead th.cell-uom,
+        table.items thead th.cell-mid,
+        table.items thead th.th-inclusive {
             background: #f5f5f5;
-            font-size: 12px;
+            font-size: 10px !important;
+            font-weight: 600;
             white-space: normal;
             word-wrap: break-word;
             overflow-wrap: break-word;
             hyphens: none;
             vertical-align: middle;
             min-width: 0;
-            line-height: 1.25;
+            line-height: 1.2;
         }
         table.items td { font-size: 12px; hyphens: none; }
         table.items .num { text-align: right; }
@@ -302,7 +310,13 @@
             padding: 6px 10px;
             vertical-align: middle;
         }
-        table.items th.th-inclusive { line-height: 1.2; font-size: 10px; }
+        /* Fixed Notified Value: break between words only (never split "Notified") */
+        table.items thead th.th-col-fixed {
+            word-break: normal;
+            overflow-wrap: normal;
+            word-wrap: normal;
+            line-height: 1.15;
+        }
         /* Description of Goods: bold HS code, then product description */
         table.items td.td-desc-goods { vertical-align: top; }
         .desc-goods-hs { font-size: 12px; color: #111; margin: 0 0 6px 0; line-height: 1.35; }
@@ -563,7 +577,7 @@
                     <th class="num">Unit Rate</th>
                     <th class="num">Value Excel ST</th>
                     @if($showFixedNotifiedColumn)
-                    <th class="num">Fixed Notified Value</th>
+                    <th class="num th-col-fixed">Fixed<br>Notified<br>Value</th>
                     @endif
                     <th class="cell-mid">Sales Tax Rate</th>
                     <th class="num">Sales Tax Amount</th>
