@@ -124,7 +124,7 @@
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none !important; }
-            .invoice-print-head-logo img { max-height: 80px !important; }
+            .print-section-1-logo img { max-height: 80px !important; }
             .fbr-brand-logo { max-width: 1in !important; max-height: 1in !important; }
             .fbr-qr-image { width: 1in !important; height: 1in !important; }
         }
@@ -135,16 +135,34 @@
         .invoice-print { max-width: 100%; }
         .invoice-print-head {
             display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .invoice-doc-title {
+            text-align: right;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            color: #111;
+        }
+        /* Section 1: business logo (left, aligned with Doc No row) + invoice meta (right) */
+        .print-section-1 {
+            display: flex;
             justify-content: space-between;
             align-items: flex-start;
             gap: 16px;
-            margin-bottom: 10px;
+            margin-bottom: 0;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #333;
         }
-        .invoice-print-head-logo {
+        .print-section-1-logo {
             flex: 0 0 auto;
             max-width: 220px;
+            align-self: flex-start;
         }
-        .invoice-print-head-logo img {
+        .print-section-1-logo img {
             max-width: 200px;
             max-height: 80px;
             width: auto;
@@ -152,27 +170,7 @@
             display: block;
             object-fit: contain;
         }
-        .invoice-doc-title {
-            text-align: right;
-            margin: 0;
-            flex: 1 1 auto;
-            min-width: 0;
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            color: #111;
-        }
-        /* Section 1: invoice meta only (business logo in .invoice-print-head from tbl_business_info.ImageUrl) */
-        .print-section-1 {
-            display: flex;
-            justify-content: flex-end;
-            align-items: flex-start;
-            gap: 16px;
-            margin-bottom: 0;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #333;
-        }
-        .print-section-1-meta { text-align: right; width: 100%; min-width: 0; }
+        .print-section-1-meta { text-align: right; flex: 0 0 auto; min-width: 0; margin-left: auto; }
         .print-section-1-meta table { margin-left: auto; border-collapse: collapse; }
         .print-section-1-meta th { text-align: right; padding: 2px 8px 2px 0; color: #555; font-weight: 600; white-space: nowrap; vertical-align: top; }
         .print-section-1-meta td { text-align: right; padding: 2px 0; }
@@ -365,16 +363,16 @@
     @if($invoice)
     <div class="invoice-print">
         <div class="invoice-print-head">
-            <div class="invoice-print-head-logo">
-                @if($sellerLogoSrc !== '')
-                    <img src="{{ $sellerLogoSrc }}" alt="{{ trim((string) ($seller->BusinessName ?? '')) ?: 'Business logo' }}">
-                @endif
-            </div>
             <h1 class="invoice-doc-title">Sales Tax Invoice</h1>
         </div>
 
-        {{-- Section 1: invoice numbers / dates --}}
+        {{-- Section 1: logo (left, Doc No row) + invoice numbers / dates (right) --}}
         <div class="print-section-1">
+            @if($sellerLogoSrc !== '')
+            <div class="print-section-1-logo">
+                <img src="{{ $sellerLogoSrc }}" alt="{{ trim((string) ($seller->BusinessName ?? '')) ?: 'Business logo' }}">
+            </div>
+            @endif
             <div class="print-section-1-meta">
                 <table>
                     <tr><th>Doc No.</th><td>{{ $invoice->DocNo ?? 'N/A' }}</td></tr>
