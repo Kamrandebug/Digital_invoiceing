@@ -1,4 +1,4 @@
-@php
+﻿@php
     $invoice     = $invoice ?? null;
     $items       = $items   ?? collect();
     $orientation = $orientation ?? 'portrait';
@@ -107,7 +107,7 @@
         ? 'https://api.qrserver.com/v1/create-qr-code/?size='.$qrPx.'x'.$qrPx.'&ecc=M&data='.urlencode($fbrTxId)
         : '';
     $printDocumentTitle = $invoice
-        ? 'GD-DI-'.\Carbon\Carbon::now()->format('Ymd').'-'.str_pad((string) ($invoice->ID ?? 0), 2, '0', STR_PAD_LEFT)
+        ? 'GD-DI-'.\Carbon\Carbon::now()->format('Ymd').'-'.(int) ($invoice->ID ?? 0)
         : 'Invoice Print';
 @endphp
 <!DOCTYPE html>
@@ -120,26 +120,51 @@
     <meta http-equiv="Expires" content="0">
     <title>{{ $printDocumentTitle }}</title>
     <style>
-        @page { size: {{ $orientation }}; margin: 15mm; }
+        /* Uniform page gutter (top/bottom/left/right) — @page + .invoice-print padding for iframe preview */
+        @page { size: {{ $orientation }}; margin: 20mm; }
         @media print {
-            /* Zero page margin: browser date/title/URL headers print in the margin area — keep them off the sheet */
-            @page { size: {{ $orientation }}; margin: 0; }
+            @page { size: {{ $orientation }}; margin: 20mm; }
             html, body {
                 margin: 0 !important;
-                padding: 15mm !important;
+                padding: 0 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+            .invoice-print {
+                padding: 20mm !important;
+                max-width: none !important;
+                box-sizing: border-box !important;
             }
             .no-print { display: none !important; }
             .print-section-1-logo img { max-height: 80px !important; }
             .fbr-brand-logo { max-width: 1in !important; max-height: 1in !important; }
             .fbr-qr-image { width: 1in !important; height: 1in !important; }
+            .after-table-summary {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) 360px !important;
+                column-gap: 28px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid-page !important;
+            }
+            .invoice-print-footer {
+                page-break-inside: avoid !important;
+                break-inside: avoid-page !important;
+            }
+            .fbr-digital-section,
+            .totals {
+                page-break-inside: avoid !important;
+                break-inside: avoid-page !important;
+            }
         }
         * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #222; margin: 0; padding: 12px; }
+        body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #222; margin: 0; padding: 0; }
         body.orientation-landscape .invoice-print { max-width: none; }
         body.orientation-portrait .invoice-print { max-width: 210mm; margin: 0 auto; }
-        .invoice-print { max-width: 100%; }
+        .invoice-print {
+            max-width: 100%;
+            padding: 20mm;
+            box-sizing: border-box;
+        }
         .invoice-print-head {
             display: flex;
             justify-content: flex-end;
@@ -191,11 +216,11 @@
             border-bottom: 2px solid #333;
             margin-bottom: 16px;
         }
-        .party-col { min-width: 0; font-size: 12px; text-align: left; }
+        .party-col { min-width: 0; font-size: 10px; text-align: left; }
         .party-spacer { min-width: 0; }
         .party-col h2 {
             margin: 0 0 10px 0;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.08em;
@@ -228,7 +253,7 @@
             line-height: 1.35;
         }
         .party-col .party-name {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             margin-bottom: 6px;
             color: #111;
@@ -283,42 +308,105 @@
         .desc-goods-hs { font-size: 12px; color: #111; margin: 0 0 6px 0; line-height: 1.35; }
         .desc-goods-hs strong { font-weight: 700; }
         .desc-goods-detail { font-size: 12px; color: #333; margin: 0; line-height: 1.4; word-break: break-word; }
+        /* FBR + QR (left) and totals (right) — fixed columns so row borders stay in the totals column only */
         .after-table-summary {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 20px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            align-items: start;
+            column-gap: 28px;
+            row-gap: 0;
             margin-top: 16px;
-            flex-wrap: wrap;
+            page-break-inside: avoid;
+            break-inside: avoid-page;
         }
         .invoice-print-footer {
             padding-bottom: 14px;
             border-bottom: 2px solid #333;
+            page-break-inside: avoid;
+            break-inside: avoid-page;
         }
-        .totals { margin-top: 0; margin-left: auto; width: 360px; flex-shrink: 0; }
-        .totals table { width: 100%; border-collapse: collapse; }
-        .totals th { text-align: right; padding: 4px 12px 4px 0; font-weight: 600; white-space: normal; line-height: 1.25; }
-        .totals td { text-align: right; padding: 4px 0; }
-        .totals tr.grand th, .totals tr.grand td { font-size: 14px; font-weight: bold; border-top: 2px solid #333; padding-top: 8px; padding-bottom: 8px; }
-        .totals tr.totals-inc th, .totals tr.totals-inc td {
-            font-size: 14px;
-            font-weight: bold;
-            border-top: 2px solid #333;
-            border-bottom: 2px solid #333;
-            padding-top: 8px;
-            padding-bottom: 8px;
+        .fbr-digital-section {
+            grid-column: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .totals {
+            grid-column: 2;
+            margin-top: 0;
+            margin-left: 0;
+            width: 100%;
+            max-width: 360px;
+            min-width: 0;
+            justify-self: end;
+            overflow: hidden;
+            isolation: isolate;
+        }
+        .totals-inner {
+            display: block;
+            width: 100%;
+            max-width: 360px;
+            margin-left: auto;
+        }
+        .totals table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            table-layout: fixed;
+        }
+        .totals th {
+            text-align: right;
+            padding: 3px 10px 3px 0;
+            font-weight: 600;
+            white-space: normal;
+            line-height: 1.25;
+            border: none;
+            vertical-align: top;
+        }
+        .totals td {
+            text-align: right;
+            padding: 3px 0;
+            border: none;
+            vertical-align: top;
+            white-space: nowrap;
+        }
+        .totals th { width: 58%; }
+        .totals td { width: 42%; }
+        /* Horizontal rules only inside the totals table (do not bleed into QR column) */
+        .totals tr.totals-rule-top th,
+        .totals tr.totals-rule-top td {
+            border-top: 1px solid #222;
+            padding-top: 6px;
+        }
+        .totals tr.totals-rule-bottom th,
+        .totals tr.totals-rule-bottom td {
+            border-bottom: 1px solid #222;
+            padding-bottom: 6px;
+        }
+        .totals tr.totals-inc th,
+        .totals tr.totals-inc td {
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .totals tr.grand th,
+        .totals tr.grand td {
+            font-size: 13px;
+            font-weight: 700;
         }
         .notes { margin-top: 20px; padding: 8px; background: #f9f9f9; border-radius: 4px; font-size: 12px; white-space: pre-line; }
         /* FBR: matching 1\" × 1\" slots for badge + QR (no captions) */
-        .fbr-digital-section { flex: 1 1 auto; min-width: 0; margin-top: 0; }
+        .fbr-digital-section {
+            margin-top: 0;
+            justify-self: start;
+            page-break-inside: avoid;
+            break-inside: avoid-page;
+        }
         .fbr-digital-title { font-size: 12px; font-weight: 700; margin-bottom: 10px; color: #1e3a5f; }
         .fbr-digital-row {
             display: flex;
             flex-direction: row;
             align-items: center;
             justify-content: flex-start;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 16px;
         }
         .fbr-badge-wrap {
@@ -538,40 +626,30 @@
                 </div>
             </div>
             <div class="totals">
+                <div class="totals-inner">
                 <table>
                     <tr><th>Total Amount Excluding ST:</th><td>{{ number_format($headerSub, 2) }} PKR</td></tr>
                     <tr><th>Discount:</th><td>{{ number_format($headerDisc, 2) }} PKR</td></tr>
-                    <tr><th>Total Sales Tax:</th><td>{{ number_format($headerGst, 2) }} PKR</td></tr>
+                    <tr class="totals-rule-bottom"><th>Total Sales Tax:</th><td>{{ number_format($headerGst, 2) }} PKR</td></tr>
                     @if($advanceTaxRate > 0.000001)
-                    <tr class="totals-inc"><th>Total Inc. All Taxes:</th><td>{{ number_format($headerTotal, 2) }} PKR</td></tr>
+                    <tr class="totals-inc totals-rule-top totals-rule-bottom"><th>Total Inc. All Taxes:</th><td>{{ number_format($headerTotal, 2) }} PKR</td></tr>
                     <tr><th>Customer WHT 236G({{ number_format($advanceTaxRate, 2) }}%):</th><td>{{ number_format($customerWht236g, 2) }} PKR</td></tr>
-                    <tr class="grand"><th>Grand Total:</th><td>{{ number_format($grandTotalAllTaxes, 2) }} PKR</td></tr>
+                    <tr class="grand totals-rule-top"><th>Grand Total:</th><td>{{ number_format($grandTotalAllTaxes, 2) }} PKR</td></tr>
                     @else
-                    <tr class="totals-inc"><th>Total Inc. All Taxes:</th><td>{{ number_format($headerTotal, 2) }} PKR</td></tr>
+                    <tr class="totals-inc totals-rule-top totals-rule-bottom"><th>Total Inc. All Taxes:</th><td>{{ number_format($headerTotal, 2) }} PKR</td></tr>
                     @endif
                 </table>
+                </div>
             </div>
+        </div>
         </div>
 
         @if(!empty(trim($invoice->Notes ?? '')))
         <div class="notes"><strong>Notes:</strong><br>{{ $invoice->Notes }}</div>
         @endif
-        </div>
     </div>
     @else
     <p>Invoice not found.</p>
     @endif
-    <script>
-    (function () {
-        var savedTitle = document.title;
-        window.addEventListener('beforeprint', function () {
-            savedTitle = document.title;
-            document.title = '\u00A0';
-        });
-        window.addEventListener('afterprint', function () {
-            document.title = savedTitle;
-        });
-    })();
-    </script>
 </body>
 </html>

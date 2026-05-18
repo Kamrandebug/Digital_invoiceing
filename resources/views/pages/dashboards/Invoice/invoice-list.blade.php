@@ -851,6 +851,15 @@ saveBtn.onclick = function () {
         setPrintFrameSrc(orient);
     });
 
+    /** Save/print PDF filename: GD-DI-YYYYMMDD-{invoiceId} (e.g. GD-DI-20260514-19) */
+    function buildGDPrintSaveTitle(invoiceId) {
+        var d = new Date();
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return 'GD-DI-' + y + m + day + '-' + String(invoiceId);
+    }
+
     document.getElementById('invoice_print_do_print').addEventListener('click', function () {
         var frame = document.getElementById('invoice_print_frame');
         if (!frame || !frame.contentWindow) return;
@@ -863,9 +872,13 @@ saveBtn.onclick = function () {
                 return;
             }
             iframeSavedTitle = iw.document.title || '';
-            /* Blank title so Chrome/Edge header does not show GD-DI name (footer URL still needs Headers and footers off). */
-            iw.document.title = '\u00A0';
-            document.title = '\u00A0';
+            var saveTitle = (_printModalInvoiceId && iw.document)
+                ? buildGDPrintSaveTitle(_printModalInvoiceId)
+                : iframeSavedTitle;
+            if (iw.document && saveTitle) {
+                iw.document.title = saveTitle;
+            }
+            document.title = saveTitle;
             var restored = false;
             function restoreTabTitle() {
                 if (restored) return;
