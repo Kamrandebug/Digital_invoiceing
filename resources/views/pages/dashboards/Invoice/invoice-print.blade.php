@@ -122,7 +122,14 @@
     <style>
         @page { size: {{ $orientation }}; margin: 15mm; }
         @media print {
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            /* Zero page margin: browser date/title/URL headers print in the margin area — keep them off the sheet */
+            @page { size: {{ $orientation }}; margin: 0; }
+            html, body {
+                margin: 0 !important;
+                padding: 15mm !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
             .no-print { display: none !important; }
             .print-section-1-logo img { max-height: 80px !important; }
             .fbr-brand-logo { max-width: 1in !important; max-height: 1in !important; }
@@ -554,5 +561,17 @@
     @else
     <p>Invoice not found.</p>
     @endif
+    <script>
+    (function () {
+        var savedTitle = document.title;
+        window.addEventListener('beforeprint', function () {
+            savedTitle = document.title;
+            document.title = '\u00A0';
+        });
+        window.addEventListener('afterprint', function () {
+            document.title = savedTitle;
+        });
+    })();
+    </script>
 </body>
 </html>
