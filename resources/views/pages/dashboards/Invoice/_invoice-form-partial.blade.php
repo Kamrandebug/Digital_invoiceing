@@ -17,7 +17,7 @@
 
     $uid = 'ifp_' . $mode . '_' . ($invoiceId ?: 'new');
     $selClass = $inModal ? 'form-select' : 'form-select form-select-sm';
-    $ifpEmptyColspan = $inModal ? ($isReadonly ? 13 : 14) : ($isReadonly ? 17 : 18);
+    $ifpEmptyColspan = $inModal ? ($isReadonly ? 14 : 15) : ($isReadonly ? 17 : 18);
 @endphp
 
 {{-- ── Info Badge (edit / show) — full page only; hidden in AJAX View/Edit modal --}}
@@ -241,6 +241,8 @@
         .table-inv td.ifp-col-tax-sro { min-width: 220px; width: 14%; max-width: none; }
         .table-inv th.ifp-col-qty,
         .table-inv td.ifp-col-qty { min-width: 64px; width: 4%; }
+        .table-inv th.ifp-col-sale-rate,
+        .table-inv td.ifp-col-sale-rate { min-width: 88px; width: 5%; }
         .table-inv th.ifp-col-amount,
         .table-inv td.ifp-col-amount { min-width: 96px; width: 6%; }
         .table-inv th.ifp-col-fixed,
@@ -334,8 +336,9 @@
                 border-bottom: 1px solid var(--bs-border-color, #dee2e6);
             }
         }
+        .ifp-tax-sro-nested-modal .ifp-tax-sro-fields .ifp-tax-column-header,
         .ifp-tax-sro-fields .ifp-tax-column-header {
-            font-size: 0.75rem;
+            font-size: 12px;
             font-weight: 600;
             letter-spacing: 0.02em;
             text-align: center;
@@ -402,12 +405,27 @@
         }
         .ifp-tax-sro-fields-lower .ifp-tax-sro-lbl {
             font-size: 12px;
+            font-weight: 500;
         }
         /* Nested Tax & SRO modal: title-case labels (override custom.css uppercase on #invoice_modal_body .ifp-tax-sro-lbl) */
         #invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
         .ifp-modal-shell .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl {
             text-transform: none;
             letter-spacing: 0.01em;
+            font-weight: 500;
+        }
+        /* Nested Tax & SRO modal: uniform 12px on all controls */
+        .ifp-tax-sro-nested-modal .modal-title,
+        .ifp-tax-sro-nested-modal .modal-footer .btn,
+        .ifp-tax-sro-nested-modal .ifp-tax-sro-fields__head,
+        .ifp-tax-sro-nested-modal .ifp-tax-column-header,
+        .ifp-tax-sro-nested-modal .ifp-tax-listbox-search,
+        .ifp-tax-sro-nested-modal .ifp-inv-tax-listbox,
+        .ifp-tax-sro-nested-modal .ifp-inv-tax-listbox option,
+        .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
+        .ifp-tax-sro-nested-modal .form-control,
+        .ifp-tax-sro-nested-modal .form-select {
+            font-size: 12px !important;
         }
         .ifp-tax-sro-fields-lower .form-control {
             font-size: 12px !important;
@@ -509,9 +527,7 @@
                     </th>
                     @endif
                     <th class="ifp-col-qty">Qty</th>
-                    @if(!$inModal)
-                    <th>Rate</th>
-                    @endif
+                    <th class="ifp-col-sale-rate">Unit Rate</th>
                     <th class="ifp-col-amount">Amount</th>
                     @if($inModal)
                     <th class="ifp-col-fixed text-nowrap">Fixed notified value</th>
@@ -598,15 +614,13 @@
                             <input type="number" name="items[{{ $idx }}][Quantity]" class="form-control form-control-sm ifp-qty" value="{{ $item->Quantity ?? 1 }}" min="0" step="0.000001">
                         @endif
                     </td>
-                    @if(!$inModal)
-                    <td>
+                    <td class="ifp-col-sale-rate">
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->Rate ?? 0, 2) }}</span>
                         @else
                             <input type="number" step="0.000001" name="items[{{ $idx }}][Rate]" class="form-control form-control-sm ifp-rate" value="{{ $item->Rate ?? 0 }}" min="0">
                         @endif
                     </td>
-                    @endif
                     <td class="ifp-col-amount">
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->Amount ?? 0, 2) }}</span>
@@ -732,9 +746,7 @@
                         'isReadonly' => false,
                     ])
                     <td class="ifp-col-qty"><input type="number" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>
-                    @if(!$inModal)
-                    <td><input type="number" step="0.000001" name="items[0][Rate]"               class="form-control form-control-sm ifp-rate"     value="0" min="0"></td>
-                    @endif
+                    <td class="ifp-col-sale-rate"><input type="number" step="0.000001" name="items[0][Rate]" class="form-control form-control-sm ifp-rate" value="0" min="0"></td>
                     <td class="ifp-col-amount"><input type="number" step="0.01"     name="items[0][Amount]"             class="form-control form-control-sm ifp-amount"   value="0" readonly></td>
                     @if($inModal)
                     <td class="ifp-col-fixed"><input type="number" step="0.01"     name="items[0][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value" value="0" readonly></td>
@@ -1184,6 +1196,51 @@
             else opt.removeAttribute('title');
         }
     }
+    /** Move the chosen row to the top of the list (after hidden placeholder) so it is visible first. */
+    function ifpTaxMoveSelectedOptionFirst(sel) {
+        if (!sel || !ifpTaxUseListboxUi(sel)) return;
+        var selectedOpt = null;
+        var si = sel.selectedIndex;
+        if (si >= 0 && sel.options[si] && sel.options[si].getAttribute('data-ifp-placeholder') !== '1') {
+            selectedOpt = sel.options[si];
+        }
+        if (!selectedOpt) {
+            var selVal = String(sel.value || '').trim();
+            for (var i = 0; i < sel.options.length; i++) {
+                var opt = sel.options[i];
+                if (opt.getAttribute('data-ifp-placeholder') === '1') continue;
+                if (selVal !== '' && ifpTaxOptionValuesMatch(selVal, opt.value)) {
+                    selectedOpt = opt;
+                    break;
+                }
+                if (!selVal && opt.getAttribute('data-ifp-none-visible') === '1' && opt.selected) {
+                    selectedOpt = opt;
+                    break;
+                }
+            }
+        }
+        if (!selectedOpt) return;
+        var insertBefore = null;
+        for (var j = 0; j < sel.options.length; j++) {
+            var o = sel.options[j];
+            if (o.getAttribute('data-ifp-placeholder') === '1') continue;
+            if (o !== selectedOpt) {
+                insertBefore = o;
+                break;
+            }
+        }
+        if (insertBefore) {
+            sel.insertBefore(selectedOpt, insertBefore);
+        } else {
+            var first = sel.options[0];
+            if (first && first !== selectedOpt) {
+                sel.insertBefore(selectedOpt, first);
+            }
+        }
+        selectedOpt.selected = true;
+        sel.value = String(selectedOpt.value);
+    }
+
     function ifpTaxFlashListboxSelection(sel) {
         if (!sel || !ifpTaxUseListboxUi(sel)) return;
         ifpTaxApplyListboxFilter(sel);
@@ -1202,8 +1259,9 @@
                 nv.selected = true;
                 sel.value = nv.value;
                 ifpTaxDeselectPlaceholder(sel);
+                ifpTaxMoveSelectedOptionFirst(sel);
+                ifpTaxApplyListboxFilter(sel);
                 ifpTaxScrollListboxToSelected(sel);
-                ifpTaxPaintSelectedOption(sel);
                 return;
             }
             ifpTaxSelectHiddenPlaceholder(sel);
@@ -1228,8 +1286,9 @@
         } else {
             ifpTaxDeselectPlaceholder(sel);
         }
+        ifpTaxMoveSelectedOptionFirst(sel);
+        ifpTaxApplyListboxFilter(sel);
         ifpTaxScrollListboxToSelected(sel);
-        ifpTaxPaintSelectedOption(sel);
     }
     /** SRO columns: no rate / no rows from API — show a visible "None" row (not the hidden listbox placeholder). */
     function ifpTaxFillSroListWithNone(sel) {
@@ -1244,8 +1303,8 @@
         nopt.selected = true;
         sel.setAttribute('data-selected', '');
         if (ifpTaxUseListboxUi(sel)) {
+            ifpTaxMoveSelectedOptionFirst(sel);
             ifpTaxScrollListboxToSelected(sel);
-            ifpTaxPaintSelectedOption(sel);
         }
     }
     function ifpTaxScrollListboxToSelected(sel) {
@@ -1256,7 +1315,7 @@
                 if (i >= 0 && sel.options[i]) {
                     var o = sel.options[i];
                     if (o.getAttribute('data-ifp-placeholder') !== '1') {
-                        o.scrollIntoView({ block: 'nearest' });
+                        o.scrollIntoView({ block: 'start' });
                     }
                 }
             } catch (e) {}
@@ -1267,7 +1326,11 @@
         if (!sel || !ifpTaxUseListboxUi(sel) || sel.dataset.ifpTaxRowPaint === '1') return;
         sel.dataset.ifpTaxRowPaint = '1';
         function paint() {
-            requestAnimationFrame(function() { ifpTaxPaintSelectedOption(sel); });
+            requestAnimationFrame(function() {
+                ifpTaxMoveSelectedOptionFirst(sel);
+                ifpTaxApplyListboxFilter(sel);
+                ifpTaxPaintSelectedOption(sel);
+            });
         }
         ['mouseup', 'keyup', 'blur', 'change'].forEach(function(ev) { sel.addEventListener(ev, paint); });
     }
@@ -1701,6 +1764,40 @@
             });
     }
 
+    function ifpFindDefaultSaleTypeOption(sel) {
+        if (!sel) return null;
+        var want = 'Goods at standard rate (default)';
+        var wantLc = want.toLowerCase();
+        var opts = sel.querySelectorAll('option');
+        for (var i = 0; i < opts.length; i++) {
+            var opt = opts[i];
+            if (!opt.value || opt.getAttribute('data-ifp-placeholder') === '1') continue;
+            var label = (opt.textContent || '').trim();
+            var ll = label.toLowerCase();
+            if (ll === wantLc || (ll.indexOf('goods at standard rate') !== -1 && ll.indexOf('default') !== -1)) {
+                return opt;
+            }
+        }
+        return null;
+    }
+
+    function ifpApplyDefaultSaleTypeIfNeeded(sel) {
+        if (!sel) return false;
+        var saved = String(sel.getAttribute('data-selected') || '').trim();
+        if (saved) return false;
+        if (String(sel.value || '').trim()) return false;
+        var opt = ifpFindDefaultSaleTypeOption(sel);
+        if (!opt) return false;
+        opt.selected = true;
+        sel.value = String(opt.value);
+        sel.setAttribute('data-selected', String(opt.value));
+        if (ifpTaxUseListboxUi(sel)) {
+            ifpTaxDeselectPlaceholder(sel);
+            ifpTaxFlashListboxSelection(sel);
+        }
+        return true;
+    }
+
     function loadSaleTypesForRow(row) {
         var sel = rowEl(row, '.ifp-sale-type');
         if (!sel) return;
@@ -1744,6 +1841,9 @@
                     ifpTaxDeselectPlaceholder(sel);
                     ifpTaxFlashListboxSelection(sel);
                 }
+                if (!selected) {
+                    ifpApplyDefaultSaleTypeIfNeeded(sel);
+                }
                 var v = String(sel.value || '').trim();
                 if (!v && selected) {
                     var wantSt = String(selected).trim();
@@ -1760,6 +1860,9 @@
                             break;
                         }
                     }
+                }
+                if (v) {
+                    sel.setAttribute('data-selected', v);
                 }
                 updateTaxSroTriggerSummary(row);
                 if (v) loadSaleTypeToRatesForRow(row, v);
@@ -2125,8 +2228,8 @@
                                 </div>
                                 <div class="row g-2 px-2 pb-2 ifp-tax-sro-fields-lower">
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifiler_${idx}">Is Filer</label><input type="hidden" name="items[${idx}][IsFiler]" class="ifp-is-filer" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifiler_${idx}" class="form-check-input ifp-is-filer-cb m-0" disabled></div></div></div>
-                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_lr_${idx}">Rate</label><input type="number" step="0.000001" id="${uid}_lr_${idx}" name="items[${idx}][Rate]" class="form-control ifp-rate" value="0" min="0"></div></div>
-                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_gst_${idx}">GST Rate %</label><input type="number" step="0.01" id="${uid}_gst_${idx}" name="items[${idx}][GstPercentage]" class="form-control ifp-gst-pct" value="0" min="0"></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_gst_${idx}">GST %</label><input type="number" step="0.01" id="${uid}_gst_${idx}" name="items[${idx}][GstPercentage]" class="form-control ifp-gst-pct" value="0" min="0"></div></div>
+                                    <div class="col-12 col-md-4 d-none d-md-block" aria-hidden="true"></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifr_${idx}">Is Fixed</label><input type="hidden" name="items[${idx}][IsFixedRate]" class="ifp-is-fixed-rate" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifr_${idx}" class="form-check-input ifp-is-fixed-rate-cb m-0" disabled></div></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_fr_${idx}">Fixed Rate</label><input type="number" step="0.01" id="${uid}_fr_${idx}" name="items[${idx}][TPRate]" class="form-control ifp-fixed-rate" value="0" readonly></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_dp_${idx}">Discount %</label><input type="number" step="0.01" id="${uid}_dp_${idx}" name="items[${idx}][DiscountPercentage]" class="form-control ifp-disc-pct" value="0" min="0" max="100"></div></div>
@@ -2146,6 +2249,7 @@
         var rowNumericTail = IFP_TAX_COMPACT
             ? (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
+                '<td class="ifp-col-sale-rate"><input type="number" step="0.000001" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate" value="0" min="0"></td>' +
                 '<td class="ifp-col-amount"><input type="number" step="0.01"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount"   value="0" readonly></td>' +
                 '<td class="ifp-col-fixed"><input type="number" step="0.01"     name="items[' + idx + '][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value" value="0" readonly></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
@@ -2158,7 +2262,7 @@
             )
             : (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
-                '<td><input type="number" step="0.000001" name="items[' + idx + '][Rate]"               class="form-control form-control-sm ifp-rate"     value="0" min="0"></td>' +
+                '<td class="ifp-col-sale-rate"><input type="number" step="0.000001" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate" value="0" min="0"></td>' +
                 '<td class="ifp-col-amount"><input type="number" step="0.01"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount"   value="0" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +

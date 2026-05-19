@@ -735,6 +735,14 @@
             </div>
 
             <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
+                @include('pages.dashboards.Customer._customer-fbr-verify', [
+                    'fbrPrefix' => 'cf_page',
+                    'isReadonly' => $isReadonly,
+                    'customer' => $customer,
+                ])
+            </div>
+
+            <div class="row {{ $isReadonly ? 'mb-3' : '' }}">
                 <div class="col-md-4">
                     <div class="mb-3">
                         <label for="IsFiler" class="{{ $isReadonly ? 'detail-label' : 'form-label required-field' }}">Tax Filer Status</label>
@@ -1157,6 +1165,15 @@
         if (isFilerCb) {
             window.syncNonFilerTaxFieldsVisibility();
             isFilerCb.addEventListener('change', window.syncNonFilerTaxFieldsVisibility);
+        }
+
+        if (typeof window.initCustomerFbrVerify === 'function') {
+            window.initCustomerFbrVerify(
+                'cf_page',
+                @json(route('customers.verify_fbr')),
+                'NTN',
+                'IsFiler'
+            );
         }
 
         window.syncAdvancedTaxFieldsVisibility = function () {

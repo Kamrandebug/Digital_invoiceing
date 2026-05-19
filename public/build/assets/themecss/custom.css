@@ -1118,6 +1118,25 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 #invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl {
 	text-transform: none;
 	letter-spacing: 0.01em;
+	font-weight: 500;
+}
+/* Nested Tax & SRO modal: uniform 12px on all controls */
+.ifp-tax-sro-nested-modal .modal-title,
+.ifp-tax-sro-nested-modal .modal-footer .btn,
+.ifp-tax-sro-nested-modal .ifp-tax-sro-fields__head,
+.ifp-modal-shell .ifp-tax-sro-nested-modal .ifp-tax-sro-fields__head,
+#invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-fields__head,
+.ifp-tax-sro-nested-modal .ifp-tax-column-header,
+.ifp-tax-sro-nested-modal .ifp-tax-listbox-search,
+.ifp-tax-sro-nested-modal .ifp-inv-tax-listbox,
+.ifp-tax-sro-nested-modal .ifp-inv-tax-listbox option,
+.ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
+.ifp-modal-shell .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
+#invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
+.ifp-tax-sro-nested-modal .form-control,
+.ifp-tax-sro-nested-modal .form-select,
+.ifp-tax-sro-nested-modal .form-check-input {
+	font-size: 12px !important;
 }
 .app-sidebar .side-menu__label {
     font-size: 12px !important;

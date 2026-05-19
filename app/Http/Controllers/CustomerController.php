@@ -106,11 +106,7 @@ class CustomerController extends Controller
         $request->merge([
             'IsAdvancedTax' => $request->boolean('IsAdvancedTax') ? 1 : 0,
         ]);
-        if ((int) $request->input('IsAdvancedTax') !== 1) {
-            $request->merge(['AdvanceTaxRate' => null]);
-        }
-        
-  // ── Validate ──────────────────────────────────────────
+        // ── Validate ──────────────────────────────────────────
 try {
     $validated = $request->validate([
         'Title'             => ['nullable', 'string', Rule::in(['Mr', 'Mrs', 'Miss', 'Ms', 'Dr', 'Prof', 'Engr'])],
@@ -136,8 +132,11 @@ try {
         'NTN'               => 'nullable|string|max:50',
         'SalesTaxNumber'    => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]{5,50}$/', 'unique:tbl_customer,SalesTaxNumber'],
         'IsFiler'           => 'nullable|boolean',
+        'RegisterType'      => 'nullable|string|max:25',
+        'FilerStatus'       => 'nullable|string|max:25',
+        'FilerStatusDate'   => 'nullable|date',
         'IsAdvancedTax'     => 'nullable|boolean',
-        'AdvanceTaxRate'    => ['nullable', 'required_if:IsAdvancedTax,1', 'numeric', 'gt:0'],
+        'AdvanceTaxRate'    => $this->advanceTaxRateValidationRules(),
         'CNIC'              => ['nullable', 'string', 'regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('tbl_customer', 'CNIC')],
         'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
         'SalesTaxWithheldAtSource' => 'nullable|string|max:50',
@@ -202,7 +201,7 @@ try {
             $isAdvancedTax = (int) $request->input('IsAdvancedTax', 0) === 1 ? 1 : 0;
             $advanceTaxRate = $isAdvancedTax === 1
                 ? round((float) $request->input('AdvanceTaxRate', 0), 2)
-                : null;
+                : 0.00;
 
             // Calculate ID
             $maxId = DB::table('temp_customer')->max('ID');
@@ -241,6 +240,9 @@ try {
                 'SalesTaxNumber'    => $request->SalesTaxNumber ?? '',
                 'CNIC'              => $request->CNIC,
                 'IsFiler'           => $request->input('IsFiler', 0),
+                'RegisterType'      => $this->nullableFbrField($request->input('RegisterType')),
+                'FilerStatus'       => $this->nullableFbrField($request->input('FilerStatus')),
+                'FilerStatusDate'   => $this->nullableFbrDate($request->input('FilerStatusDate')),
                 'IsAdvanceTax'     => $isAdvancedTax,
                 'AdvanceTax'       => $advanceTaxRate,
                 'Notes'             => $request->Notes,
@@ -387,6 +389,76 @@ public function modal(Request $request, $id = null)
 }
 
     /**
+     * AJAX: verify customer NTN with FBR (registration type + ATL status).
+     */
+    public function verifyFbr(Request $request)
+    {
+        $request->validate([
+            'ntn' => 'required|string|max:50',
+            'filer_status_date' => 'nullable|date',
+        ]);
+
+        $result = Customer::verify_fbr(
+            (string) $request->input('ntn'),
+            $request->input('filer_status_date')
+        );
+
+        if (! ($result['success'] ?? false)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $result['message'] ?? 'FBR verification failed.',
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $result['message'] ?? 'FBR verification completed.',
+            'register_type' => $result['register_type'] ?? null,
+            'filer_status' => $result['filer_status'] ?? null,
+            'filer_status_date' => $result['filer_status_date'] ?? null,
+            'is_filer' => $result['is_filer'] ?? null,
+            'registration_no' => $result['registration_no'] ?? null,
+        ]);
+    }
+
+    /**
+     * When Advanced Tax is off, skip rate rules (form may still post 0.00 from UI).
+     *
+     * @return list<\Illuminate\Contracts\Validation\ValidationRule|string>
+     */
+    private function advanceTaxRateValidationRules(): array
+    {
+        return [
+            'nullable',
+            Rule::excludeIf(fn () => ! request()->boolean('IsAdvancedTax')),
+            'required_if:IsAdvancedTax,1',
+            'numeric',
+            'gt:0',
+        ];
+    }
+
+    private function nullableFbrField(mixed $value): ?string
+    {
+        $s = trim((string) ($value ?? ''));
+
+        return $s === '' ? null : $s;
+    }
+
+    private function nullableFbrDate(mixed $value): ?string
+    {
+        $s = trim((string) ($value ?? ''));
+        if ($s === '') {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($s)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Province dropdown options from core_digital_invoicing.fbr_province.
      *
      * @return \Illuminate\Support\Collection<int, string>
@@ -461,10 +533,6 @@ public function modal(Request $request, $id = null)
         $request->merge([
             'IsAdvancedTax' => $request->boolean('IsAdvancedTax') ? 1 : 0,
         ]);
-        if ((int) $request->input('IsAdvancedTax') !== 1) {
-            $request->merge(['AdvanceTaxRate' => null]);
-        }
-        
      // ── Validate ──────────────────────────────────────────
 try {
     $validated = $request->validate([
@@ -497,8 +565,11 @@ try {
             Rule::unique('tbl_customer', 'SalesTaxNumber')->where('Status', 1)->ignore((int) $id, 'ID'),
         ],
         'IsFiler'           => 'nullable|boolean',
+        'RegisterType'      => 'nullable|string|max:25',
+        'FilerStatus'       => 'nullable|string|max:25',
+        'FilerStatusDate'   => 'nullable|date',
         'IsAdvancedTax'     => 'nullable|boolean',
-        'AdvanceTaxRate'    => ['nullable', 'required_if:IsAdvancedTax,1', 'numeric', 'gt:0'],
+        'AdvanceTaxRate'    => $this->advanceTaxRateValidationRules(),
         'CNIC'              => ['nullable', 'string', 'regex:/^[0-9]{5}-[0-9]{7}-[0-9]$/', Rule::unique('tbl_customer', 'CNIC')->ignore($id, 'ID')],
         'CreditLimit'       => 'nullable|numeric|min:0|max:999999999999.99',
         'PaymentTerms'      => 'nullable|string|in:Cash,Net 15,Net 30,Net 45,Net 60,Due on Receipt,COD',
@@ -568,7 +639,7 @@ try {
             $isAdvancedTax = (int) $request->input('IsAdvancedTax', 0) === 1 ? 1 : 0;
             $advanceTaxRate = $isAdvancedTax === 1
                 ? round((float) $request->input('AdvanceTaxRate', 0), 2)
-                : null;
+                : 0.00;
 
             // Prepare data for temp_customer (edit flow needs a row with TID = $id and RequestID)
             $data = [
@@ -602,6 +673,9 @@ try {
                 'SalesTaxNumber'    => $request->SalesTaxNumber ?? '',
                 'CNIC'              => $request->CNIC,
                 'IsFiler'           => $request->input('IsFiler', 0),
+                'RegisterType'      => $this->nullableFbrField($request->input('RegisterType')),
+                'FilerStatus'       => $this->nullableFbrField($request->input('FilerStatus')),
+                'FilerStatusDate'   => $this->nullableFbrDate($request->input('FilerStatusDate')),
                 'IsAdvanceTax'     => $isAdvancedTax,
                 'AdvanceTax'       => $advanceTaxRate,
                 'Notes'             => $request->Notes,

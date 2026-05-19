@@ -40,6 +40,8 @@ return [
     */
     'fbr' => [
         'post_url' => env('FBR_POST_URL', 'https://gw.fbr.gov.pk/di_data/v1/di/postinvoicedata_sb'),
+        'statl_url' => env('FBR_STATL_URL', 'https://gw.fbr.gov.pk/dist/v1/statl'),
+        'get_reg_type_url' => env('FBR_GET_REG_TYPE_URL', 'https://gw.fbr.gov.pk/dist/v1/Get_Reg_Type'),
         /** Set true in production when FBR gateway SSL is trusted. Your working cURL used verify off. */
         'verify_ssl' => env('FBR_VERIFY_SSL', false),
         'timeout' => env('FBR_HTTP_TIMEOUT', 120),

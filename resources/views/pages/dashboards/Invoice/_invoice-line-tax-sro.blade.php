@@ -121,7 +121,7 @@
                         </div>
                     </div>
                     <div class="row g-2 px-2 pb-2 ifp-tax-sro-fields-lower">
-                        {{-- Row 1: Is Filer | Rate | GST Rate % --}}
+                        {{-- Row 1: Is Filer | GST % | (spacer) — 3-col grid aligned with row 2 --}}
                         <div class="col-12 col-md-4">
                             <div class="ifp-tax-sro-field mb-0">
                                 <label class="ifp-tax-sro-lbl" for="{{ $uid }}_ifiler_{{ $idx }}">Is Filer</label>
@@ -133,16 +133,11 @@
                         </div>
                         <div class="col-12 col-md-4">
                             <div class="ifp-tax-sro-field mb-0">
-                                <label class="ifp-tax-sro-lbl" for="{{ $uid }}_lr_{{ $idx }}">Rate</label>
-                                <input type="number" step="0.000001" id="{{ $uid }}_lr_{{ $idx }}" name="items[{{ $idx }}][Rate]" class="form-control ifp-rate" value="{{ $item?->Rate ?? 0 }}" min="0">
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <div class="ifp-tax-sro-field mb-0">
-                                <label class="ifp-tax-sro-lbl" for="{{ $uid }}_gst_{{ $idx }}">GST Rate %</label>
+                                <label class="ifp-tax-sro-lbl" for="{{ $uid }}_gst_{{ $idx }}">GST %</label>
                                 <input type="number" step="0.01" id="{{ $uid }}_gst_{{ $idx }}" name="items[{{ $idx }}][GstPercentage]" class="form-control ifp-gst-pct" value="{{ $item?->GstPercentage ?? 0 }}" min="0">
                             </div>
                         </div>
+                        <div class="col-12 col-md-4 d-none d-md-block" aria-hidden="true"></div>
                         {{-- Row 2: Is Fixed | Fixed Rate | Discount % --}}
                         <div class="col-12 col-md-4">
                             <div class="ifp-tax-sro-field mb-0">

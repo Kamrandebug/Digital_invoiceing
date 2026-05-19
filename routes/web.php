@@ -57,6 +57,7 @@ Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->
 
     // ⚠️ Static segments BEFORE /{id} wildcard
     Route::get('/export/csv', [CustomerController::class, 'exportCSV'])->name('export-csv');
+    Route::post('/verify-fbr', [CustomerController::class, 'verifyFbr'])->middleware('tenant.role:owner,admin,accountant')->name('verify_fbr');
     Route::get('/modal', [CustomerController::class, 'modal'])->name('modal');
 
     Route::get('/{id}/edit', [CustomerController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
