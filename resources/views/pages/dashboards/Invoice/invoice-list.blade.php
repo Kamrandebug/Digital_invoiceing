@@ -402,6 +402,9 @@
                     <button type="button" class="btn btn-sm btn-success ms-2" id="invoice_print_do_print">
                         <i class="fas fa-print me-1"></i> Print / Save as PDF
                     </button>
+                    <small class="text-muted d-block w-100 mt-1" style="font-size: 11px;">
+                        In the print dialog, turn off <strong>Headers and footers</strong> to hide the date, title, and page URL.
+                    </small>
                 </div>
                 <div class="border rounded bg-light" style="min-height: 400px;">
                     <iframe id="invoice_print_frame" name="invoice_print_frame"
@@ -848,11 +851,13 @@ saveBtn.onclick = function () {
         setPrintFrameSrc(orient);
     });
 
-    /** Chrome "Save as PDF" uses the parent tab title when printing an iframe — sync both, then restore parent. */
+    /** Save/print PDF filename: GD-DI-YYYYMMDD-{invoiceId} (e.g. GD-DI-20260514-19) */
     function buildGDPrintSaveTitle(invoiceId) {
         var d = new Date();
-        var ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-        return 'GD-DI-' + ymd + '-' + String(invoiceId).padStart(2, '0');
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return 'GD-DI-' + y + m + day + '-' + String(invoiceId);
     }
 
     document.getElementById('invoice_print_do_print').addEventListener('click', function () {
@@ -860,20 +865,29 @@ saveBtn.onclick = function () {
         if (!frame || !frame.contentWindow) return;
         var iw = frame.contentWindow;
         var parentTitle = document.title;
+        var iframeSavedTitle = '';
         try {
-            var printTitle = (_printModalInvoiceId && iw.document)
-                ? buildGDPrintSaveTitle(_printModalInvoiceId)
-                : parentTitle;
-            if (iw.document && _printModalInvoiceId) {
-                iw.document.title = printTitle;
+            if (!iw.document) {
+                showToast('error', 'Invoice preview is still loading. Please wait and try again.');
+                return;
             }
-            document.title = printTitle;
+            iframeSavedTitle = iw.document.title || '';
+            var saveTitle = (_printModalInvoiceId && iw.document)
+                ? buildGDPrintSaveTitle(_printModalInvoiceId)
+                : iframeSavedTitle;
+            if (iw.document && saveTitle) {
+                iw.document.title = saveTitle;
+            }
+            document.title = saveTitle;
             var restored = false;
             function restoreTabTitle() {
                 if (restored) return;
                 restored = true;
                 document.title = parentTitle;
                 try {
+                    if (iw.document) {
+                        iw.document.title = iframeSavedTitle;
+                    }
                     iw.removeEventListener('afterprint', restoreTabTitle);
                 } catch (e2) {}
             }
@@ -883,6 +897,11 @@ saveBtn.onclick = function () {
             iw.print();
         } catch (e) {
             document.title = parentTitle;
+            try {
+                if (iw.document) {
+                    iw.document.title = iframeSavedTitle;
+                }
+            } catch (e2) {}
             showToast('error', 'Could not open print dialog. Try printing from the browser (Ctrl+P).');
         }
     });
