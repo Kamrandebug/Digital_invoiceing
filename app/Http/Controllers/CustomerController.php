@@ -10,17 +10,105 @@ use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
+    protected function routePrefix(): string
+    {
+        return 'customers';
+    }
+
+    protected function listView(): string
+    {
+        return 'pages.dashboards.Customer.customers-list';
+    }
+
+    protected function formView(): string
+    {
+        return 'pages.dashboards.Customer.customers-form';
+    }
+
+    protected function partialView(): string
+    {
+        return 'pages.dashboards.Customer._customer-form-partial';
+    }
+
+    /** @return list<int> */
+    protected function partyTypesForList(): array
+    {
+        return [Customer::PARTY_TYPE_CUSTOMER, Customer::PARTY_TYPE_BOTH];
+    }
+
+    protected function partyTypeForCreate(): int
+    {
+        return Customer::PARTY_TYPE_CUSTOMER;
+    }
+
+    protected function includeNullPartyTypeInList(): bool
+    {
+        return true;
+    }
+
+    protected function accountNoPrefix(): string
+    {
+        return 'CUST';
+    }
+
+    protected function entitySingular(): string
+    {
+        return 'Customer';
+    }
+
+    protected function listVariableName(): string
+    {
+        return 'customers';
+    }
+
+    protected function exportFilenamePrefix(): string
+    {
+        return 'customers-export';
+    }
+
+    protected function listingFilters(Request $request): array
+    {
+        return array_merge([
+            'search' => $request->input('search'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+            'party_types' => $this->partyTypesForList(),
+            'party_include_null' => $this->includeNullPartyTypeInList(),
+        ], $this->extraListingFilters($request));
+    }
+
+    /** @return array<string, mixed> */
+    protected function extraListingFilters(Request $request): array
+    {
+        return [];
+    }
+
+    protected function partyRoute(string $name, mixed $parameters = []): string
+    {
+        return route($this->routePrefix().'.'.$name, $parameters);
+    }
+
+    protected function findPartyRecord(int|string $id): ?object
+    {
+        $query = DB::table('tbl_customer')->where('ID', $id);
+        $types = $this->partyTypesForList();
+        if ($this->includeNullPartyTypeInList()) {
+            $query->where(function ($q) use ($types) {
+                $q->whereIn('PartyType', $types)->orWhereNull('PartyType');
+            });
+        } else {
+            $query->whereIn('PartyType', $types);
+        }
+
+        return $query->first();
+    }
+
     /**
      * Display a listing of customers
      */
     public function index(Request $request)
     {
-        // Filters
-        $filters = [
-            'search' => $request->input('search'),
-            'start_date' => $request->input('start_date'),
-            'end_date' => $request->input('end_date'),
-        ];
+        $filters = $this->listingFilters($request);
 
         // Validation
         $rules = [];
@@ -44,10 +132,10 @@ class CustomerController extends Controller
             $request->validate($rules, $messages);
         }
 
-        // Get filtered data
         $customers = Customer::getlistingdata($filters)->paginate(15);
-        
-        return view('pages.dashboards.Customer.customers-list', compact('customers'));
+        $listKey = $this->listVariableName();
+
+        return view($this->listView(), [$listKey => $customers]);
     }
     
     /**
@@ -55,7 +143,7 @@ class CustomerController extends Controller
      */
     public function create()
     {
-        return view('pages.dashboards.Customer.customers-form', [
+        return view($this->formView(), [
             'mode' => 'create',
             'customer' => new Customer(),
             'provinces' => $this->provinceOptions(),
@@ -213,7 +301,8 @@ try {
                 'TID'               => $nextId,
                 'IsArchive'         => 0,
                 'VoucherID'         => 0,
-                'AccountNo'         => 'CUST-' . str_pad($nextId, 6, '0', STR_PAD_LEFT), // Generate Unique AccountNo
+                'AccountNo'         => $this->accountNoPrefix().'-'.str_pad((string) $nextId, 6, '0', STR_PAD_LEFT),
+                'PartyType'         => $this->partyTypeForCreate(),
                 'Title'             => $request->Title,
                 'FirstName'         => $request->FirstName,
                 'LastName'          => $request->LastName,
@@ -266,7 +355,7 @@ try {
             // Execute model transaction (runs query inside model)
             $saveResult = Customer::save_transaction(['RequestID' => $requestId]);
             if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
-                $message = $saveResult['message'] ?? 'Unable to add customer.';
+                $message = $saveResult['message'] ?? 'Unable to add '.$this->entitySingular().'.';
                 if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
                     return response()->json(['status' => 'error', 'message' => $message], 422);
                 }
@@ -277,7 +366,7 @@ try {
             if ($request->header('X-Requested-With') === 'XMLHttpRequest' || $request->expectsJson()) {
                 $newId = DB::table('tbl_customer')->where('AccountNo', $data['AccountNo'])->value('ID');
                 $custRow = $newId ? DB::table('tbl_customer')->where('ID', $newId)->first() : null;
-                $payload = ['status' => 'success', 'message' => 'Customer created successfully!'];
+                $payload = ['status' => 'success', 'message' => $this->entitySingular().' created successfully!'];
                 if ($custRow) {
                     $label = trim($custRow->BusinessName ?? '')
                         ?: trim($custRow->DisplayName ?? '')
@@ -298,7 +387,7 @@ try {
 
                 return response()->json($payload);
             }
-        return redirect()->route('customers.index')->with('success', 'Customer created successfully!');
+        return redirect()->to($this->partyRoute('index'))->with('success', $this->entitySingular().' created successfully!');
 
         } catch (\Exception $e) {
            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -314,19 +403,17 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
      */
     public function show($id)
     {
-        // Read from tbl_customer
-        $customer = DB::table('tbl_customer')->where('ID', $id)->first();
-        
-        if (!$customer) {
-            abort(404, 'Customer not found in CRM');
+        $customer = $this->findPartyRecord($id);
+
+        if (! $customer) {
+            abort(404, $this->entitySingular().' not found in CRM');
         }
-        
-        // Hydrate model
+
         $customerModel = new Customer();
-        $customerModel->setRawAttributes((array)$customer, true);
+        $customerModel->setRawAttributes((array) $customer, true);
         $customerModel->exists = true;
 
-        return view('pages.dashboards.Customer.customers-form', [
+        return view($this->formView(), [
             'mode' => 'show',
             'customer' => $customerModel,
             'provinces' => $this->provinceOptions(),
@@ -338,19 +425,17 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
      */
     public function edit($id)
     {
-        // Read from tbl_customer
-        $customer = DB::table('tbl_customer')->where('ID', $id)->first();
-        
-        if (!$customer) {
-            abort(404, 'Customer not found in CRM');
+        $customer = $this->findPartyRecord($id);
+
+        if (! $customer) {
+            abort(404, $this->entitySingular().' not found in CRM');
         }
 
-        // Hydrate model
         $customerModel = new Customer();
-        $customerModel->setRawAttributes((array)$customer, true);
+        $customerModel->setRawAttributes((array) $customer, true);
         $customerModel->exists = true;
 
-        return view('pages.dashboards.Customer.customers-form', [
+        return view($this->formView(), [
             'mode' => 'edit',
             'customer' => $customerModel,
             'provinces' => $this->provinceOptions(),
@@ -366,21 +451,19 @@ public function modal(Request $request, $id = null)
     $customer = null;
 
     if ($id && in_array($mode, ['edit', 'show'])) {
-        $customer = DB::table('tbl_customer')->where('ID', $id)->first();
+        $customer = $this->findPartyRecord($id);
 
-        if (!$customer) {
-            return response('<div class="alert alert-danger m-3">Customer not found.</div>', 404);
+        if (! $customer) {
+            return response('<div class="alert alert-danger m-3">'.$this->entitySingular().' not found.</div>', 404);
         }
 
-        // Hydrate into model so $customer->CreatedOn etc work as Carbon dates
         $customerModel = new Customer();
         $customerModel->setRawAttributes((array) $customer, true);
         $customerModel->exists = true;
         $customer = $customerModel;
     }
 
-    // Return ONLY the partial — no layout wrapping
-    return view('pages.dashboards.Customer._customer-form-partial', [
+    return view($this->partialView(), [
         'mode'     => $mode,
         'customer' => $customer ?? new Customer(),
         'inModal'  => true,
@@ -487,11 +570,10 @@ public function modal(Request $request, $id = null)
      */
     public function edit_transaction(Request $request, $id)
     {
-        // Get existing
-        $customer = DB::table('tbl_customer')->where('ID', $id)->first();
-        
-        if (!$customer) {
-            return redirect()->back()->with('error', 'Customer not found.');
+        $customer = $this->findPartyRecord($id);
+
+        if (! $customer) {
+            return redirect()->back()->with('error', $this->entitySingular().' not found.');
         }
         
         // Format inputs (empty optional fields → null for validation)
@@ -647,6 +729,7 @@ try {
                 'IsArchive'         => 0,
                 'VoucherID'         => $customer->VoucherID ?? 0,
                 'AccountNo'         => $customer->AccountNo ?? '0',
+                'PartyType'         => $customer->PartyType ?? $this->partyTypeForCreate(),
                 'Title'             => $request->Title,
                 'FirstName'         => $request->FirstName,
                 'LastName'          => $request->LastName,
@@ -701,7 +784,7 @@ try {
             // Execute model transaction (runs query inside model)
             $editResult = Customer::edit_transaction(['RequestID' => $requestId]);
             if (is_array($editResult) && ($editResult['status'] ?? false) === false) {
-                $message = $editResult['message'] ?? 'Unable to update customer.';
+                $message = $editResult['message'] ?? 'Unable to update '.$this->entitySingular().'.';
                 if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
                     return response()->json(['status' => 'error', 'message' => $message], 422);
                 }
@@ -710,9 +793,9 @@ try {
             }
 
            if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
-    return response()->json(['status' => 'success', 'message' => 'Customer created successfully!']);
+    return response()->json(['status' => 'success', 'message' => $this->entitySingular().' updated successfully!']);
 }
-return redirect()->route('customers.index')->with('success', 'Customer updated successfully!');
+return redirect()->to($this->partyRoute('index'))->with('success', $this->entitySingular().' updated successfully!');
                 
         } catch (\Exception $e) {
             \Log::error('Edit transaction failed', [
@@ -734,11 +817,10 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
     public function delete_transaction($id)
     {
         try {
-            // Read from tbl_customer
-            $customer = DB::table('tbl_customer')->where('ID', $id)->first();
-            
-            if (!$customer) {
-                return redirect()->back()->with('error', 'Customer not found.');
+            $customer = $this->findPartyRecord($id);
+
+            if (! $customer) {
+                return redirect()->back()->with('error', $this->entitySingular().' not found.');
             }
             
             $requestId = (string) Str::uuid();
@@ -753,6 +835,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
                 'TID' => $id,
                 'RequestID' => $requestId,
                 'AccountNo' => $customer->AccountNo ?? '0',
+                'PartyType' => $customer->PartyType ?? $this->partyTypeForCreate(),
                 'Title' => $customer->Title ?? 'Mr',
                 'FirstName' => $customer->FirstName ?? '',
                 'Status' => 2,
@@ -766,8 +849,8 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
             Customer::delete_transaction(['RequestID' => $requestId]);
             
             return redirect()
-                ->route('customers.index')
-                ->with('success', 'Customer archived successfully!');
+                ->to($this->partyRoute('index'))
+                ->with('success', $this->entitySingular().' archived successfully!');
                 
         } catch (\Exception $e) {
             return redirect()
@@ -781,7 +864,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
      */
     public function exportCSV(Request $request)
     {
-        $filename = 'customers-export-' . date('Y-m-d-His') . '.csv';
+        $filename = $this->exportFilenamePrefix().'-'.date('Y-m-d-His').'.csv';
         
         $headers = [
             "Content-type" => "text/csv",
@@ -791,13 +874,8 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
             "Expires" => "0"
         ];
 
-        // Get filtered data
-        $filters = [
-            'search' => $request->input('search'),
-            'start_date' => $request->input('start_date'),
-            'end_date' => $request->input('end_date'),
-        ];
-        
+        $filters = $this->listingFilters($request);
+
         $customers = Customer::getlistingdata($filters)->get();
         
         $callback = function() use ($customers) {

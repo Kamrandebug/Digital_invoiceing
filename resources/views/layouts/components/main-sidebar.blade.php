@@ -40,19 +40,31 @@
                         <span class="side-menu__label">Customers</span>
 					</a>
 				</li>
+                <li class="slide">
+					<a href="{{ route('invoices.index') }}" class="side-menu__item">
+						<i class="ri-receipt-line menu-icon"></i>
+                        <span class="side-menu__label">Invoices</span>
+					</a>
+				</li>
+				<li class="slide">
+					<a href="{{ route('suppliers.index') }}" class="side-menu__item">
+						<i class="ri-truck-line menu-icon"></i>
+                        <span class="side-menu__label">Suppliers</span>
+					</a>
+				</li>
+				<li class="slide">
+					<a href="{{ route('purchases.index') }}" class="side-menu__item">
+						<i class="ri-shopping-cart-line menu-icon"></i>
+                        <span class="side-menu__label">Purchases</span>
+					</a>
+				</li>
 				<li class="slide">
 					<a href="{{ url('products') }}" class="side-menu__item">
 						<i class="ri-box-3-line menu-icon"></i>
                         <span class="side-menu__label">Products</span>
 					</a>
 				</li>
-				<li class="slide">
-					<a href="{{ route('invoices.index') }}" class="side-menu__item">
-						<i class="ri-receipt-line menu-icon"></i>
-                        <span class="side-menu__label">Invoices</span>
-					</a>
-				</li>
-                <li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
+				<li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
                     <a href="javascript:void(0);" class="side-menu__item">
                         <i class="ri-bar-chart-2-line menu-icon"></i>
                         <span class="side-menu__label">Reports</span>

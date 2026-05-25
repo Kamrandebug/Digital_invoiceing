@@ -12,6 +12,12 @@ class Customer extends Model
 {
     use HasFactory;
 
+    public const PARTY_TYPE_CUSTOMER = 1;
+
+    public const PARTY_TYPE_SUPPLIER = 2;
+
+    public const PARTY_TYPE_BOTH = 3;
+
     protected $table = 'temp_customer';
     protected $primaryKey = 'ID';
     
@@ -26,6 +32,7 @@ class Customer extends Model
         'IsArchive',
         'VoucherID',
         'AccountNo',
+        'PartyType',
         'Title',
         'FirstName',
         'LastName',
@@ -82,6 +89,17 @@ class Customer extends Model
   public static function getlistingdata($filters = [])
 {
 $query = DB::table('tbl_customer')->where('Status', '!=', 2);
+
+    if (! empty($filters['party_types'])) {
+        $partyTypes = array_map('intval', (array) $filters['party_types']);
+        if (! empty($filters['party_include_null'])) {
+            $query->where(function ($q) use ($partyTypes) {
+                $q->whereIn('PartyType', $partyTypes)->orWhereNull('PartyType');
+            });
+        } else {
+            $query->whereIn('PartyType', $partyTypes);
+        }
+    }
 
     if (!empty($filters['search'])) {
         $search = $filters['search'];
@@ -147,10 +165,10 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
         }
 
         DB::statement("
-            INSERT INTO tbl_customer (AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
+            INSERT INTO tbl_customer (AccountNo,PartyType,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
                 Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn)
-            SELECT 	AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
+            SELECT 	AccountNo,PartyType,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
                 Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn
             FROM 	temp_customer

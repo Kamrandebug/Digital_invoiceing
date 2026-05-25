@@ -769,9 +769,9 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 }
 
 /* Invoice Add/Edit/View (AJAX modal): native selects match product modal — full border, same box model as .form-control */
-/* #invoice_modal_body: fallback scope if shell class missing; var(..., #dee2e6): borders work when customer-management.css is not loaded */
+/* #invoice_modal_body, #purchase_modal_body: fallback scope if shell class missing; var(..., #dee2e6): borders work when customer-management.css is not loaded */
 .ifp-modal-shell .form-select:not([multiple]):not([size]),
-#invoice_modal_body .form-select:not([multiple]):not([size]) {
+#invoice_modal_body .form-select:not([multiple]):not([size]), #purchase_modal_body .form-select:not([multiple]):not([size]){
 	border: 1px solid var(--cm-border-color, #dee2e6) !important;
 	border-radius: 5px !important;
 	background-color: var(--cm-input-bg, #ffffff) !important;
@@ -789,20 +789,20 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	color: rgb(1, 26, 66) !important;
 }
 .ifp-modal-shell .form-select:not([multiple]):not([size]):focus,
-#invoice_modal_body .form-select:not([multiple]):not([size]):focus {
+#invoice_modal_body .form-select:not([multiple]):not([size]):focus, #purchase_modal_body .form-select:not([multiple]):not([size]):focus{
 	border-color: rgb(var(--primary-rgb)) !important;
 	box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
 	outline: none;
 }
 .ifp-modal-shell .form-select.is-invalid:not([multiple]):not([size]),
-#invoice_modal_body .form-select.is-invalid:not([multiple]):not([size]) {
+#invoice_modal_body .form-select.is-invalid:not([multiple]):not([size]), #purchase_modal_body .form-select.is-invalid:not([multiple]):not([size]){
 	border-color: #dc3545 !important;
 }
 /* Line grid: match .table-inv in invoice partial + listing (not the ultra-tight 2px / ~0.1rem pad) */
 .ifp-modal-shell .table-inv .form-select:not([multiple]):not([size]),
 .ifp-modal-shell .table-inv .form-control:not(textarea),
-#invoice_modal_body .table-inv .form-select:not([multiple]):not([size]),
-#invoice_modal_body .table-inv .form-control:not(textarea) {
+#invoice_modal_body .table-inv .form-select:not([multiple]):not([size]), #purchase_modal_body .table-inv .form-select:not([multiple]):not([size]),
+#invoice_modal_body .table-inv .form-control:not(textarea), #purchase_modal_body .table-inv .form-control:not(textarea){
 	min-height: calc(1.2em + 0.4rem) !important;
 	padding: 0.2rem 0.35rem !important;
 	font-size: 12px !important;
@@ -811,13 +811,13 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	box-sizing: border-box !important;
 }
 .ifp-modal-shell .table-inv .form-select:not([multiple]):not([size]),
-#invoice_modal_body .table-inv .form-select:not([multiple]):not([size]) {
+#invoice_modal_body .table-inv .form-select:not([multiple]):not([size]), #purchase_modal_body .table-inv .form-select:not([multiple]):not([size]){
 	padding-right: 1.15rem !important;
 	background-position: right 0.35rem center !important;
 	background-size: 10px 8px !important;
 }
 .ifp-modal-shell .table-inv textarea.form-control,
-#invoice_modal_body .table-inv textarea.form-control {
+#invoice_modal_body .table-inv textarea.form-control, #purchase_modal_body .table-inv textarea.form-control{
 	padding: 0.2rem 0.35rem !important;
 	margin: 0 !important;
 	min-height: 1.5rem !important;
@@ -827,6 +827,9 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 #customer_modal_body .form-control:not(textarea),
 #customer_modal_body textarea.form-control,
 #customer_modal_body .form-select:not([multiple]):not([size]),
+#supplier_modal_body .form-control:not(textarea),
+#supplier_modal_body textarea.form-control,
+#supplier_modal_body .form-select:not([multiple]):not([size]),
 #customer_modal_body .form-select[multiple],
 #customer_modal_body .form-select[size]:not([size="1"]),
 .customer-form-container .form-control:not(textarea),
@@ -888,7 +891,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	z-index: 1085 !important;
 }
 .ifp-modal-shell .ifp-col-tax-sro-header,
-#invoice_modal_body .ifp-col-tax-sro-header {
+#invoice_modal_body .ifp-col-tax-sro-header, #purchase_modal_body .ifp-col-tax-sro-header{
 	font-size: 0.65rem;
 	font-weight: 700;
 	text-transform: uppercase;
@@ -899,12 +902,12 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	border-bottom: 1px solid var(--cm-border-color, #e9ecef);
 }
 .ifp-modal-shell .ifp-col-tax-sro-header__title,
-#invoice_modal_body .ifp-col-tax-sro-header__title {
+#invoice_modal_body .ifp-col-tax-sro-header__title, #purchase_modal_body .ifp-col-tax-sro-header__title{
 	color: rgb(1, 26, 66);
 	font-size: 0.62rem;
 }
 .ifp-modal-shell .ifp-col-tax-sro-header__hint,
-#invoice_modal_body .ifp-col-tax-sro-header__hint {
+#invoice_modal_body .ifp-col-tax-sro-header__hint, #purchase_modal_body .ifp-col-tax-sro-header__hint{
 	font-weight: 500;
 	font-size: 0.54rem;
 	text-transform: none;
@@ -912,28 +915,28 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	color: #8b95a5;
 }
 .ifp-modal-shell .ifp-col-tax-sro,
-#invoice_modal_body .ifp-col-tax-sro {
+#invoice_modal_body .ifp-col-tax-sro, #purchase_modal_body .ifp-col-tax-sro{
 	min-width: 14rem;
 	max-width: none;
 	width: 14%;
 	vertical-align: middle !important;
 }
 .ifp-modal-shell .ifp-tax-sro-readonly-card,
-#invoice_modal_body .ifp-tax-sro-readonly-card {
+#invoice_modal_body .ifp-tax-sro-readonly-card, #purchase_modal_body .ifp-tax-sro-readonly-card{
 	border: 1px solid var(--cm-border-color, #e9ecef);
 	border-radius: 8px;
 	padding: 0.4rem 0.5rem;
 	background: linear-gradient(180deg, #fafbfc 0%, #f4f6f9 100%);
 }
 .ifp-modal-shell .ifp-tax-sro-dl,
-#invoice_modal_body .ifp-tax-sro-dl {
+#invoice_modal_body .ifp-tax-sro-dl, #purchase_modal_body .ifp-tax-sro-dl{
 	display: grid;
 	grid-template-columns: minmax(4.25rem, auto) 1fr;
 	gap: 0.15rem 0.45rem;
 	align-items: baseline;
 }
 .ifp-modal-shell .ifp-tax-sro-dl dt,
-#invoice_modal_body .ifp-tax-sro-dl dt {
+#invoice_modal_body .ifp-tax-sro-dl dt, #purchase_modal_body .ifp-tax-sro-dl dt{
 	margin: 0;
 	font-size: 0.6rem;
 	font-weight: 700;
@@ -942,7 +945,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	color: #868e96;
 }
 .ifp-modal-shell .ifp-tax-sro-dl dd,
-#invoice_modal_body .ifp-tax-sro-dl dd {
+#invoice_modal_body .ifp-tax-sro-dl dd, #purchase_modal_body .ifp-tax-sro-dl dd{
 	margin: 0;
 	font-size: 0.72rem;
 	font-weight: 500;
@@ -950,7 +953,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	line-height: 1.35;
 }
 .ifp-modal-shell button.ifp-tax-sro-open-btn,
-#invoice_modal_body button.ifp-tax-sro-open-btn {
+#invoice_modal_body button.ifp-tax-sro-open-btn, #purchase_modal_body button.ifp-tax-sro-open-btn{
 	background: transparent;
 	cursor: pointer;
 	display: inline-flex;
@@ -972,7 +975,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	box-sizing: border-box;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__icon,
-#invoice_modal_body .ifp-tax-sro-trigger__icon {
+#invoice_modal_body .ifp-tax-sro-trigger__icon, #purchase_modal_body .ifp-tax-sro-trigger__icon{
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -985,7 +988,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	flex-shrink: 0;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__text,
-#invoice_modal_body .ifp-tax-sro-trigger__text {
+#invoice_modal_body .ifp-tax-sro-trigger__text, #purchase_modal_body .ifp-tax-sro-trigger__text{
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -994,7 +997,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	flex: 1;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__sub,
-#invoice_modal_body .ifp-tax-sro-trigger__sub {
+#invoice_modal_body .ifp-tax-sro-trigger__sub, #purchase_modal_body .ifp-tax-sro-trigger__sub{
 	font-variant: JIS78;
 	display: flex;
 	flex-direction: row;
@@ -1008,7 +1011,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	line-height: 1.2;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__sep,
-#invoice_modal_body .ifp-tax-sro-trigger__sep {
+#invoice_modal_body .ifp-tax-sro-trigger__sep, #purchase_modal_body .ifp-tax-sro-trigger__sep{
 	flex-shrink: 0;
 	opacity: 0.45;
 	font-size: 0.5rem;
@@ -1016,7 +1019,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 }
 /* Sale type label gets more width; rate profile (e.g. "18%") stays narrower */
 .ifp-modal-shell .ifp-tax-sro-trigger__sale,
-#invoice_modal_body .ifp-tax-sro-trigger__sale {
+#invoice_modal_body .ifp-tax-sro-trigger__sale, #purchase_modal_body .ifp-tax-sro-trigger__sale{
 	flex: 3 1 0;
 	min-width: 0;
 	white-space: nowrap;
@@ -1024,7 +1027,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	text-overflow: ellipsis;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__rate,
-#invoice_modal_body .ifp-tax-sro-trigger__rate {
+#invoice_modal_body .ifp-tax-sro-trigger__rate, #purchase_modal_body .ifp-tax-sro-trigger__rate{
 	flex: 1 1 0;
 	min-width: 0;
 	max-width: 36%;
@@ -1033,19 +1036,19 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	text-overflow: ellipsis;
 }
 .ifp-modal-shell .ifp-tax-sro-trigger__chev,
-#invoice_modal_body .ifp-tax-sro-trigger__chev {
+#invoice_modal_body .ifp-tax-sro-trigger__chev, #purchase_modal_body .ifp-tax-sro-trigger__chev{
 	flex-shrink: 0;
 	font-size: 0.8rem;
 	line-height: 1;
 	opacity: 0.45;
 }
 .ifp-modal-shell button.ifp-tax-sro-open-btn:hover,
-#invoice_modal_body button.ifp-tax-sro-open-btn:hover {
+#invoice_modal_body button.ifp-tax-sro-open-btn:hover, #purchase_modal_body button.ifp-tax-sro-open-btn:hover{
 	border-color: rgba(var(--primary-rgb), 0.38);
 	box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.12);
 }
 .ifp-modal-shell button.ifp-tax-sro-open-btn:focus-visible,
-#invoice_modal_body button.ifp-tax-sro-open-btn:focus-visible {
+#invoice_modal_body button.ifp-tax-sro-open-btn:focus-visible, #purchase_modal_body button.ifp-tax-sro-open-btn:focus-visible{
 	outline: 2px solid rgb(var(--primary-rgb));
 	outline-offset: 2px;
 }
@@ -1064,7 +1067,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
 }
 .ifp-modal-shell .ifp-tax-sro-fields__head,
-#invoice_modal_body .ifp-tax-sro-fields__head {
+#invoice_modal_body .ifp-tax-sro-fields__head, #purchase_modal_body .ifp-tax-sro-fields__head{
 	padding: 0.45rem 0.75rem;
 	font-size: 0.62rem;
 	font-weight: 700;
@@ -1075,36 +1078,36 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	border-bottom: 1px solid var(--cm-border-color, #e9ecef);
 }
 .ifp-modal-shell .ifp-tax-sro-fields__body,
-#invoice_modal_body .ifp-tax-sro-fields__body {
+#invoice_modal_body .ifp-tax-sro-fields__body, #purchase_modal_body .ifp-tax-sro-fields__body{
 	padding: 0.65rem 0.75rem 0.75rem;
 }
 .ifp-modal-shell .ifp-tax-sro-field,
-#invoice_modal_body .ifp-tax-sro-field {
+#invoice_modal_body .ifp-tax-sro-field, #purchase_modal_body .ifp-tax-sro-field{
 	margin-bottom: 0.6rem;
 }
 .ifp-modal-shell .ifp-tax-sro-field--last,
-#invoice_modal_body .ifp-tax-sro-field--last {
+#invoice_modal_body .ifp-tax-sro-field--last, #purchase_modal_body .ifp-tax-sro-field--last{
 	margin-bottom: 0;
 }
 .ifp-modal-shell .ifp-tax-sro-fixed-row .ifp-tax-sro-field,
-#invoice_modal_body .ifp-tax-sro-fixed-row .ifp-tax-sro-field {
+#invoice_modal_body .ifp-tax-sro-fixed-row .ifp-tax-sro-field, #purchase_modal_body .ifp-tax-sro-fixed-row .ifp-tax-sro-field{
 	margin-bottom: 0;
 }
 .ifp-modal-shell .ifp-tax-sro-fixed-row,
-#invoice_modal_body .ifp-tax-sro-fixed-row {
+#invoice_modal_body .ifp-tax-sro-fixed-row, #purchase_modal_body .ifp-tax-sro-fixed-row{
 	margin-top: 0.15rem;
 }
 .ifp-modal-shell .ifp-tax-sro-fields__body .row,
-#invoice_modal_body .ifp-tax-sro-fields__body .row {
+#invoice_modal_body .ifp-tax-sro-fields__body .row, #purchase_modal_body .ifp-tax-sro-fields__body .row{
 	--bs-gutter-x: 0.65rem;
 	--bs-gutter-y: 0.55rem;
 }
 .ifp-modal-shell .ifp-tax-sro-fields__body .ifp-tax-sro-field,
-#invoice_modal_body .ifp-tax-sro-fields__body .ifp-tax-sro-field {
+#invoice_modal_body .ifp-tax-sro-fields__body .ifp-tax-sro-field, #purchase_modal_body .ifp-tax-sro-fields__body .ifp-tax-sro-field{
 	margin-bottom: 0;
 }
 .ifp-modal-shell .ifp-tax-sro-lbl,
-#invoice_modal_body .ifp-tax-sro-lbl {
+#invoice_modal_body .ifp-tax-sro-lbl, #purchase_modal_body .ifp-tax-sro-lbl{
 	display: block;
 	font-size: 0.65rem;
 	font-weight: 700;
@@ -1115,7 +1118,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 }
 /* Nested Tax & SRO modal only: show field labels in title case (HTML), not all-caps */
 .ifp-modal-shell .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
-#invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl {
+#invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl, #purchase_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl{
 	text-transform: none;
 	letter-spacing: 0.01em;
 	font-weight: 500;
@@ -1125,14 +1128,14 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 .ifp-tax-sro-nested-modal .modal-footer .btn,
 .ifp-tax-sro-nested-modal .ifp-tax-sro-fields__head,
 .ifp-modal-shell .ifp-tax-sro-nested-modal .ifp-tax-sro-fields__head,
-#invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-fields__head,
+#invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-fields__head, #purchase_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-fields__head,
 .ifp-tax-sro-nested-modal .ifp-tax-column-header,
 .ifp-tax-sro-nested-modal .ifp-tax-listbox-search,
 .ifp-tax-sro-nested-modal .ifp-inv-tax-listbox,
 .ifp-tax-sro-nested-modal .ifp-inv-tax-listbox option,
 .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
 .ifp-modal-shell .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
-#invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
+#invoice_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl, #purchase_modal_body .ifp-tax-sro-nested-modal .ifp-tax-sro-lbl,
 .ifp-tax-sro-nested-modal .form-control,
 .ifp-tax-sro-nested-modal .form-select,
 .ifp-tax-sro-nested-modal .form-check-input {
@@ -1199,12 +1202,16 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	transition: transform 0.28s ease-out, opacity 0.28s ease-out;
 }
 body.ifp-invoice-customer-open .modal-backdrop.show,
-body.ifp-invoice-product-open .modal-backdrop.show {
+body.ifp-invoice-product-open .modal-backdrop.show,
+body.ifp-purchase-product-open .modal-backdrop.show,
+body.ifp-purchase-supplier-open .modal-backdrop.show {
 	background-color: #0f172a;
 	opacity: 0.58 !important;
 }
 body.ifp-invoice-customer-open .modal-backdrop.show ~ .modal-backdrop.show,
-body.ifp-invoice-product-open .modal-backdrop.show ~ .modal-backdrop.show {
+body.ifp-invoice-product-open .modal-backdrop.show ~ .modal-backdrop.show,
+body.ifp-purchase-product-open .modal-backdrop.show ~ .modal-backdrop.show,
+body.ifp-purchase-supplier-open .modal-backdrop.show ~ .modal-backdrop.show {
 	opacity: 0.72 !important;
 }
 
