@@ -120,10 +120,10 @@
     <meta http-equiv="Expires" content="0">
     <title>{{ $printDocumentTitle }}</title>
     <style>
-        /* Uniform page gutter (top/bottom/left/right) — @page + .invoice-print padding for iframe preview */
-        @page { size: {{ $orientation }}; margin: 20mm; }
+        /* Page gutter: @page margins + .invoice-print side margins (iframe preview + print/PDF) */
+        @page { size: {{ $orientation }}; margin: 20px; }
         @media print {
-            @page { size: {{ $orientation }}; margin: 20mm; }
+            @page { size: {{ $orientation }}; margin: 20px; }
             html, body {
                 margin: 0 !important;
                 padding: 0 !important;
@@ -131,8 +131,14 @@
                 print-color-adjust: exact;
             }
             .invoice-print {
-                padding: 20mm !important;
-                max-width: none !important;
+                padding-top: 35px !important;
+                padding-bottom: 35px !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: 20px !important;
+                margin-right: 20px !important;
+                width: calc(100% - 40px) !important;
+                max-width: calc(100% - 40px) !important;
                 box-sizing: border-box !important;
             }
             .no-print { display: none !important; }
@@ -158,14 +164,32 @@
             table.items thead th {
                 font-size: 10px !important;
             }
+            /* Portrait PDF/print: keep Sales Tax Amount from overlapping adjacent columns */
+            body.orientation-portrait table.items col.col-tax { width: 12% !important; }
+            body.orientation-portrait table.items col.col-value,
+            body.orientation-portrait table.items col.col-inclusive { width: 11% !important; }
+            body.orientation-portrait table.items th.col-tax-amount,
+            body.orientation-portrait table.items td.col-tax-amount,
+            body.orientation-portrait table.items th.col-value-amount,
+            body.orientation-portrait table.items td.col-value-amount {
+                white-space: nowrap !important;
+                padding-left: 4px !important;
+                padding-right: 4px !important;
+                font-size: 11px !important;
+            }
         }
         * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #222; margin: 0; padding: 0; }
-        body.orientation-landscape .invoice-print { max-width: none; }
-        body.orientation-portrait .invoice-print { max-width: 210mm; margin: 0 auto; }
+        html, body { width: 100%; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #222; }
         .invoice-print {
-            max-width: 100%;
-            padding: 20mm;
+            width: calc(100% - 40px);
+            max-width: calc(100% - 40px);
+            padding-top: 35px;
+            padding-bottom: 35px;
+            padding-left: 0;
+            padding-right: 0;
+            margin-left: 20px;
+            margin-right: 20px;
             box-sizing: border-box;
         }
         .invoice-print-head {
@@ -267,20 +291,22 @@
             line-height: 1.35;
         }
         table.items { width: 100%; border-collapse: collapse; margin: 16px 0; table-layout: fixed; }
-        /* Column widths: description = HS code + product description text */
+        /* Column widths: amount columns (Value Excel ST, Sales Tax Amount, Inclusive) aligned for large figures */
         table.items col.col-idx { width: 4%; }
-        table.items col.col-desc { width: 22%; }
+        table.items col.col-desc { width: 20%; }
         table.items col.col-qty { width: 8%; }
         table.items col.col-uom { width: 10%; }
         table.items col.col-rate { width: 9%; }
-        table.items col.col-value { width: 9%; }
-        table.items col.col-fixed { width: 10%; }
-        table.items col.col-taxrate { width: 8%; }
-        table.items col.col-tax { width: 9%; }
+        table.items col.col-value { width: 11%; }
+        table.items col.col-fixed { width: 9%; }
+        table.items col.col-taxrate { width: 6%; }
+        table.items col.col-tax { width: 12%; }
         table.items col.col-inclusive { width: 11%; }
         /* When Fixed Notified column is hidden, redistribute its width */
-        table.items.items--no-fixed col.col-desc { width: 29%; }
-        table.items.items--no-fixed col.col-inclusive { width: 14%; }
+        table.items.items--no-fixed col.col-desc { width: 27%; }
+        table.items.items--no-fixed col.col-value { width: 11%; }
+        table.items.items--no-fixed col.col-tax { width: 12%; }
+        table.items.items--no-fixed col.col-inclusive { width: 12%; }
         table.items th, table.items td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; box-sizing: border-box; }
         table.items thead th,
         table.items thead th.num,
@@ -300,6 +326,15 @@
         }
         table.items td { font-size: 12px; hyphens: none; }
         table.items .num { text-align: right; }
+        table.items th.col-value-amount,
+        table.items td.col-value-amount,
+        table.items th.col-tax-amount,
+        table.items td.col-tax-amount {
+            text-align: right;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+            overflow: hidden;
+        }
         table.items .cell-mid { text-align: center; }
         /* Unit (UOM): enough padding + wrapping so text does not crowd the border */
         table.items th.cell-uom,
@@ -484,9 +519,15 @@
             @endif
             <div class="print-section-1-meta">
                 <table>
-                    <tr><th>Doc No.</th><td>{{ $invoice->DocNo ?? 'N/A' }}</td></tr>
-                    <tr><th>Invoice Date</th><td>{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : '-' }}</td></tr>
-                    <tr><th>FBR Invoice#</th><td>@if(trim((string) ($invoice->FbrTransactionID ?? '')) !== '')<strong>{{ $invoice->FbrTransactionID }}</strong>@else - @endif</td></tr>
+                    <tr><th>Doc No:</th><td>{{ $invoice->DocNo ?? 'N/A' }}</td></tr>
+                    @if(trim((string) ($invoice->DocNo2 ?? '')) !== '')
+                    <tr><th>Doc2 No:</th><td>{{ $invoice->DocNo2 }}</td></tr>
+                    @endif
+                    @if(trim((string) ($invoice->DocNo3 ?? '')) !== '')
+                    <tr><th>Doc3 No:</th><td>{{ $invoice->DocNo3 }}</td></tr>
+                    @endif
+                    <tr><th>Invoice Date:</th><td>{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : '-' }}</td></tr>
+                    <tr><th>FBR Invoice:</th><td>@if(trim((string) ($invoice->FbrTransactionID ?? '')) !== '')<strong>{{ $invoice->FbrTransactionID }}</strong>@else - @endif</td></tr>
                 </table>
             </div>
         </div>
@@ -575,13 +616,13 @@
                     <th class="num">Qty</th>
                     <th class="cell-uom">Unit</th>
                     <th class="num">Unit Rate</th>
-                    <th class="num">Value Excel ST</th>
+                    <th class="num col-value-amount">Value Excel ST</th>
                     @if($showFixedNotifiedColumn)
                     <th class="num th-col-fixed">Fixed<br>Notified<br>Value</th>
                     @endif
                     <th class="cell-mid">Sales Tax Rate</th>
-                    <th class="num">Sales Tax Amount</th>
-                    <th class="num th-inclusive">Value<br>Inclusive<br>Sales Tax</th>
+                    <th class="num col-tax-amount">Sales Tax Amount</th>
+                    <th class="num col-value-amount th-inclusive">Value<br>Inclusive<br>Sales Tax</th>
                 </tr>
             </thead>
             <tbody>
@@ -604,13 +645,13 @@
                     <td class="num">{{ $item->Quantity ?? 0 }}</td>
                     <td class="cell-uom">{{ trim((string) ($item->Uom_Desc ?? '')) !== '' ? $item->Uom_Desc : '—' }}</td>
                     <td class="num">{{ number_format((float) ($item->Rate ?? 0), 2) }}</td>
-                    <td class="num">{{ number_format((float) ($item->Amount ?? 0), 2) }}</td>
+                    <td class="num col-value-amount">{{ number_format((float) ($item->Amount ?? 0), 2) }}</td>
                     @if($showFixedNotifiedColumn)
                     <td class="num">{{ number_format((float) ($item->FixedNotifiedValueOrRetailPrice ?? 0), 2) }}</td>
                     @endif
                     <td class="cell-mid">{{ trim((string) ($item->SaleTypeToRateDesc ?? '')) !== '' ? $item->SaleTypeToRateDesc : '—' }}</td>
-                    <td class="num">{{ number_format($lineGst($item), 2) }}</td>
-                    <td class="num">{{ number_format($net, 2) }}</td>
+                    <td class="num col-tax-amount">{{ number_format((float) $lineGst($item), 2, '.', ',') }}</td>
+                    <td class="num col-value-amount">{{ number_format($net, 2) }}</td>
                 </tr>
                 @empty
                 <tr><td colspan="{{ $showFixedNotifiedColumn ? 10 : 9 }}" class="text-center">No line items.</td></tr>
