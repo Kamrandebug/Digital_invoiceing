@@ -164,6 +164,19 @@
             table.items thead th {
                 font-size: 10px !important;
             }
+            /* Portrait PDF/print: keep Sales Tax Amount from overlapping adjacent columns */
+            body.orientation-portrait table.items col.col-tax { width: 12% !important; }
+            body.orientation-portrait table.items col.col-value,
+            body.orientation-portrait table.items col.col-inclusive { width: 11% !important; }
+            body.orientation-portrait table.items th.col-tax-amount,
+            body.orientation-portrait table.items td.col-tax-amount,
+            body.orientation-portrait table.items th.col-value-amount,
+            body.orientation-portrait table.items td.col-value-amount {
+                white-space: nowrap !important;
+                padding-left: 4px !important;
+                padding-right: 4px !important;
+                font-size: 11px !important;
+            }
         }
         * { box-sizing: border-box; }
         html, body { width: 100%; margin: 0; padding: 0; }
@@ -278,20 +291,21 @@
             line-height: 1.35;
         }
         table.items { width: 100%; border-collapse: collapse; margin: 16px 0; table-layout: fixed; }
-        /* Column widths: Value Excel ST and Value Inclusive Sales Tax share the same width */
+        /* Column widths: amount columns (Value Excel ST, Sales Tax Amount, Inclusive) aligned for large figures */
         table.items col.col-idx { width: 4%; }
-        table.items col.col-desc { width: 21%; }
+        table.items col.col-desc { width: 20%; }
         table.items col.col-qty { width: 8%; }
         table.items col.col-uom { width: 10%; }
         table.items col.col-rate { width: 9%; }
         table.items col.col-value { width: 11%; }
-        table.items col.col-fixed { width: 10%; }
-        table.items col.col-taxrate { width: 8%; }
-        table.items col.col-tax { width: 8%; }
+        table.items col.col-fixed { width: 9%; }
+        table.items col.col-taxrate { width: 6%; }
+        table.items col.col-tax { width: 12%; }
         table.items col.col-inclusive { width: 11%; }
         /* When Fixed Notified column is hidden, redistribute its width */
-        table.items.items--no-fixed col.col-desc { width: 28%; }
-        table.items.items--no-fixed col.col-value { width: 12%; }
+        table.items.items--no-fixed col.col-desc { width: 27%; }
+        table.items.items--no-fixed col.col-value { width: 11%; }
+        table.items.items--no-fixed col.col-tax { width: 12%; }
         table.items.items--no-fixed col.col-inclusive { width: 12%; }
         table.items th, table.items td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; box-sizing: border-box; }
         table.items thead th,
@@ -313,10 +327,13 @@
         table.items td { font-size: 12px; hyphens: none; }
         table.items .num { text-align: right; }
         table.items th.col-value-amount,
-        table.items td.col-value-amount {
+        table.items td.col-value-amount,
+        table.items th.col-tax-amount,
+        table.items td.col-tax-amount {
             text-align: right;
             white-space: nowrap;
             font-variant-numeric: tabular-nums;
+            overflow: hidden;
         }
         table.items .cell-mid { text-align: center; }
         /* Unit (UOM): enough padding + wrapping so text does not crowd the border */
@@ -604,7 +621,7 @@
                     <th class="num th-col-fixed">Fixed<br>Notified<br>Value</th>
                     @endif
                     <th class="cell-mid">Sales Tax Rate</th>
-                    <th class="num">Sales Tax Amount</th>
+                    <th class="num col-tax-amount">Sales Tax Amount</th>
                     <th class="num col-value-amount th-inclusive">Value<br>Inclusive<br>Sales Tax</th>
                 </tr>
             </thead>
@@ -633,7 +650,7 @@
                     <td class="num">{{ number_format((float) ($item->FixedNotifiedValueOrRetailPrice ?? 0), 2) }}</td>
                     @endif
                     <td class="cell-mid">{{ trim((string) ($item->SaleTypeToRateDesc ?? '')) !== '' ? $item->SaleTypeToRateDesc : '—' }}</td>
-                    <td class="num">{{ number_format($lineGst($item), 2) }}</td>
+                    <td class="num col-tax-amount">{{ number_format((float) $lineGst($item), 2, '.', ',') }}</td>
                     <td class="num col-value-amount">{{ number_format($net, 2) }}</td>
                 </tr>
                 @empty
