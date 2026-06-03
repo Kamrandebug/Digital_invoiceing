@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PurchaseModel;
+use App\Services\PurchaseBreakupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -28,6 +29,8 @@ class PurchaseController extends Controller
         if (! empty($rules)) {
             $request->validate($rules);
         }
+
+        app(PurchaseBreakupService::class)->expireStaleProcessingJobs();
 
         $purchases = PurchaseModel::getlistingdata($filters)->paginate(15);
 

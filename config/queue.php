@@ -36,7 +36,8 @@ return [
 
         'database' => [
             'driver' => 'database',
-            'connection' => env('DB_QUEUE_CONNECTION'),
+            // Must not use the runtime default: tenant middleware sets default to `tenant`.
+            'connection' => env('DB_QUEUE_CONNECTION', 'landlord'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
@@ -86,7 +87,7 @@ return [
     */
 
     'batching' => [
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'database' => env('DB_QUEUE_BATCHING_CONNECTION', env('DB_QUEUE_CONNECTION', 'landlord')),
         'table' => 'job_batches',
     ],
 
@@ -105,7 +106,7 @@ return [
 
     'failed' => [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'database' => env('DB_QUEUE_FAILED_CONNECTION', env('DB_QUEUE_CONNECTION', 'landlord')),
         'table' => 'failed_jobs',
     ],
 

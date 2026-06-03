@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PurchaseBreakupService;
 use App\Services\StockService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -40,8 +41,27 @@ class PurchaseModel extends Model
 
     public static function getlistingdata(array $filters = [])
     {
+        $latestBreakupSub = DB::table('purchase_breakup_jobs as bj_inner')
+            ->select('bj_inner.purchase_id', DB::raw('MAX(bj_inner.version_no) as max_version'))
+            ->groupBy('bj_inner.purchase_id');
+
+        $lineCountSub = DB::table('tbl_purchase_detail')
+            ->select('PurchaseID', DB::raw('COUNT(*) as PurchaseLineCount'))
+            ->where('Status', '!=', 2)
+            ->groupBy('PurchaseID');
+
         $query = DB::table('tbl_purchase_header as h')
             ->leftJoin('tbl_customer as sup', 'h.SupplierID', '=', 'sup.ID')
+            ->leftJoinSub($lineCountSub, 'plc', function ($join) {
+                $join->on('plc.PurchaseID', '=', 'h.ID');
+            })
+            ->leftJoinSub($latestBreakupSub, 'bj_max', function ($join) {
+                $join->on('bj_max.purchase_id', '=', 'h.ID');
+            })
+            ->leftJoin('purchase_breakup_jobs as bj', function ($join) {
+                $join->on('bj.purchase_id', '=', 'h.ID')
+                    ->on('bj.version_no', '=', 'bj_max.max_version');
+            })
             ->select(
                 'h.ID as HeaderID',
                 'h.DocNo',
@@ -52,7 +72,12 @@ class PurchaseModel extends Model
                 'h.SubTotal',
                 'h.TotalAmount',
                 'h.CreatedOn',
-                self::sqlSupplierDisplayName()
+                self::sqlSupplierDisplayName(),
+                DB::raw('COALESCE(plc.PurchaseLineCount, 0) as PurchaseLineCount'),
+                'bj.id as BreakupJobId',
+                'bj.breakup_status as BreakupStatus',
+                'bj.version_no as BreakupVersion',
+                'bj.total_rows as BreakupTotalRows'
             )
             ->where('h.Status', '!=', 2);
 
@@ -281,6 +306,13 @@ class PurchaseModel extends Model
 
             $stock->applyPurchaseLines($newLines);
         });
+
+        $newLines = DB::table('tbl_purchase_detail')
+            ->where('PurchaseID', $tid)
+            ->where('Status', '!=', 2)
+            ->get(['ProductID', 'Quantity', 'Rate']);
+
+        app(PurchaseBreakupService::class)->expireIfMaterialChange((int) $tid, $oldLines, $newLines);
 
         return ['status' => true, 'message' => null];
     }

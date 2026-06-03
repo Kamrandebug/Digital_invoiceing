@@ -336,6 +336,12 @@ window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    function formatLineDecimal(el) {
+        if (!el || el.value === '') return;
+        const v = parseFloat(el.value);
+        if (!isNaN(v)) el.value = v.toFixed(2);
+    }
+
     function recalc() {
         let total = 0;
         body.querySelectorAll('tr.ifp-row').forEach(row => {
@@ -355,11 +361,13 @@ window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
             const opt = this.selectedOptions[0];
             const cost = opt ? parseFloat(opt.dataset.cost || 0) : 0;
             const rate = row.querySelector('.line-rate');
-            if (rate && !rate.dataset.touched) rate.value = cost.toFixed(6);
+            if (rate && !rate.dataset.touched) rate.value = cost.toFixed(2);
             recalc();
         });
         row.querySelector('.line-qty')?.addEventListener('input', recalc);
+        row.querySelector('.line-qty')?.addEventListener('blur', function() { formatLineDecimal(this); recalc(); });
         row.querySelector('.line-rate')?.addEventListener('input', function() { this.dataset.touched = '1'; recalc(); });
+        row.querySelector('.line-rate')?.addEventListener('blur', function() { formatLineDecimal(this); recalc(); });
         row.querySelector('.btn-remove-line')?.addEventListener('click', function() {
             if (body.querySelectorAll('tr.ifp-row').length <= 1) return;
             row.remove();
@@ -386,8 +394,8 @@ window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
             '<button type="button" class="btn btn-sm btn-primary ifp-line-add-entity-btn flex-shrink-0 ifp-new-product-btn" title="New product" aria-label="New product"><i class="ri-add-line"></i></button>' +
             '</div></td>' +
             '<td class="ifp-col-desc"><textarea name="items[' + i + '][Details]" rows="1" class="form-control form-control-sm ifp-details line-details" placeholder="Enter Description"></textarea></td>' +
-            '<td class="ifp-col-qty"><input type="number" name="items[' + i + '][Quantity]" class="form-control form-control-sm ifp-qty line-qty" value="1" min="0" step="0.000001"></td>' +
-            '<td class="ifp-col-sale-rate"><input type="number" step="0.000001" name="items[' + i + '][Rate]" class="form-control form-control-sm ifp-rate line-rate" value="0" min="0"></td>' +
+            '<td class="ifp-col-qty"><input type="number" name="items[' + i + '][Quantity]" class="form-control form-control-sm ifp-qty line-qty" value="1.00" min="0" step="0.01"></td>' +
+            '<td class="ifp-col-sale-rate"><input type="number" step="0.01" name="items[' + i + '][Rate]" class="form-control form-control-sm ifp-rate line-rate" value="0.00" min="0"></td>' +
             '<td class="ifp-col-amount"><input type="number" step="0.01" name="items[' + i + '][Amount]" class="form-control form-control-sm ifp-amount line-amount" value="0" readonly></td>' +
             '<td class="ifp-col-actions"><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del btn-remove-line"><i class="ri-delete-bin-5-line"></i></button></td>';
         body.appendChild(tr);
@@ -395,7 +403,11 @@ window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
         recalc();
     }
 
-    body.querySelectorAll('tr.ifp-row').forEach(bindRow);
+    body.querySelectorAll('tr.ifp-row').forEach(function (row) {
+        bindRow(row);
+        formatLineDecimal(row.querySelector('.line-qty'));
+        formatLineDecimal(row.querySelector('.line-rate'));
+    });
     document.getElementById(uid + '_addRow')?.addEventListener('click', addLine);
     recalc();
 

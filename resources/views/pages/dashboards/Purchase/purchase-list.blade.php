@@ -19,6 +19,19 @@
     #purchasesTable .dropdown-menu {
         z-index: 1060;
     }
+    #breakupPreviewModal .modal-dialog {
+        max-height: calc(100vh - 2rem);
+    }
+    #breakupPreviewModal .modal-content {
+        max-height: calc(100vh - 2rem);
+        display: flex;
+        flex-direction: column;
+    }
+    #breakupPreviewModal .modal-body {
+        overflow: hidden;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
 </style>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.0/dist/css/bootstrap-datepicker3.min.css" rel="stylesheet">
 @endsection
@@ -148,6 +161,7 @@
                             <th width="25%">Supplier</th>
                             <th>Doc No <i class="fas fa-sort"></i></th>
                             <th>Total</th>
+                            <th>Breakup</th>
                             <th class="action-col">Action</th>
                         </tr>
                     </thead>
@@ -162,6 +176,22 @@
                             <td>{{ $purchase->SupplierDisplayName ?? 'N/A' }}</td>
                             <td>{{ $purchase->DocNo ?? '-' }}</td>
                             <td>{{ number_format($purchase->TotalAmount ?? 0, 2) }} PKR</td>
+                            @php
+                                $lineCount = (int) ($purchase->PurchaseLineCount ?? 0);
+                                $singleLine = $lineCount === 1;
+                                $breakupStatus = $singleLine
+                                    ? (int) ($purchase->BreakupStatus ?? \App\Services\PurchaseBreakupService::STATUS_NOT_GENERATED)
+                                    : -1;
+                                $breakupSvc = app(\App\Services\PurchaseBreakupService::class);
+                                $breakupLabel = $breakupSvc->statusLabel($breakupStatus >= 0 ? $breakupStatus : null, $singleLine);
+                                $breakupBadge = $breakupSvc->statusBadgeClass($breakupStatus >= 0 ? $breakupStatus : null, $singleLine);
+                            @endphp
+                            <td @if($breakupStatus === \App\Services\PurchaseBreakupService::STATUS_PROCESSING) data-breakup-processing="1" data-purchase-id="{{ $purchase->HeaderID }}" @endif>
+                                <span class="badge rounded-pill {{ $breakupBadge }}"
+                                      @if(!$singleLine) title="Breakup requires exactly one line item" @endif>
+                                    {{ $breakupLabel }}
+                                </span>
+                            </td>
                             <td>
                                 <div class="action-wrapper d-inline-flex justify-content-end">
                                     <div class="btn-group btn-listing">
@@ -184,6 +214,54 @@
                                                     <i class="fas fa-edit"></i> Edit
                                                 </button>
                                             </li>
+                                            @if($singleLine)
+                                                @if($breakupStatus === \App\Services\PurchaseBreakupService::STATUS_NOT_GENERATED || $breakupStatus === \App\Services\PurchaseBreakupService::STATUS_FAILED)
+                                                    <li>
+                                                        <button type="button" class="dropdown-item"
+                                                                onclick="openBreakupGenerateModal({{ $purchase->HeaderID }}, '{{ addslashes($purchase->DocNo ?? '') }}', false)">
+                                                            <i class="fas fa-random"></i> Generate Breakup
+                                                        </button>
+                                                    </li>
+                                                @elseif($breakupStatus === \App\Services\PurchaseBreakupService::STATUS_PROCESSING)
+                                                    <li>
+                                                        <span class="dropdown-item text-muted">
+                                                            <i class="fas fa-spinner"></i> Processing…
+                                                        </span>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item"
+                                                                onclick="openBreakupGenerateModal({{ $purchase->HeaderID }}, '{{ addslashes($purchase->DocNo ?? '') }}', true)">
+                                                            <i class="fas fa-redo"></i> Retry (stuck?)
+                                                        </button>
+                                                    </li>
+                                                @elseif($breakupStatus === \App\Services\PurchaseBreakupService::STATUS_GENERATED)
+                                                    <li>
+                                                        <button type="button" class="dropdown-item"
+                                                                onclick="openBreakupPreview({{ $purchase->HeaderID }})">
+                                                            <i class="fas fa-table"></i> Preview
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ route('purchases.breakup.download', $purchase->HeaderID) }}">
+                                                            <i class="fas fa-file-excel"></i> Download Excel
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item"
+                                                                onclick="openBreakupGenerateModal({{ $purchase->HeaderID }}, '{{ addslashes($purchase->DocNo ?? '') }}', true)">
+                                                            <i class="fas fa-redo"></i> Regenerate
+                                                        </button>
+                                                    </li>
+                                                @elseif($breakupStatus === \App\Services\PurchaseBreakupService::STATUS_EXPIRED)
+                                                    <li>
+                                                        <button type="button" class="dropdown-item"
+                                                                onclick="openBreakupGenerateModal({{ $purchase->HeaderID }}, '{{ addslashes($purchase->DocNo ?? '') }}', true)">
+                                                            <i class="fas fa-redo"></i> Regenerate
+                                                        </button>
+                                                    </li>
+                                                @endif
+                                            @endif
+                                            <li><hr class="dropdown-divider"></li>
                                             <li>
                                                 <button type="button"
                                                         class="dropdown-item text-danger"
@@ -204,7 +282,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5" class="text-center py-5">
+                            <td colspan="6" class="text-center py-5">
                                 <i class="fas fa-shopping-cart fa-3x text-muted mb-3 d-block"></i>
                                 <p class="text-muted mb-2">No purchases found.</p>
                                 @if(!request('search') && !request('start_date') && !request('end_date'))
@@ -259,6 +337,70 @@
     </div>
 </div>
 
+<div class="modal fade" id="breakupGenerateModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold" id="breakupGenerateModalTitle">Generate Breakup</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted fs-12 mb-3">Purchase: <strong id="breakupGenerateDocNo"></strong></p>
+                <div id="breakupGenerateAlert" class="alert alert-danger d-none" role="alert"></div>
+                <form id="breakupGenerateForm">
+                    <div class="mb-3">
+                        <label class="form-label">Min Invoice Amount</label>
+                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm"
+                               name="min_invoice_amount" id="breakupMinAmount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Max Invoice Amount</label>
+                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm"
+                               name="max_invoice_amount" id="breakupMaxAmount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Invoice Prefix</label>
+                        <input type="text" class="form-control form-control-sm" name="invoice_prefix"
+                               id="breakupInvoicePrefix" value="INV" maxlength="50" required>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" name="allow_decimal_qty"
+                               id="breakupAllowDecimal" value="1">
+                        <label class="form-check-label" for="breakupAllowDecimal">Allow decimal qty</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="breakupGenerateSubmitBtn">
+                    <i class="fas fa-random"></i> <span id="breakupGenerateSubmitLabel">Generate</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="breakupPreviewModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold">Breakup Preview</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="breakupPreviewBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="deletePurchaseModal" tabindex="-1" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog">
@@ -284,6 +426,154 @@
 <script>
 let deletePurchaseId = null;
 let searchTimer = null;
+let breakupPurchaseId = null;
+let breakupIsRegenerate = false;
+let breakupPollTimer = null;
+const BREAKUP_STATUS_PROCESSING = 1;
+const breakupGenerateUrl = '{{ url("/purchases") }}';
+const breakupCsrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
+function applyBreakupFormSettings(settings) {
+    if (!settings) return;
+    if (settings.min_invoice_amount != null) {
+        document.getElementById('breakupMinAmount').value = settings.min_invoice_amount;
+    }
+    if (settings.max_invoice_amount != null) {
+        document.getElementById('breakupMaxAmount').value = settings.max_invoice_amount;
+    }
+    if (settings.invoice_prefix) {
+        document.getElementById('breakupInvoicePrefix').value = settings.invoice_prefix;
+    }
+    document.getElementById('breakupAllowDecimal').checked = !!settings.allow_decimal_qty;
+}
+
+function openBreakupGenerateModal(purchaseId, docNo, isRegenerate) {
+    breakupPurchaseId = purchaseId;
+    breakupIsRegenerate = !!isRegenerate;
+    document.getElementById('breakupGenerateDocNo').textContent = docNo || '';
+    document.getElementById('breakupGenerateModalTitle').textContent = isRegenerate ? 'Regenerate Breakup' : 'Generate Breakup';
+    document.getElementById('breakupGenerateSubmitLabel').textContent = isRegenerate ? 'Regenerate' : 'Generate';
+    document.getElementById('breakupGenerateAlert').classList.add('d-none');
+    document.getElementById('breakupGenerateForm').reset();
+    document.getElementById('breakupInvoicePrefix').value = 'INV';
+
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('breakupGenerateModal'));
+    const submitBtn = document.getElementById('breakupGenerateSubmitBtn');
+    submitBtn.disabled = true;
+
+    fetch(breakupGenerateUrl + '/' + purchaseId + '/breakup/settings', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+        if (data.settings) {
+            applyBreakupFormSettings(data.settings);
+        }
+    })
+    .catch(function () { /* keep defaults */ })
+    .finally(function () {
+        submitBtn.disabled = false;
+        modal.show();
+    });
+}
+
+function openBreakupPreview(purchaseId) {
+    const body = document.getElementById('breakupPreviewBody');
+    body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('breakupPreviewModal')).show();
+
+    fetch(breakupGenerateUrl + '/' + purchaseId + '/breakup/preview', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function (res) {
+        if (!res.ok) throw new Error('Preview not available');
+        return res.text();
+    })
+    .then(function (html) {
+        body.innerHTML = html;
+    })
+    .catch(function (err) {
+        body.innerHTML = '<div class="alert alert-danger m-0">' + err.message + '</div>';
+    });
+}
+
+document.getElementById('breakupGenerateSubmitBtn')?.addEventListener('click', function () {
+    if (!breakupPurchaseId) return;
+
+    const alertEl = document.getElementById('breakupGenerateAlert');
+    const btn = this;
+    const form = document.getElementById('breakupGenerateForm');
+    const fd = new FormData(form);
+    if (!document.getElementById('breakupAllowDecimal').checked) {
+        fd.delete('allow_decimal_qty');
+    } else {
+        fd.set('allow_decimal_qty', '1');
+    }
+
+    const path = breakupIsRegenerate ? '/breakup/regenerate' : '/breakup/generate';
+    btn.disabled = true;
+    alertEl.classList.add('d-none');
+
+    fetch(breakupGenerateUrl + '/' + breakupPurchaseId + path, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': breakupCsrf,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: fd
+    })
+    .then(function (res) {
+        return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.message || 'Request failed');
+            return data;
+        });
+    })
+    .then(function () {
+        bootstrap.Modal.getInstance(document.getElementById('breakupGenerateModal'))?.hide();
+        window.location.reload();
+    })
+    .catch(function (err) {
+        alertEl.textContent = err.message || 'Generation failed';
+        alertEl.classList.remove('d-none');
+    })
+    .finally(function () {
+        btn.disabled = false;
+    });
+});
+
+function startBreakupPolling() {
+    const processingRows = document.querySelectorAll('[data-breakup-processing="1"]');
+    if (processingRows.length === 0) return;
+
+    if (breakupPollTimer) clearInterval(breakupPollTimer);
+    breakupPollTimer = setInterval(function () {
+        let anyProcessing = false;
+        const checks = [];
+
+        processingRows.forEach(function (el) {
+            const id = el.getAttribute('data-purchase-id');
+            checks.push(
+                fetch(breakupGenerateUrl + '/' + id + '/breakup/status', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.breakup_status === BREAKUP_STATUS_PROCESSING) {
+                        anyProcessing = true;
+                    }
+                })
+            );
+        });
+
+        Promise.all(checks).then(function () {
+            if (!anyProcessing) {
+                clearInterval(breakupPollTimer);
+                window.location.reload();
+            }
+        });
+    }, 5000);
+}
 
 function debounceSearch() {
     clearTimeout(searchTimer);
@@ -369,6 +659,8 @@ function openPurchaseModal(mode, purchaseId) {
 }
 
 $(function () {
+    startBreakupPolling();
+
     $('.filter-date-picker').datepicker({
         format: 'yyyy-mm-dd',
         todayHighlight: true,

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\PurchaseBreakupController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\DashboardsController;
@@ -100,6 +101,15 @@ Route::middleware(['auth', 'tenant'])->prefix('purchases')->name('purchases.')->
 
     Route::get('/export/csv', [PurchaseController::class, 'exportCSV'])->name('export-csv');
     Route::get('/modal', [PurchaseController::class, 'modal'])->name('modal');
+
+    Route::post('/{id}/breakup/generate', [PurchaseBreakupController::class, 'generate'])
+        ->middleware('tenant.role:owner,admin,accountant')->name('breakup.generate');
+    Route::post('/{id}/breakup/regenerate', [PurchaseBreakupController::class, 'regenerate'])
+        ->middleware('tenant.role:owner,admin,accountant')->name('breakup.regenerate');
+    Route::get('/{id}/breakup/preview', [PurchaseBreakupController::class, 'preview'])->name('breakup.preview');
+    Route::get('/{id}/breakup/download', [PurchaseBreakupController::class, 'download'])->name('breakup.download');
+    Route::get('/{id}/breakup/settings', [PurchaseBreakupController::class, 'settings'])->name('breakup.settings');
+    Route::get('/{id}/breakup/status', [PurchaseBreakupController::class, 'status'])->name('breakup.status');
 
     Route::get('/{id}/edit', [PurchaseController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
     Route::put('/{id}/update', [PurchaseController::class, 'edit_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('edit_transaction');

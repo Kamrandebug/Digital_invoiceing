@@ -38,20 +38,28 @@
     </td>
     <td class="ifp-col-qty">
         @if($readonly)
-            <span class="small">{{ number_format($item->Quantity ?? 0, 4) }}</span>
+            <span class="small">{{ number_format((float) ($item->Quantity ?? 0), 2) }}</span>
         @else
+            @php
+                $qtyVal = old('items.'.$nameIdx.'.Quantity', $item->Quantity ?? 1);
+                $qtyDisplay = is_numeric($qtyVal) ? number_format((float) $qtyVal, 2, '.', '') : $qtyVal;
+            @endphp
             <input type="number" name="items[{{ $nameIdx }}][Quantity]"
                    class="form-control form-control-sm ifp-qty line-qty"
-                   value="{{ old('items.'.$nameIdx.'.Quantity', $item->Quantity ?? 1) }}" min="0" step="0.000001">
+                   value="{{ $qtyDisplay }}" min="0" step="0.01">
         @endif
     </td>
     <td class="ifp-col-sale-rate">
         @if($readonly)
-            <span class="small">{{ number_format($item->Rate ?? 0, 2) }}</span>
+            <span class="small">{{ number_format((float) ($item->Rate ?? 0), 2) }}</span>
         @else
-            <input type="number" step="0.000001" name="items[{{ $nameIdx }}][Rate]"
+            @php
+                $rateVal = old('items.'.$nameIdx.'.Rate', $item->Rate ?? 0);
+                $rateDisplay = is_numeric($rateVal) ? number_format((float) $rateVal, 2, '.', '') : $rateVal;
+            @endphp
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][Rate]"
                    class="form-control form-control-sm ifp-rate line-rate"
-                   value="{{ old('items.'.$nameIdx.'.Rate', $item->Rate ?? 0) }}" min="0">
+                   value="{{ $rateDisplay }}" min="0">
         @endif
     </td>
     <td class="ifp-col-amount">
