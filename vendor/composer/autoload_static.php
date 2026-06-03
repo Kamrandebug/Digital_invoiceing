@@ -633,9 +633,13 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
         'App\\Http\\Controllers\\PagesController' => __DIR__ . '/../..' . '/app/Http/Controllers/PagesController.php',
         'App\\Http\\Controllers\\ProductController' => __DIR__ . '/../..' . '/app/Http/Controllers/ProductController.php',
         'App\\Http\\Controllers\\ProfileController' => __DIR__ . '/../..' . '/app/Http/Controllers/ProfileController.php',
+<<<<<<< HEAD
         'App\\Http\\Controllers\\PurchaseController' => __DIR__ . '/../..' . '/app/Http/Controllers/PurchaseController.php',
         'App\\Http\\Controllers\\SaleReportController' => __DIR__ . '/../..' . '/app/Http/Controllers/SaleReportController.php',
         'App\\Http\\Controllers\\SupplierController' => __DIR__ . '/../..' . '/app/Http/Controllers/SupplierController.php',
+=======
+        'App\\Http\\Controllers\\SaleReportController' => __DIR__ . '/../..' . '/app/Http/Controllers/SaleReportController.php',
+>>>>>>> main
         'App\\Http\\Controllers\\TablesController' => __DIR__ . '/../..' . '/app/Http/Controllers/TablesController.php',
         'App\\Http\\Controllers\\TenantListController' => __DIR__ . '/../..' . '/app/Http/Controllers/TenantListController.php',
         'App\\Http\\Controllers\\WidgetsController' => __DIR__ . '/../..' . '/app/Http/Controllers/WidgetsController.php',

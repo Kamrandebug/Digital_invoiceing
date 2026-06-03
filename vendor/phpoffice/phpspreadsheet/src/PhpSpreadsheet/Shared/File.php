@@ -2,6 +2,10 @@
 
 namespace PhpOffice\PhpSpreadsheet\Shared;
 
+<<<<<<< HEAD
+=======
+use Composer\Pcre\Preg;
+>>>>>>> main
 use PhpOffice\PhpSpreadsheet\Exception;
 use PhpOffice\PhpSpreadsheet\Reader\Exception as ReaderException;
 use ZipArchive;
@@ -141,6 +145,7 @@ class File
     }
 
     /**
+<<<<<<< HEAD
      * All filenames starting with protocol (e.g. phar://) are prohibited.
      * Note that many protocols, including http and zip, will already
      * return false for is_file.
@@ -154,6 +159,24 @@ class File
         if (is_string($scheme) && strlen($scheme) > 1) {
             throw new Exception(
                 "Stream wrappers are not permitted as file paths: {$filename}"
+=======
+     * Blocks phar:// and similar RCE-bearing wrappers.
+     * Note that many protocols, including http and zip, will already
+     * return false for is_file.
+     * A whitelist of protocols may be added if needed in future.
+     * data: is intentionally allowed; callers needing strict
+     * on-disk-only semantics must validate $filename themselves.
+     */
+    public static function prohibitWrappers(string $filename): void
+    {
+        if (
+            Preg::IsMatch('~^phar://~i', $filename)
+            || (Preg::isMatch('/^([\w.\s\x00-\x1f]+):/', $filename) && !Preg::isMatch('/^([\w.]+):/', $filename))
+            || Preg::isMatch('~^[\w.]+://.*phar:~is', $filename)
+        ) {
+            throw new Exception(
+                "Disallowed stream wrapper: {$filename}"
+>>>>>>> main
             );
         }
     }

@@ -28,9 +28,13 @@ return array(
     'App\\Http\\Controllers\\PagesController' => $baseDir . '/app/Http/Controllers/PagesController.php',
     'App\\Http\\Controllers\\ProductController' => $baseDir . '/app/Http/Controllers/ProductController.php',
     'App\\Http\\Controllers\\ProfileController' => $baseDir . '/app/Http/Controllers/ProfileController.php',
+<<<<<<< HEAD
     'App\\Http\\Controllers\\PurchaseController' => $baseDir . '/app/Http/Controllers/PurchaseController.php',
     'App\\Http\\Controllers\\SaleReportController' => $baseDir . '/app/Http/Controllers/SaleReportController.php',
     'App\\Http\\Controllers\\SupplierController' => $baseDir . '/app/Http/Controllers/SupplierController.php',
+=======
+    'App\\Http\\Controllers\\SaleReportController' => $baseDir . '/app/Http/Controllers/SaleReportController.php',
+>>>>>>> main
     'App\\Http\\Controllers\\TablesController' => $baseDir . '/app/Http/Controllers/TablesController.php',
     'App\\Http\\Controllers\\TenantListController' => $baseDir . '/app/Http/Controllers/TenantListController.php',
     'App\\Http\\Controllers\\WidgetsController' => $baseDir . '/app/Http/Controllers/WidgetsController.php',
