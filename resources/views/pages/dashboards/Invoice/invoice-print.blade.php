@@ -168,9 +168,7 @@
             body.orientation-portrait table.items col.col-tax { width: 12% !important; }
             body.orientation-portrait table.items col.col-value,
             body.orientation-portrait table.items col.col-inclusive { width: 11% !important; }
-            body.orientation-portrait table.items th.col-tax-amount,
             body.orientation-portrait table.items td.col-tax-amount,
-            body.orientation-portrait table.items th.col-value-amount,
             body.orientation-portrait table.items td.col-value-amount {
                 white-space: nowrap !important;
                 padding-left: 4px !important;
@@ -326,9 +324,7 @@
         }
         table.items td { font-size: 12px; hyphens: none; }
         table.items .num { text-align: right; }
-        table.items th.col-value-amount,
         table.items td.col-value-amount,
-        table.items th.col-tax-amount,
         table.items td.col-tax-amount {
             text-align: right;
             white-space: nowrap;
@@ -616,12 +612,12 @@
                     <th class="num">Qty</th>
                     <th class="cell-uom">Unit</th>
                     <th class="num">Unit Rate</th>
-                    <th class="num col-value-amount">Value Excel ST</th>
+                    <th class="num col-value-amount th-inclusive">Value<br>Excel<br>ST</th>
                     @if($showFixedNotifiedColumn)
                     <th class="num th-col-fixed">Fixed<br>Notified<br>Value</th>
                     @endif
                     <th class="cell-mid">Sales Tax Rate</th>
-                    <th class="num col-tax-amount">Sales Tax Amount</th>
+                    <th class="num col-tax-amount th-inclusive">Sales<br>Tax<br>Amount</th>
                     <th class="num col-value-amount th-inclusive">Value<br>Inclusive<br>Sales Tax</th>
                 </tr>
             </thead>
