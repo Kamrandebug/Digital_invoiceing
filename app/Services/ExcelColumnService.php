@@ -15,7 +15,7 @@ class ExcelColumnService
         return [
             ['column_label' => 'Invoice No', 'db_column_name' => 'invoice_no', 'sequence_no' => 1, 'is_visible' => 1, 'excel_width' => 18, 'alignment' => 'left'],
             ['column_label' => 'Date', 'db_column_name' => 'invoice_date', 'sequence_no' => 2, 'is_visible' => 1, 'excel_width' => 14, 'alignment' => 'center'],
-            ['column_label' => 'Supplier', 'db_column_name' => 'supplier_name', 'sequence_no' => 3, 'is_visible' => 1, 'excel_width' => 25, 'alignment' => 'left'],
+            ['column_label' => 'Customer', 'db_column_name' => 'supplier_name', 'sequence_no' => 3, 'is_visible' => 1, 'excel_width' => 25, 'alignment' => 'left'],
             ['column_label' => 'Product', 'db_column_name' => 'product_name', 'sequence_no' => 4, 'is_visible' => 1, 'excel_width' => 25, 'alignment' => 'left'],
             ['column_label' => 'Qty', 'db_column_name' => 'qty', 'sequence_no' => 5, 'is_visible' => 1, 'excel_width' => 12, 'alignment' => 'right'],
             ['column_label' => 'Rate', 'db_column_name' => 'rate', 'sequence_no' => 6, 'is_visible' => 1, 'excel_width' => 14, 'alignment' => 'right'],
@@ -32,13 +32,15 @@ class ExcelColumnService
             return;
         }
 
-        if ($conn->table('purchase_breakup_excel_columns')->count() > 0) {
-            return;
+        if ($conn->table('purchase_breakup_excel_columns')->count() === 0) {
+            foreach ($this->defaultColumnDefinitions() as $col) {
+                $conn->table('purchase_breakup_excel_columns')->insert($col);
+            }
         }
 
-        foreach ($this->defaultColumnDefinitions() as $col) {
-            $conn->table('purchase_breakup_excel_columns')->insert($col);
-        }
+        $conn->table('purchase_breakup_excel_columns')
+            ->where('db_column_name', 'supplier_name')
+            ->update(['column_label' => 'Customer']);
     }
 
     /**

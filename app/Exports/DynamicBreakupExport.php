@@ -26,7 +26,7 @@ class DynamicBreakupExport implements FromArray, WithHeadings
                     : ($row->{$col} ?? '');
 
                 if ($col === 'invoice_date' && $value) {
-                    $value = \Carbon\Carbon::parse($value)->format('Y-m-d');
+                    $value = \Carbon\Carbon::parse($value)->format('d/m/Y');
                 }
 
                 $line[] = $value;

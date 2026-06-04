@@ -28,15 +28,34 @@ class PurchaseBreakupController extends Controller
     protected function dispatchGeneration(Request $request, int $id, bool $isRegenerate)
     {
         $validated = $request->validate([
+            'customer_id' => 'required|integer|min:1',
             'min_invoice_amount' => 'required|numeric|min:0.01',
             'max_invoice_amount' => 'required|numeric|min:0.01|gte:min_invoice_amount',
+            'from_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:from_date',
             'invoice_prefix' => 'required|string|max:50',
             'allow_decimal_qty' => 'sometimes|boolean',
         ]);
 
+        $customer = DB::connection('tenant')->table('tbl_customer')
+            ->where('ID', (int) $validated['customer_id'])
+            ->where('Status', 1)
+            ->first();
+
+        if (! $customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please select an active customer.',
+            ], 422);
+        }
+
         $settings = [
+            'customer_id' => (int) $validated['customer_id'],
+            'customer_name' => $this->resolveCustomerDisplayName($customer),
             'min_invoice_amount' => (float) $validated['min_invoice_amount'],
             'max_invoice_amount' => (float) $validated['max_invoice_amount'],
+            'from_date' => $validated['from_date'],
+            'end_date' => $validated['end_date'],
             'invoice_prefix' => $validated['invoice_prefix'],
             'allow_decimal_qty' => $request->boolean('allow_decimal_qty'),
         ];
@@ -141,5 +160,22 @@ class PurchaseBreakupController extends Controller
                 $lineCount === 1
             ),
         ]);
+    }
+
+    protected function resolveCustomerDisplayName(object $customer): string
+    {
+        $name = trim((string) ($customer->BusinessName ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        $name = trim((string) ($customer->DisplayName ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        $name = trim(trim((string) ($customer->FirstName ?? '')).' '.trim((string) ($customer->LastName ?? '')));
+
+        return $name !== '' ? $name : ('Customer #'.(int) ($customer->ID ?? 0));
     }
 }

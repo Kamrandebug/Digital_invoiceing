@@ -7,6 +7,7 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'App\\Console\\Commands\\TenantsMigrateCommand' => $baseDir . '/app/Console/Commands/TenantsMigrateCommand.php',
+    'App\\Exports\\DynamicBreakupExport' => $baseDir . '/app/Exports/DynamicBreakupExport.php',
     'App\\Http\\Controllers\\ApplicationsController' => $baseDir . '/app/Http/Controllers/ApplicationsController.php',
     'App\\Http\\Controllers\\Auth\\AuthenticatedSessionController' => $baseDir . '/app/Http/Controllers/Auth/AuthenticatedSessionController.php',
     'App\\Http\\Controllers\\Auth\\ConfirmablePasswordController' => $baseDir . '/app/Http/Controllers/Auth/ConfirmablePasswordController.php',
@@ -28,13 +29,10 @@ return array(
     'App\\Http\\Controllers\\PagesController' => $baseDir . '/app/Http/Controllers/PagesController.php',
     'App\\Http\\Controllers\\ProductController' => $baseDir . '/app/Http/Controllers/ProductController.php',
     'App\\Http\\Controllers\\ProfileController' => $baseDir . '/app/Http/Controllers/ProfileController.php',
-<<<<<<< HEAD
+    'App\\Http\\Controllers\\PurchaseBreakupController' => $baseDir . '/app/Http/Controllers/PurchaseBreakupController.php',
     'App\\Http\\Controllers\\PurchaseController' => $baseDir . '/app/Http/Controllers/PurchaseController.php',
     'App\\Http\\Controllers\\SaleReportController' => $baseDir . '/app/Http/Controllers/SaleReportController.php',
     'App\\Http\\Controllers\\SupplierController' => $baseDir . '/app/Http/Controllers/SupplierController.php',
-=======
-    'App\\Http\\Controllers\\SaleReportController' => $baseDir . '/app/Http/Controllers/SaleReportController.php',
->>>>>>> main
     'App\\Http\\Controllers\\TablesController' => $baseDir . '/app/Http/Controllers/TablesController.php',
     'App\\Http\\Controllers\\TenantListController' => $baseDir . '/app/Http/Controllers/TenantListController.php',
     'App\\Http\\Controllers\\WidgetsController' => $baseDir . '/app/Http/Controllers/WidgetsController.php',
@@ -42,6 +40,7 @@ return array(
     'App\\Http\\Middleware\\InitializeTenantContext' => $baseDir . '/app/Http/Middleware/InitializeTenantContext.php',
     'App\\Http\\Requests\\Auth\\LoginRequest' => $baseDir . '/app/Http/Requests/Auth/LoginRequest.php',
     'App\\Http\\Requests\\ProfileUpdateRequest' => $baseDir . '/app/Http/Requests/ProfileUpdateRequest.php',
+    'App\\Jobs\\GenerateBreakupJob' => $baseDir . '/app/Jobs/GenerateBreakupJob.php',
     'App\\Jobs\\MigrateTenantJob' => $baseDir . '/app/Jobs/MigrateTenantJob.php',
     'App\\Models\\BusinessInfo' => $baseDir . '/app/Models/BusinessInfo.php',
     'App\\Models\\Customer' => $baseDir . '/app/Models/Customer.php',
@@ -55,6 +54,8 @@ return array(
     'App\\Models\\User' => $baseDir . '/app/Models/User.php',
     'App\\Providers\\AppServiceProvider' => $baseDir . '/app/Providers/AppServiceProvider.php',
     'App\\Providers\\TenancyServiceProvider' => $baseDir . '/app/Providers/TenancyServiceProvider.php',
+    'App\\Services\\ExcelColumnService' => $baseDir . '/app/Services/ExcelColumnService.php',
+    'App\\Services\\PurchaseBreakupService' => $baseDir . '/app/Services/PurchaseBreakupService.php',
     'App\\Services\\StockService' => $baseDir . '/app/Services/StockService.php',
     'App\\Services\\TenantProvisioningService' => $baseDir . '/app/Services/TenantProvisioningService.php',
     'App\\View\\Components\\AppLayout' => $baseDir . '/app/View/Components/AppLayout.php',

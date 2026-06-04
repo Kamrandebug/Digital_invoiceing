@@ -127,7 +127,7 @@ class PurchaseBreakupService
     /**
      * Settings from the most recent breakup job (for regenerate modal pre-fill).
      *
-     * @return array{min_invoice_amount: ?float, max_invoice_amount: ?float, invoice_prefix: string, allow_decimal_qty: bool}|null
+     * @return array{customer_id: ?int, min_invoice_amount: ?float, max_invoice_amount: ?float, from_date: ?string, end_date: ?string, invoice_prefix: string, allow_decimal_qty: bool}|null
      */
     public function getLastJobSettings(int $purchaseId): ?array
     {
@@ -142,12 +142,15 @@ class PurchaseBreakupService
         }
 
         return [
+            'customer_id' => isset($decoded['customer_id']) ? (int) $decoded['customer_id'] : null,
             'min_invoice_amount' => isset($decoded['min_invoice_amount'])
                 ? (float) $decoded['min_invoice_amount']
                 : null,
             'max_invoice_amount' => isset($decoded['max_invoice_amount'])
                 ? (float) $decoded['max_invoice_amount']
                 : null,
+            'from_date' => ! empty($decoded['from_date']) ? (string) $decoded['from_date'] : null,
+            'end_date' => ! empty($decoded['end_date']) ? (string) $decoded['end_date'] : null,
             'invoice_prefix' => trim((string) ($decoded['invoice_prefix'] ?? 'INV')) ?: 'INV',
             'allow_decimal_qty' => (bool) ($decoded['allow_decimal_qty'] ?? false),
         ];
@@ -182,7 +185,7 @@ class PurchaseBreakupService
     }
 
     /**
-     * @param  array{min_invoice_amount: float, max_invoice_amount: float, invoice_prefix: string, allow_decimal_qty?: bool}  $settings
+     * @param  array{customer_id: int, customer_name?: string, min_invoice_amount: float, max_invoice_amount: float, from_date: string, end_date: string, invoice_prefix: string, allow_decimal_qty?: bool}  $settings
      * @return array{success: bool, message?: string, job_id?: int}
      */
     public function startGeneration(int $purchaseId, array $settings, int $userId, bool $isRegenerate = false): array
@@ -261,8 +264,12 @@ class PurchaseBreakupService
         }
 
         $settingsPayload = [
+            'customer_id' => (int) ($settings['customer_id'] ?? 0),
+            'customer_name' => trim((string) ($settings['customer_name'] ?? '')),
             'min_invoice_amount' => $minAmount,
             'max_invoice_amount' => $maxAmount,
+            'from_date' => (string) ($settings['from_date'] ?? ''),
+            'end_date' => (string) ($settings['end_date'] ?? ''),
             'invoice_prefix' => $prefix,
             'allow_decimal_qty' => $allowDecimal,
             'min_qty' => $minQty,
@@ -365,9 +372,17 @@ class PurchaseBreakupService
         $minQty = $allowDecimal ? (float) ($settings['min_qty'] ?? 1) : (int) ($settings['min_qty'] ?? 1);
         $maxQty = $allowDecimal ? (float) ($settings['max_qty'] ?? 1) : (int) ($settings['max_qty'] ?? 1);
         $prefix = trim((string) ($settings['invoice_prefix'] ?? 'INV'));
-        $supplierName = (string) ($header->SupplierDisplayName ?? '');
+        $partyName = $this->resolveBreakupCustomerName($settings);
         $productName = (string) ($line->ProductName ?? '');
-        $purchaseDate = $header->PurchaseDate;
+        $fromDate = (string) ($settings['from_date'] ?? '');
+        $endDate = (string) ($settings['end_date'] ?? '');
+        $purchaseDate = $header->PurchaseDate ?? null;
+        if ($fromDate === '' && $purchaseDate) {
+            $fromDate = \Carbon\Carbon::parse($purchaseDate)->format('Y-m-d');
+        }
+        if ($endDate === '' && $fromDate !== '') {
+            $endDate = $fromDate;
+        }
 
         $remainingQty = $totalQty;
         $rows = [];
@@ -407,8 +422,8 @@ class PurchaseBreakupService
 
             $rows[] = [
                 'invoice_no' => $invoiceNo,
-                'invoice_date' => $purchaseDate,
-                'supplier_name' => $supplierName,
+                'invoice_date' => $this->randomInvoiceDate($fromDate, $endDate, $purchaseDate),
+                'supplier_name' => $partyName,
                 'product_name' => $productName,
                 'qty' => $qty,
                 'rate' => $rate,
@@ -617,6 +632,72 @@ class PurchaseBreakupService
         };
 
         return $normalize($oldLines) !== $normalize($newLines);
+    }
+
+    protected function randomInvoiceDate(string $fromDate, string $endDate, mixed $fallbackDate = null): string
+    {
+        try {
+            $from = \Carbon\Carbon::parse($fromDate)->startOfDay();
+            $end = \Carbon\Carbon::parse($endDate)->startOfDay();
+        } catch (\Throwable) {
+            if ($fallbackDate) {
+                return \Carbon\Carbon::parse($fallbackDate)->format('Y-m-d');
+            }
+
+            return now()->format('Y-m-d');
+        }
+
+        if ($end->lt($from)) {
+            $end = $from->copy();
+        }
+
+        $days = (int) $from->diffInDays($end);
+        if ($days <= 0) {
+            return $from->format('Y-m-d');
+        }
+
+        return $from->copy()->addDays(mt_rand(0, $days))->format('Y-m-d');
+    }
+
+    /**
+     * Customer selected in Generate Breakup modal (never the purchase supplier).
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    protected function resolveBreakupCustomerName(array $settings): string
+    {
+        $name = trim((string) ($settings['customer_name'] ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        $customerId = (int) ($settings['customer_id'] ?? 0);
+        if ($customerId <= 0) {
+            return '';
+        }
+
+        $customer = DB::connection('tenant')->table('tbl_customer')
+            ->where('ID', $customerId)
+            ->where('Status', 1)
+            ->first();
+
+        if (! $customer) {
+            return '';
+        }
+
+        $display = trim((string) ($customer->BusinessName ?? ''));
+        if ($display !== '') {
+            return $display;
+        }
+
+        $display = trim((string) ($customer->DisplayName ?? ''));
+        if ($display !== '') {
+            return $display;
+        }
+
+        $display = trim(trim((string) ($customer->FirstName ?? '')).' '.trim((string) ($customer->LastName ?? '')));
+
+        return $display !== '' ? $display : ('Customer #'.$customerId);
     }
 
     public function statusLabel(?int $status, bool $singleLine): string

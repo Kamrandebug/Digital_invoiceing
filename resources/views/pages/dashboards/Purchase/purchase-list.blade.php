@@ -337,44 +337,79 @@
     </div>
 </div>
 
-<div class="modal fade" id="breakupGenerateModal" tabindex="-1" aria-hidden="true"
+<div class="modal effect-fall fade" id="breakupGenerateModal" tabindex="-1" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h6 class="modal-title fw-semibold" id="breakupGenerateModalTitle">Generate Breakup</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <p class="text-muted fs-12 mb-3">Purchase: <strong id="breakupGenerateDocNo"></strong></p>
-                <div id="breakupGenerateAlert" class="alert alert-danger d-none" role="alert"></div>
-                <form id="breakupGenerateForm">
-                    <div class="mb-3">
-                        <label class="form-label">Min Invoice Amount</label>
-                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm"
-                               name="min_invoice_amount" id="breakupMinAmount" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Max Invoice Amount</label>
-                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm"
-                               name="max_invoice_amount" id="breakupMaxAmount" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Invoice Prefix</label>
-                        <input type="text" class="form-control form-control-sm" name="invoice_prefix"
-                               id="breakupInvoicePrefix" value="INV" maxlength="50" required>
-                    </div>
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" name="allow_decimal_qty"
-                               id="breakupAllowDecimal" value="1">
-                        <label class="form-check-label" for="breakupAllowDecimal">Allow decimal qty</label>
+            <div class="modal-body" id="breakup_generate_modal_body">
+                <div id="breakupGenerateAlert" class="alert alert-danger d-none mb-3" role="alert"></div>
+                <form id="breakupGenerateForm" novalidate>
+                    <div class="ifp-modal-shell">
+                        <div class="_pfp-tab-panel-shell border rounded overflow-hidden mb-0">
+                            <div class="_pfp-tab-panel-body">
+                                <p class="text-muted fs-12 mb-3 mb-0 pb-3 border-bottom">
+                                    Purchase: <strong id="breakupGenerateDocNo"></strong>
+                                </p>
+                                <div class="row g-2 pt-3">
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
+                                        <select name="customer_id" id="breakupCustomerId" class="form-select" required>
+                                            <option value="">— Select Customer —</option>
+                                            @foreach($customers ?? [] as $cust)
+                                                <option value="{{ $cust->ID }}">
+                                                    {{ trim($cust->BusinessName ?? '') ?: trim($cust->DisplayName ?? '') ?: trim(trim(($cust->FirstName ?? '') . ' ' . ($cust->LastName ?? ''))) ?: ('Customer #' . $cust->ID) }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Min Invoice Amount <span class="text-danger">*</span></label>
+                                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm"
+                                               name="min_invoice_amount" id="breakupMinAmount" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Max Invoice Amount <span class="text-danger">*</span></label>
+                                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm"
+                                               name="max_invoice_amount" id="breakupMaxAmount" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">From Date <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control form-control-sm"
+                                               name="from_date" id="breakupFromDate" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">End Date <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control form-control-sm"
+                                               name="end_date" id="breakupEndDate" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Invoice Prefix <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" name="invoice_prefix"
+                                               id="breakupInvoicePrefix" value="INV" maxlength="50" required>
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="allow_decimal_qty"
+                                                   id="breakupAllowDecimal" value="1">
+                                            <label class="form-check-label" for="breakupAllowDecimal">Allow decimal qty</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary btn-sm" id="breakupGenerateSubmitBtn">
-                    <i class="fas fa-random"></i> <span id="breakupGenerateSubmitLabel">Generate</span>
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" id="breakupGenerateSubmitBtn">
+                    <i class="fas fa-random me-1"></i> <span id="breakupGenerateSubmitLabel">Generate</span>
                 </button>
             </div>
         </div>
@@ -435,11 +470,20 @@ const breakupCsrf = (document.querySelector('meta[name="csrf-token"]') || {}).co
 
 function applyBreakupFormSettings(settings) {
     if (!settings) return;
+    if (settings.customer_id != null) {
+        document.getElementById('breakupCustomerId').value = String(settings.customer_id);
+    }
     if (settings.min_invoice_amount != null) {
         document.getElementById('breakupMinAmount').value = settings.min_invoice_amount;
     }
     if (settings.max_invoice_amount != null) {
         document.getElementById('breakupMaxAmount').value = settings.max_invoice_amount;
+    }
+    if (settings.from_date) {
+        document.getElementById('breakupFromDate').value = settings.from_date;
+    }
+    if (settings.end_date) {
+        document.getElementById('breakupEndDate').value = settings.end_date;
     }
     if (settings.invoice_prefix) {
         document.getElementById('breakupInvoicePrefix').value = settings.invoice_prefix;
@@ -456,6 +500,9 @@ function openBreakupGenerateModal(purchaseId, docNo, isRegenerate) {
     document.getElementById('breakupGenerateAlert').classList.add('d-none');
     document.getElementById('breakupGenerateForm').reset();
     document.getElementById('breakupInvoicePrefix').value = 'INV';
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('breakupFromDate').value = today;
+    document.getElementById('breakupEndDate').value = today;
 
     const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('breakupGenerateModal'));
     const submitBtn = document.getElementById('breakupGenerateSubmitBtn');

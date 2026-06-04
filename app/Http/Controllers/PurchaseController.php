@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InvoiceModel;
 use App\Models\PurchaseModel;
 use App\Services\PurchaseBreakupService;
 use Illuminate\Http\Request;
@@ -34,7 +35,9 @@ class PurchaseController extends Controller
 
         $purchases = PurchaseModel::getlistingdata($filters)->paginate(15);
 
-        return view('pages.dashboards.Purchase.purchase-list', compact('purchases'));
+        $customers = DB::select(InvoiceModel::Load_Customer());
+
+        return view('pages.dashboards.Purchase.purchase-list', compact('purchases', 'customers'));
     }
 
     public function create()

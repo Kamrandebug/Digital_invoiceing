@@ -771,7 +771,7 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 /* Invoice Add/Edit/View (AJAX modal): native selects match product modal — full border, same box model as .form-control */
 /* #invoice_modal_body, #purchase_modal_body: fallback scope if shell class missing; var(..., #dee2e6): borders work when customer-management.css is not loaded */
 .ifp-modal-shell .form-select:not([multiple]):not([size]),
-#invoice_modal_body .form-select:not([multiple]):not([size]), #purchase_modal_body .form-select:not([multiple]):not([size]){
+#invoice_modal_body .form-select:not([multiple]):not([size]), #purchase_modal_body .form-select:not([multiple]):not([size]), #breakup_generate_modal_body .form-select:not([multiple]):not([size]){
 	border: 1px solid var(--cm-border-color, #dee2e6) !important;
 	border-radius: 5px !important;
 	background-color: var(--cm-input-bg, #ffffff) !important;
@@ -789,13 +789,13 @@ select.form-select.ifp-inv-tax-listbox:focus option:focus {
 	color: rgb(1, 26, 66) !important;
 }
 .ifp-modal-shell .form-select:not([multiple]):not([size]):focus,
-#invoice_modal_body .form-select:not([multiple]):not([size]):focus, #purchase_modal_body .form-select:not([multiple]):not([size]):focus{
+#invoice_modal_body .form-select:not([multiple]):not([size]):focus, #purchase_modal_body .form-select:not([multiple]):not([size]):focus, #breakup_generate_modal_body .form-select:not([multiple]):not([size]):focus{
 	border-color: rgb(var(--primary-rgb)) !important;
 	box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
 	outline: none;
 }
 .ifp-modal-shell .form-select.is-invalid:not([multiple]):not([size]),
-#invoice_modal_body .form-select.is-invalid:not([multiple]):not([size]), #purchase_modal_body .form-select.is-invalid:not([multiple]):not([size]){
+#invoice_modal_body .form-select.is-invalid:not([multiple]):not([size]), #purchase_modal_body .form-select.is-invalid:not([multiple]):not([size]), #breakup_generate_modal_body .form-select.is-invalid:not([multiple]):not([size]){
 	border-color: #dc3545 !important;
 }
 /* Line grid: match .table-inv in invoice partial + listing (not the ultra-tight 2px / ~0.1rem pad) */

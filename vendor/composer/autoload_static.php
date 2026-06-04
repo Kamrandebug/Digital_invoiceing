@@ -612,6 +612,7 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
 
     public static $classMap = array (
         'App\\Console\\Commands\\TenantsMigrateCommand' => __DIR__ . '/../..' . '/app/Console/Commands/TenantsMigrateCommand.php',
+        'App\\Exports\\DynamicBreakupExport' => __DIR__ . '/../..' . '/app/Exports/DynamicBreakupExport.php',
         'App\\Http\\Controllers\\ApplicationsController' => __DIR__ . '/../..' . '/app/Http/Controllers/ApplicationsController.php',
         'App\\Http\\Controllers\\Auth\\AuthenticatedSessionController' => __DIR__ . '/../..' . '/app/Http/Controllers/Auth/AuthenticatedSessionController.php',
         'App\\Http\\Controllers\\Auth\\ConfirmablePasswordController' => __DIR__ . '/../..' . '/app/Http/Controllers/Auth/ConfirmablePasswordController.php',
@@ -633,13 +634,10 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
         'App\\Http\\Controllers\\PagesController' => __DIR__ . '/../..' . '/app/Http/Controllers/PagesController.php',
         'App\\Http\\Controllers\\ProductController' => __DIR__ . '/../..' . '/app/Http/Controllers/ProductController.php',
         'App\\Http\\Controllers\\ProfileController' => __DIR__ . '/../..' . '/app/Http/Controllers/ProfileController.php',
-<<<<<<< HEAD
+        'App\\Http\\Controllers\\PurchaseBreakupController' => __DIR__ . '/../..' . '/app/Http/Controllers/PurchaseBreakupController.php',
         'App\\Http\\Controllers\\PurchaseController' => __DIR__ . '/../..' . '/app/Http/Controllers/PurchaseController.php',
         'App\\Http\\Controllers\\SaleReportController' => __DIR__ . '/../..' . '/app/Http/Controllers/SaleReportController.php',
         'App\\Http\\Controllers\\SupplierController' => __DIR__ . '/../..' . '/app/Http/Controllers/SupplierController.php',
-=======
-        'App\\Http\\Controllers\\SaleReportController' => __DIR__ . '/../..' . '/app/Http/Controllers/SaleReportController.php',
->>>>>>> main
         'App\\Http\\Controllers\\TablesController' => __DIR__ . '/../..' . '/app/Http/Controllers/TablesController.php',
         'App\\Http\\Controllers\\TenantListController' => __DIR__ . '/../..' . '/app/Http/Controllers/TenantListController.php',
         'App\\Http\\Controllers\\WidgetsController' => __DIR__ . '/../..' . '/app/Http/Controllers/WidgetsController.php',
@@ -647,6 +645,7 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
         'App\\Http\\Middleware\\InitializeTenantContext' => __DIR__ . '/../..' . '/app/Http/Middleware/InitializeTenantContext.php',
         'App\\Http\\Requests\\Auth\\LoginRequest' => __DIR__ . '/../..' . '/app/Http/Requests/Auth/LoginRequest.php',
         'App\\Http\\Requests\\ProfileUpdateRequest' => __DIR__ . '/../..' . '/app/Http/Requests/ProfileUpdateRequest.php',
+        'App\\Jobs\\GenerateBreakupJob' => __DIR__ . '/../..' . '/app/Jobs/GenerateBreakupJob.php',
         'App\\Jobs\\MigrateTenantJob' => __DIR__ . '/../..' . '/app/Jobs/MigrateTenantJob.php',
         'App\\Models\\BusinessInfo' => __DIR__ . '/../..' . '/app/Models/BusinessInfo.php',
         'App\\Models\\Customer' => __DIR__ . '/../..' . '/app/Models/Customer.php',
@@ -660,6 +659,8 @@ class ComposerStaticInit88970a0117c062eed55fa8728fc43833
         'App\\Models\\User' => __DIR__ . '/../..' . '/app/Models/User.php',
         'App\\Providers\\AppServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AppServiceProvider.php',
         'App\\Providers\\TenancyServiceProvider' => __DIR__ . '/../..' . '/app/Providers/TenancyServiceProvider.php',
+        'App\\Services\\ExcelColumnService' => __DIR__ . '/../..' . '/app/Services/ExcelColumnService.php',
+        'App\\Services\\PurchaseBreakupService' => __DIR__ . '/../..' . '/app/Services/PurchaseBreakupService.php',
         'App\\Services\\StockService' => __DIR__ . '/../..' . '/app/Services/StockService.php',
         'App\\Services\\TenantProvisioningService' => __DIR__ . '/../..' . '/app/Services/TenantProvisioningService.php',
         'App\\View\\Components\\AppLayout' => __DIR__ . '/../..' . '/app/View/Components/AppLayout.php',

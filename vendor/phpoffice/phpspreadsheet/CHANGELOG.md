@@ -5,8 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com)
 and this project adheres to [Semantic Versioning](https://semver.org). This is always true of the master branch. Some earlier branches, including the branch from which you are reading this file, remain supported and security fixes are applied to them; if the security fix represents a breaking change, it may have to be applied as a minor or patch version.
 
-<<<<<<< HEAD
-=======
 ## 2026-05-30 - 1.30.5
 
 ### Security Note
@@ -17,7 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org). This is a
 
 - Third-party security patches.
 
->>>>>>> main
 ## 2026-04-19 - 1.30.4
 
 ### Fixed
