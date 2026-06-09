@@ -1101,12 +1101,13 @@
         uomSelect.appendChild(opt);
     }
 
-    function fetchHsCodeInfo() {
+    function fetchHsCodeInfo(updateDescription) {
+        if (updateDescription === undefined) updateDescription = true;
         var code = (hsInput && hsInput.value) ? hsInput.value.trim() : '';
         if (uomSelect) clearUomOptions();
 
         if (!code) {
-            if (saleInfo) saleInfo.value = '';
+            if (saleInfo && updateDescription) saleInfo.value = '';
             return;
         }
 
@@ -1139,7 +1140,7 @@
                         }
                     }
                 }
-                if (saleInfo && data.description) {
+                if (saleInfo && data.description && updateDescription) {
                     saleInfo.value = data.description;
                 }
             })
@@ -1550,9 +1551,10 @@
         });
     }
 
-    // When editing, if HS Code already has a value, pre-load UOM list (and pre-select existing UOM)
+    // When editing, pre-load UOM list from HS code but keep the saved description from the database.
+    // Description is only refreshed when the user changes the HS code field.
     if (hsInput && uomSelect && hsInput.value && hsInput.value.trim() !== '') {
-        fetchHsCodeInfo();
+        fetchHsCodeInfo(@json($isEdit) ? false : true);
     }
 
     if (isFixedValueCheckbox && fixedNotifiedValueInput) {

@@ -13,14 +13,40 @@
         : ($isEdit ? route('purchases.edit_transaction', $purchaseId) : '#');
     $uid = 'pfp_' . $mode . '_' . ($purchaseId ?: 'new');
     $selClass = $inModal ? 'form-select' : 'form-select form-select-sm';
-    $pfpEmptyColspan = $isReadonly ? 5 : 6;
+    $pfpEmptyColspan = $isReadonly ? ($inModal ? 14 : 16) : ($inModal ? 15 : 17);
     $productsJson = collect($products ?? [])->map(fn ($p) => [
         'id' => (int) $p->ID,
         'name' => $p->ProductName ?? ('Product #' . $p->ID),
         'cost' => (float) ($p->Cost ?? 0),
+        'rate' => (float) ($p->Cost ?? 0),
+        'gst' => (float) ($p->GstPercentage ?? 0),
+        'hscode' => $p->HsCode ?? '',
+        'sale_information' => $p->SaleInformation ?? '',
+        'uom_id' => $p->UomID ?? '',
+        'uom_label' => trim((string) ($p->UomName ?? '')),
+        'sale_type_id' => $p->SaleTypeID ?? '',
+        'sale_type_to_rate_id' => $p->SaleTypeToRateID ?? '',
+        'sro_schedule_id' => $p->SroScheduleID ?? '',
+        'sro_item_id' => $p->SroItemID ?? '',
+        'tp_rate' => (float) ($p->TPRate ?? 0),
+        'is_fixed_rate' => in_array(strtolower(trim((string) ($p->IsFixedRate ?? '0'))), ['1', 'true', 'yes', 'y', 'on'], true) ? 1 : 0,
         'qty' => (float) ($p->CurrentQuantity ?? 0),
     ])->values();
-    $calcTotal = $items->sum(fn ($r) => (float) ($r->Amount ?? 0));
+    $calcSubTotal = $items->sum(fn ($r) => (float) ($r->Amount ?? 0));
+    $calcDiscount = $items->sum(fn ($r) => (float) ($r->DiscountAmount ?? 0));
+    $calcGst = $items->sum(fn ($r) => (float) ($r->GSTAmount ?? 0));
+    $calcTotal = $items->sum(fn ($r) => (float) ($r->Total ?? $r->TotalValues ?? 0));
+    $viewSubTotal = $purchase ? ($purchase->SubTotal ?? $purchase->ValueSalesExcludingST ?? $calcSubTotal) : $calcSubTotal;
+    $viewDiscount = $purchase ? ($purchase->Discount ?? $calcDiscount) : $calcDiscount;
+    $viewGst = $purchase ? ($purchase->SalesTaxApplicable ?? $calcGst) : $calcGst;
+    $viewGrand = $purchase ? ($purchase->TotalAmount ?? $calcTotal) : $calcTotal;
+    $supplierAdvanceOn = $purchase && (int) ($purchase->SupplierIsAdvanceTax ?? 0) === 1;
+    $supplierAdvanceRate = $purchase ? (float) ($purchase->SupplierAdvanceTax ?? 0) : 0.0;
+    $supplierWht236g = ($supplierAdvanceOn && $supplierAdvanceRate > 0.000001)
+        ? round((float) $viewGrand * ($supplierAdvanceRate / 100.0), 2)
+        : 0.0;
+    $grandTotalAllTaxes = round((float) $viewGrand + $supplierWht236g, 2);
+    $showWhtBlock = $supplierAdvanceOn && $supplierAdvanceRate > 0.000001;
 @endphp
 
 @if(!$isReadonly)
@@ -50,7 +76,15 @@
                         @php
                             $label = trim($s->BusinessName ?? '') ?: trim($s->DisplayName ?? '') ?: trim(($s->FirstName ?? '').' '.($s->LastName ?? '')) ?: ('Supplier #' . $s->ID);
                         @endphp
-                        <option value="{{ $s->ID }}" {{ (int) old('SupplierID', $purchase->SupplierID ?? 0) === (int) $s->ID ? 'selected' : '' }}>{{ $label }}</option>
+                        <option value="{{ $s->ID }}"
+                                data-is-filer="{{ (int) ($s->IsFiler ?? 0) ? 1 : 0 }}"
+                                data-sales-tax-withheld="{{ $s->SalesTaxWithheldAtSource ?? 0 }}"
+                                data-extra-tax-pct="{{ $s->ExtraTax ?? 0 }}"
+                                data-further-tax-pct="{{ $s->FurtherTax ?? 0 }}"
+                                data-fed-payable-pct="{{ $s->FedPayable ?? 0 }}"
+                                data-is-advance-tax="{{ (int) ($s->IsAdvanceTax ?? 0) === 1 ? 1 : 0 }}"
+                                data-advance-tax-rate="{{ (float) ($s->AdvanceTax ?? 0) }}"
+                                {{ (int) old('SupplierID', $purchase->SupplierID ?? 0) === (int) $s->ID ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
                 </select>
                 <button type="button" class="btn btn-sm btn-primary ifp-line-add-entity-btn flex-shrink-0"
@@ -132,18 +166,12 @@
         text-align: right;
         font-variant-numeric: tabular-nums;
     }
-    .table-inv.purchase-lines-table th.ifp-col-product,
-    .table-inv.purchase-lines-table td.ifp-col-product { min-width: 200px; width: 28%; }
-    .table-inv.purchase-lines-table th.ifp-col-desc,
-    .table-inv.purchase-lines-table td.ifp-col-desc { min-width: 220px; width: 32%; }
-    .table-inv.purchase-lines-table th.ifp-col-qty,
-    .table-inv.purchase-lines-table td.ifp-col-qty { min-width: 72px; width: 8%; }
-    .table-inv.purchase-lines-table th.ifp-col-sale-rate,
-    .table-inv.purchase-lines-table td.ifp-col-sale-rate { min-width: 96px; width: 12%; }
-    .table-inv.purchase-lines-table th.ifp-col-amount,
-    .table-inv.purchase-lines-table td.ifp-col-amount { min-width: 96px; width: 12%; }
-    .table-inv.purchase-lines-table th.ifp-col-actions,
-    .table-inv.purchase-lines-table td.ifp-col-actions { min-width: 48px; width: 4%; }
+    .ifp-inv-line-items-scroll { overflow-x: auto; width: 100%; max-width: 100%; min-width: 0; }
+    .ifp-purchase-totals-summary.table {
+        margin-left: auto; width: 100%; max-width: 22rem; font-size: 12px;
+    }
+    .ifp-purchase-totals-summary tr.ifp-totals-inc th,
+    .ifp-purchase-totals-summary tr.ifp-totals-inc td,
     .ifp-purchase-totals-summary tr.ifp-totals-grand th,
     .ifp-purchase-totals-summary tr.ifp-totals-grand td {
         border: none !important;
@@ -163,9 +191,33 @@
                 <tr>
                     <th class="ifp-col-product">Product / Services</th>
                     <th class="ifp-col-desc">Description</th>
+                    <th class="ifp-col-uom">UOM</th>
+                    @if(!$inModal)
+                    <th>Sale Type</th>
+                    <th>Sale Type To Rate</th>
+                    <th>SRO Schedule</th>
+                    <th>SRO Item</th>
+                    @else
+                    <th class="ifp-col-tax-sro">Tax &amp; SRO</th>
+                    @endif
                     <th class="ifp-col-qty">Qty</th>
                     <th class="ifp-col-sale-rate">Unit Rate</th>
                     <th class="ifp-col-amount">Amount</th>
+                    @if($inModal)
+                    <th class="ifp-col-fixed">Fixed notified value</th>
+                    @endif
+                    @if(!$inModal)
+                    <th>Disc %</th>
+                    @endif
+                    <th class="ifp-col-disc-amt">Disc Amount</th>
+                    @if(!$inModal)
+                    <th>GST Rate</th>
+                    @endif
+                    <th class="ifp-col-gst-amt">GST Amount</th>
+                    <th class="ifp-col-net">Net</th>
+                    <th class="ifp-col-extra-tax">Extra Tax</th>
+                    <th class="ifp-col-further-tax">Further Tax</th>
+                    <th class="ifp-col-fed-payable">FED Payable</th>
                     @if(!$isReadonly)<th class="ifp-col-actions"></th>@endif
                 </tr>
             </thead>
@@ -178,6 +230,7 @@
                         'products' => $products,
                         'selClass' => $selClass,
                         'inModal' => $inModal,
+                        'uid' => $uid,
                     ])
                 @empty
                     @if(!$isReadonly)
@@ -188,6 +241,7 @@
                             'products' => $products,
                             'selClass' => $selClass,
                             'inModal' => $inModal,
+                            'uid' => $uid,
                         ])
                     @else
                         <tr><td colspan="{{ $pfpEmptyColspan }}" class="text-center text-muted py-3"><i>No line items found.</i></td></tr>
@@ -213,9 +267,6 @@
         <div class="_pfp-tab-panel-body">
 @endif
 
-@php
-    $viewTotal = $purchase ? ($purchase->TotalAmount ?? $calcTotal) : $calcTotal;
-@endphp
 <div class="row mt-4">
     <div class="col-md-9">
         <div class="clearfix w-50">
@@ -232,20 +283,100 @@
     <div class="col text-end">
         <table class="table table-sm text-nowrap mb-0 table-borderless ifp-purchase-totals-summary">
             <tbody>
-                <tr class="ifp-totals-grand">
-                    <th scope="row"><div class="fw-medium">Total Amount:</div></th>
+                <tr>
+                    <th scope="row"><div class="fw-medium">Total Amount Excluding ST:</div></th>
                     <td>
-                        <input type="text" id="purchaseGrandTotal" name="GrandTotalDisplay"
-                               class="form-control invoice-amount-input w-100 fw-bold"
-                               value="{{ number_format((float) $viewTotal, 2, '.', '') }}" readonly>
+                        <input type="number" step="0.01" name="SubTotal" id="{{ $uid }}_SubTotal"
+                               class="form-control invoice-amount-input w-100"
+                               value="{{ $isReadonly ? number_format((float) $viewSubTotal, 2) : '0.00' }}" readonly>
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row"><div class="fw-medium">Discount:</div></th>
+                    <td>
+                        <input type="number" step="0.01" name="TotalDiscount" id="{{ $uid }}_TotalDiscount"
+                               class="form-control invoice-amount-input w-100"
+                               value="{{ $isReadonly ? number_format((float) $viewDiscount, 2) : '0.00' }}" readonly>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><div class="fw-medium">Total Sales Tax:</div></th>
+                    <td>
+                        <input type="number" step="0.01" name="TotalGST" id="{{ $uid }}_TotalGST"
+                               class="form-control invoice-amount-input w-100"
+                               value="{{ $isReadonly ? number_format((float) $viewGst, 2) : '0.00' }}" readonly>
+                    </td>
+                </tr>
+                <tr class="ifp-totals-inc">
+                    <th scope="row"><div class="fw-medium">Total Inc. All Taxes:</div></th>
+                    <td>
+                        <input type="number" step="0.01" name="GrandTotal" id="{{ $uid }}_GrandTotal"
+                               class="form-control invoice-amount-input w-100 fw-bold"
+                               value="{{ $isReadonly ? number_format((float) $viewGrand, 2) : '0.00' }}" readonly>
+                    </td>
+                </tr>
+                @if($isReadonly)
+                    @if($showWhtBlock)
+                        <tr>
+                            <th scope="row"><div class="fw-medium">Supplier WHT 236G ({{ number_format($supplierAdvanceRate, 2) }}%):</div></th>
+                            <td>
+                                <input type="number" step="0.01" id="{{ $uid }}_SupplierWht236g"
+                                       class="form-control invoice-amount-input w-100"
+                                       value="{{ number_format($supplierWht236g, 2) }}" readonly>
+                            </td>
+                        </tr>
+                        <tr class="ifp-totals-grand">
+                            <th scope="row"><div class="fw-medium">Grand Total:</div></th>
+                            <td>
+                                <input type="number" step="0.01" id="{{ $uid }}_GrandTotalWithWht"
+                                       class="form-control invoice-amount-input w-100 fw-bold"
+                                       value="{{ number_format($grandTotalAllTaxes, 2) }}" readonly>
+                            </td>
+                        </tr>
+                    @endif
+                @else
+                    <tr id="{{ $uid }}_tr_supplier_wht" class="@if(!$showWhtBlock) d-none @endif">
+                        <th scope="row">
+                            <div class="fw-medium">Supplier WHT 236G (<span id="{{ $uid }}_wht_label_pct">{{ number_format($supplierAdvanceRate, 2) }}</span>%):</div>
+                        </th>
+                        <td>
+                            <input type="number" step="0.01" id="{{ $uid }}_SupplierWht236g"
+                                   class="form-control invoice-amount-input w-100"
+                                   value="{{ $showWhtBlock ? number_format($supplierWht236g, 2) : '0.00' }}" readonly>
+                        </td>
+                    </tr>
+                    <tr id="{{ $uid }}_tr_grand_with_wht" class="ifp-totals-grand @if(!$showWhtBlock) d-none @endif">
+                        <th scope="row"><div class="fw-medium">Grand Total:</div></th>
+                        <td>
+                            <input type="number" step="0.01" id="{{ $uid }}_GrandTotalWithWht"
+                                   class="form-control invoice-amount-input w-100 fw-bold"
+                                   value="{{ $showWhtBlock ? number_format($grandTotalAllTaxes, 2) : '0.00' }}" readonly>
+                        </td>
+                    </tr>
+                @endif
             </tbody>
         </table>
     </div>
 </div>
 
 @if($inModal)
+        </div>
+    </div>
+</div>
+@endif
+
+@if(!$isReadonly && $inModal)
+<div class="modal fade ifp-tax-sro-nested-modal" id="{{ $uid }}_taxSroModal" tabindex="-1" aria-labelledby="{{ $uid }}_taxSroModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header py-2 px-3 border-bottom">
+                <h6 class="modal-title fs-14 fw-semibold mb-0" id="{{ $uid }}_taxSroModalLabel">Tax &amp; SRO</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" id="{{ $uid }}_taxSroModalBody"></div>
+            <div class="modal-footer py-2 px-3 border-top bg-light">
+                <button type="button" class="btn btn-sm btn-primary px-3" data-bs-dismiss="modal">Done</button>
+            </div>
         </div>
     </div>
 </div>
@@ -311,10 +442,14 @@
 </div>
 @endif
 
+@if(!$isReadonly)
+@vite(['resources/assets/js/line-tax-calculator.js', 'resources/assets/js/ifp-purchase-tax-form.js'])
+@endif
 <script>
 window.PURCHASE_PRODUCTS = @json($productsJson);
 window.PURCHASE_FORM_UID = @json($uid);
 window.PURCHASE_SEL_CLASS = @json($selClass);
+window.PURCHASE_IN_MODAL = @json((bool) $inModal);
 
 window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
     const form = document.getElementById('purchaseForm');
@@ -323,93 +458,21 @@ window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
     const selCls = window.PURCHASE_SEL_CLASS || 'form-select';
     if (!form || mode === 'show') return;
 
-    function productOptions(selectedId) {
-        let html = '<option value="">— Select —</option>';
-        (window.PURCHASE_PRODUCTS || []).forEach(p => {
-            const sel = parseInt(selectedId, 10) === p.id ? ' selected' : '';
-            html += `<option value="${p.id}" data-cost="${p.cost}"${sel}>${escapeHtml(p.name)}</option>`;
-        });
-        return html;
-    }
-
-    function escapeHtml(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function formatLineDecimal(el) {
-        if (!el || el.value === '') return;
-        const v = parseFloat(el.value);
-        if (!isNaN(v)) el.value = v.toFixed(2);
-    }
-
-    function recalc() {
-        let total = 0;
-        body.querySelectorAll('tr.ifp-row').forEach(row => {
-            const qty = parseFloat(row.querySelector('.line-qty')?.value) || 0;
-            const rate = parseFloat(row.querySelector('.line-rate')?.value) || 0;
-            const amt = Math.round(qty * rate * 100) / 100;
-            const amtEl = row.querySelector('.line-amount');
-            if (amtEl) amtEl.value = amt.toFixed(2);
-            total += amt;
-        });
-        const gt = document.getElementById('purchaseGrandTotal');
-        if (gt) gt.value = total.toFixed(2);
-    }
-
-    function bindRow(row) {
-        row.querySelector('.line-product')?.addEventListener('change', function() {
-            const opt = this.selectedOptions[0];
-            const cost = opt ? parseFloat(opt.dataset.cost || 0) : 0;
-            const rate = row.querySelector('.line-rate');
-            if (rate && !rate.dataset.touched) rate.value = cost.toFixed(2);
-            recalc();
-        });
-        row.querySelector('.line-qty')?.addEventListener('input', recalc);
-        row.querySelector('.line-qty')?.addEventListener('blur', function() { formatLineDecimal(this); recalc(); });
-        row.querySelector('.line-rate')?.addEventListener('input', function() { this.dataset.touched = '1'; recalc(); });
-        row.querySelector('.line-rate')?.addEventListener('blur', function() { formatLineDecimal(this); recalc(); });
-        row.querySelector('.btn-remove-line')?.addEventListener('click', function() {
-            if (body.querySelectorAll('tr.ifp-row').length <= 1) return;
-            row.remove();
-            reindexLines();
-            recalc();
+    if (window.IfpPurchaseTaxForm && window.IfpLineTaxCalculator && body) {
+        window._pfpTaxBindings = window.IfpPurchaseTaxForm.init({
+            uid: uid,
+            body: body,
+            selCls: selCls,
+            inModal: !!window.PURCHASE_IN_MODAL,
+            routes: {
+                hscode: @json(route('products.hscode-info')),
+                saleTypes: @json(route('products.sale-types')),
+                saleTypeRates: @json(route('products.sale-type-to-rates')),
+                sroSchedules: @json(route('products.sro-schedules')),
+                sroItems: @json(route('products.sro-items')),
+            }
         });
     }
-
-    function reindexLines() {
-        body.querySelectorAll('tr.ifp-row').forEach((row, i) => {
-            row.querySelectorAll('[name]').forEach(el => {
-                el.name = el.name.replace(/items\[\d+\]/, 'items[' + i + ']');
-            });
-        });
-    }
-
-    function addLine() {
-        const i = body.querySelectorAll('tr.ifp-row').length;
-        const tr = document.createElement('tr');
-        tr.className = 'ifp-row purchase-line-row';
-        tr.innerHTML =
-            '<td class="form-select-sm ifp-col-product"><div class="d-flex gap-1 align-items-start ifp-product-select-wrap">' +
-            '<select name="items[' + i + '][ProductID]" class="' + selCls + ' line-product ifp-product flex-grow-1" style="min-width:0;" required>' + productOptions('') + '</select>' +
-            '<button type="button" class="btn btn-sm btn-primary ifp-line-add-entity-btn flex-shrink-0 ifp-new-product-btn" title="New product" aria-label="New product"><i class="ri-add-line"></i></button>' +
-            '</div></td>' +
-            '<td class="ifp-col-desc"><textarea name="items[' + i + '][Details]" rows="1" class="form-control form-control-sm ifp-details line-details" placeholder="Enter Description"></textarea></td>' +
-            '<td class="ifp-col-qty"><input type="number" name="items[' + i + '][Quantity]" class="form-control form-control-sm ifp-qty line-qty" value="1.00" min="0" step="0.01"></td>' +
-            '<td class="ifp-col-sale-rate"><input type="number" step="0.01" name="items[' + i + '][Rate]" class="form-control form-control-sm ifp-rate line-rate" value="0.00" min="0"></td>' +
-            '<td class="ifp-col-amount"><input type="number" step="0.01" name="items[' + i + '][Amount]" class="form-control form-control-sm ifp-amount line-amount" value="0" readonly></td>' +
-            '<td class="ifp-col-actions"><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del btn-remove-line"><i class="ri-delete-bin-5-line"></i></button></td>';
-        body.appendChild(tr);
-        bindRow(tr);
-        recalc();
-    }
-
-    body.querySelectorAll('tr.ifp-row').forEach(function (row) {
-        bindRow(row);
-        formatLineDecimal(row.querySelector('.line-qty'));
-        formatLineDecimal(row.querySelector('.line-rate'));
-    });
-    document.getElementById(uid + '_addRow')?.addEventListener('click', addLine);
-    recalc();
 
     let productQuickTargetRow = null;
 
@@ -424,6 +487,13 @@ window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
             const o = document.createElement('option');
             o.value = id;
             o.textContent = c.label || ('Supplier #' + id);
+            o.setAttribute('data-is-filer', String(c.is_filer != null ? c.is_filer : 0));
+            o.setAttribute('data-sales-tax-withheld', String(c.sales_tax_withheld != null ? c.sales_tax_withheld : 0));
+            o.setAttribute('data-extra-tax-pct', String(c.extra_tax != null ? c.extra_tax : 0));
+            o.setAttribute('data-further-tax-pct', String(c.further_tax != null ? c.further_tax : 0));
+            o.setAttribute('data-fed-payable-pct', String(c.fed_payable != null ? c.fed_payable : 0));
+            o.setAttribute('data-is-advance-tax', String(c.is_advance_tax != null ? c.is_advance_tax : 0));
+            o.setAttribute('data-advance-tax-rate', String(c.advance_tax != null ? c.advance_tax : 0));
             sel.appendChild(o);
         }
         sel.value = id;
@@ -583,8 +653,20 @@ window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
         const id = String(p.id);
         const cost = p.cost != null ? p.cost : (p.rate != null ? p.rate : 0);
         o.value = id;
-        o.textContent = p.label || ('Product #' + id);
+        o.textContent = p.label || p.name || ('Product #' + id);
         o.setAttribute('data-cost', String(cost));
+        o.setAttribute('data-rate', String(cost));
+        o.setAttribute('data-gst', String(p.gst != null ? p.gst : 0));
+        o.setAttribute('data-hscode', String(p.hscode != null ? p.hscode : ''));
+        o.setAttribute('data-sale-information', String(p.sale_information != null ? p.sale_information : ''));
+        o.setAttribute('data-uom-id', String(p.uom_id != null ? p.uom_id : ''));
+        o.setAttribute('data-uom-label', String(p.uom_label != null ? p.uom_label : ''));
+        o.setAttribute('data-sale-type-id', String(p.sale_type_id != null ? p.sale_type_id : ''));
+        o.setAttribute('data-sale-type-to-rate-id', String(p.sale_type_to_rate_id != null ? p.sale_type_to_rate_id : ''));
+        o.setAttribute('data-sro-schedule-id', String(p.sro_schedule_id != null ? p.sro_schedule_id : ''));
+        o.setAttribute('data-sro-item-id', String(p.sro_item_id != null ? p.sro_item_id : ''));
+        o.setAttribute('data-tp-rate', String(p.tp_rate != null ? p.tp_rate : 0));
+        o.setAttribute('data-is-fixed-rate', String(p.is_fixed_rate != null ? p.is_fixed_rate : 0));
         return o;
     }
 

@@ -107,6 +107,7 @@ Route::middleware(['auth', 'tenant'])->prefix('purchases')->name('purchases.')->
     Route::post('/{id}/breakup/regenerate', [PurchaseBreakupController::class, 'regenerate'])
         ->middleware('tenant.role:owner,admin,accountant')->name('breakup.regenerate');
     Route::get('/{id}/breakup/preview', [PurchaseBreakupController::class, 'preview'])->name('breakup.preview');
+    Route::get('/{id}/breakup/export-debug', [PurchaseBreakupController::class, 'exportDebug'])->name('breakup.export-debug');
     Route::get('/{id}/breakup/download', [PurchaseBreakupController::class, 'download'])->name('breakup.download');
     Route::get('/{id}/breakup/settings', [PurchaseBreakupController::class, 'settings'])->name('breakup.settings');
     Route::get('/{id}/breakup/status', [PurchaseBreakupController::class, 'status'])->name('breakup.status');

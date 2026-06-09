@@ -216,13 +216,16 @@ class PurchaseController extends Controller
         $callback = function () use ($purchases) {
             $file = fopen('php://output', 'w');
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            fputcsv($file, ['Doc No', 'Supplier', 'Purchase Date', 'Total Amount', 'Status', 'Created Date']);
+            fputcsv($file, ['Doc No', 'Supplier', 'Purchase Date', 'Sub Total', 'Discount', 'Total GST', 'Total Amount', 'Status', 'Created Date']);
 
             foreach ($purchases as $row) {
                 fputcsv($file, [
                     $row->DocNo,
                     $row->SupplierDisplayName,
                     $row->PurchaseDate,
+                    number_format($row->SubTotal ?? 0, 2),
+                    number_format($row->Discount ?? 0, 2),
+                    number_format($row->TotalGST ?? $row->SalesTaxApplicable ?? 0, 2),
                     number_format($row->TotalAmount ?? 0, 2),
                     $row->Status == 1 ? 'Active' : 'Archived',
                     $row->CreatedOn,
@@ -257,10 +260,29 @@ class PurchaseController extends Controller
                 'DocNo' => (string) $docNo,
                 'ProductID' => (int) ($item['ProductID'] ?? 0),
                 'ProductDescription' => $item['Details'] ?? ($item['ProductDescription'] ?? null),
+                'HsCode' => $item['HsCode'] ?? null,
                 'UomID' => $item['UomID'] ?? null,
+                'SaleTypeID' => $item['SaleTypeID'] ?? null,
+                'SaleTypeToRateID' => $item['SaleTypeToRateID'] ?? null,
+                'SroScheduleID' => $item['SroScheduleID'] ?? null,
+                'SroItemID' => $item['SroItemID'] ?? null,
+                'RateType' => $item['RateType'] ?? null,
+                'TPRate' => $item['TPRate'] ?? 0,
                 'Quantity' => $qty,
                 'Rate' => $rate,
                 'Amount' => $amount,
+                'DiscountPercentage' => $item['DiscountPercentage'] ?? '0',
+                'DiscountAmount' => $item['DiscountAmount'] ?? 0,
+                'GstPercentage' => $item['GstPercentage'] ?? '0',
+                'GSTAmount' => $item['GSTAmount'] ?? 0,
+                'ValueSalesExcludingST' => $amount,
+                'FixedNotifiedValueOrRetailPrice' => $item['FixedNotifiedValueOrRetailPrice'] ?? (round((float) ($item['TPRate'] ?? 0) * $qty, 2)),
+                'SalesTaxApplicable' => $item['GSTAmount'] ?? 0,
+                'SalesTaxWithheldAtSource' => $item['SalesTaxWithheldAtSource'] ?? ($request->SalesTaxWithheldAtSource ?? 0),
+                'ExtraTax' => $item['ExtraTax'] ?? ($request->ExtraTax ?? 0),
+                'FurtherTax' => $item['FurtherTax'] ?? ($request->FurtherTax ?? 0),
+                'FedPayable' => $item['FedPayable'] ?? ($request->FedPayable ?? 0),
+                'TotalValues' => $item['Total'] ?? 0,
                 'Notes' => $request->Notes ?? null,
                 'Status' => $status,
                 'CreatedBy' => $userId,
@@ -282,7 +304,12 @@ class PurchaseController extends Controller
         if ($id && in_array($mode, ['edit', 'show'])) {
             $purchase = DB::table('tbl_purchase_header as h')
                 ->leftJoin('tbl_customer as sup', 'h.SupplierID', '=', 'sup.ID')
-                ->select('h.*', PurchaseModel::sqlSupplierDisplayName())
+                ->select(
+                    'h.*',
+                    PurchaseModel::sqlSupplierDisplayName(),
+                    DB::raw('COALESCE(sup.IsAdvanceTax, 0) as SupplierIsAdvanceTax'),
+                    DB::raw('COALESCE(sup.AdvanceTax, 0) as SupplierAdvanceTax')
+                )
                 ->where('h.ID', $id)
                 ->where('h.Status', '!=', 2)
                 ->first();
@@ -291,7 +318,7 @@ class PurchaseController extends Controller
                 $purchaseId = $purchase->PurchaseID ?? $purchase->ID;
                 $items = DB::table('tbl_purchase_detail as d')
                     ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
-                    ->select('d.*', 'p.Name as ProductName')
+                    ->select('d.*', 'p.Name as ProductName', DB::raw('d.TotalValues as Total'))
                     ->where('d.PurchaseID', $purchaseId)
                     ->where('d.Status', '!=', 2)
                     ->get();

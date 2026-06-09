@@ -62,6 +62,7 @@ class PurchaseBreakupService
         DB::purge('tenant');
         DB::reconnect('tenant');
         DB::setDefaultConnection('tenant');
+        ExcelColumnService::clearSchemaCaches();
     }
 
     public function countActiveLines(int $purchaseId): int
@@ -500,17 +501,14 @@ class PurchaseBreakupService
         $fileName = "{$safeDoc}-breakup-v{$version}.xlsx";
         $relativePath = 'purchase-breakup/'.$tenantId.'/'.$fileName;
 
-        $exportRows = collect($generatedRows);
-        if ($exportRows->isEmpty()) {
-            $exportRows = $this->excelColumnService->getBreakupData($purchaseId, $jobId);
-        }
+        $package = $this->excelColumnService->buildExportPackage($purchaseId, $jobId);
 
-        if ($exportRows->isEmpty()) {
+        if ($package['rows']->isEmpty()) {
             throw new \RuntimeException('No breakup rows available to export.');
         }
 
         Excel::store(
-            new DynamicBreakupExport($exportRows, $this->excelColumnService),
+            new DynamicBreakupExport($package['rows'], $package['columns'], $this->excelColumnService),
             $relativePath,
             'local'
         );
@@ -535,8 +533,8 @@ class PurchaseBreakupService
             return null;
         }
 
-        $data = $this->excelColumnService->getBreakupData($purchaseId, (int) $job->id);
-        if ($data->isEmpty()) {
+        $package = $this->excelColumnService->buildExportPackage($purchaseId, (int) $job->id);
+        if ($package['rows']->isEmpty()) {
             return null;
         }
 
@@ -549,7 +547,7 @@ class PurchaseBreakupService
             $header ?? 'PUR',
             (int) $job->version_no,
             $tenantContext,
-            $data->map(fn ($row) => (array) $row)->all()
+            $package['rows']->map(fn ($row) => (array) $row)->all()
         );
 
         DB::connection('tenant')->table('purchase_breakup_jobs')->where('id', $job->id)->update([
@@ -624,6 +622,7 @@ class PurchaseBreakupService
                     'ProductID' => (int) ($l->ProductID ?? 0),
                     'Quantity' => round((float) ($l->Quantity ?? 0), 4),
                     'Rate' => round((float) ($l->Rate ?? 0), 4),
+                    'TotalValues' => round((float) ($l->TotalValues ?? 0), 2),
                 ];
             }
             usort($out, fn ($a, $b) => $a['ProductID'] <=> $b['ProductID']);
@@ -631,7 +630,7 @@ class PurchaseBreakupService
             return $out;
         };
 
-        return $normalize($oldLines) !== $normalize($newLines);
+        return json_encode($normalize($oldLines)) !== json_encode($normalize($newLines));
     }
 
     protected function randomInvoiceDate(string $fromDate, string $endDate, mixed $fallbackDate = null): string

@@ -160,6 +160,8 @@
                             <th>Purchase Date <i class="fas fa-sort"></i></th>
                             <th width="25%">Supplier</th>
                             <th>Doc No <i class="fas fa-sort"></i></th>
+                            <th>Sub Total</th>
+                            <th>GST</th>
                             <th>Total</th>
                             <th>Breakup</th>
                             <th class="action-col">Action</th>
@@ -175,6 +177,8 @@
                             </td>
                             <td>{{ $purchase->SupplierDisplayName ?? 'N/A' }}</td>
                             <td>{{ $purchase->DocNo ?? '-' }}</td>
+                            <td>{{ number_format($purchase->SubTotal ?? 0, 2) }} PKR</td>
+                            <td>{{ number_format($purchase->TotalGST ?? $purchase->SalesTaxApplicable ?? 0, 2) }} PKR</td>
                             <td>{{ number_format($purchase->TotalAmount ?? 0, 2) }} PKR</td>
                             @php
                                 $lineCount = (int) ($purchase->PurchaseLineCount ?? 0);
@@ -457,6 +461,7 @@
 @endsection
 
 @section('scripts')
+@vite(['resources/assets/js/line-tax-calculator.js', 'resources/assets/js/ifp-purchase-tax-form.js'])
 <script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.0/dist/js/bootstrap-datepicker.min.js"></script>
 <script>
 let deletePurchaseId = null;

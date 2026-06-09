@@ -4,6 +4,8 @@
     $readonly = $readonly ?? false;
     $nameIdx = $idx;
     $selClass = $selClass ?? ($inModal ?? false ? 'form-select' : 'form-select form-select-sm');
+    $uid = $uid ?? '';
+    $inModal = $inModal ?? false;
 @endphp
 <tr class="ifp-row purchase-line-row">
     <td class="form-select-sm ifp-col-product">
@@ -16,7 +18,19 @@
                     <option value="">— Select —</option>
                     @foreach($products ?? [] as $p)
                         <option value="{{ $p->ID }}"
+                            data-rate="{{ $p->Cost ?? 0 }}"
                             data-cost="{{ $p->Cost ?? 0 }}"
+                            data-gst="{{ $p->GstPercentage ?? 0 }}"
+                            data-hscode="{{ $p->HsCode ?? '' }}"
+                            data-sale-information="{{ $p->SaleInformation ?? '' }}"
+                            data-uom-id="{{ $p->UomID ?? '' }}"
+                            data-uom-label="{{ trim((string) ($p->UomName ?? '')) }}"
+                            data-sale-type-id="{{ $p->SaleTypeID ?? '' }}"
+                            data-sale-type-to-rate-id="{{ $p->SaleTypeToRateID ?? '' }}"
+                            data-sro-schedule-id="{{ $p->SroScheduleID ?? '' }}"
+                            data-sro-item-id="{{ $p->SroItemID ?? '' }}"
+                            data-tp-rate="{{ $p->TPRate ?? 0 }}"
+                            data-is-fixed-rate="{{ in_array(strtolower(trim((string) ($p->IsFixedRate ?? '0'))), ['1', 'true', 'yes', 'y', 'on'], true) ? 1 : 0 }}"
                             {{ (int) ($item->ProductID ?? 0) === (int) $p->ID ? 'selected' : '' }}>
                             {{ $p->ProductName ?? ('Product #' . $p->ID) }}
                         </option>
@@ -31,11 +45,29 @@
         @if($readonly)
             <span class="small ifp-readonly-desc">{{ $item->ProductDescription ?? '-' }}</span>
         @else
+            <input type="hidden" name="items[{{ $nameIdx }}][HsCode]" class="ifp-hscode" value="{{ $item->HsCode ?? '' }}">
             <textarea name="items[{{ $nameIdx }}][Details]" rows="1"
                       class="form-control form-control-sm ifp-details line-details"
                       placeholder="Enter Description">{{ old('items.'.$nameIdx.'.Details', $item->ProductDescription ?? '') }}</textarea>
         @endif
     </td>
+    <td class="ifp-col-uom">
+        @if($readonly)
+            <span class="small">{{ $item->UomName ?? $item->UomID ?? '-' }}</span>
+        @else
+            <select name="items[{{ $nameIdx }}][UomID]" class="{{ $selClass }} ifp-uom" data-selected="{{ $item->UomID ?? '' }}">
+                <option value="">Select UOM</option>
+            </select>
+        @endif
+    </td>
+    @include('pages.dashboards.Invoice._invoice-line-tax-sro', [
+        'idx' => $nameIdx,
+        'item' => $item,
+        'uid' => $uid,
+        'selClass' => $selClass,
+        'inModal' => $inModal,
+        'isReadonly' => $readonly,
+    ])
     <td class="ifp-col-qty">
         @if($readonly)
             <span class="small">{{ number_format((float) ($item->Quantity ?? 0), 2) }}</span>
@@ -69,6 +101,93 @@
             <input type="number" step="0.01" name="items[{{ $nameIdx }}][Amount]"
                    class="form-control form-control-sm ifp-amount line-amount"
                    value="{{ old('items.'.$nameIdx.'.Amount', $item->Amount ?? 0) }}" readonly>
+        @endif
+    </td>
+    @if($inModal)
+    <td class="ifp-col-fixed">
+        @if($readonly)
+            <span class="small">{{ number_format((float) ($item->FixedNotifiedValueOrRetailPrice ?? ($item->TPRate ?? 0) * ($item->Quantity ?? 0)), 2) }}</span>
+        @else
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][FixedNotifiedValueOrRetailPrice]"
+                   class="form-control form-control-sm ifp-fixed-notified-value"
+                   value="{{ number_format((float) ($item->FixedNotifiedValueOrRetailPrice ?? ($item->TPRate ?? 0) * ($item->Quantity ?? 0)), 2, '.', '') }}" readonly>
+        @endif
+    </td>
+    @endif
+    @if(!$inModal)
+    <td>
+        @if($readonly)
+            <span class="small">{{ $item->DiscountPercentage ?? 0 }}%</span>
+        @else
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][DiscountPercentage]"
+                   class="form-control form-control-sm ifp-disc-pct"
+                   value="{{ $item->DiscountPercentage ?? 0 }}" min="0" max="100">
+        @endif
+    </td>
+    @endif
+    <td class="ifp-col-disc-amt">
+        @if($readonly)
+            <span class="small">{{ number_format((float) ($item->DiscountAmount ?? 0), 2) }}</span>
+        @else
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][DiscountAmount]"
+                   class="form-control form-control-sm ifp-disc-amt"
+                   value="{{ $item->DiscountAmount ?? 0 }}" readonly>
+        @endif
+    </td>
+    @if(!$inModal)
+    <td>
+        @if($readonly)
+            <span class="small">{{ $item->GstPercentage ?? 0 }}%</span>
+        @else
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][GstPercentage]"
+                   class="form-control form-control-sm ifp-gst-pct"
+                   value="{{ $item->GstPercentage ?? 0 }}" min="0">
+        @endif
+    </td>
+    @endif
+    <td class="ifp-col-gst-amt">
+        @if($readonly)
+            <span class="small">{{ number_format((float) ($item->GSTAmount ?? 0), 2) }}</span>
+        @else
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][GSTAmount]"
+                   class="form-control form-control-sm ifp-gst-amt"
+                   value="{{ $item->GSTAmount ?? 0 }}" readonly>
+        @endif
+    </td>
+    <td class="ifp-col-net">
+        @if($readonly)
+            <span class="small fw-bold">{{ number_format((float) ($item->Total ?? $item->TotalValues ?? 0), 2) }}</span>
+        @else
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][Total]"
+                   class="form-control form-control-sm ifp-total fw-bold"
+                   value="{{ $item->Total ?? $item->TotalValues ?? 0 }}" readonly>
+        @endif
+    </td>
+    <td class="ifp-col-extra-tax">
+        @if($readonly)
+            <span class="small">{{ number_format((float) ($item->ExtraTax ?? 0), 2) }}</span>
+        @else
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][ExtraTax]"
+                   class="form-control form-control-sm ifp-extra-tax"
+                   value="{{ $item->ExtraTax ?? 0 }}" min="0">
+        @endif
+    </td>
+    <td class="ifp-col-further-tax">
+        @if($readonly)
+            <span class="small">{{ number_format((float) ($item->FurtherTax ?? 0), 2) }}</span>
+        @else
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][FurtherTax]"
+                   class="form-control form-control-sm ifp-further-tax"
+                   value="{{ $item->FurtherTax ?? 0 }}" min="0">
+        @endif
+    </td>
+    <td class="ifp-col-fed-payable">
+        @if($readonly)
+            <span class="small">{{ number_format((float) ($item->FedPayable ?? 0), 2) }}</span>
+        @else
+            <input type="number" step="0.01" name="items[{{ $nameIdx }}][FedPayable]"
+                   class="form-control form-control-sm ifp-fed-payable"
+                   value="{{ $item->FedPayable ?? 0 }}" min="0">
         @endif
     </td>
     @if(!$readonly)

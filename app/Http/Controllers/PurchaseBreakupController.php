@@ -81,8 +81,9 @@ class PurchaseBreakupController extends Controller
             return response('<div class="alert alert-warning m-0">No generated breakup available for preview.</div>', 404);
         }
 
-        $columns = $this->excelColumnService->getVisibleColumns();
-        $rows = $this->excelColumnService->getBreakupData($id, (int) $job->id, 100);
+        $package = $this->excelColumnService->buildExportPackage($id, (int) $job->id, 100);
+        $columns = $package['columns'];
+        $rows = $package['rows'];
         $total = (int) ($job->total_rows ?? 0);
 
         $totals = DB::connection('tenant')
@@ -116,17 +117,40 @@ class PurchaseBreakupController extends Controller
             abort(403, 'Breakup file is not available for download.');
         }
 
-        $path = $this->breakupService->resolveDownloadPath($job);
-
-        if (! $path || (is_file($path) && filesize($path) < 512)) {
-            $path = $this->breakupService->rebuildExcelForPurchase($id);
-        }
+        // Always rebuild from live purchase_breakup_excel_columns (is_visible, sequence_no)
+        // so Excel matches the preview modal — do not serve a stale file from generate time.
+        $path = $this->breakupService->rebuildExcelForPurchase($id);
 
         if (! $path) {
-            abort(404, 'Breakup file not found on disk. Try Regenerate.');
+            abort(500, 'Could not rebuild breakup Excel from current column configuration. Check logs or use Regenerate.');
         }
 
+        $job = $this->breakupService->getLatestJob($id) ?? $job;
+
         return response()->download($path, $job->file_name ?? 'breakup.xlsx');
+    }
+
+    public function exportDebug(int $id)
+    {
+        $job = $this->breakupService->getLatestJob($id);
+        if (! $job || (int) $job->breakup_status !== PurchaseBreakupService::STATUS_GENERATED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No generated breakup available.',
+            ], 404);
+        }
+
+        $package = $this->excelColumnService->buildExportPackage($id, (int) $job->id, 5);
+
+        return response()->json([
+            'success' => true,
+            'purchase_id' => $id,
+            'job_id' => (int) $job->id,
+            'excel_headings' => $package['columns']->pluck('column_label')->values()->all(),
+            'excel_db_columns' => $package['columns']->pluck('db_column_name')->values()->all(),
+            'row_count_sample' => $package['rows']->count(),
+            'queries' => $package['debug'],
+        ]);
     }
 
     public function settings(int $id)
