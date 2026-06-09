@@ -93,12 +93,31 @@ class PurchaseBreakupController extends Controller
             ->selectRaw('COALESCE(SUM(qty), 0) as total_qty, COALESCE(SUM(amount), 0) as total_amount')
             ->first();
 
+        $totalGstAmount = null;
+        $hasGstColumn = $columns->contains(function ($col) {
+            $name = strtolower((string) ($col->db_column_name ?? ''));
+
+            return in_array($name, ['gst_amount', 'gstamount'], true);
+        });
+
+        if ($hasGstColumn) {
+            $detailGst = DB::connection('tenant')
+                ->table('tbl_purchase_detail')
+                ->where('PurchaseID', $id)
+                ->where('Status', '!=', 2)
+                ->orderBy('ID')
+                ->value('GSTAmount');
+
+            $totalGstAmount = $detailGst !== null ? (float) $detailGst : 0.0;
+        }
+
         return view('pages.dashboards.Purchase._breakup-preview-partial', [
             'columns' => $columns,
             'rows' => $rows,
             'total' => $total,
             'totalQty' => (float) ($totals->total_qty ?? 0),
             'totalAmount' => (float) ($totals->total_amount ?? 0),
+            'totalGstAmount' => $totalGstAmount,
         ]);
     }
 

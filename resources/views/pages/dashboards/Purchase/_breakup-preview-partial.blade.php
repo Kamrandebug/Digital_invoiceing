@@ -4,6 +4,8 @@
 
     $amountColIndex = null;
 
+    $gstColIndex = null;
+
     $numericCols = [
 
         'qty', 'rate', 'amount',
@@ -31,6 +33,14 @@
         if ($col->db_column_name === 'amount') {
 
             $amountColIndex = $idx;
+
+        }
+
+        $gstKey = strtolower((string) $col->db_column_name);
+
+        if (in_array($gstKey, ['gst_amount', 'gstamount'], true)) {
+
+            $gstColIndex = $idx;
 
         }
 
@@ -126,11 +136,9 @@
 
     }
 
-    .breakup-preview-scroll {
+    .breakup-preview-hscroll {
 
         flex: 0 0 auto;
-
-        max-height: 42vh;
 
         overflow-x: auto;
 
@@ -144,7 +152,31 @@
 
     }
 
-    .breakup-preview-scroll.has-vertical-scroll {
+    .breakup-preview-hscroll:has(.breakup-preview-totals) {
+
+        border-radius: 0.25rem;
+
+    }
+
+    .breakup-preview-table-block {
+
+        width: max-content;
+
+        min-width: {{ $tableMinWidth }}px;
+
+    }
+
+    .breakup-preview-vscroll {
+
+        max-height: 42vh;
+
+        overflow-x: hidden;
+
+        overflow-y: hidden;
+
+    }
+
+    .breakup-preview-vscroll.has-vertical-scroll {
 
         overflow-y: scroll;
 
@@ -156,15 +188,13 @@
 
     }
 
-    .breakup-preview-scroll.has-vertical-scroll::-webkit-scrollbar {
+    .breakup-preview-vscroll.has-vertical-scroll::-webkit-scrollbar {
 
         width: 10px;
 
-        height: 10px;
-
     }
 
-    .breakup-preview-scroll.has-vertical-scroll::-webkit-scrollbar-track {
+    .breakup-preview-vscroll.has-vertical-scroll::-webkit-scrollbar-track {
 
         background: #e9ecef;
 
@@ -172,7 +202,7 @@
 
     }
 
-    .breakup-preview-scroll.has-vertical-scroll::-webkit-scrollbar-thumb {
+    .breakup-preview-vscroll.has-vertical-scroll::-webkit-scrollbar-thumb {
 
         background: #6c757d;
 
@@ -182,9 +212,33 @@
 
     }
 
-    .breakup-preview-scroll.has-vertical-scroll::-webkit-scrollbar-thumb:hover {
+    .breakup-preview-vscroll.has-vertical-scroll::-webkit-scrollbar-thumb:hover {
 
         background: #495057;
+
+    }
+
+    .breakup-preview-hscroll::-webkit-scrollbar {
+
+        height: 10px;
+
+    }
+
+    .breakup-preview-hscroll::-webkit-scrollbar-track {
+
+        background: #e9ecef;
+
+        border-radius: 4px;
+
+    }
+
+    .breakup-preview-hscroll::-webkit-scrollbar-thumb {
+
+        background: #6c757d;
+
+        border-radius: 4px;
+
+        border: 2px solid #e9ecef;
 
     }
 
@@ -286,15 +340,11 @@
 
         flex-shrink: 0;
 
-        border: 1px solid var(--bs-border-color, #dee2e6);
-
         border-top: 2px solid var(--bs-border-color, #dee2e6);
-
-        border-radius: 0 0 0.25rem 0.25rem;
 
         background: var(--bs-gray-100, #f8f9fa);
 
-        overflow-x: auto;
+        overflow: hidden;
 
     }
 
@@ -358,9 +408,13 @@
 
 <div class="breakup-preview-wrap">
 
-    <div class="breakup-preview-scroll{{ $rows->count() > 8 ? ' has-vertical-scroll' : '' }}">
+    <div class="breakup-preview-hscroll">
 
-        <table class="table listing-table mb-0 breakup-preview-data-table">
+        <div class="breakup-preview-table-block">
+
+            <div class="breakup-preview-vscroll{{ $rows->count() > 8 ? ' has-vertical-scroll' : '' }}">
+
+                <table class="table listing-table mb-0 breakup-preview-data-table">
 
             <colgroup>
 
@@ -443,17 +497,15 @@
 
             </tbody>
 
-        </table>
+                </table>
 
-    </div>
+            </div>
 
+            @if($rows->isNotEmpty() && ($qtyColIndex !== null || $amountColIndex !== null || $gstColIndex !== null))
 
+            <div class="breakup-preview-totals">
 
-    @if($rows->isNotEmpty() && ($qtyColIndex !== null || $amountColIndex !== null))
-
-    <div class="breakup-preview-totals">
-
-        <table class="table listing-table mb-0 breakup-preview-data-table">
+                <table class="table listing-table mb-0 breakup-preview-data-table">
 
             <colgroup>
 
@@ -491,6 +543,10 @@
 
                                 $cell = number_format($totalAmount ?? 0, 2);
 
+                            } elseif ($idx === $gstColIndex && $totalGstAmount !== null) {
+
+                                $cell = number_format($totalGstAmount, 2);
+
                             }
 
                             $tdClass = ($align === 'right') ? 'num' : (($align === 'center') ? 'text-center' : 'text-wrap');
@@ -505,11 +561,15 @@
 
             </tbody>
 
-        </table>
+                </table>
+
+            </div>
+
+            @endif
+
+        </div>
 
     </div>
-
-    @endif
 
 
 
