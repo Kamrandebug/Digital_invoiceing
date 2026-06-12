@@ -519,7 +519,7 @@
 					<div class="row g-2">
 						<div class="col-md-4">
 							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
-								NTN Number @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
+								Registration / NTN @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
 							</label>
 							@if($isReadonly)
 								<div class="_cfp-detail-value">{{ $customer->NTN ?? '-' }}</div>

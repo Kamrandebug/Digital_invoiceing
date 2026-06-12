@@ -259,17 +259,18 @@
         .party-col table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .party-col th {
             text-align: left;
-            padding: 2px 10px 2px 0;
-            width: 30%;
-            max-width: 7.5rem;
-            white-space: nowrap;
+            padding: 2px 8px 2px 0;
+            width: 44%;
+            white-space: normal;
             color: #555;
             font-weight: 600;
             vertical-align: top;
+            line-height: 1.35;
+            overflow-wrap: break-word;
         }
         .party-col td {
-            padding: 2px 0;
-            width: 70%;
+            padding: 2px 0 2px 4px;
+            width: 56%;
             vertical-align: top;
             text-align: left;
             word-break: normal;
@@ -287,6 +288,9 @@
             overflow-wrap: break-word;
             hyphens: none;
             line-height: 1.35;
+        }
+        .party-col td {
+    text-transform: uppercase;
         }
         table.items { width: 100%; border-collapse: collapse; margin: 16px 0; table-layout: fixed; }
         /* Column widths: amount columns (Value Excel ST, Sales Tax Amount, Inclusive) aligned for large figures */
@@ -438,6 +442,25 @@
             font-weight: 700;
         }
         .notes { margin-top: 20px; padding: 8px; background: #f9f9f9; border-radius: 4px; font-size: 12px; white-space: pre-line; }
+        .business-notes {
+            max-width: 96%;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 12px 16px;
+            font-size: 10px;
+            line-height: 1.5;
+            white-space: normal;
+        }
+        .business-notes .notes-label {
+            display: block;
+            text-align: left;
+            margin: 0 0 2px 0;
+        }
+        .business-notes .notes-body {
+            margin: 0;
+            text-align: center;
+            white-space: pre-line;
+        }
         /* FBR: matching 1\" × 1\" slots for badge + QR (no captions) */
         .fbr-digital-section {
             margin-top: 0;
@@ -515,7 +538,7 @@
             @endif
             <div class="print-section-1-meta">
                 <table>
-                    <tr><th>Doc No:</th><td>{{ $invoice->DocNo ?? 'N/A' }}</td></tr>
+                    <tr><th>Invoice / Doc No:</th><td>{{ $invoice->DocNo ?? 'N/A' }}</td></tr>
                     @if(trim((string) ($invoice->DocNo2 ?? '')) !== '')
                     <tr><th>Doc2 No:</th><td>{{ $invoice->DocNo2 }}</td></tr>
                     @endif
@@ -545,7 +568,7 @@
                         <tr><th>Phone:</th><td>{{ $seller->Phone }}</td></tr>
                         @endif
                         @if(!empty(trim((string) ($seller->NTN ?? ''))))
-                        <tr><th>NTN:</th><td>{{ $seller->NTN }}</td></tr>
+                        <tr><th>Registration / NTN:</th><td>{{ $seller->NTN }}</td></tr>
                         @endif
                         @if(!empty(trim((string) ($seller->SalesTaxNumber ?? ''))))
                         <tr><th>STN:</th><td>{{ $seller->SalesTaxNumber }}</td></tr>
@@ -574,7 +597,7 @@
                         <tr><th>Phone:</th><td>{{ $buyer->Phone }}</td></tr>
                         @endif
                         @if(!empty(trim((string) ($buyer->NTN ?? ''))))
-                        <tr><th>NTN:</th><td>{{ $buyer->NTN }}</td></tr>
+                        <tr><th>Registration / NTN:</th><td>{{ $buyer->NTN }}</td></tr>
                         @endif
                         @if(!empty(trim((string) ($buyer->SalesTaxNumber ?? ''))))
                         <tr><th>STN:</th><td>{{ $buyer->SalesTaxNumber }}</td></tr>
@@ -694,6 +717,13 @@
             </div>
         </div>
         </div>
+
+        @if($seller && !empty(trim($seller->Notes ?? '')))
+        <div class="notes business-notes">
+            <strong class="notes-label">Notes:</strong>
+            <div class="notes-body">{{ ltrim((string) $seller->Notes) }}</div>
+        </div>
+        @endif
 
         @if(!empty(trim($invoice->Notes ?? '')))
         <div class="notes"><strong>Notes:</strong><br>{{ $invoice->Notes }}</div>
