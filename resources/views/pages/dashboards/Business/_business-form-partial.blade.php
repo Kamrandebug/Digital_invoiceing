@@ -285,7 +285,7 @@
 
                 {{-- 2. NTN + Sales Tax Number + CNIC --}}
                 <div class="col-md-4">
-                    <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">NTN</label>
+                    <label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label _cfp-required' }}">Registration / NTN</label>
                     @if($isReadonly)
                         <div class="_cfp-detail-value">{{ $record->NTN ?? '-' }}</div>
                     @else
