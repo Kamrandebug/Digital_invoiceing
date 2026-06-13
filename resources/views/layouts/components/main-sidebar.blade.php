@@ -47,12 +47,6 @@
 					</a>
 				</li>
 				<li class="slide">
-					<a href="{{ url('products') }}" class="side-menu__item">
-						<i class="ri-box-3-line menu-icon"></i>
-                        <span class="side-menu__label">Products</span>
-					</a>
-				</li>
-				<li class="slide">
 					<a href="{{ route('invoices.index') }}" class="side-menu__item">
 						<i class="ri-receipt-line menu-icon"></i>
                         <span class="side-menu__label">Invoices</span>
@@ -68,12 +62,6 @@
 					<a href="{{ route('purchases.index') }}" class="side-menu__item">
 						<i class="ri-shopping-cart-line menu-icon"></i>
                         <span class="side-menu__label">Purchases</span>
-					</a>
-				</li>
-				<li class="slide">
-					<a href="{{ url('products') }}" class="side-menu__item">
-						<i class="ri-box-3-line menu-icon"></i>
-                        <span class="side-menu__label">Products</span>
 					</a>
 				</li>
 				<li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
