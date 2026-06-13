@@ -277,6 +277,7 @@
             overflow-wrap: break-word;
             hyphens: none;
             line-height: 1.35;
+            text-transform: uppercase;
         }
         .party-col .party-name {
             font-size: 12px;
@@ -288,9 +289,7 @@
             overflow-wrap: break-word;
             hyphens: none;
             line-height: 1.35;
-        }
-        .party-col td {
-    text-transform: uppercase;
+            text-transform: uppercase;
         }
         table.items { width: 100%; border-collapse: collapse; margin: 16px 0; table-layout: fixed; }
         /* Column widths: amount columns (Value Excel ST, Sales Tax Amount, Inclusive) aligned for large figures */
