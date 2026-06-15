@@ -166,7 +166,7 @@
                             <th>DocNo <i class="fas fa-sort"></i></th>
                             <th>Net</th>
                             <th>FBR Transaction ID</th>
-                            <th style="width:260px;">FBR Response</th>
+                            <th style="width:100px;">FBR Response</th>
                             <th class="action-col">Action</th>
                         </tr>
                     </thead>

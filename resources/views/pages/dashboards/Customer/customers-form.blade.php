@@ -685,7 +685,7 @@
                 <div class="col-md-4">
                     <div class="mb-3">
                         <label for="NTN" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">
-                            NTN Number @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
+                            Registration / NTN @if(!$isReadonly)<small class="text-muted fw-normal">(Optional)</small>@endif
                         </label>
                         @if($isReadonly)
                             <div class="detail-value">{{ $customer->NTN ?? '-' }}</div>

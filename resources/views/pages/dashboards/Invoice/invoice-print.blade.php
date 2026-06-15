@@ -168,9 +168,7 @@
             body.orientation-portrait table.items col.col-tax { width: 12% !important; }
             body.orientation-portrait table.items col.col-value,
             body.orientation-portrait table.items col.col-inclusive { width: 11% !important; }
-            body.orientation-portrait table.items th.col-tax-amount,
             body.orientation-portrait table.items td.col-tax-amount,
-            body.orientation-portrait table.items th.col-value-amount,
             body.orientation-portrait table.items td.col-value-amount {
                 white-space: nowrap !important;
                 padding-left: 4px !important;
@@ -261,23 +259,25 @@
         .party-col table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .party-col th {
             text-align: left;
-            padding: 2px 10px 2px 0;
-            width: 30%;
-            max-width: 7.5rem;
-            white-space: nowrap;
+            padding: 2px 8px 2px 0;
+            width: 44%;
+            white-space: normal;
             color: #555;
             font-weight: 600;
             vertical-align: top;
+            line-height: 1.35;
+            overflow-wrap: break-word;
         }
         .party-col td {
-            padding: 2px 0;
-            width: 70%;
+            padding: 2px 0 2px 4px;
+            width: 56%;
             vertical-align: top;
             text-align: left;
             word-break: normal;
             overflow-wrap: break-word;
             hyphens: none;
             line-height: 1.35;
+            text-transform: uppercase;
         }
         .party-col .party-name {
             font-size: 12px;
@@ -289,6 +289,7 @@
             overflow-wrap: break-word;
             hyphens: none;
             line-height: 1.35;
+            text-transform: uppercase;
         }
         table.items { width: 100%; border-collapse: collapse; margin: 16px 0; table-layout: fixed; }
         /* Column widths: amount columns (Value Excel ST, Sales Tax Amount, Inclusive) aligned for large figures */
@@ -326,9 +327,7 @@
         }
         table.items td { font-size: 12px; hyphens: none; }
         table.items .num { text-align: right; }
-        table.items th.col-value-amount,
         table.items td.col-value-amount,
-        table.items th.col-tax-amount,
         table.items td.col-tax-amount {
             text-align: right;
             white-space: nowrap;
@@ -442,6 +441,25 @@
             font-weight: 700;
         }
         .notes { margin-top: 20px; padding: 8px; background: #f9f9f9; border-radius: 4px; font-size: 12px; white-space: pre-line; }
+        .business-notes {
+            max-width: 96%;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 12px 16px;
+            font-size: 10px;
+            line-height: 1.5;
+            white-space: normal;
+        }
+        .business-notes .notes-label {
+            display: block;
+            text-align: left;
+            margin: 0 0 2px 0;
+        }
+        .business-notes .notes-body {
+            margin: 0;
+            text-align: center;
+            white-space: pre-line;
+        }
         /* FBR: matching 1\" × 1\" slots for badge + QR (no captions) */
         .fbr-digital-section {
             margin-top: 0;
@@ -519,7 +537,7 @@
             @endif
             <div class="print-section-1-meta">
                 <table>
-                    <tr><th>Doc No:</th><td>{{ $invoice->DocNo ?? 'N/A' }}</td></tr>
+                    <tr><th>Invoice / Doc No:</th><td>{{ $invoice->DocNo ?? 'N/A' }}</td></tr>
                     @if(trim((string) ($invoice->DocNo2 ?? '')) !== '')
                     <tr><th>Doc2 No:</th><td>{{ $invoice->DocNo2 }}</td></tr>
                     @endif
@@ -549,7 +567,7 @@
                         <tr><th>Phone:</th><td>{{ $seller->Phone }}</td></tr>
                         @endif
                         @if(!empty(trim((string) ($seller->NTN ?? ''))))
-                        <tr><th>NTN:</th><td>{{ $seller->NTN }}</td></tr>
+                        <tr><th>Registration / NTN:</th><td>{{ $seller->NTN }}</td></tr>
                         @endif
                         @if(!empty(trim((string) ($seller->SalesTaxNumber ?? ''))))
                         <tr><th>STN:</th><td>{{ $seller->SalesTaxNumber }}</td></tr>
@@ -578,7 +596,7 @@
                         <tr><th>Phone:</th><td>{{ $buyer->Phone }}</td></tr>
                         @endif
                         @if(!empty(trim((string) ($buyer->NTN ?? ''))))
-                        <tr><th>NTN:</th><td>{{ $buyer->NTN }}</td></tr>
+                        <tr><th>Registration / NTN:</th><td>{{ $buyer->NTN }}</td></tr>
                         @endif
                         @if(!empty(trim((string) ($buyer->SalesTaxNumber ?? ''))))
                         <tr><th>STN:</th><td>{{ $buyer->SalesTaxNumber }}</td></tr>
@@ -616,12 +634,12 @@
                     <th class="num">Qty</th>
                     <th class="cell-uom">Unit</th>
                     <th class="num">Unit Rate</th>
-                    <th class="num col-value-amount">Value Excel ST</th>
+                    <th class="num col-value-amount th-inclusive">Value<br>Excel<br>ST</th>
                     @if($showFixedNotifiedColumn)
                     <th class="num th-col-fixed">Fixed<br>Notified<br>Value</th>
                     @endif
                     <th class="cell-mid">Sales Tax Rate</th>
-                    <th class="num col-tax-amount">Sales Tax Amount</th>
+                    <th class="num col-tax-amount th-inclusive">Sales<br>Tax<br>Amount</th>
                     <th class="num col-value-amount th-inclusive">Value<br>Inclusive<br>Sales Tax</th>
                 </tr>
             </thead>
@@ -698,6 +716,13 @@
             </div>
         </div>
         </div>
+
+        @if($seller && !empty(trim($seller->Notes ?? '')))
+        <div class="notes business-notes">
+            <strong class="notes-label">Notes:</strong>
+            <div class="notes-body">{{ ltrim((string) $seller->Notes) }}</div>
+        </div>
+        @endif
 
         @if(!empty(trim($invoice->Notes ?? '')))
         <div class="notes"><strong>Notes:</strong><br>{{ $invoice->Notes }}</div>
