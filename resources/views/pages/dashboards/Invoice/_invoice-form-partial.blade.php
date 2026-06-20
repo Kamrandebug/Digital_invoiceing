@@ -753,9 +753,7 @@
                         'isReadonly' => false,
                     ])
                     <td class="ifp-col-qty"><input type="number" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>
-                    @if(!$inModal)
-                    <td><input type="text" inputmode="decimal" name="items[0][Rate]"               class="form-control form-control-sm ifp-rate ifp-numfmt"     value="0.00"></td>
-                    @endif
+                    <td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[0][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>
                     <td class="ifp-col-amount"><input type="text"     name="items[0][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>
                     @if($inModal)
                     <td class="ifp-col-fixed"><input type="text"     name="items[0][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>
@@ -1106,6 +1104,9 @@
             el.value = ifpSanitizeNumericText(el.value);
         });
     }
+    function ifpRateInput(row) {
+        return rowEl(row, '.ifp-col-sale-rate .ifp-rate') || rowEl(row, '.ifp-rate');
+    }
     function rowEl(row, selector) {
         var fromRow = row ? row.querySelector(selector) : null;
         if (fromRow) return fromRow;
@@ -1429,7 +1430,7 @@
     // ── Row calculation ──
     function calcRow(row) {
         const qty     = n(rowEl(row, '.ifp-qty')?.value);
-        const rate    = n(rowEl(row, '.ifp-rate')?.value);
+        const rate    = n(ifpRateInput(row)?.value);
         const discPct = n(rowEl(row, '.ifp-disc-pct')?.value);
         const gstPct  = n(rowEl(row, '.ifp-gst-pct')?.value);
         let extraTax = n(rowEl(row, '.ifp-extra-tax')?.value);
@@ -1572,7 +1573,7 @@
                 calcSummary();
             });
         });
-        const rateInp = row.querySelector('.ifp-rate');
+        const rateInp = ifpRateInput(row);
         if (rateInp) {
             rateInp.addEventListener('focus', function() {
                 rateInp.value = ifpSanitizeNumericText(rateInp.value);
@@ -1603,7 +1604,7 @@
                     ? prodSel.selectedOptions[0]
                     : prodSel.options[prodSel.selectedIndex];
                 if (!opt) return;
-                const rateEl = rowEl(row, '.ifp-rate');
+                const rateEl = ifpRateInput(row);
                 const gstEl  = rowEl(row, '.ifp-gst-pct');
                 const ds = opt.dataset || {};
                 if (forceDetailsFill) {
@@ -2271,7 +2272,6 @@
                                 </div>
                                 <div class="row g-2 px-2 pb-2 ifp-tax-sro-fields-lower">
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifiler_${idx}">Is Filer</label><input type="hidden" name="items[${idx}][IsFiler]" class="ifp-is-filer" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifiler_${idx}" class="form-check-input ifp-is-filer-cb m-0" disabled></div></div></div>
-                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_lr_${idx}">Rate</label><input type="text" inputmode="decimal" id="${uid}_lr_${idx}" name="items[${idx}][Rate]" class="form-control ifp-rate ifp-numfmt" value="0.00"></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_gst_${idx}">GST Rate %</label><input type="number" step="0.01" id="${uid}_gst_${idx}" name="items[${idx}][GstPercentage]" class="form-control ifp-gst-pct" value="0" min="0"></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifr_${idx}">Is Fixed</label><input type="hidden" name="items[${idx}][IsFixedRate]" class="ifp-is-fixed-rate" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifr_${idx}" class="form-check-input ifp-is-fixed-rate-cb m-0" disabled></div></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_fr_${idx}">Fixed Rate</label><input type="number" step="0.01" id="${uid}_fr_${idx}" name="items[${idx}][TPRate]" class="form-control ifp-fixed-rate" value="0" readonly></div></div>
@@ -2292,6 +2292,7 @@
         var rowNumericTail = IFP_TAX_COMPACT
             ? (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
+                '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td class="ifp-col-fixed"><input type="text"     name="items[' + idx + '][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
@@ -2304,7 +2305,7 @@
             )
             : (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
-                '<td><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]"               class="form-control form-control-sm ifp-rate ifp-numfmt"     value="0.00"></td>' +
+                '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
