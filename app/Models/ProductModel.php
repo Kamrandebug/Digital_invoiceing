@@ -189,12 +189,12 @@ class ProductModel extends Model
 
         DB::connection('landlord')->statement("
             INSERT INTO {$tenantDbQuoted}.tbl_product (
-                VoucherID,`Name`,`Code`,`Type`,CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,Weight,Image,
+                VoucherID,`Name`,`Code`,`Type`,CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,IsFixedRate,Weight,Image,
                 HsCode,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,
                 SroItemID,SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
             )
             SELECT
-                VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,Weight,Image,
+                VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,IsFixedRate,Weight,Image,
                 HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
                 SaleTypeToRate,fsttr.`ratE_DESC` AS SaleTypeToRateDesc,SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
                 SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
@@ -263,7 +263,7 @@ class ProductModel extends Model
         DB::connection('landlord')->statement("
             UPDATE {$tenantDbQuoted}.tbl_product uu
             JOIN (
-                SELECT t.TID, VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,Weight,Image,
+                SELECT t.TID, VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,IsFixedRate,Weight,Image,
                 HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
                 SaleTypeToRate, fsttr.`ratE_DESC` AS SaleTypeToRateDesc, SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
                 SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,UpdatedBy,UpdatedOn,RequestID
@@ -285,6 +285,7 @@ class ProductModel extends Model
                 uu.SalePrice          = u.SalePrice,
                 uu.Cost               = u.Cost,
                 uu.TPRate             = u.TPRate,
+                uu.IsFixedRate        = u.IsFixedRate,
                 uu.Weight             = u.Weight,
                 uu.Image              = u.Image,
                 uu.HsCode             = u.HsCode,
