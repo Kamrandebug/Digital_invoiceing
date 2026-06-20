@@ -242,11 +242,11 @@
         .table-inv th.ifp-col-qty,
         .table-inv td.ifp-col-qty { min-width: 64px; width: 4%; }
         .table-inv th.ifp-col-amount,
-        .table-inv td.ifp-col-amount { min-width: 96px; width: 6%; }
+        .table-inv td.ifp-col-amount { min-width: 108px; width: 6%; }
         .table-inv th.ifp-col-fixed,
-        .table-inv td.ifp-col-fixed { min-width: 120px; width: 7%; }
+        .table-inv td.ifp-col-fixed { min-width: 132px; width: 7%; }
         .table-inv th.ifp-col-disc-amt,
-        .table-inv td.ifp-col-disc-amt { min-width: 96px; width: 6%; }
+        .table-inv td.ifp-col-disc-amt { min-width: 108px; width: 6%; }
         .table-inv th.ifp-col-extra-tax,
         .table-inv td.ifp-col-extra-tax { min-width: 96px; width: 5%; }
         .table-inv th.ifp-col-further-tax,
@@ -254,9 +254,9 @@
         .table-inv th.ifp-col-fed-payable,
         .table-inv td.ifp-col-fed-payable { min-width: 96px; width: 5%; }
         .table-inv th.ifp-col-gst-amt,
-        .table-inv td.ifp-col-gst-amt { min-width: 96px; width: 6%; }
+        .table-inv td.ifp-col-gst-amt { min-width: 108px; width: 6%; }
         .table-inv th.ifp-col-net,
-        .table-inv td.ifp-col-net { min-width: 110px; width: 7%; }
+        .table-inv td.ifp-col-net { min-width: 122px; width: 7%; }
         .table-inv th.ifp-col-actions,
         .table-inv td.ifp-col-actions { min-width: 48px; width: 3%; }
         .table-inv .form-control,
@@ -286,6 +286,13 @@
         .table-inv input[type="number"]::-webkit-outer-spin-button,
         .table-inv input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .table-inv input[type="number"] { -moz-appearance: textfield; }
+        .table-inv .ifp-numfmt {
+            min-width: 0;
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
         .table-inv td.ifp-col-desc textarea.form-control { min-width: 200px; width: 100%; }
         .table-inv td.ifp-col-desc .ifp-readonly-desc {
             display: block;
@@ -619,7 +626,7 @@
                         @if($isReadonly)
                             <span class="small">{{ number_format((float) ($item->TPRate ?? 0) * (float) ($item->Quantity ?? 0), 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value" value="{{ number_format((float) ($item->TPRate ?? 0) * (float) ($item->Quantity ?? 0), 2, '.', '') }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="{{ number_format((float) ($item->TPRate ?? 0) * (float) ($item->Quantity ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     @endif
@@ -737,7 +744,7 @@
                     @endif
                     <td class="ifp-col-amount"><input type="text"     name="items[0][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>
                     @if($inModal)
-                    <td class="ifp-col-fixed"><input type="number" step="0.01"     name="items[0][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value" value="0" readonly></td>
+                    <td class="ifp-col-fixed"><input type="text"     name="items[0][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>
                     @endif
                     @if(!$inModal)
                     <td><input type="number" step="0.01"     name="items[0][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>
@@ -1422,7 +1429,7 @@
         set('ifp-fed-payable', fedPayable);
         set('ifp-gst-amt',  gstAmt);
         set('ifp-total',    total);
-        if (fixedNotifiedEl) fixedNotifiedEl.value = fixedNotified.toFixed(2);
+        if (fixedNotifiedEl) fixedNotifiedEl.value = ifpFormatNumber(fixedNotified, 2);
 
         return { amount, discAmt, gstAmt, total };
     }
@@ -2181,7 +2188,7 @@
             ? (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
-                '<td class="ifp-col-fixed"><input type="number" step="0.01"     name="items[' + idx + '][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value" value="0" readonly></td>' +
+                '<td class="ifp-col-fixed"><input type="text"     name="items[' + idx + '][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
                 '<td class="ifp-col-gst-amt"><input type="text"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>' +
                 '<td class="ifp-col-net"><input type="text"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>' +
