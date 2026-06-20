@@ -753,6 +753,11 @@ saveBtn.onclick = function () {
         return;
     }
 
+    // Remove visual thousand separators before collecting FormData.
+    if (typeof window.ifpNormalizeFormattedInputs === 'function') {
+        window.ifpNormalizeFormattedInputs(form);
+    }
+
     // ✅ All good — proceed with AJAX
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
