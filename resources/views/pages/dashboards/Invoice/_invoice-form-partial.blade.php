@@ -603,7 +603,7 @@
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->Rate ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.000001" name="items[{{ $idx }}][Rate]" class="form-control form-control-sm ifp-rate" value="{{ $item->Rate ?? 0 }}" min="0">
+                            <input type="text" inputmode="decimal" name="items[{{ $idx }}][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="{{ number_format((float) ($item->Rate ?? 0), 2, '.', ',') }}">
                         @endif
                     </td>
                     @endif
@@ -611,7 +611,7 @@
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->Amount ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][Amount]" class="form-control form-control-sm ifp-amount" value="{{ $item->Amount ?? 0 }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][Amount]" class="form-control form-control-sm ifp-amount ifp-numfmt" value="{{ number_format((float) ($item->Amount ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     @if($inModal)
@@ -652,14 +652,14 @@
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->GSTAmount ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][GSTAmount]" class="form-control form-control-sm ifp-gst-amt" value="{{ $item->GSTAmount ?? 0 }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][GSTAmount]" class="form-control form-control-sm ifp-gst-amt ifp-numfmt" value="{{ number_format((float) ($item->GSTAmount ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     <td class="ifp-col-net">
                         @if($isReadonly)
                             <span class="small fw-bold">{{ number_format($item->Total ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][Total]" class="form-control form-control-sm ifp-total fw-bold" value="{{ $item->Total ?? 0 }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][Total]" class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="{{ number_format((float) ($item->Total ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     <td class="ifp-col-extra-tax">
@@ -733,9 +733,9 @@
                     ])
                     <td class="ifp-col-qty"><input type="number" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>
                     @if(!$inModal)
-                    <td><input type="number" step="0.000001" name="items[0][Rate]"               class="form-control form-control-sm ifp-rate"     value="0" min="0"></td>
+                    <td><input type="text" inputmode="decimal" name="items[0][Rate]"               class="form-control form-control-sm ifp-rate ifp-numfmt"     value="0.00"></td>
                     @endif
-                    <td class="ifp-col-amount"><input type="number" step="0.01"     name="items[0][Amount]"             class="form-control form-control-sm ifp-amount"   value="0" readonly></td>
+                    <td class="ifp-col-amount"><input type="text"     name="items[0][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>
                     @if($inModal)
                     <td class="ifp-col-fixed"><input type="number" step="0.01"     name="items[0][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value" value="0" readonly></td>
                     @endif
@@ -746,8 +746,8 @@
                     @if(!$inModal)
                     <td><input type="number" step="0.01"     name="items[0][GstPercentage]"      class="form-control form-control-sm ifp-gst-pct"  value="0" min="0"></td>
                     @endif
-                    <td class="ifp-col-gst-amt"><input type="number" step="0.01"     name="items[0][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt"  value="0" readonly></td>
-                    <td class="ifp-col-net"><input type="number" step="0.01"     name="items[0][Total]"              class="form-control form-control-sm ifp-total fw-bold" value="0" readonly></td>
+                    <td class="ifp-col-gst-amt"><input type="text"     name="items[0][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>
+                    <td class="ifp-col-net"><input type="text"     name="items[0][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>
                     <td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[0][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>
                     <td class="ifp-col-further-tax"><input type="number" step="0.01"     name="items[0][FurtherTax]"         class="form-control form-control-sm ifp-further-tax" value="0" min="0"></td>
                     <td class="ifp-col-fed-payable"><input type="number" step="0.01"     name="items[0][FedPayable]"         class="form-control form-control-sm ifp-fed-payable" value="0" min="0"></td>
@@ -829,32 +829,32 @@
                         <tr>
                             <th scope="row"><div class="fw-medium">Total Amount Excluding ST:</div></th>
                             <td>
-                                <input type="number" step="0.01" name="SubTotal" id="{{ $uid }}_SubTotal"
-                                       class="form-control invoice-amount-input w-100"
+                                <input type="text" name="SubTotal" id="{{ $uid }}_SubTotal"
+                                       class="form-control invoice-amount-input w-100 ifp-numfmt"
                                        value="{{ $isReadonly ? number_format((float) $viewSubTotal, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
                         <tr>
                             <th scope="row"><div class="fw-medium">Discount:</div></th>
                             <td>
-                                <input type="number" step="0.01" name="TotalDiscount" id="{{ $uid }}_TotalDiscount"
-                                       class="form-control invoice-amount-input w-100"
+                                <input type="text" name="TotalDiscount" id="{{ $uid }}_TotalDiscount"
+                                       class="form-control invoice-amount-input w-100 ifp-numfmt"
                                        value="{{ $isReadonly ? number_format((float) $viewDiscount, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
                         <tr>
                             <th scope="row"><div class="fw-medium">Total Sales Tax:</div></th>
                             <td>
-                                <input type="number" step="0.01" name="TotalGST" id="{{ $uid }}_TotalGST"
-                                       class="form-control invoice-amount-input w-100"
+                                <input type="text" name="TotalGST" id="{{ $uid }}_TotalGST"
+                                       class="form-control invoice-amount-input w-100 ifp-numfmt"
                                        value="{{ $isReadonly ? number_format((float) $viewGst, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
                         <tr class="ifp-totals-inc">
                             <th scope="row"><div class="fw-medium">Total Inc. All Taxes:</div></th>
                             <td>
-                                <input type="number" step="0.01" name="GrandTotal" id="{{ $uid }}_GrandTotal"
-                                       class="form-control invoice-amount-input w-100 fw-bold"
+                                <input type="text" name="GrandTotal" id="{{ $uid }}_GrandTotal"
+                                       class="form-control invoice-amount-input w-100 ifp-numfmt fw-bold"
                                        value="{{ $isReadonly ? number_format((float) $viewGrand, 2) : '0.00' }}" readonly>
                             </td>
                         </tr>
@@ -863,16 +863,16 @@
                                 <tr>
                                     <th scope="row"><div class="fw-medium">Customer WHT 236G ({{ number_format($buyerAdvanceRate, 2) }}%):</div></th>
                                     <td>
-                                        <input type="number" step="0.01" id="{{ $uid }}_CustomerWht236g"
-                                               class="form-control invoice-amount-input w-100"
+                                        <input type="text" id="{{ $uid }}_CustomerWht236g"
+                                               class="form-control invoice-amount-input w-100 ifp-numfmt"
                                                value="{{ number_format($customerWht236g, 2) }}" readonly>
                                     </td>
                                 </tr>
                                 <tr class="ifp-totals-grand">
                                     <th scope="row"><div class="fw-medium">Grand Total:</div></th>
                                     <td>
-                                        <input type="number" step="0.01" id="{{ $uid }}_GrandTotalWithWht"
-                                               class="form-control invoice-amount-input w-100 fw-bold"
+                                        <input type="text" id="{{ $uid }}_GrandTotalWithWht"
+                                               class="form-control invoice-amount-input w-100 ifp-numfmt fw-bold"
                                                value="{{ number_format($grandTotalAllTaxes, 2) }}" readonly>
                                     </td>
                                 </tr>
@@ -883,16 +883,16 @@
                                     <div class="fw-medium">Customer WHT 236G (<span id="{{ $uid }}_wht_label_pct">{{ number_format($buyerAdvanceRate, 2) }}</span>%):</div>
                                 </th>
                                 <td>
-                                    <input type="number" step="0.01" id="{{ $uid }}_CustomerWht236g"
-                                           class="form-control invoice-amount-input w-100"
+                                    <input type="text" id="{{ $uid }}_CustomerWht236g"
+                                           class="form-control invoice-amount-input w-100 ifp-numfmt"
                                            value="{{ $showWhtBlock ? number_format($customerWht236g, 2) : '0.00' }}" readonly>
                                 </td>
                             </tr>
                             <tr id="{{ $uid }}_tr_grand_with_wht" class="ifp-totals-grand @if(!$showWhtBlock) d-none @endif">
                                 <th scope="row"><div class="fw-medium">Grand Total:</div></th>
                                 <td>
-                                    <input type="number" step="0.01" id="{{ $uid }}_GrandTotalWithWht"
-                                           class="form-control invoice-amount-input w-100 fw-bold"
+                                    <input type="text" id="{{ $uid }}_GrandTotalWithWht"
+                                           class="form-control invoice-amount-input w-100 ifp-numfmt fw-bold"
                                            value="{{ $showWhtBlock ? number_format($grandTotalAllTaxes, 2) : '0.00' }}" readonly>
                                 </td>
                             </tr>
@@ -1059,7 +1059,32 @@
     const INV_SRO_SCHEDULES    = "{{ route('products.sro-schedules') }}";
     const INV_SRO_ITEMS        = "{{ route('products.sro-items') }}";
 
-    function n(v) { return parseFloat(v) || 0; }
+    function ifpSanitizeNumericText(v) {
+        return String(v == null ? '' : v).replace(/,/g, '').trim();
+    }
+    function n(v) {
+        const raw = ifpSanitizeNumericText(v);
+        return parseFloat(raw) || 0;
+    }
+    function ifpFormatNumber(v, decimals) {
+        const d = typeof decimals === 'number' ? decimals : 2;
+        const num = Number(v);
+        const safe = Number.isFinite(num) ? num : 0;
+        return safe.toLocaleString('en-US', {
+            minimumFractionDigits: d,
+            maximumFractionDigits: d
+        });
+    }
+    function ifpSetFormattedValue(el, v, decimals) {
+        if (!el) return;
+        el.value = ifpFormatNumber(v, decimals);
+    }
+    function ifpNormalizeFormattedInputs(scope) {
+        const root = scope || document;
+        root.querySelectorAll('.ifp-numfmt').forEach(function(el) {
+            el.value = ifpSanitizeNumericText(el.value);
+        });
+    }
     function rowEl(row, selector) {
         var fromRow = row ? row.querySelector(selector) : null;
         if (fromRow) return fromRow;
@@ -1372,9 +1397,9 @@
             const extraTaxEl = rowEl(row, '.ifp-extra-tax');
             const furtherTaxEl = rowEl(row, '.ifp-further-tax');
             const fedPayableEl = rowEl(row, '.ifp-fed-payable');
-            if (extraTaxEl) extraTaxEl.value = '0.00';
-            if (furtherTaxEl) furtherTaxEl.value = '0.00';
-            if (fedPayableEl) fedPayableEl.value = '0.00';
+            if (extraTaxEl) extraTaxEl.value = ifpFormatNumber(0, 2);
+            if (furtherTaxEl) furtherTaxEl.value = ifpFormatNumber(0, 2);
+            if (fedPayableEl) fedPayableEl.value = ifpFormatNumber(0, 2);
         } else if (rateType === 'R') {
             gstAmt = rateValue * qty;
         } else if (rateType === 'H') {
@@ -1388,7 +1413,7 @@
 
         function set(cls, val) {
             const el = rowEl(row, '.' + cls);
-            if (el) el.value = val.toFixed(2);
+            if (el) ifpSetFormattedValue(el, val, 2);
         }
         set('ifp-amount',   amount);
         set('ifp-disc-amt', discAmt);
@@ -1426,11 +1451,11 @@
         }
         const whtEl = document.getElementById(uid + '_CustomerWht236g');
         if (whtEl) {
-            whtEl.value = wht.toFixed(2);
+            whtEl.value = ifpFormatNumber(wht, 2);
         }
         const gtwEl = document.getElementById(uid + '_GrandTotalWithWht');
         if (gtwEl) {
-            gtwEl.value = grandWithWht.toFixed(2);
+            gtwEl.value = ifpFormatNumber(grandWithWht, 2);
         }
         const trWht = document.getElementById(uid + '_tr_customer_wht');
         const trGrand = document.getElementById(uid + '_tr_grand_with_wht');
@@ -1457,7 +1482,7 @@
         });
         function s(id, v) {
             const el = document.getElementById(uid + '_' + id);
-            if (el) el.value = v.toFixed(2);
+            if (el) el.value = ifpFormatNumber(v, 2);
         }
         s('SubTotal',      sub);
         s('TotalDiscount', disc);
@@ -1475,6 +1500,15 @@
                 calcSummary();
             });
         });
+        const rateInp = row.querySelector('.ifp-rate');
+        if (rateInp) {
+            rateInp.addEventListener('focus', function() {
+                rateInp.value = ifpSanitizeNumericText(rateInp.value);
+            });
+            rateInp.addEventListener('blur', function() {
+                rateInp.value = ifpFormatNumber(n(rateInp.value), 2);
+            });
+        }
 
         // Product select → auto-fill rate, GST, and product fields (HsCode, Description, UOM, Sale Type cascade)
         const prodSel = row.querySelector('.ifp-product');
@@ -1501,7 +1535,7 @@
                 const gstEl  = rowEl(row, '.ifp-gst-pct');
                 const ds = opt.dataset || {};
                 if (forceDetailsFill) {
-                    if (rateEl) rateEl.value = ds.rate || opt.getAttribute('data-rate') || 0;
+                    if (rateEl) rateEl.value = ifpFormatNumber(ds.rate || opt.getAttribute('data-rate') || 0, 2);
                     if (gstEl)  gstEl.value  = ds.gst  || opt.getAttribute('data-gst')  || 0;
                 }
 
@@ -2125,7 +2159,7 @@
                                 </div>
                                 <div class="row g-2 px-2 pb-2 ifp-tax-sro-fields-lower">
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifiler_${idx}">Is Filer</label><input type="hidden" name="items[${idx}][IsFiler]" class="ifp-is-filer" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifiler_${idx}" class="form-check-input ifp-is-filer-cb m-0" disabled></div></div></div>
-                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_lr_${idx}">Rate</label><input type="number" step="0.000001" id="${uid}_lr_${idx}" name="items[${idx}][Rate]" class="form-control ifp-rate" value="0" min="0"></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_lr_${idx}">Rate</label><input type="text" inputmode="decimal" id="${uid}_lr_${idx}" name="items[${idx}][Rate]" class="form-control ifp-rate ifp-numfmt" value="0.00"></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_gst_${idx}">GST Rate %</label><input type="number" step="0.01" id="${uid}_gst_${idx}" name="items[${idx}][GstPercentage]" class="form-control ifp-gst-pct" value="0" min="0"></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifr_${idx}">Is Fixed</label><input type="hidden" name="items[${idx}][IsFixedRate]" class="ifp-is-fixed-rate" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifr_${idx}" class="form-check-input ifp-is-fixed-rate-cb m-0" disabled></div></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_fr_${idx}">Fixed Rate</label><input type="number" step="0.01" id="${uid}_fr_${idx}" name="items[${idx}][TPRate]" class="form-control ifp-fixed-rate" value="0" readonly></div></div>
@@ -2146,11 +2180,11 @@
         var rowNumericTail = IFP_TAX_COMPACT
             ? (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
-                '<td class="ifp-col-amount"><input type="number" step="0.01"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount"   value="0" readonly></td>' +
+                '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td class="ifp-col-fixed"><input type="number" step="0.01"     name="items[' + idx + '][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value" value="0" readonly></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
-                '<td class="ifp-col-gst-amt"><input type="number" step="0.01"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt"  value="0" readonly></td>' +
-                '<td class="ifp-col-net"><input type="number" step="0.01"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total fw-bold" value="0" readonly></td>' +
+                '<td class="ifp-col-gst-amt"><input type="text"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>' +
+                '<td class="ifp-col-net"><input type="text"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>' +
                 '<td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[' + idx + '][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>' +
                 '<td class="ifp-col-further-tax"><input type="number" step="0.01"     name="items[' + idx + '][FurtherTax]"         class="form-control form-control-sm ifp-further-tax" value="0" min="0"></td>' +
                 '<td class="ifp-col-fed-payable"><input type="number" step="0.01"     name="items[' + idx + '][FedPayable]"         class="form-control form-control-sm ifp-fed-payable" value="0" min="0"></td>' +
@@ -2158,13 +2192,13 @@
             )
             : (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
-                '<td><input type="number" step="0.000001" name="items[' + idx + '][Rate]"               class="form-control form-control-sm ifp-rate"     value="0" min="0"></td>' +
-                '<td class="ifp-col-amount"><input type="number" step="0.01"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount"   value="0" readonly></td>' +
+                '<td><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]"               class="form-control form-control-sm ifp-rate ifp-numfmt"     value="0.00"></td>' +
+                '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][GstPercentage]"      class="form-control form-control-sm ifp-gst-pct"  value="0" min="0"></td>' +
-                '<td class="ifp-col-gst-amt"><input type="number" step="0.01"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt"  value="0" readonly></td>' +
-                '<td class="ifp-col-net"><input type="number" step="0.01"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total fw-bold" value="0" readonly></td>' +
+                '<td class="ifp-col-gst-amt"><input type="text"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>' +
+                '<td class="ifp-col-net"><input type="text"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>' +
                 '<td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[' + idx + '][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>' +
                 '<td class="ifp-col-further-tax"><input type="number" step="0.01"     name="items[' + idx + '][FurtherTax]"         class="form-control form-control-sm ifp-further-tax" value="0" min="0"></td>' +
                 '<td class="ifp-col-fed-payable"><input type="number" step="0.01"     name="items[' + idx + '][FedPayable]"         class="form-control form-control-sm ifp-fed-payable" value="0" min="0"></td>' +
@@ -2593,6 +2627,9 @@
         loadSaleTypesForRow(row);
     });
     calcSummary();
+    if (!window.ifpNormalizeFormattedInputs) {
+        window.ifpNormalizeFormattedInputs = ifpNormalizeFormattedInputs;
+    }
 
 })();
 </script>
