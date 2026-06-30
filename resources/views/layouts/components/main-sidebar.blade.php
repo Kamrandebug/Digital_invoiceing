@@ -52,6 +52,21 @@
                         <span class="side-menu__label">Invoices</span>
 					</a>
 				</li>
+				@php
+					$isPurchased = false;
+					try {
+						if (\Illuminate\Support\Facades\Schema::hasTable('tbl_business_info')) {
+							$businessInfo = \Illuminate\Support\Facades\DB::table('tbl_business_info')
+								->where('IsArchive', 0)
+								->orderBy('ID')
+								->first(['IsPurchased']);
+							$isPurchased = $businessInfo ? (bool) $businessInfo->IsPurchased : false;
+						}
+					} catch (\Throwable $e) {
+						// Fallback to false if database/table is not available or query fails
+					}
+				@endphp
+				@if ($isPurchased)
 				<li class="slide">
 					<a href="{{ route('suppliers.index') }}" class="side-menu__item">
 						<i class="ri-truck-line menu-icon"></i>
@@ -64,6 +79,7 @@
                         <span class="side-menu__label">Purchases</span>
 					</a>
 				</li>
+				@endif
 				<li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
                     <a href="javascript:void(0);" class="side-menu__item">
                         <i class="ri-bar-chart-2-line menu-icon"></i>

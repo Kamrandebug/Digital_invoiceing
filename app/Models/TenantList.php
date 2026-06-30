@@ -50,6 +50,10 @@ class TenantList extends Model
 
         return $query
             ->join('tbl_tenant_users as tu', 'tu.TenantID', '=', 'tbl_tenant.ID')
+            ->leftJoin('users as u', function ($join) {
+                $join->on('u.id', '=', 'tu.UserID')
+                     ->where('u.isconsultant', '=', 1);
+            })
             ->where('tu.UserID', $userId)
             ->where('tu.IsActive', 1)
             ->where('tbl_tenant.Statusi', 1)
@@ -58,7 +62,8 @@ class TenantList extends Model
                 'tbl_tenant.*',
                 'tu.ID as TenantUserID',
                 'tu.Role as UserRole',
-                'tu.IsActive as TenantUserIsActive'
+                'tu.IsActive as TenantUserIsActive',
+                'u.ConsultantLogo'
             );
     }
 

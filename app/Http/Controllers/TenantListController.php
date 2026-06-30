@@ -63,6 +63,21 @@ class TenantListController extends Controller
             ?? $tenant->db_name
             ?? null;
 
+        $logo = $tenant->ConsultantLogo ?? null;
+        $logoUrl = null;
+        if ($logo) {
+            if (str_starts_with($logo, 'http://') || str_starts_with($logo, 'https://')) {
+                $logoUrl = $logo;
+            } else {
+                try {
+                    $logoUrl = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($logo, now()->addMinutes(20));
+                } catch (\Throwable $e) {
+                    \Log::error('Failed to generate presigned S3 URL for consultant logo', ['error' => $e->getMessage()]);
+                    $logoUrl = 'https://godigital.pk.s3.ap-southeast-1.amazonaws.com/' . ltrim($logo, '/');
+                }
+            }
+        }
+
         $request->session()->put('selected_tenant', [
             'id'         => $tenant->ID,
             'TenantName' => $tenant->TenantName,
@@ -74,6 +89,7 @@ class TenantListController extends Controller
             // Membership context from tbl_tenant_users for role-aware authorization.
             'tenant_user_id' => $tenant->TenantUserID ?? null,
             'role'           => strtolower((string) ($tenant->UserRole ?? 'user')),
+            'ConsultantLogo' => $logoUrl,
         ]);
 
         return redirect()->intended(route('dashboard', absolute: false));
