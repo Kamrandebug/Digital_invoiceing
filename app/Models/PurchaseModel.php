@@ -298,6 +298,43 @@ class PurchaseModel extends Model
     }
 
     /**
+     * @return array{status: bool, message: string}|null
+     */
+    private static function runTempPurchaseImportValidation(string $requestID, string $tenantDbQuoted): ?array
+    {
+        // TODO: Add validation SQL against tbl_temp_purchase_importtable for RequestID = ?
+        return null;
+    }
+
+    private static function persistPurchaseImportFromTemp(string $requestID, string $tenantDbQuoted): void
+    {
+        // TODO: Add persist SQL from tbl_temp_purchase_importtable into purchase tables for RequestID = ?
+    }
+
+    /**
+     * @return array{status: bool, message: ?string}
+     */
+    public static function save_import_data(string $requestID): array
+    {
+        $requestID = trim($requestID);
+        if ($requestID === '') {
+            throw new \RuntimeException('RequestID is required for save_import_data.');
+        }
+
+        $tenantDbQuoted = self::tenantDatabaseQuoted();
+        $validationError = self::runTempPurchaseImportValidation($requestID, $tenantDbQuoted);
+        if ($validationError !== null) {
+            return $validationError;
+        }
+
+        DB::transaction(function () use ($requestID, $tenantDbQuoted) {
+            self::persistPurchaseImportFromTemp($requestID, $tenantDbQuoted);
+        });
+
+        return ['status' => true, 'message' => null];
+    }
+
+    /**
      * @return array{status: bool, message: ?string}
      */
     public static function save_transaction(string $requestID): array

@@ -42,6 +42,11 @@
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Purchase Management</h1>
         <div class="d-flex float-end">
             <button type="button"
+                    class="btn btn-sm btn-secondary-light btn-wave waves-light me-2"
+                    onclick="openPurchaseImportModal()">
+                <i class="ri-upload-2-line fw-medium align-middle me-1"></i> Import
+            </button>
+            <button type="button"
                     class="btn btn-sm btn-primary btn-wave waves-light"
                     onclick="openPurchaseModal('create')">
                 <i class="ri-add-line fw-medium align-middle me-1"></i> Add Purchase
@@ -440,6 +445,59 @@
     </div>
 </div>
 
+<div class="modal effect-fall fade" id="purchaseImportModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold">Import Purchases</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="purchaseImportAlert" class="alert alert-danger d-none mb-3" role="alert"></div>
+                <form id="purchaseImportForm" enctype="multipart/form-data" novalidate>
+                    <div class="ifp-modal-shell">
+                        <div class="_pfp-tab-panel-shell border rounded overflow-hidden mb-0">
+                            <div class="_pfp-tab-panel-body">
+                                <p class="text-muted fs-12 mb-3 pb-3 border-bottom">
+                                    Upload a filled <strong>Purchase_Ledger</strong> Excel file to import purchase records.
+                                </p>
+                                <div class="mb-3">
+                                    <a href="{{ route('purchases.import-template') }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="ri-download-2-line me-1"></i> Download import format (Purchase_Ledger)
+                                    </a>
+                                </div>
+                                <div class="row g-2 pt-1">
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold" for="purchaseImportFile">
+                                            Excel file <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="file"
+                                               class="form-control form-control-sm"
+                                               name="import_file"
+                                               id="purchaseImportFile"
+                                               accept=".xlsx,.xls"
+                                               required>
+                                        <div class="form-text">Accepted formats: .xlsx, .xls (max 5 MB)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" id="purchaseImportSubmitBtn">
+                    <i class="ri-upload-2-line me-1"></i> Import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="deletePurchaseModal" tabindex="-1" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog">
@@ -472,6 +530,66 @@ let breakupPollTimer = null;
 const BREAKUP_STATUS_PROCESSING = 1;
 const breakupGenerateUrl = '{{ url("/purchases") }}';
 const breakupCsrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+const purchaseImportUrl = '{{ route("purchases.import") }}';
+
+function openPurchaseImportModal() {
+    const alertEl = document.getElementById('purchaseImportAlert');
+    const form = document.getElementById('purchaseImportForm');
+    const submitBtn = document.getElementById('purchaseImportSubmitBtn');
+
+    if (form) form.reset();
+    if (alertEl) {
+        alertEl.textContent = '';
+        alertEl.classList.add('d-none');
+    }
+    if (submitBtn) submitBtn.disabled = false;
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('purchaseImportModal')).show();
+}
+
+document.getElementById('purchaseImportSubmitBtn')?.addEventListener('click', function () {
+    const alertEl = document.getElementById('purchaseImportAlert');
+    const btn = this;
+    const form = document.getElementById('purchaseImportForm');
+    const fileInput = document.getElementById('purchaseImportFile');
+
+    if (!fileInput?.files?.length) {
+        alertEl.textContent = 'Please select an Excel file to import.';
+        alertEl.classList.remove('d-none');
+        return;
+    }
+
+    const fd = new FormData(form);
+    btn.disabled = true;
+    alertEl.classList.add('d-none');
+
+    fetch(purchaseImportUrl, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': breakupCsrf,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: fd
+    })
+    .then(function (res) {
+        return res.json().then(function (data) {
+            if (!res.ok) throw new Error(data.message || 'Import failed');
+            return data;
+        });
+    })
+    .then(function () {
+        bootstrap.Modal.getInstance(document.getElementById('purchaseImportModal'))?.hide();
+        window.location.reload();
+    })
+    .catch(function (err) {
+        alertEl.textContent = err.message || 'Import failed';
+        alertEl.classList.remove('d-none');
+    })
+    .finally(function () {
+        btn.disabled = false;
+    });
+});
 
 function applyBreakupFormSettings(settings) {
     if (!settings) return;

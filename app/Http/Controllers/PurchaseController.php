@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\InvoiceModel;
 use App\Models\PurchaseModel;
+use App\Imports\PurchaseLedgerImport;
 use App\Services\PurchaseBreakupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PurchaseController extends Controller
 {
@@ -235,6 +238,72 @@ class PurchaseController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function downloadImportTemplate(): BinaryFileResponse
+    {
+        $path = public_path('assets/templates/Purchase_Ledger.xlsx');
+
+        if (! is_file($path)) {
+            abort(404, 'Import template not found.');
+        }
+
+        return response()->download($path, 'Purchase_Ledger.xlsx');
+    }
+
+    public function importPurchases(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:xlsx,xls|max:5120',
+        ], [
+            'import_file.required' => 'Please select an Excel file to import.',
+            'import_file.mimes' => 'Import file must be an Excel workbook (.xlsx or .xls).',
+            'import_file.max' => 'Import file must not exceed 5 MB.',
+        ]);
+
+        try {
+            $requestId = (string) Str::uuid();
+            $userId = auth()->id() ?? 1;
+            $now = now()->toDateTimeString();
+
+            $import = new PurchaseLedgerImport;
+            Excel::import($import, $request->file('import_file'));
+            $rows = $import->mappedRows();
+
+            if (empty($rows)) {
+                return $this->failResponse($request, 'No data rows found in the import file.', 422);
+            }
+
+            $insertRows = [];
+            foreach ($rows as $row) {
+                $insertRows[] = array_merge($row, [
+                    'RequestID' => $requestId,
+                    'ErrMsg' => null,
+                    'CreatedBy' => $userId,
+                    'CreatedOn' => $now,
+                    'UpdatedBy' => $userId,
+                    'UpdatedOn' => $now,
+                ]);
+            }
+
+            foreach (array_chunk($insertRows, 200) as $chunk) {
+                DB::table('tbl_temp_purchase_importtable')->insert($chunk);
+            }
+
+            $saveResult = PurchaseModel::save_import_data($requestId);
+            if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+                return $this->failResponse($request, $saveResult['message'] ?? 'Unable to import purchases.', 422);
+            }
+
+            $message = count($rows).' purchase row(s) imported successfully.';
+            session()->flash('success', $message);
+
+            return $this->successResponse($request, $message);
+        } catch (\Throwable $e) {
+            \Log::error('Purchase import failed', ['error' => $e->getMessage()]);
+
+            return $this->failResponse($request, 'Import failed: '.$e->getMessage(), 500);
+        }
     }
 
     private function insertTempLines(

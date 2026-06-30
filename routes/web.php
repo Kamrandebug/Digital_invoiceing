@@ -100,6 +100,10 @@ Route::middleware(['auth', 'tenant'])->prefix('purchases')->name('purchases.')->
     Route::post('/save', [PurchaseController::class, 'save_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('save_transaction');
 
     Route::get('/export/csv', [PurchaseController::class, 'exportCSV'])->name('export-csv');
+    Route::get('/import/template', [PurchaseController::class, 'downloadImportTemplate'])
+        ->middleware('tenant.role:owner,admin,accountant')->name('import-template');
+    Route::post('/import', [PurchaseController::class, 'importPurchases'])
+        ->middleware('tenant.role:owner,admin,accountant')->name('import');
     Route::get('/modal', [PurchaseController::class, 'modal'])->name('modal');
 
     Route::post('/{id}/breakup/generate', [PurchaseBreakupController::class, 'generate'])
