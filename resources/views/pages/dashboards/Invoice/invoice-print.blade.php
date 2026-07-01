@@ -1,4 +1,4 @@
-﻿@php
+@php
     $invoice     = $invoice ?? null;
     $items       = $items   ?? collect();
     $orientation = $orientation ?? 'portrait';
@@ -545,6 +545,9 @@
                     <tr><th>Doc3 No:</th><td>{{ $invoice->DocNo3 }}</td></tr>
                     @endif
                     <tr><th>Invoice Date:</th><td>{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : '-' }}</td></tr>
+                    @if(!empty(trim((string) ($invoice->SaleOfTerm ?? ''))))
+                    <tr><th>Sale of Term:</th><td>{{ $invoice->SaleOfTerm }}</td></tr>
+                    @endif
                     <tr><th>FBR Invoice:</th><td>@if(trim((string) ($invoice->FbrTransactionID ?? '')) !== '')<strong>{{ $invoice->FbrTransactionID }}</strong>@else - @endif</td></tr>
                 </table>
             </div>

@@ -23,6 +23,7 @@ class InvoiceModel extends Model
     protected $fillable = [
         'InvoiceID',
         'CustomerID',
+        'SaleOfTerm',
         'Address',
         'InvoiceDate',
         'TermDays',
@@ -138,6 +139,46 @@ class InvoiceModel extends Model
         return collect([
             (object) ['docTypeId' => 4, 'docDescription' => 'Sale Invoice'],
             (object) ['docTypeId' => 9, 'docDescription' => 'Debit Note'],
+        ]);
+    }
+
+    /**
+     * Load Sale of Terms from core_digital_invoicing.tbl_sale_of_term.
+     */
+    public static function Load_SaleOfTerms()
+    {
+        $table = 'core_digital_invoicing.tbl_sale_of_term';
+
+        $connectionOrder = array_values(array_unique(array_filter([
+            'landlord',
+            'mysql',
+            config('database.default'),
+        ])));
+
+        foreach ($connectionOrder as $connectionName) {
+            if (! config("database.connections.{$connectionName}")) {
+                continue;
+            }
+            try {
+                $rows = DB::connection($connectionName)
+                    ->table($table)
+                    ->select('id', 'TermName', 'RetrunValue', 'Statusi')
+                    ->where('Statusi', 1)
+                    ->orderBy('DisplayOrder')
+                    ->get();
+                if ($rows->isNotEmpty()) {
+                    return $rows;
+                }
+            } catch (\Throwable $e) {
+                \Log::debug("Load_SaleOfTerms connection={$connectionName}: " . $e->getMessage());
+            }
+        }
+
+        \Log::warning('Load_SaleOfTerms: no rows from tbl_sale_of_term; using fallback list.');
+
+        return collect([
+            (object) ['id' => 2, 'TermName' => 'Cash', 'RetrunValue' => 'CASH', 'Statusi' => 1],
+            (object) ['id' => 3, 'TermName' => 'Credit', 'RetrunValue' => 'CREDIT', 'Statusi' => 1],
         ]);
     }
 
@@ -314,8 +355,8 @@ class InvoiceModel extends Model
                 ", [$requestID]);
 
         DB::connection('landlord')->statement("
-            INSERT INTO {$tenantDbQuoted}.tbl_sales_invoice_header (ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT t.TID AS ID,t.InvoiceID,1 AS InvoiceNumber,t.InvoiceType,t.InvoiceDate,t.DocNo,t.DocNo2,t.DocNo3,t.CustomerID,
+            INSERT INTO {$tenantDbQuoted}.tbl_sales_invoice_header (ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,SaleOfTerm,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT t.TID AS ID,t.InvoiceID,1 AS InvoiceNumber,t.InvoiceType,t.InvoiceDate,t.DocNo,t.DocNo2,t.DocNo3,t.CustomerID,t.SaleOfTerm,
             c.`NTN` AS BuyerNTNCNIC,c.`BusinessName` AS BuyerBusinessName,c.County AS BuyerProvince, c.`Address` AS BuyerAddress,
             ''AS InvoiceRefNo,c.IsFiler AS BuyerRegistrationType,
             ''AS ScenarioId,SUM(t.TotalValues) AS TotalValues,SUM(t.ValueSalesExcludingST) AS ValueSalesExcludingST,

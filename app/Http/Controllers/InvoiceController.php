@@ -87,6 +87,7 @@ class InvoiceController extends Controller
             'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
             'customers' => DB::select($customerSql),
             'products' => DB::select($productSql),
+            'saleOfTerms' => InvoiceModel::Load_SaleOfTerms(),
             'inModal' => false,
         ]);
     }
@@ -138,6 +139,7 @@ class InvoiceController extends Controller
             'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
             'customers' => DB::select($customerSql),
             'products' => DB::select($productSql),
+            'saleOfTerms' => InvoiceModel::Load_SaleOfTerms(),
             'inModal' => true,
         ]);
     }
@@ -235,6 +237,7 @@ class InvoiceController extends Controller
             'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
             'customers' => DB::select($customerSql),
             'products' => DB::select($productSql),
+            'saleOfTerms' => InvoiceModel::Load_SaleOfTerms(),
             'inModal' => false,
         ]);
     }
@@ -278,6 +281,7 @@ class InvoiceController extends Controller
             'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
             'customers' => DB::select($customerSql),
             'products' => DB::select($productSql),
+            'saleOfTerms' => InvoiceModel::Load_SaleOfTerms(),
             'inModal' => false,
         ]);
     }
@@ -292,6 +296,7 @@ class InvoiceController extends Controller
         $request->validate([
             'CustomerID' => 'required|integer',
             'InvoiceDate' => 'required|date',
+            'SaleOfTerm' => 'nullable|string|max:50',
             'items' => 'required|array|min:1',
             'items.*.Quantity' => 'required|numeric|min:0',
             'items.*.Rate' => 'required|numeric|min:0',
@@ -320,6 +325,7 @@ class InvoiceController extends Controller
                     'InvoiceID' => $nextId,
                     'TID' => $nextId,
                     'CustomerID' => (int) $request->CustomerID,
+                    'SaleOfTerm' => $request->SaleOfTerm,
                     'InvoiceDate' => $request->InvoiceDate,
                     'DueDate' => $request->InvoiceDate,
                     'TermDays' => 0,
@@ -417,6 +423,7 @@ class InvoiceController extends Controller
         $request->validate([
             'CustomerID' => 'required|integer',
             'InvoiceDate' => 'required|date',
+            'SaleOfTerm' => 'nullable|string|max:50',
             'Status' => 'required|in:1,2',
             'items' => 'required|array|min:1',
             'items.*.Quantity' => 'required|numeric|min:0',
@@ -437,6 +444,7 @@ class InvoiceController extends Controller
                     'InvoiceID' => $id,
                     'TID' => $id, // CRITICAL for Model Join
                     'CustomerID' => (int) $request->CustomerID,
+                    'SaleOfTerm' => $request->SaleOfTerm,
                     'InvoiceDate' => $request->InvoiceDate,
                     'DueDate' => $request->InvoiceDate,
                     'TermDays' => 0,

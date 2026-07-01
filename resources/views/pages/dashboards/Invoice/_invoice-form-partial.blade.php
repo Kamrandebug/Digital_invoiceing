@@ -126,21 +126,32 @@
         @endif
     </div>
     <div class="col-md-3">
-        @if($isEdit)
-        <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
-        <select name="Status" class="{{ $selClass }} @error('Status') is-invalid @enderror" required>
-            <option value="1" {{ old('Status', $invoice->Status ?? 1) == 1 ? 'selected' : '' }}>Active</option>
-            <option value="2" {{ old('Status', $invoice->Status ?? 1) == 2 ? 'selected' : '' }}>Archive</option>
-        </select>
-        @error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        @elseif($isCreate)
-        <input type="hidden" name="Status" value="1">
+        <label class="form-label fw-semibold">Sale of Term</label>
+        @if($isReadonly)
+            @php
+                $selectedTerm = collect($saleOfTerms ?? [])->first(function($term) use ($invoice) {
+                    return (string)$term->RetrunValue === (string)($invoice->SaleOfTerm ?? '');
+                });
+            @endphp
+            <div class="form-control form-control-sm bg-light">{{ $selectedTerm ? $selectedTerm->TermName : ($invoice->SaleOfTerm ?? '-') }}</div>
+        @else
+            <select name="SaleOfTerm"
+                    id="{{ $uid }}_SaleOfTerm"
+                    class="{{ $selClass }} @error('SaleOfTerm') is-invalid @enderror">
+                <option value="">— Select Term —</option>
+                @foreach($saleOfTerms ?? [] as $term)
+                    <option value="{{ $term->RetrunValue }}" {{ old('SaleOfTerm', $invoice->SaleOfTerm ?? '') === $term->RetrunValue ? 'selected' : '' }}>
+                        {{ $term->TermName }}
+                    </option>
+                @endforeach
+            </select>
+            @error('SaleOfTerm')<div class="invalid-feedback">{{ $message }}</div>@enderror
         @endif
     </div>
 </div>
 
 <div class="row g-2 mt-1">
-    {{-- Row 2: 4 columns — Doc No, Doc No2, Doc No3, (empty) --}}
+    {{-- Row 2: 4 columns — Doc No, Doc No2, Doc No3, Status --}}
     <div class="col-md-3">
         <label class="form-label fw-semibold">Doc No.</label>
         @if($isReadonly)
@@ -181,7 +192,16 @@
         @endif
     </div>
     <div class="col-md-3">
-        {{-- Fourth column (empty) for 4-column layout --}}
+        @if($isEdit)
+        <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+        <select name="Status" class="{{ $selClass }} @error('Status') is-invalid @enderror" required>
+            <option value="1" {{ old('Status', $invoice->Status ?? 1) == 1 ? 'selected' : '' }}>Active</option>
+            <option value="2" {{ old('Status', $invoice->Status ?? 1) == 2 ? 'selected' : '' }}>Archive</option>
+        </select>
+        @error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @elseif($isCreate)
+        <input type="hidden" name="Status" value="1">
+        @endif
     </div>
 </div>
 
