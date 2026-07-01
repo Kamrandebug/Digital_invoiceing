@@ -407,6 +407,12 @@
     "src": "resources/assets/js/hrm-dashboard.js",
     "isEntry": true
   },
+  "resources/assets/js/ifp-purchase-tax-form.js": {
+    "file": "assets/ifp-purchase-tax-form-xPwduTOa.js",
+    "name": "ifp-purchase-tax-form",
+    "src": "resources/assets/js/ifp-purchase-tax-form.js",
+    "isEntry": true
+  },
   "resources/assets/js/invoice-list.js": {
     "file": "assets/invoice-list-ePXOWTnS.js",
     "name": "invoice-list",
@@ -471,6 +477,12 @@
     "file": "assets/leaflet-DxHQwzIi.js",
     "name": "leaflet",
     "src": "resources/assets/js/leaflet.js",
+    "isEntry": true
+  },
+  "resources/assets/js/line-tax-calculator.js": {
+    "file": "assets/line-tax-calculator-CI1_9iJ8.js",
+    "name": "line-tax-calculator",
+    "src": "resources/assets/js/line-tax-calculator.js",
     "isEntry": true
   },
   "resources/assets/js/mail-settings.js": {
@@ -750,7 +762,7 @@
     "isEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-ClRNzhW9.css",
+    "file": "assets/app-DJsO77Xa.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },

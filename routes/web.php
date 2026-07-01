@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\PurchaseBreakupController;
+use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\DashboardsController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProductController;
@@ -57,6 +60,7 @@ Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->
 
     // ⚠️ Static segments BEFORE /{id} wildcard
     Route::get('/export/csv', [CustomerController::class, 'exportCSV'])->name('export-csv');
+    Route::post('/verify-fbr', [CustomerController::class, 'verifyFbr'])->middleware('tenant.role:owner,admin,accountant')->name('verify_fbr');
     Route::get('/modal', [CustomerController::class, 'modal'])->name('modal');
 
     Route::get('/{id}/edit', [CustomerController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
@@ -64,6 +68,59 @@ Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->
     Route::delete('/{id}/delete', [CustomerController::class, 'delete_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('delete_transaction');
     Route::get('/{id}/modal', [CustomerController::class, 'modal'])->name('modal.id');
     Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
+});
+
+// ── Suppliers (same tbl_customer / temp_customer, PartyType = 2) ─
+Route::middleware(['auth', 'tenant'])->prefix('suppliers')->name('suppliers.')->group(function () {
+
+    Route::get('/', [SupplierController::class, 'index'])->name('index');
+    Route::get('/create', [SupplierController::class, 'create'])->middleware('tenant.role:owner,admin,accountant')->name('create');
+    Route::post('/save', [SupplierController::class, 'save_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('save_transaction');
+
+    Route::get('/export/csv', [SupplierController::class, 'exportCSV'])->name('export-csv');
+    Route::post('/verify-fbr', [SupplierController::class, 'verifyFbr'])->middleware('tenant.role:owner,admin,accountant')->name('verify_fbr');
+    Route::get('/modal', [SupplierController::class, 'modal'])->name('modal');
+
+    Route::get('/{id}/edit', [SupplierController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
+    Route::put('/{id}/update', [SupplierController::class, 'edit_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('edit_transaction');
+    Route::delete('/{id}/delete', [SupplierController::class, 'delete_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('delete_transaction');
+    Route::get('/{id}/modal', [SupplierController::class, 'modal'])->name('modal.id');
+    Route::get('/{id}', [SupplierController::class, 'show'])->name('show');
+});
+
+Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
+    Route::get('/suppliers-list', [SupplierController::class, 'index'])->middleware('tenant');
+});
+
+// ── Purchases ─────────────────────────────────────────────────
+Route::middleware(['auth', 'tenant'])->prefix('purchases')->name('purchases.')->group(function () {
+
+    Route::get('/', [PurchaseController::class, 'index'])->name('index');
+    Route::get('/create', [PurchaseController::class, 'create'])->middleware('tenant.role:owner,admin,accountant')->name('create');
+    Route::post('/save', [PurchaseController::class, 'save_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('save_transaction');
+
+    Route::get('/export/csv', [PurchaseController::class, 'exportCSV'])->name('export-csv');
+    Route::get('/import/template', [PurchaseController::class, 'downloadImportTemplate'])
+        ->middleware('tenant.role:owner,admin,accountant')->name('import-template');
+    Route::post('/import', [PurchaseController::class, 'importPurchases'])
+        ->middleware('tenant.role:owner,admin,accountant')->name('import');
+    Route::get('/modal', [PurchaseController::class, 'modal'])->name('modal');
+
+    Route::post('/{id}/breakup/generate', [PurchaseBreakupController::class, 'generate'])
+        ->middleware('tenant.role:owner,admin,accountant')->name('breakup.generate');
+    Route::post('/{id}/breakup/regenerate', [PurchaseBreakupController::class, 'regenerate'])
+        ->middleware('tenant.role:owner,admin,accountant')->name('breakup.regenerate');
+    Route::get('/{id}/breakup/preview', [PurchaseBreakupController::class, 'preview'])->name('breakup.preview');
+    Route::get('/{id}/breakup/export-debug', [PurchaseBreakupController::class, 'exportDebug'])->name('breakup.export-debug');
+    Route::get('/{id}/breakup/download', [PurchaseBreakupController::class, 'download'])->name('breakup.download');
+    Route::get('/{id}/breakup/settings', [PurchaseBreakupController::class, 'settings'])->name('breakup.settings');
+    Route::get('/{id}/breakup/status', [PurchaseBreakupController::class, 'status'])->name('breakup.status');
+
+    Route::get('/{id}/edit', [PurchaseController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
+    Route::put('/{id}/update', [PurchaseController::class, 'edit_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('edit_transaction');
+    Route::delete('/{id}/delete', [PurchaseController::class, 'delete_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('delete_transaction');
+    Route::get('/{id}/modal', [PurchaseController::class, 'modal'])->name('modal.id');
+    Route::get('/{id}', [PurchaseController::class, 'show'])->name('show');
 });
 
 // ── Business Info ─────────────────────────────────────────────

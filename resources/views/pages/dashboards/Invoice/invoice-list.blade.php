@@ -745,12 +745,19 @@ saveBtn.onclick = function () {
     let hasValidItem = false;
     rows.forEach(function(row) {
         const qty  = parseFloat(row.querySelector('.ifp-qty')?.value)  || 0;
-        const rate = parseFloat(row.querySelector('.ifp-rate')?.value) || 0;
+        const rateEl = row.querySelector('.ifp-col-sale-rate .ifp-rate') || row.querySelector('.ifp-rate');
+        const rateRaw = (rateEl && rateEl.value) ? String(rateEl.value).replace(/,/g, '').trim() : '';
+        const rate = parseFloat(rateRaw) || 0;
         if (qty > 0 && rate > 0) hasValidItem = true;
     });
     if (!hasValidItem) {
         showToast('error', 'At least one line item must have quantity and rate greater than 0.');
         return;
+    }
+
+    // Remove visual thousand separators before collecting FormData.
+    if (typeof window.ifpNormalizeFormattedInputs === 'function') {
+        window.ifpNormalizeFormattedInputs(form);
     }
 
     // ✅ All good — proceed with AJAX

@@ -524,7 +524,7 @@
 							@if($isReadonly)
 								<div class="_cfp-detail-value">{{ $customer->NTN ?? '-' }}</div>
 							@else
-								<input type="text" name="NTN"
+								<input type="text" name="NTN" id="{{ $uid }}_NTN"
 									   class="form-control form-control-sm @error('NTN') is-invalid @enderror"
 									   value="{{ old('NTN', $customer->NTN ?? '') }}" placeholder="Enter NTN">
 								@error('NTN')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -556,6 +556,13 @@
 								@error('CNIC')<div class="invalid-feedback">{{ $message }}</div>@enderror
 							@endif
 						</div>
+					</div>
+					<div class="row g-2">
+						@include('pages.dashboards.Customer._customer-fbr-verify', [
+							'fbrPrefix' => $uid,
+							'isReadonly' => $isReadonly,
+							'customer' => $customer,
+						])
 					</div>
 					<div class="row g-2">
 						<div class="col-md-4">
@@ -908,6 +915,15 @@
     }
     document.getElementById(uid + '_IsFiler')?.addEventListener('change', syncNonFilerTaxFields);
     syncNonFilerTaxFields();
+
+    if (typeof window.initCustomerFbrVerify === 'function') {
+        window.initCustomerFbrVerify(
+            uid,
+            @json(route('customers.verify_fbr')),
+            uid + '_NTN',
+            uid + '_IsFiler'
+        );
+    }
 
     function syncAdvancedTaxFields() {
         const cb = document.getElementById(uid + '_IsAdvancedTax');

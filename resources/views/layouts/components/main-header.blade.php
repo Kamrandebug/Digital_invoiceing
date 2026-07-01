@@ -25,6 +25,51 @@
 			</div>
 			<!-- End::header-element -->
 
+			@php
+				$consultantLogo = session('selected_tenant.ConsultantLogo');
+
+				// If session has cached public (unsigned) S3 URL, auto-regenerate to presigned URL
+				if ($consultantLogo && !str_contains($consultantLogo, 'X-Amz-Signature') && str_contains($consultantLogo, 'logos/consultants')) {
+					$pos = strpos($consultantLogo, 'logos/consultants');
+					if ($pos !== false) {
+						$path = substr($consultantLogo, $pos);
+						try {
+							$consultantLogo = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($path, now()->addMinutes(20));
+							session()->put('selected_tenant.ConsultantLogo', $consultantLogo);
+						} catch (\Throwable $e) {
+							// ignore
+						}
+					}
+				}
+
+				if (!$consultantLogo && auth()->check()) {
+					$consultantUser = \Illuminate\Support\Facades\DB::connection('landlord')
+						->table('users')
+						->where('id', auth()->id())
+						->where('isconsultant', 1)
+						->first(['ConsultantLogo']);
+					if ($consultantUser && !empty($consultantUser->ConsultantLogo)) {
+						$logo = $consultantUser->ConsultantLogo;
+						if (str_starts_with($logo, 'http://') || str_starts_with($logo, 'https://')) {
+							$consultantLogo = $logo;
+						} else {
+							try {
+								$consultantLogo = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($logo, now()->addMinutes(20));
+							} catch (\Throwable $e) {
+								$consultantLogo = 'https://godigital.pk.s3.ap-southeast-1.amazonaws.com/' . ltrim($logo, '/');
+							}
+						}
+					}
+				}
+			@endphp
+
+			{{-- Commented out since it is now shown in the left top menu (sidebar header) --}}
+			{{-- @if(!empty($consultantLogo))
+			<div class="header-element me-3 d-md-flex align-items-center">
+				<img src="{{ $consultantLogo }}" alt="Consultant Logo" style="height: 35px; width: auto; max-width: 150px; object-fit: contain;">
+			</div>
+			@endif --}}
+
 			<div class="header-element header-search d-md-block d-none">
 				<!-- Start::header-link -->
 				<input type="text" class="header-search-bar form-control bg-white" id="header-search" placeholder="Search" spellcheck=false autocomplete="off" autocapitalize="off">

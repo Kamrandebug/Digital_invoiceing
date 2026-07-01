@@ -2,12 +2,48 @@
 
     <!-- Start::main-sidebar-header -->
     <div class="main-sidebar-header">
-        <a href="{{ url('dashboard') }}" class="header-logo">
-            <img src="{{ asset('build/assets/images/se_logo.png') }}" alt="logo" class="desktop-logo">
-            <img src="{{ asset('build/assets/images/brand-logos/toggle-dark.png') }}" alt="logo" class="toggle-dark">
-            <img src="{{ asset('build/assets/images/brand-logos/desktop-dark.png') }}" alt="logo" class="desktop-dark">
-            <img src="{{ asset('build/assets/images/se_logo_icon.png') }}" alt="logo" class="toggle-logo">
-        </a>
+        @php
+            $consultantLogo = session('selected_tenant.ConsultantLogo');
+            if (!$consultantLogo && auth()->check()) {
+                try {
+                    $consultantUser = \Illuminate\Support\Facades\DB::connection('landlord')
+                        ->table('users')
+                        ->where('id', auth()->id())
+                        ->where('isconsultant', 1)
+                        ->first(['ConsultantLogo']);
+                    if ($consultantUser && !empty($consultantUser->ConsultantLogo)) {
+                        $logo = $consultantUser->ConsultantLogo;
+                        if (str_starts_with($logo, 'http://') || str_starts_with($logo, 'https://')) {
+                            $consultantLogo = $logo;
+                        } else {
+                            try {
+                                $consultantLogo = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($logo, now()->addMinutes(20));
+                            } catch (\Throwable $e) {
+                                $consultantLogo = 'https://godigital.pk.s3.ap-southeast-1.amazonaws.com/' . ltrim($logo, '/');
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+        @endphp
+
+        @if(!empty($consultantLogo))
+            <a href="{{ url('dashboard') }}" class="header-logo">
+                <img src="{{ $consultantLogo }}" alt="logo" class="desktop-logo" style="height: 35px; max-height: 35px; width: auto; object-fit: contain;">
+                <img src="{{ $consultantLogo }}" alt="logo" class="desktop-dark" style="height: 35px; max-height: 35px; width: auto; object-fit: contain;">
+                <img src="{{ asset('build/assets/images/se_logo_icon.png') }}" alt="logo" class="toggle-logo">
+                <img src="{{ asset('build/assets/images/brand-logos/toggle-dark.png') }}" alt="logo" class="toggle-dark">
+            </a>
+        @else
+            <a href="{{ url('dashboard') }}" class="header-logo">
+                <img src="{{ asset('build/assets/images/se_logo.png') }}" alt="logo" class="desktop-logo">
+                <img src="{{ asset('build/assets/images/brand-logos/toggle-dark.png') }}" alt="logo" class="toggle-dark">
+                <img src="{{ asset('build/assets/images/brand-logos/desktop-dark.png') }}" alt="logo" class="desktop-dark">
+                <img src="{{ asset('build/assets/images/se_logo_icon.png') }}" alt="logo" class="toggle-logo">
+            </a>
+        @endif
     </div>
     <!-- End::main-sidebar-header -->
 
@@ -52,7 +88,35 @@
                         <span class="side-menu__label">Invoices</span>
 					</a>
 				</li>
-                <li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
+				@php
+					$isPurchased = false;
+					try {
+						if (\Illuminate\Support\Facades\Schema::hasTable('tbl_business_info')) {
+							$businessInfo = \Illuminate\Support\Facades\DB::table('tbl_business_info')
+								->where('IsArchive', 0)
+								->orderBy('ID')
+								->first(['IsPurchased']);
+							$isPurchased = $businessInfo ? (bool) $businessInfo->IsPurchased : false;
+						}
+					} catch (\Throwable $e) {
+						// Fallback to false if database/table is not available or query fails
+					}
+				@endphp
+				@if ($isPurchased)
+				<li class="slide">
+					<a href="{{ route('suppliers.index') }}" class="side-menu__item">
+						<i class="ri-truck-line menu-icon"></i>
+                        <span class="side-menu__label">Suppliers</span>
+					</a>
+				</li>
+				<li class="slide">
+					<a href="{{ route('purchases.index') }}" class="side-menu__item">
+						<i class="ri-shopping-cart-line menu-icon"></i>
+                        <span class="side-menu__label">Purchases</span>
+					</a>
+				</li>
+				@endif
+				<li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
                     <a href="javascript:void(0);" class="side-menu__item">
                         <i class="ri-bar-chart-2-line menu-icon"></i>
                         <span class="side-menu__label">Reports</span>
@@ -186,5 +250,36 @@
 
     </div>
     <!-- End::main-sidebar -->
+
+    @if(!empty($consultantLogo))
+    <style>
+        .sidebar-powered-by .desktop-logo,
+        .sidebar-powered-by .desktop-dark {
+            display: none;
+        }
+        html[data-theme-mode="light"] .sidebar-powered-by .desktop-logo {
+            display: block;
+        }
+        html[data-theme-mode="dark"] .sidebar-powered-by .desktop-dark {
+            display: block;
+        }
+        html[data-toggled="double-menu-close"] .sidebar-powered-by,
+        html[data-toggled="icon-overlay-close"] .sidebar-powered-by,
+        html[data-toggled="icon-text-close"] .sidebar-powered-by,
+        html[data-toggled="detached-close"] .sidebar-powered-by,
+        html[data-toggled="menu-click-closed"] .sidebar-powered-by,
+        html[data-toggled="menu-hover-closed"] .sidebar-powered-by,
+        html[data-toggled="close"] .sidebar-powered-by {
+            display: none !important;
+        }
+    </style>
+    <div class="sidebar-powered-by" style="font-size: 11px; position: absolute; bottom: 15px; left: 24px; z-index: 99; text-align: left;">
+        <div class="text-muted" style="margin-bottom: 4px;">powered by</div>
+        <div style="display: flex; justify-content: flex-start;">
+            <img src="{{ asset('build/assets/images/se_logo.png') }}" alt="Go Digital" class="desktop-logo" style="height: 15px; width: auto;">
+            <img src="{{ asset('build/assets/images/brand-logos/desktop-dark.png') }}" alt="Go Digital" class="desktop-dark" style="height: 15px; width: auto;">
+        </div>
+    </div>
+    @endif
 
 </aside>

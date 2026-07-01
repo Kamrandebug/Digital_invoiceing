@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProductModel;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -113,6 +114,7 @@ class ProductController extends Controller
 
             // Stock
             'CurrentQuantity' => ['nullable', 'numeric', 'min:0'],
+            'LowStockLevel'   => ['nullable', 'numeric', 'min:0'],
             'Unit'            => ['nullable', 'integer'],
 
             'Status'          => ['required', 'integer', 'in:0,1'],
@@ -217,6 +219,9 @@ class ProductController extends Controller
 
             if ($request->header('X-Requested-With') === 'XMLHttpRequest' || $request->expectsJson()) {
                 $newId = DB::table('tbl_product')->where('Code', $autoProductCode)->value('ID');
+                if ($newId) {
+                    $this->syncProductLowStockLevel((int) $newId, $request);
+                }
                 $prodRow = $newId ? DB::table('tbl_product')->where('ID', $newId)->first() : null;
                 $payload = ['status' => 'success', 'message' => 'Product created successfully!'];
                 if ($prodRow) {
@@ -238,6 +243,7 @@ class ProductController extends Controller
                         'id'                      => (int) $prodRow->ID,
                         'label'                   => (string) ($prodRow->Name ?? $prodRow->Code ?? ('Product #' . $prodRow->ID)),
                         'rate'                    => (float) ($prodRow->SalePrice ?? 0),
+                        'cost'                    => (float) ($prodRow->Cost ?? 0),
                         'gst'                     => 0,
                         'hscode'                  => (string) ($prodRow->HsCode ?? ''),
                         'sale_information'        => (string) ($prodRow->SaleInformation ?? ''),
@@ -254,6 +260,12 @@ class ProductController extends Controller
 
                 return response()->json($payload);
             }
+
+            $newId = DB::table('tbl_product')->where('Code', $autoProductCode)->value('ID');
+            if ($newId) {
+                $this->syncProductLowStockLevel((int) $newId, $request);
+            }
+
             return redirect()
                 ->route('products.index')
                 ->with('success', 'Product created successfully with Request ID: ' . $requestId);
@@ -419,6 +431,7 @@ class ProductController extends Controller
 
             // Stock
             'CurrentQuantity' => ['nullable', 'numeric', 'min:0'],
+            'LowStockLevel'   => ['nullable', 'numeric', 'min:0'],
             'Unit'            => ['nullable', 'integer'],
 
             'Status'          => ['required', 'integer', 'in:0,1'],
@@ -477,11 +490,11 @@ class ProductController extends Controller
                 'Type'            => $request->Type,
                 'CategoryID'      => $request->Category ?? null,
                 'CategoryName'    => null,
-                'CurrentQuantity' => $request->CurrentQuantity ?? $product->CurrentQuantity ?? 0,
+                'CurrentQuantity' => $product->CurrentQuantity ?? 0,
                 'Unit'            => $request->Unit ?? 0,
                 'UnitName'        => null,
                 'SalePrice'       => $request->SalePrice ?? 0,
-                'Cost'            => $request->Cost ?? 0,
+                'Cost'            => $product->Cost ?? 0,
                 'TPRate'          => ((int) $request->input('IsFixedValue', 0) === 1) ? ($request->TPRate ?? 0) : 0,
                 'IsFixedRate'     => (int) $request->input('IsFixedValue', 0),
                 'Weight'          => $request->Weight ?? 0,
@@ -520,6 +533,8 @@ class ProductController extends Controller
 
                 return redirect()->back()->with('error', $message)->withInput();
             }
+
+            $this->syncProductLowStockLevel((int) $id, $request);
 
             if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json(['status' => 'success', 'message' => 'Product updated successfully!']);
@@ -1848,5 +1863,30 @@ class ProductController extends Controller
         }
 
         return '—';
+    }
+
+    /**
+     * Persist low-stock threshold and refresh computed StockStatus (column may be absent on older tenants).
+     */
+    private function syncProductLowStockLevel(int $productId, Request $request): void
+    {
+        if ($productId <= 0 || ! Schema::hasColumn('tbl_product', 'LowStockLevel')) {
+            if ($productId > 0 && Schema::hasColumn('tbl_product', 'StockStatus')) {
+                app(StockService::class)->refreshStockStatus($productId);
+            }
+
+            return;
+        }
+
+        $level = $request->input('LowStockLevel');
+        DB::table('tbl_product')
+            ->where('ID', $productId)
+            ->update([
+                'LowStockLevel' => ($level !== null && $level !== '') ? $level : 0,
+            ]);
+
+        if (Schema::hasColumn('tbl_product', 'StockStatus')) {
+            app(StockService::class)->refreshStockStatus($productId);
+        }
     }
 }

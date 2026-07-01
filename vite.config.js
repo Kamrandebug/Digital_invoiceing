@@ -38,6 +38,18 @@ export default defineConfig({
                     dest: 'assets'
                 },
                 {
+                    src: 'resources/assets/web-assets',
+                    dest: 'assets'
+                },
+                {
+                    src: 'resources/assets/themecss',
+                    dest: 'assets'
+                },
+                {
+                    src: 'resources/assets/js-legacy/select2.js',
+                    dest: 'assets'
+                },
+                {
                     src: 'node_modules/bootstrap/dist/css/bootstrap.min.css',
                     dest: 'assets/libs/bootstrap/css'
                 },

@@ -79,7 +79,8 @@ class InvoiceModel extends Model
         $query = "SELECT ID, DisplayName, FirstName, LastName, BusinessName, IsFiler, SalesTaxWithheldAtSource, ExtraTax, FurtherTax, FedPayable,
                          IsAdvanceTax, AdvanceTax
                   FROM tbl_customer
-                  WHERE Status = 1";
+                  WHERE Status = 1
+                    AND (PartyType IN (1, 3) OR PartyType IS NULL)";
 
         return $query;
     }
