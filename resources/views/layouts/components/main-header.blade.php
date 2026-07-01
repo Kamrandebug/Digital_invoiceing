@@ -63,11 +63,12 @@
 				}
 			@endphp
 
-			@if(!empty($consultantLogo))
+			{{-- Commented out since it is now shown in the left top menu (sidebar header) --}}
+			{{-- @if(!empty($consultantLogo))
 			<div class="header-element me-3 d-md-flex align-items-center">
 				<img src="{{ $consultantLogo }}" alt="Consultant Logo" style="height: 35px; width: auto; max-width: 150px; object-fit: contain;">
 			</div>
-			@endif
+			@endif --}}
 
 			<div class="header-element header-search d-md-block d-none">
 				<!-- Start::header-link -->
