@@ -51,7 +51,7 @@ class TenantList extends Model
         return $query
             ->join('tbl_tenant_users as tu', 'tu.TenantID', '=', 'tbl_tenant.ID')
             ->leftJoin('users as u', function ($join) {
-                $join->on('u.id', '=', 'tu.UserID')
+                $join->on('u.id', '=', 'tu.ConsultantID')
                      ->where('u.isconsultant', '=', 1);
             })
             ->where('tu.UserID', $userId)
