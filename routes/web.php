@@ -115,6 +115,9 @@ Route::middleware(['auth', 'tenant'])->prefix('purchases')->name('purchases.')->
     Route::get('/{id}/breakup/download', [PurchaseBreakupController::class, 'download'])->name('breakup.download');
     Route::get('/{id}/breakup/settings', [PurchaseBreakupController::class, 'settings'])->name('breakup.settings');
     Route::get('/{id}/breakup/status', [PurchaseBreakupController::class, 'status'])->name('breakup.status');
+    Route::post('/{id}/breakup/post-to-fbr', [PurchaseBreakupController::class, 'postToFbr'])
+        ->middleware('tenant.role:owner,admin,accountant')
+        ->name('breakup.post-to-fbr');
 
     Route::get('/{id}/edit', [PurchaseController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
     Route::put('/{id}/update', [PurchaseController::class, 'edit_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('edit_transaction');

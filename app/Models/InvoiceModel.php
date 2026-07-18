@@ -367,7 +367,7 @@ class InvoiceModel extends Model
             FROM {$tenantDbQuoted}.tbl_temp_invoice_detail t
             INNER JOIN {$tenantDbQuoted}.`tbl_customer` c ON (c.ID = t.CustomerID)
             WHERE t.RequestID = ?
-            GROUP BY t.RequestID
+            GROUP BY t.InvoiceID
         ", [$requestID]);
 
         DB::connection('landlord')->statement("

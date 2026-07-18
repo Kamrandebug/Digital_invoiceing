@@ -1,4 +1,4 @@
-﻿(function (global) {
+(function (global) {
   'use strict';
   function initPurchaseTaxForm(ctx) {
     const uid = ctx.uid;
@@ -6,6 +6,17 @@
     const selCls = ctx.selCls;
     const IFP_TAX_COMPACT = !!ctx.inModal;
     var taxSroModalEl = null, taxSroModalBody = null, taxSroSlotHost = null, taxSroSlotNode = null;
+
+    function ifpSanitizeNumericText(v) {
+        return typeof window.ifpSanitizeNumericText === 'function'
+            ? window.ifpSanitizeNumericText(v)
+            : String(v == null ? '' : v).replace(/,/g, '').trim();
+    }
+    function ifpFormatNumber(v, decimals) {
+        return typeof window.ifpFormatNumber === 'function'
+            ? window.ifpFormatNumber(v, decimals)
+            : (parseFloat(v) || 0).toFixed(decimals || 2);
+    }
 
     const INV_HSCODE_URL = ctx.routes.hscode;
     const INV_SALE_TYPES_URL = ctx.routes.saleTypes;
@@ -904,6 +915,15 @@
                 calcSummary();
             });
         });
+        const rateInp = rowEl(row, '.ifp-rate') || row.querySelector('.ifp-rate');
+        if (rateInp) {
+            rateInp.addEventListener('focus', function() {
+                rateInp.value = ifpSanitizeNumericText(rateInp.value);
+            });
+            rateInp.addEventListener('blur', function() {
+                rateInp.value = ifpFormatNumber(n(rateInp.value), 2);
+            });
+        }
 
         // Product select → auto-fill rate, GST, and product fields (HsCode, Description, UOM, Sale Type cascade)
         const prodSel = row.querySelector('.ifp-product');
@@ -930,7 +950,7 @@
                 const gstEl  = rowEl(row, '.ifp-gst-pct');
                 const ds = opt.dataset || {};
                 if (forceDetailsFill) {
-                    if (rateEl) rateEl.value = ds.rate || opt.getAttribute('data-rate') || 0;
+                    if (rateEl) rateEl.value = ifpFormatNumber(ds.rate || opt.getAttribute('data-rate') || 0, 2);
                     if (gstEl)  gstEl.value  = ds.gst  || opt.getAttribute('data-gst')  || 0;
                 }
 

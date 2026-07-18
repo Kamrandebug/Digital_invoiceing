@@ -407,6 +407,16 @@
                                             <label class="form-check-label" for="breakupAllowDecimal">Allow decimal qty</label>
                                         </div>
                                     </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Doc2</label>
+                                        <input type="text" class="form-control form-control-sm" name="doc2"
+                                               id="breakupDoc2" placeholder="Enter Doc2..." maxlength="50">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Doc3</label>
+                                        <input type="text" class="form-control form-control-sm" name="doc3"
+                                               id="breakupDoc3" placeholder="Enter Doc3..." maxlength="50">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -439,6 +449,9 @@
                 </div>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-success btn-sm d-none" id="breakupPostFbrBtn">
+                    <i class="fas fa-paper-plane me-1"></i> Post to FBR
+                </button>
                 <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
@@ -611,6 +624,8 @@ function applyBreakupFormSettings(settings) {
     if (settings.invoice_prefix) {
         document.getElementById('breakupInvoicePrefix').value = settings.invoice_prefix;
     }
+    document.getElementById('breakupDoc2').value = settings.doc2 || '';
+    document.getElementById('breakupDoc3').value = settings.doc3 || '';
     document.getElementById('breakupAllowDecimal').checked = !!settings.allow_decimal_qty;
 }
 
@@ -661,11 +676,78 @@ function openBreakupPreview(purchaseId) {
     })
     .then(function (html) {
         body.innerHTML = html;
+        const meta = document.getElementById('breakupPreviewMetadata');
+        const postBtn = document.getElementById('breakupPostFbrBtn');
+        if (meta && postBtn) {
+            const jobId = meta.getAttribute('data-job-id');
+            postBtn.dataset.jobId = jobId;
+            postBtn.dataset.purchaseId = purchaseId;
+            postBtn.classList.remove('d-none');
+        }
     })
     .catch(function (err) {
         body.innerHTML = '<div class="alert alert-danger m-0">' + err.message + '</div>';
+        const postBtn = document.getElementById('breakupPostFbrBtn');
+        if (postBtn) {
+            postBtn.classList.add('d-none');
+        }
     });
 }
+
+document.getElementById('breakupPreviewModal').addEventListener('hidden.bs.modal', function () {
+    const postBtn = document.getElementById('breakupPostFbrBtn');
+    if (postBtn) {
+        postBtn.classList.add('d-none');
+        delete postBtn.dataset.jobId;
+        delete postBtn.dataset.purchaseId;
+    }
+});
+
+document.getElementById('breakupPostFbrBtn')?.addEventListener('click', function () {
+    const btn = this;
+    const purchaseId = btn.dataset.purchaseId;
+    const jobId = btn.dataset.jobId;
+    if (!purchaseId || !jobId) return;
+
+    if (!confirm('Are you sure you want to post all generated breakup invoices to FBR? This will insert sale invoices into the system and submit them to FBR.')) {
+        return;
+    }
+
+    btn.disabled = true;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Posting...';
+
+    fetch(breakupGenerateUrl + '/' + purchaseId + '/breakup/post-to-fbr', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': breakupCsrf,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ job_id: jobId })
+    })
+    .then(function (res) {
+        return res.json().then(function (data) {
+            if (!res.ok) {
+                throw new Error(data.message || 'Failed to post to FBR');
+            }
+            return data;
+        });
+    })
+    .then(function (data) {
+        alert(data.message || 'Invoices posted successfully.');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('breakupPreviewModal')).hide();
+        window.location.reload();
+    })
+    .catch(function (err) {
+        alert(err.message);
+    })
+    .finally(function () {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    });
+});
 
 document.getElementById('breakupGenerateSubmitBtn')?.addEventListener('click', function () {
     if (!breakupPurchaseId) return;

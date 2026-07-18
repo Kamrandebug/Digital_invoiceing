@@ -5,7 +5,8 @@
     'use strict';
 
     function n(v) {
-        return parseFloat(v) || 0;
+        const clean = String(v == null ? '' : v).replace(/,/g, '').trim();
+        return parseFloat(clean) || 0;
     }
 
     function createLineTaxCalculator(config) {
@@ -47,11 +48,19 @@
             }
             const whtEl = document.getElementById(whtAmountId);
             if (whtEl) {
-                whtEl.value = wht.toFixed(2);
+                if (typeof window.ifpFormatNumber === 'function' && whtEl.classList.contains('ifp-numfmt')) {
+                    whtEl.value = window.ifpFormatNumber(wht, 2);
+                } else {
+                    whtEl.value = wht.toFixed(2);
+                }
             }
             const gtwEl = document.getElementById(grandWithWhtId);
             if (gtwEl) {
-                gtwEl.value = grandWithWht.toFixed(2);
+                if (typeof window.ifpFormatNumber === 'function' && gtwEl.classList.contains('ifp-numfmt')) {
+                    gtwEl.value = window.ifpFormatNumber(grandWithWht, 2);
+                } else {
+                    gtwEl.value = grandWithWht.toFixed(2);
+                }
             }
             const trWht = document.getElementById(trWhtId);
             const trGrand = document.getElementById(trGrandId);
@@ -122,7 +131,13 @@
 
             function set(cls, val) {
                 const el = rowEl(row, '.' + cls);
-                if (el) el.value = val.toFixed(2);
+                if (el) {
+                    if (typeof window.ifpFormatNumber === 'function' && el.classList.contains('ifp-numfmt')) {
+                        el.value = window.ifpFormatNumber(val, 2);
+                    } else {
+                        el.value = val.toFixed(2);
+                    }
+                }
             }
             set('ifp-amount', amount);
             set('ifp-disc-amt', discAmt);
@@ -151,7 +166,13 @@
             });
             function s(id, v) {
                 const el = document.getElementById(uid + '_' + id);
-                if (el) el.value = v.toFixed(2);
+                if (el) {
+                    if (typeof window.ifpFormatNumber === 'function' && el.classList.contains('ifp-numfmt')) {
+                        el.value = window.ifpFormatNumber(v, 2);
+                    } else {
+                        el.value = v.toFixed(2);
+                    }
+                }
             }
             s('SubTotal', sub);
             s('TotalDiscount', disc);

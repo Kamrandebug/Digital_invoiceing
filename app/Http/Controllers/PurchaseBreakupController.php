@@ -35,6 +35,8 @@ class PurchaseBreakupController extends Controller
             'end_date' => 'required|date|after_or_equal:from_date',
             'invoice_prefix' => 'required|string|max:50',
             'allow_decimal_qty' => 'sometimes|boolean',
+            'doc2' => 'nullable|string|max:50',
+            'doc3' => 'nullable|string|max:50',
         ]);
 
         $customer = DB::connection('tenant')->table('tbl_customer')
@@ -118,6 +120,7 @@ class PurchaseBreakupController extends Controller
             'totalQty' => (float) ($totals->total_qty ?? 0),
             'totalAmount' => (float) ($totals->total_amount ?? 0),
             'totalGstAmount' => $totalGstAmount,
+            'jobId' => (int) $job->id,
         ]);
     }
 
@@ -203,6 +206,19 @@ class PurchaseBreakupController extends Controller
                 $lineCount === 1
             ),
         ]);
+    }
+
+    public function postToFbr(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'job_id' => 'required|integer',
+        ]);
+
+        $result = $this->breakupService->postBreakupToFbr($id, (int) $validated['job_id'], (int) ($request->user()?->id ?? 1));
+        if (! $result['success']) {
+            return response()->json($result, 422);
+        }
+        return response()->json($result);
     }
 
     protected function resolveCustomerDisplayName(object $customer): string

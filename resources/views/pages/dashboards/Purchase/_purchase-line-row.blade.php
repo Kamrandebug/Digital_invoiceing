@@ -70,15 +70,15 @@
     ])
     <td class="ifp-col-qty">
         @if($readonly)
-            <span class="small">{{ number_format((float) ($item->Quantity ?? 0), 2) }}</span>
+            <span class="small">{{ number_format((float) ($item->Quantity ?? 0), 0) }}</span>
         @else
             @php
                 $qtyVal = old('items.'.$nameIdx.'.Quantity', $item->Quantity ?? 1);
-                $qtyDisplay = is_numeric($qtyVal) ? number_format((float) $qtyVal, 2, '.', '') : $qtyVal;
+                $qtyDisplay = is_numeric($qtyVal) ? number_format((float) $qtyVal, 0, '.', '') : $qtyVal;
             @endphp
             <input type="number" name="items[{{ $nameIdx }}][Quantity]"
                    class="form-control form-control-sm ifp-qty line-qty"
-                   value="{{ $qtyDisplay }}" min="0" step="0.01">
+                   value="{{ $qtyDisplay }}" min="0" step="1">
         @endif
     </td>
     <td class="ifp-col-sale-rate">
@@ -87,20 +87,19 @@
         @else
             @php
                 $rateVal = old('items.'.$nameIdx.'.Rate', $item->Rate ?? 0);
-                $rateDisplay = is_numeric($rateVal) ? number_format((float) $rateVal, 2, '.', '') : $rateVal;
             @endphp
-            <input type="number" step="0.01" name="items[{{ $nameIdx }}][Rate]"
-                   class="form-control form-control-sm ifp-rate line-rate"
-                   value="{{ $rateDisplay }}" min="0">
+            <input type="text" inputmode="decimal" name="items[{{ $nameIdx }}][Rate]"
+                   class="form-control form-control-sm ifp-rate line-rate ifp-numfmt"
+                   value="{{ number_format((float) $rateVal, 2, '.', ',') }}">
         @endif
     </td>
     <td class="ifp-col-amount">
         @if($readonly)
             <span class="small">{{ number_format($item->Amount ?? 0, 2) }}</span>
         @else
-            <input type="number" step="0.01" name="items[{{ $nameIdx }}][Amount]"
-                   class="form-control form-control-sm ifp-amount line-amount"
-                   value="{{ old('items.'.$nameIdx.'.Amount', $item->Amount ?? 0) }}" readonly>
+            <input type="text" name="items[{{ $nameIdx }}][Amount]"
+                   class="form-control form-control-sm ifp-amount line-amount ifp-numfmt"
+                   value="{{ number_format((float) old('items.'.$nameIdx.'.Amount', $item->Amount ?? 0), 2, '.', ',') }}" readonly>
         @endif
     </td>
     @if($inModal)
@@ -108,9 +107,12 @@
         @if($readonly)
             <span class="small">{{ number_format((float) ($item->FixedNotifiedValueOrRetailPrice ?? ($item->TPRate ?? 0) * ($item->Quantity ?? 0)), 2) }}</span>
         @else
-            <input type="number" step="0.01" name="items[{{ $nameIdx }}][FixedNotifiedValueOrRetailPrice]"
-                   class="form-control form-control-sm ifp-fixed-notified-value"
-                   value="{{ number_format((float) ($item->FixedNotifiedValueOrRetailPrice ?? ($item->TPRate ?? 0) * ($item->Quantity ?? 0)), 2, '.', '') }}" readonly>
+            @php
+                $fixedVal = $item->FixedNotifiedValueOrRetailPrice ?? ($item->TPRate ?? 0) * ($item->Quantity ?? 0);
+            @endphp
+            <input type="text" name="items[{{ $nameIdx }}][FixedNotifiedValueOrRetailPrice]"
+                   class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt"
+                   value="{{ number_format((float) $fixedVal, 2, '.', ',') }}" readonly>
         @endif
     </td>
     @endif
@@ -129,9 +131,9 @@
         @if($readonly)
             <span class="small">{{ number_format((float) ($item->DiscountAmount ?? 0), 2) }}</span>
         @else
-            <input type="number" step="0.01" name="items[{{ $nameIdx }}][DiscountAmount]"
-                   class="form-control form-control-sm ifp-disc-amt"
-                   value="{{ $item->DiscountAmount ?? 0 }}" readonly>
+            <input type="text" name="items[{{ $nameIdx }}][DiscountAmount]"
+                   class="form-control form-control-sm ifp-disc-amt ifp-numfmt"
+                   value="{{ number_format((float) ($item->DiscountAmount ?? 0), 2, '.', ',') }}" readonly>
         @endif
     </td>
     @if(!$inModal)
@@ -149,18 +151,21 @@
         @if($readonly)
             <span class="small">{{ number_format((float) ($item->GSTAmount ?? 0), 2) }}</span>
         @else
-            <input type="number" step="0.01" name="items[{{ $nameIdx }}][GSTAmount]"
-                   class="form-control form-control-sm ifp-gst-amt"
-                   value="{{ $item->GSTAmount ?? 0 }}" readonly>
+            <input type="text" name="items[{{ $nameIdx }}][GSTAmount]"
+                   class="form-control form-control-sm ifp-gst-amt ifp-numfmt"
+                   value="{{ number_format((float) ($item->GSTAmount ?? 0), 2, '.', ',') }}" readonly>
         @endif
     </td>
     <td class="ifp-col-net">
         @if($readonly)
             <span class="small fw-bold">{{ number_format((float) ($item->Total ?? $item->TotalValues ?? 0), 2) }}</span>
         @else
-            <input type="number" step="0.01" name="items[{{ $nameIdx }}][Total]"
-                   class="form-control form-control-sm ifp-total fw-bold"
-                   value="{{ $item->Total ?? $item->TotalValues ?? 0 }}" readonly>
+            @php
+                $totalVal = $item->Total ?? $item->TotalValues ?? 0;
+            @endphp
+            <input type="text" name="items[{{ $nameIdx }}][Total]"
+                   class="form-control form-control-sm ifp-total ifp-numfmt fw-bold"
+                   value="{{ number_format((float) $totalVal, 2, '.', ',') }}" readonly>
         @endif
     </td>
     <td class="ifp-col-extra-tax">
