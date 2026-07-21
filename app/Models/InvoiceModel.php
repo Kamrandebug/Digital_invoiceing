@@ -41,6 +41,7 @@ class InvoiceModel extends Model
         'Quantity',
         'Rate',
         'Amount',
+        'FBRQty',
         'DiscountPercentage',
         'DiscountAmount',
         'GstPercentage',
@@ -91,8 +92,8 @@ class InvoiceModel extends Model
         // Product dropdown for invoice: include tax/FBR fields for auto-fill on line item.
         $query = "SELECT p.ID, p.Name AS ProductName, p.SalePrice, 0 AS GstPercentage,
                   p.HsCode, p.SaleInformation, p.UomID,
-                  (SELECT u.UnitName FROM tbl_Unit u WHERE u.id = p.UomID LIMIT 1) AS UomName,
-                  p.SaleTypeID, p.SaleTypeToRateID, p.SroScheduleID, p.SroItemID, p.TPRate, p.IsFixedRate
+                  (SELECT u.UnitName FROM tbl_Unit u WHERE u.id = p.Unit LIMIT 1) AS UnitName,
+                  p.SaleTypeID, p.SaleTypeToRateID, p.SroScheduleID, p.SroItemID, p.TPRate, p.IsFixedRate, p.Unit
                   FROM tbl_product p
                   WHERE p.Status = 1";
 
@@ -371,8 +372,8 @@ class InvoiceModel extends Model
         ", [$requestID]);
 
         DB::connection('landlord')->statement("
-            INSERT INTO {$tenantDbQuoted}.`tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,Weight,GSTAmount,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
-            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.Weight,t.GSTAmount,
+            INSERT INTO {$tenantDbQuoted}.`tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,FBRQty,Weight,GSTAmount,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.FBRQty, t.Weight,t.GSTAmount,
                 t.HsCode, t.ProductDescription AS SaleInformation,t.UomID, t.Uom_Desc AS Uom_Desc,
                 t.SaleTypeID, t.SaleTypeDesc AS SaleTypeDesc,
                 t.SaleTypeToRateID, t.SaleTypeToRateDesc AS SaleTypeToRateDesc,
@@ -535,7 +536,7 @@ SELECT
                     '"productDescription" : ', JSON_QUOTE(IFNULL(d.ProductDescription, '')), ',',
                     '"rate" : ', JSON_QUOTE(IFNULL(d.SaleTypeToRateDesc, '')), ',',
                     '"uoM" : ', JSON_QUOTE(IFNULL(d.Uom_Desc, '')), ',',
-                    '"quantity" : ', IFNULL(d.Quantity, 0), ',',
+                    '"quantity" : ', IFNULL(IF(p.Unit > 1, d.FBRQty, d.Quantity), 0), ',',
                     '"totalValues" : ', IFNULL(d.TotalValues, 0), ',',
                     '"valueSalesExcludingST" : ', IFNULL(d.ValueSalesExcludingST, 0), ',',
                     '"fixedNotifiedValueOrRetailPrice" : ', IFNULL(d.FixedNotifiedValueOrRetailPrice, 0), ',',
@@ -553,6 +554,7 @@ SELECT
                 SEPARATOR ','
             )
             FROM tbl_sales_invoice_detail d
+            INNER JOIN tbl_product p ON (p.ID = d.ProductID)
             WHERE d.InvoiceID = h.ID AND IFNULL(d.Status, 0) != 2
         ), ''),
         ']}'

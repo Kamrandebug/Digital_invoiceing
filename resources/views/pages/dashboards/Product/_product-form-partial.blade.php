@@ -299,7 +299,7 @@
                             @endif
                         </div>
                         <div class="col-md-6">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Unit</label>
+                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Custom Unit</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->UnitName ?? $product->Unit ?? '-' }}</div>
                             @else
                             <div class="d-flex gap-1 align-items-center">

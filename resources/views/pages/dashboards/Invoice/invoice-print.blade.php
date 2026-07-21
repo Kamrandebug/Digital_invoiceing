@@ -109,6 +109,14 @@
     $printDocumentTitle = $invoice
         ? 'GD-DI-'.\Carbon\Carbon::now()->format('Ymd').'-'.(int) ($invoice->ID ?? 0)
         : 'Invoice Print';
+
+    $allUnits = \Illuminate\Support\Facades\DB::table('tbl_Unit')->pluck('UnitName', 'id')->toArray();
+    $hasFbrQty = false;
+    foreach ($items as $it) {
+        if (($it->Unit ?? 0) > 1) {
+            $hasFbrQty = true;
+        }
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -519,6 +527,9 @@
             background: #f8fafc;
             box-sizing: border-box;
         }
+        table.items.has-fbr-qty col.col-desc { width: 12% !important; }
+        table.items.items--no-fixed.has-fbr-qty col.col-desc { width: 19% !important; }
+        table.items.has-fbr-qty col.col-fbr-qty { width: 8% !important; }
     </style>
 </head>
 <body class="orientation-{{ $orientation }}">
@@ -615,10 +626,13 @@
         </div>
 
         {{-- Section 3: line items + totals / FBR (unchanged) --}}
-        <table class="items @if(! $showFixedNotifiedColumn) items--no-fixed @endif">
+        <table class="items @if(! $showFixedNotifiedColumn) items--no-fixed @endif @if($hasFbrQty) has-fbr-qty @endif">
             <colgroup>
                 <col class="col-idx">
                 <col class="col-desc">
+                @if($hasFbrQty)
+                <col class="col-fbr-qty">
+                @endif
                 <col class="col-qty">
                 <col class="col-uom">
                 <col class="col-rate">
@@ -634,6 +648,9 @@
                 <tr>
                     <th>#</th>
                     <th>Description of Goods</th>
+                    @if($hasFbrQty)
+                    <th class="num">Qty of<br>HS Code</th>
+                    @endif
                     <th class="num">Qty</th>
                     <th class="cell-uom">Unit</th>
                     <th class="num">Unit Rate</th>
@@ -663,8 +680,17 @@
                         —
                         @endif
                     </td>
+                    @if($hasFbrQty)
+                    <td class="num">{{ ($item->Unit ?? 0) > 1 ? ($item->FBRQty ?? '—') : '—' }}</td>
+                    @endif
                     <td class="num">{{ $item->Quantity ?? 0 }}</td>
-                    <td class="cell-uom">{{ trim((string) ($item->Uom_Desc ?? '')) !== '' ? $item->Uom_Desc : '—' }}</td>
+                    <td class="cell-uom">
+                        @if(($item->Unit ?? 0) > 1 && isset($allUnits[$item->Unit]))
+                            {{ $allUnits[$item->Unit] }}
+                        @else
+                            {{ trim((string) ($item->Uom_Desc ?? '')) !== '' ? $item->Uom_Desc : '—' }}
+                        @endif
+                    </td>
                     <td class="num">{{ number_format((float) ($item->Rate ?? 0), 2) }}</td>
                     <td class="num col-value-amount">{{ number_format((float) ($item->Amount ?? 0), 2) }}</td>
                     @if($showFixedNotifiedColumn)
@@ -675,7 +701,7 @@
                     <td class="num col-value-amount">{{ number_format($net, 2) }}</td>
                 </tr>
                 @empty
-                <tr><td colspan="{{ $showFixedNotifiedColumn ? 10 : 9 }}" class="text-center">No line items.</td></tr>
+                <tr><td colspan="{{ ($showFixedNotifiedColumn ? 10 : 9) + ($hasFbrQty ? 1 : 0) }}" class="text-center">No line items.</td></tr>
                 @endforelse
             </tbody>
         </table>

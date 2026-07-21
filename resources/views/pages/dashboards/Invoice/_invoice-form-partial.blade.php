@@ -18,6 +18,14 @@
     $uid = 'ifp_' . $mode . '_' . ($invoiceId ?: 'new');
     $selClass = $inModal ? 'form-select' : 'form-select form-select-sm';
     $ifpEmptyColspan = $inModal ? ($isReadonly ? 14 : 15) : ($isReadonly ? 17 : 18);
+
+    $hasFbrQty = false;
+    foreach ($items as $item) {
+        if (($item->Unit ?? 0) > 1 || ($item->FBRQty ?? 0) > 0) {
+            $hasFbrQty = true;
+            break;
+        }
+    }
 @endphp
 
 {{-- ── Info Badge (edit / show) — full page only; hidden in AJAX View/Edit modal --}}
@@ -263,6 +271,16 @@
         .table-inv td.ifp-col-qty { min-width: 64px; width: 4%; }
         .table-inv th.ifp-col-sale-rate,
         .table-inv td.ifp-col-sale-rate { min-width: 88px; width: 5%; }
+        .table-inv th.ifp-col-fbr-qty,
+        .table-inv td.ifp-col-fbr-qty {
+            min-width: 88px;
+            width: 5%;
+            display: none !important;
+        }
+        .table-inv.show-fbr-qty th.ifp-col-fbr-qty,
+        .table-inv.show-fbr-qty td.ifp-col-fbr-qty {
+            display: table-cell !important;
+        }
         .table-inv th.ifp-col-amount,
         .table-inv td.ifp-col-amount { min-width: 108px; width: 6%; }
         .table-inv th.ifp-col-fixed,
@@ -534,7 +552,7 @@
     </style>
     <div class="col-xl-12">
         <div class="ifp-inv-line-items-scroll">
-        <table class="table table-inv listing-table invoices-table mt-3 {{ $isReadonly ? '' : 'text-nowrap' }}">
+        <table class="table table-inv listing-table invoices-table mt-3 {{ $isReadonly ? '' : 'text-nowrap' }} {{ $hasFbrQty ? 'show-fbr-qty' : '' }}">
             <thead>
                 <tr>
                     <th class="ifp-col-product">Product / Services</th>
@@ -555,6 +573,7 @@
                     @endif
                     <th class="ifp-col-qty">Qty</th>
                     <th class="ifp-col-sale-rate">Unit Rate</th>
+                    <th class="ifp-col-fbr-qty">FBR Qty</th>
                     <th class="ifp-col-amount">Amount</th>
                     @if($inModal)
                     <th class="ifp-col-fixed text-nowrap">Fixed notified value</th>
@@ -593,7 +612,8 @@
                                             data-hscode="{{ $prod->HsCode ?? '' }}"
                                             data-sale-information="{{ $prod->SaleInformation ?? '' }}"
                                             data-uom-id="{{ $prod->UomID ?? '' }}"
-                                            data-uom-label="{{ trim((string) ($prod->UomName ?? '')) }}"
+                                            data-uom-label="{{ trim((string) ($prod->UnitName ?? '')) }}"
+                                            data-unit="{{ $prod->Unit ?? 0 }}"
                                             data-sale-type-id="{{ $prod->SaleTypeID ?? '' }}"
                                             data-sale-type-to-rate-id="{{ $prod->SaleTypeToRateID ?? '' }}"
                                             data-sro-schedule-id="{{ $prod->SroScheduleID ?? '' }}"
@@ -614,7 +634,7 @@
                             <span class="small ifp-readonly-desc">{{ $item->Details ?? $item->ProductDescription ?? '-' }}</span>
                         @else
                             <input type="hidden" name="items[{{ $idx }}][HsCode]" class="ifp-hscode" value="{{ $item->HsCode ?? '' }}">
-                            <textarea name="items[{{ $idx }}][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description">{{ $item->Details ?? '' }}</textarea>
+                            <textarea name="items[{{ $idx }}][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description">{{ $item->Details ?? $item->ProductDescription ?? '' }}</textarea>
                         @endif
                     </td>
                     <td class="ifp-col-uom">
@@ -646,6 +666,14 @@
                             <span class="small">{{ number_format($item->Rate ?? 0, 2) }}</span>
                         @else
                             <input type="text" inputmode="decimal" name="items[{{ $idx }}][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="{{ number_format((float) ($item->Rate ?? 0), 2, '.', ',') }}">
+                        @endif
+                    </td>
+                    <td class="ifp-col-fbr-qty">
+                        @if($isReadonly)
+                            <span class="small">{{ $item->FBRQty ?? '—' }}</span>
+                        @else
+                            <input type="number" step="0.000001" name="items[{{ $idx }}][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="{{ $item->FBRQty ?? '' }}" {{ ($item->Unit ?? 0) <= 1 ? 'disabled' : '' }}>
+                            <input type="hidden" name="items[{{ $idx }}][Unit]" class="ifp-product-unit" value="{{ $item->Unit ?? 0 }}">
                         @endif
                     </td>
                     <td class="ifp-col-amount">
@@ -746,7 +774,8 @@
                                         data-hscode="{{ $prod->HsCode ?? '' }}"
                                         data-sale-information="{{ $prod->SaleInformation ?? '' }}"
                                         data-uom-id="{{ $prod->UomID ?? '' }}"
-                                        data-uom-label="{{ trim((string) ($prod->UomName ?? '')) }}"
+                                        data-uom-label="{{ trim((string) ($prod->UnitName ?? '')) }}"
+                                        data-unit="{{ $prod->Unit ?? 0 }}"
                                         data-sale-type-id="{{ $prod->SaleTypeID ?? '' }}"
                                         data-sale-type-to-rate-id="{{ $prod->SaleTypeToRateID ?? '' }}"
                                         data-sro-schedule-id="{{ $prod->SroScheduleID ?? '' }}"
@@ -774,6 +803,10 @@
                     ])
                     <td class="ifp-col-qty"><input type="number" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>
                     <td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[0][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>
+                    <td class="ifp-col-fbr-qty">
+                        <input type="number" step="0.000001" name="items[0][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled>
+                        <input type="hidden" name="items[0][Unit]" class="ifp-product-unit" value="0">
+                    </td>
                     <td class="ifp-col-amount"><input type="text"     name="items[0][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>
                     @if($inModal)
                     <td class="ifp-col-fixed"><input type="text"     name="items[0][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>
@@ -1517,7 +1550,40 @@
         set('ifp-total',    total);
         if (fixedNotifiedEl) fixedNotifiedEl.value = ifpFormatNumber(fixedNotified, 2);
 
+        // FBR Qty Input Enablement:
+        const unitEl = rowEl(row, '.ifp-product-unit');
+        const unit = n(unitEl ? unitEl.value : '0');
+        const fbrQtyEl = rowEl(row, '.ifp-fbr-qty');
+        if (fbrQtyEl) {
+            if (unit > 1) {
+                fbrQtyEl.removeAttribute('disabled');
+            } else {
+                fbrQtyEl.value = '';
+                fbrQtyEl.setAttribute('disabled', 'true');
+            }
+        }
+
         return { amount, discAmt, gstAmt, total };
+    }
+
+    function toggleFbrQtyColumn() {
+        if (@json($isReadonly)) return;
+        let hasFbrQty = false;
+        body.querySelectorAll('.ifp-row').forEach(function(row) {
+            const unitEl = row.querySelector('.ifp-product-unit');
+            const unit = parseInt(unitEl ? unitEl.value : '0', 10) || 0;
+            if (unit > 1) {
+                hasFbrQty = true;
+            }
+        });
+        const table = body.closest('.table-inv');
+        if (table) {
+            if (hasFbrQty) {
+                table.classList.add('show-fbr-qty');
+            } else {
+                table.classList.remove('show-fbr-qty');
+            }
+        }
     }
 
     function ifpCustomerAdvanceMeta() {
@@ -1593,6 +1659,15 @@
                 calcSummary();
             });
         });
+        const fbrInp = row.querySelector('.ifp-fbr-qty');
+        if (fbrInp) {
+            fbrInp.addEventListener('blur', function() {
+                if (fbrInp.value !== '') {
+                    const parsed = parseInt(fbrInp.value, 10);
+                    fbrInp.value = isNaN(parsed) ? '' : String(parsed);
+                }
+            });
+        }
         const rateInp = ifpRateInput(row);
         if (rateInp) {
             rateInp.addEventListener('focus', function() {
@@ -1627,6 +1702,7 @@
                 const rateEl = ifpRateInput(row);
                 const gstEl  = rowEl(row, '.ifp-gst-pct');
                 const ds = opt.dataset || {};
+                const qty = n(rowEl(row, '.ifp-qty')?.value || '1');
                 if (forceDetailsFill) {
                     if (rateEl) rateEl.value = ifpFormatNumber(ds.rate || opt.getAttribute('data-rate') || 0, 2);
                     if (gstEl)  gstEl.value  = ds.gst  || opt.getAttribute('data-gst')  || 0;
@@ -1635,6 +1711,7 @@
                 const hsCode = ds.hscode || opt.getAttribute('data-hscode') || '';
                 const saleInfo = ds.saleInformation || opt.getAttribute('data-sale-information') || '';
                 const uomId = ds.uomId || opt.getAttribute('data-uom-id') || '';
+                const unit = parseInt(ds.unit || opt.getAttribute('data-unit') || '0', 10) || 0;
                 const saleTypeId = ds.saleTypeId || opt.getAttribute('data-sale-type-id') || '';
                 const saleTypeToRateId = ds.saleTypeToRateId || opt.getAttribute('data-sale-type-to-rate-id') || '';
                 const sroScheduleId = ds.sroScheduleId || opt.getAttribute('data-sro-schedule-id') || '';
@@ -1679,11 +1756,31 @@
                 if (fixedRateEl) fixedRateEl.value = n(tpRate).toFixed(2);
                 if (isFixedHidden) isFixedHidden.value = String(isFixedVal);
                 if (isFixedCb) isFixedCb.checked = !!isFixedVal;
+
+                const unitEl = rowEl(row, '.ifp-product-unit');
+                if (unitEl) {
+                    unitEl.value = String(unit);
+                }
+                const fbrQtyEl = rowEl(row, '.ifp-fbr-qty');
+                if (fbrQtyEl) {
+                    if (unit > 1) {
+                        fbrQtyEl.removeAttribute('disabled');
+                        // Empty by default for manual entry on selection
+                        if (forceDetailsFill) {
+                            fbrQtyEl.value = '';
+                        }
+                    } else {
+                        fbrQtyEl.value = '';
+                        fbrQtyEl.setAttribute('disabled', 'true');
+                    }
+                }
+
                 if (forceDetailsFill) {
                     loadSaleTypesForRow(row);
                 }
 
                 calcRow(row);
+                toggleFbrQtyColumn();
                 calcSummary();
             };
 
@@ -1709,6 +1806,7 @@
                 }
                 row.remove();
                 // reIndex(); // Optional if you handle indices on server-side differently, but good practice
+                toggleFbrQtyColumn();
                 calcSummary();
             });
         }
@@ -2313,6 +2411,7 @@
             ? (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
                 '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
+                '<td class="ifp-col-fbr-qty"><input type="number" step="0.000001" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td class="ifp-col-fixed"><input type="text"     name="items[' + idx + '][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
@@ -2326,6 +2425,7 @@
             : (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
                 '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
+                '<td class="ifp-col-fbr-qty"><input type="number" step="0.000001" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
@@ -2759,6 +2859,7 @@
         bindRowTaxDropdowns(row);
         loadSaleTypesForRow(row);
     });
+    toggleFbrQtyColumn();
     calcSummary();
     if (!window.ifpNormalizeFormattedInputs) {
         window.ifpNormalizeFormattedInputs = ifpNormalizeFormattedInputs;
