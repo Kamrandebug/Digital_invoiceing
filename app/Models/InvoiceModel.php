@@ -536,7 +536,7 @@ SELECT
                     '"productDescription" : ', JSON_QUOTE(IFNULL(d.ProductDescription, '')), ',',
                     '"rate" : ', JSON_QUOTE(IFNULL(d.SaleTypeToRateDesc, '')), ',',
                     '"uoM" : ', JSON_QUOTE(IFNULL(d.Uom_Desc, '')), ',',
-                    '"quantity" : ', IFNULL(IF(p.Unit > 1, d.FBRQty, d.Quantity), 0), ',',
+                    '"quantity" : ', IFNULL(IF(d.Unit > 1, d.FBRQty, d.Quantity), 0), ',',
                     '"totalValues" : ', IFNULL(d.TotalValues, 0), ',',
                     '"valueSalesExcludingST" : ', IFNULL(d.ValueSalesExcludingST, 0), ',',
                     '"fixedNotifiedValueOrRetailPrice" : ', IFNULL(d.FixedNotifiedValueOrRetailPrice, 0), ',',
@@ -554,7 +554,7 @@ SELECT
                 SEPARATOR ','
             )
             FROM tbl_sales_invoice_detail d
-            INNER JOIN tbl_product p ON (p.ID = d.ProductID)
+            -- INNER JOIN tbl_product p ON (p.ID = d.ProductID)
             WHERE d.InvoiceID = h.ID AND IFNULL(d.Status, 0) != 2
         ), ''),
         ']}'

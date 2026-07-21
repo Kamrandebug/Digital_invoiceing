@@ -312,6 +312,11 @@
                                 <button type="button" class="btn btn-sm btn-primary pfp-line-add-entity-btn flex-shrink-0" id="{{ $uid }}_newUnitBtn" title="New unit" aria-label="New unit"><i class="ri-add-line"></i></button>
                             </div>
                             @error('Unit')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            @if(!$isReadonly)
+                            <div class="text-muted small mt-1">
+                                <i class="ri-information-line"></i> Unit selection affects the HS Code Qty (FBR Qty) column on invoices.
+                            </div>
+                            @endif
                             @endif
                         </div>
                         <div class="col-md-3">

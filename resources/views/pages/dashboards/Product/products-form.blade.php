@@ -252,6 +252,11 @@
                             @error('Unit')
                                 <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
                             @enderror
+                            @if(!$isReadonly)
+                            <div class="text-muted small mt-1">
+                                <i class="fas fa-info-circle"></i> Unit selection affects the HS Code Qty (FBR Qty) column on invoices.
+                            </div>
+                            @endif
                         @endif
                     </div>
                 </div>
