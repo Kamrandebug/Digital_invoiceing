@@ -670,9 +670,9 @@
                     </td>
                     <td class="ifp-col-fbr-qty">
                         @if($isReadonly)
-                            <span class="small">{{ $item->FBRQty ?? '—' }}</span>
+                            <span class="small">{{ isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2) : '—' }}</span>
                         @else
-                            <input type="number" step="0.000001" name="items[{{ $idx }}][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="{{ $item->FBRQty ?? '' }}" {{ ($item->Unit ?? 0) <= 1 ? 'disabled' : '' }}>
+                            <input type="number" step="0.01" name="items[{{ $idx }}][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="{{ isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2, '.', '') : '' }}" {{ ($item->Unit ?? 0) <= 1 ? 'disabled' : '' }}>
                             <input type="hidden" name="items[{{ $idx }}][Unit]" class="ifp-product-unit" value="{{ $item->Unit ?? 0 }}">
                         @endif
                     </td>
@@ -804,7 +804,7 @@
                     <td class="ifp-col-qty"><input type="number" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>
                     <td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[0][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>
                     <td class="ifp-col-fbr-qty">
-                        <input type="number" step="0.000001" name="items[0][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled>
+                        <input type="number" step="0.01" name="items[0][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled>
                         <input type="hidden" name="items[0][Unit]" class="ifp-product-unit" value="0">
                     </td>
                     <td class="ifp-col-amount"><input type="text"     name="items[0][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>
@@ -1663,8 +1663,8 @@
         if (fbrInp) {
             fbrInp.addEventListener('blur', function() {
                 if (fbrInp.value !== '') {
-                    const parsed = parseInt(fbrInp.value, 10);
-                    fbrInp.value = isNaN(parsed) ? '' : String(parsed);
+                    const parsed = parseFloat(fbrInp.value);
+                    fbrInp.value = isNaN(parsed) ? '' : parsed.toFixed(2);
                 }
             });
         }
@@ -2411,7 +2411,7 @@
             ? (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
                 '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
-                '<td class="ifp-col-fbr-qty"><input type="number" step="0.000001" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
+                '<td class="ifp-col-fbr-qty"><input type="number" step="0.01" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td class="ifp-col-fixed"><input type="text"     name="items[' + idx + '][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
@@ -2425,7 +2425,7 @@
             : (
                 '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
                 '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
-                '<td class="ifp-col-fbr-qty"><input type="number" step="0.000001" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
+                '<td class="ifp-col-fbr-qty"><input type="number" step="0.01" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>' +
                 '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
