@@ -670,9 +670,9 @@
                     </td>
                     <td class="ifp-col-fbr-qty">
                         @if($isReadonly)
-                            <span class="small">{{ isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2) : '—' }}</span>
+                            <span class="small">{{ ($item->Unit ?? 0) > 1 ? (isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2) : '—') : number_format((float)($item->Quantity ?? 0), 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="{{ isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2, '.', '') : '' }}" {{ ($item->Unit ?? 0) <= 1 ? 'disabled' : '' }}>
+                            <input type="number" step="0.01" name="items[{{ $idx }}][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="{{ ($item->Unit ?? 0) > 1 ? (isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2, '.', '') : '') : number_format((float)($item->Quantity ?? 0), 2, '.', '') }}" {{ ($item->Unit ?? 0) <= 1 ? 'disabled' : '' }}>
                             <input type="hidden" name="items[{{ $idx }}][Unit]" class="ifp-product-unit" value="{{ $item->Unit ?? 0 }}">
                         @endif
                     </td>
@@ -1550,7 +1550,7 @@
         set('ifp-total',    total);
         if (fixedNotifiedEl) fixedNotifiedEl.value = ifpFormatNumber(fixedNotified, 2);
 
-        // FBR Qty Input Enablement:
+        // FBR Qty Input Enablement & Fallback:
         const unitEl = rowEl(row, '.ifp-product-unit');
         const unit = n(unitEl ? unitEl.value : '0');
         const fbrQtyEl = rowEl(row, '.ifp-fbr-qty');
@@ -1558,7 +1558,7 @@
             if (unit > 1) {
                 fbrQtyEl.removeAttribute('disabled');
             } else {
-                fbrQtyEl.value = '';
+                fbrQtyEl.value = qty.toFixed(2);
                 fbrQtyEl.setAttribute('disabled', 'true');
             }
         }
@@ -1770,7 +1770,7 @@
                             fbrQtyEl.value = '';
                         }
                     } else {
-                        fbrQtyEl.value = '';
+                        fbrQtyEl.value = qty.toFixed(2);
                         fbrQtyEl.setAttribute('disabled', 'true');
                     }
                 }

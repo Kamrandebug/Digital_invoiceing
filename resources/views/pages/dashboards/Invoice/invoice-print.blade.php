@@ -681,7 +681,7 @@
                         @endif
                     </td>
                     @if($hasFbrQty)
-                    <td class="num">{{ ($item->Unit ?? 0) > 1 ? (isset($item->FBRQty) ? number_format((float) $item->FBRQty, 2) : '—') : '—' }}</td>
+                    <td class="num">{{ ($item->Unit ?? 0) > 1 ? (isset($item->FBRQty) ? number_format((float) $item->FBRQty, 2) : '—') : number_format((float) ($item->Quantity ?? 0), 2) }}</td>
                     @endif
                     <td class="num">{{ $item->Quantity ?? 0 }}</td>
                     <td class="cell-uom">
