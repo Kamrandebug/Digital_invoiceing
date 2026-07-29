@@ -162,28 +162,33 @@
 									  <button class="btn btn-outline-primary btn-list-left" onclick="openProductModal('show', {{ $product->ID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
-									  <button type="button" class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									  <button type="button"
+                                              class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2"
+                                              data-bs-toggle="dropdown"
+                                              data-bs-auto-close="true"
+                                              data-bs-popper-config='{"strategy":"fixed"}'
+                                              aria-expanded="false">
 										<span class="sr-only">Toggle Dropdown</span>
 									  </button>
-									  <ul class="dropdown-menu">
-										
-										<button class="dropdown-item"
-												onclick="openProductModal('edit', {{ $product->ID }})">
-											<i class="fas fa-edit"></i> Edit
-										</button>
-										  
-										<button class="dropdown-item text-danger" title="Archive"
-											onclick="confirmDelete({{ $product->ID }}, '{{ addslashes($product->Name ?? '') }}')">
-											<i class="fas fa-trash"></i> Delete
-										</button>
-
-										<form id="delete-form-{{ $product->ID }}"
-											  action="{{ route('products.delete_transaction', $product->ID) }}"
-											  method="POST" style="display:none;">
-											@csrf
-											@method('DELETE')
-										</form>
-										  
+									  <ul class="dropdown-menu dropdown-menu-end">
+										<li>
+											<button class="dropdown-item"
+													onclick="openProductModal('edit', {{ $product->ID }})">
+												<i class="fas fa-edit"></i> Edit
+											</button>
+										</li>
+										<li>
+											<button class="dropdown-item text-danger" title="Archive"
+												onclick="confirmDelete({{ $product->ID }}, '{{ addslashes($product->Name ?? '') }}')">
+												<i class="fas fa-trash"></i> Delete
+											</button>
+											<form id="delete-form-{{ $product->ID }}"
+												  action="{{ route('products.delete_transaction', $product->ID) }}"
+												  method="POST" style="display:none;">
+												@csrf
+												@method('DELETE')
+											</form>
+										</li>
 									  </ul>
 									</div>
 								

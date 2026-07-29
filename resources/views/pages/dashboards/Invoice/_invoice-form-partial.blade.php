@@ -573,7 +573,7 @@
                     @endif
                     <th class="ifp-col-qty">Qty</th>
                     <th class="ifp-col-sale-rate">Unit Rate</th>
-                    <th class="ifp-col-fbr-qty">FBR Qty</th>
+                    <th class="ifp-col-fbr-qty">HSCode Qty</th>
                     <th class="ifp-col-amount">Amount</th>
                     @if($inModal)
                     <th class="ifp-col-fixed text-nowrap">Fixed notified value</th>
