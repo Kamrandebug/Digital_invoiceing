@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr" data-nav-layout="vertical" data-theme-mode="light" data-header-styles="transparent" data-width="fullwidth" data-menu-styles="transparent" data-page-style="flat" data-toggled="close"  data-vertical-style="doublemenu" data-toggled="double-menu-open">
+<html lang="en" dir="ltr" data-nav-layout="vertical" data-theme-mode="light" data-header-styles="transparent" data-width="fullwidth" data-menu-styles="transparent" data-page-style="flat" data-toggled="close" data-vertical-style="default">
 
     <head>
 
@@ -58,6 +58,13 @@
 
             <!-- Start::app-content -->
             <div class="main-content app-content">
+                @if(session('selected_tenant.expiry_warning') && !request()->routeIs('tenants.index'))
+                    <div class="alert alert-warning alert-dismissible fade show m-3" role="alert">
+                        <i class="ri-alert-line align-middle me-2 fs-16"></i>
+                        <strong>Subscription Notice:</strong> The subscription for this tenant will expire in <strong>{{ session('selected_tenant.days_left') }}</strong> days. Please renew to avoid service disruption.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
                  @yield('content')				
             </div>
             <!-- End::content  -->

@@ -137,7 +137,7 @@
                                             Default Menu
                                         </label>
                                         <input class="form-check-input" type="radio" name="sidemenu-layout-styles"
-                                            id="switcher-default-menu">
+                                            id="switcher-default-menu" checked>
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
@@ -182,7 +182,7 @@
                                             Double Menu
                                         </label>
                                         <input class="form-check-input" type="radio" name="sidemenu-layout-styles"
-                                            id="switcher-double-menu" checked>
+                                            id="switcher-double-menu">
                                     </div>
                                 </div>
                             </div>

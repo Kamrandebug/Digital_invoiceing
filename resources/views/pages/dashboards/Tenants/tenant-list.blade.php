@@ -145,11 +145,44 @@
 <div class="row justify-content-center">
 	<div class="col-10">
 		<div class="page-header-breadcrumb mb-5 company-header">
-			<div class="d-flex align-center justify-content-between flex-wrap">
+			<div class="d-flex align-items-center justify-content-between flex-wrap w-100">
 				<span class="title-tenant">Select Tenant</span>
-				<button type="button" class="btn btn-purple-gradient rounded-pill btn-wave waves-effect waves-light" data-bs-toggle="modal" data-bs-target="#addTenantModal">
-					<i class="ri-add-line align-middle me-1"></i> Add Tenant
-				</button>
+				
+				<!-- Profile Dropdown (Replaces the Add Tenant button) -->
+				<div class="dropdown">
+					<button class="btn btn-outline-light dropdown-toggle text-dark d-flex align-items-center gap-2 rounded-pill px-3 py-2" 
+							type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false" 
+							style="border: 1px solid rgba(0,0,0,0.08); background: #fff; box-shadow: rgba(0, 0, 0, 0.04) 0px 3px 5px;">
+						<span class="avatar avatar-xs rounded-circle bg-purple-transparent text-purple" 
+                              style="width: 26px; height: 26px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; background: rgba(138, 43, 226, 0.1); color: #8a2be2;">
+							{{ substr(auth()->user()->name ?? 'U', 0, 1) }}
+						</span>
+						<span class="d-none d-sm-inline-block fw-semibold text-muted" style="font-size: 0.875rem;">
+							{{ auth()->user()->name }}
+						</span>
+					</button>
+					<ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" aria-labelledby="userMenuButton" 
+						style="border-radius: 12px; min-width: 200px; padding: 0.5rem 0; z-index: 1050;">
+						<li class="px-3 py-2 border-bottom text-muted" style="font-size: 0.75rem;">
+							<div>Signed in as</div>
+							<div class="text-dark fw-semibold text-truncate">{{ auth()->user()->email }}</div>
+						</li>
+						<li>
+							<a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('profile.edit') }}" style="font-size: 0.875rem;">
+								<i class="ri-user-line text-muted"></i> View Profile
+							</a>
+						</li>
+						<li><hr class="dropdown-divider my-1" style="border-color: rgba(0,0,0,0.05);"></li>
+						<li>
+							<form method="POST" action="{{ route('logout') }}">
+								@csrf
+								<button type="submit" class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" style="font-size: 0.875rem;">
+									<i class="ri-logout-box-line"></i> Log Out
+								</button>
+							</form>
+						</li>
+					</ul>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -189,56 +222,59 @@
                 @else
                     <div class="row g-4 justify-content-center">
                         @foreach($tenants as $tenant)
-                        <div class="col-md-6 col-lg-4 col-xl-3">
-                            <div class="company-card card ribbon-card">
-								<div class="card-body text-center p-3">
-                                    <div class="tenant-list-image mb-2">
-                                        @if(!empty($tenant->ImageUrl))
-                                            @php $imgSrc = str_starts_with($tenant->ImageUrl, 'http') ? $tenant->ImageUrl : asset($tenant->ImageUrl); @endphp
-                                            <img src="{{ $imgSrc }}" alt="{{ $tenant->TenantName }}" class="rounded" style="max-height: 120px; width: auto; object-fit: contain;">
-                                        @else
-                                            <div class="bg-light rounded d-inline-flex align-items-center justify-content-center company-logo-card">
-                                                <i class="ri-building-line fs-1 text-secondary"></i>
-                                            </div>
-                                        @endif
-                                    </div>
-                                    <h6 class="company-title">{{ $tenant->TenantName ?? 'Unnamed' }}</h6>
-                                    @php
-                                        $saleStatus = data_get($tenant, 'SaleStatus') ?? data_get($tenant, 'salestatus');
-                                        $expiry = data_get($tenant, 'ExpiryDate') ?? data_get($tenant, 'expirydate');
-                                        if ($expiry && ! $expiry instanceof \Carbon\Carbon) {
-                                            try {
-                                                $expiry = \Carbon\Carbon::parse($expiry);
-                                            } catch (\Throwable $e) {
-                                                $expiry = null;
-                                            }
-                                        }
-                                        $expirySoon = $expiry && $expiry->isFuture() && $expiry->lte(now()->copy()->addDays(30));
+                            @php
+                                $saleStatus = data_get($tenant, 'SaleStatus') ?? data_get($tenant, 'salestatus');
+                                $expiry = data_get($tenant, 'ExpiryDate') ?? data_get($tenant, 'expirydate');
+                                if ($expiry && ! $expiry instanceof \Carbon\Carbon) {
+                                    try {
+                                        $expiry = \Carbon\Carbon::parse($expiry);
+                                    } catch (\Throwable $e) {
+                                        $expiry = null;
+                                    }
+                                }
+                                $expirySoon = $expiry && $expiry->isFuture() && $expiry->lte(now()->copy()->addDays(30));
+                                $isExpired = $expiry && $expiry->isPast();
+                                $expiryWarning = $expiry && $expiry->isFuture() && $expiry->lte(now()->copy()->addDays(7));
 
-                                        $saleBadgeClass = 'tenant-sale--default';
-                                        $saleIcon = 'ri-price-tag-3-line';
-                                        if (filled($saleStatus)) {
-                                            $compact = strtolower(preg_replace('/[\s._-]+/', '', (string) $saleStatus));
-                                            if (str_contains($compact, 'unpaid') || $compact === 'overdue') {
-                                                $saleBadgeClass = 'ribbon-danger';
-                                                $saleIcon = 'ri-error-warning-line';
-                                            } elseif (in_array($compact, ['paid', 'fullypaid', 'complete', 'completed'], true)) {
-                                                $saleBadgeClass = 'ribbon-success';
-                                                $saleIcon = 'ri-checkbox-circle-line';
-                                            } elseif (in_array($compact, ['trial', 'trail'], true) || str_starts_with($compact, 'trial') || str_starts_with($compact, 'trail')) {
-                                                $saleBadgeClass = 'ribbon-secondary';
-                                                $saleIcon = 'ri-timer-flash-line';
-                                            } elseif (str_contains($compact, 'invoice')) {
-                                                $saleBadgeClass = 'ribbon-primary';
-                                                $saleIcon = 'ri-file-list-3-line';
-                                            } elseif (in_array($compact, ['pending', 'processing', 'draft', 'due'], true) || str_contains($compact, 'pending')) {
-                                                $saleBadgeClass = 'ribbon-orange';
-                                                $saleIcon = 'ri-loader-4-line';
-                                            }
-                                        }
-                                    @endphp
+                                $saleBadgeClass = 'tenant-sale--default';
+                                $saleIcon = 'ri-price-tag-3-line';
+                                if (filled($saleStatus)) {
+                                    $compact = strtolower(preg_replace('/[\s._-]+/', '', (string) $saleStatus));
+                                    if (str_contains($compact, 'unpaid') || $compact === 'overdue') {
+                                        $saleBadgeClass = 'ribbon-danger';
+                                        $saleIcon = 'ri-error-warning-line';
+                                    } elseif (in_array($compact, ['paid', 'fullypaid', 'complete', 'completed'], true)) {
+                                        $saleBadgeClass = 'ribbon-success';
+                                        $saleIcon = 'ri-checkbox-circle-line';
+                                    } elseif (in_array($compact, ['trial', 'trail'], true) || str_starts_with($compact, 'trial') || str_starts_with($compact, 'trail')) {
+                                        $saleBadgeClass = 'ribbon-secondary';
+                                        $saleIcon = 'ri-timer-flash-line';
+                                    } elseif (str_contains($compact, 'invoice')) {
+                                        $saleBadgeClass = 'ribbon-primary';
+                                        $saleIcon = 'ri-file-list-3-line';
+                                    } elseif (in_array($compact, ['pending', 'processing', 'draft', 'due'], true) || str_contains($compact, 'pending')) {
+                                        $saleBadgeClass = 'ribbon-orange';
+                                        $saleIcon = 'ri-loader-4-line';
+                                    }
+                                }
+
+                             @endphp
+                            <div class="col-md-6 col-lg-4 col-xl-3" @if($isExpired) style="opacity: 0.72;" @endif>
+                                <div class="company-card card ribbon-card">
+                                    <div class="card-body text-center p-3">
+                                        <div class="tenant-list-image mb-2">
+                                            @if(!empty($tenant->ImageUrl))
+                                                @php $imgSrc = str_starts_with($tenant->ImageUrl, 'http') ? $tenant->ImageUrl : asset($tenant->ImageUrl); @endphp
+                                                <img src="{{ $imgSrc }}" alt="{{ $tenant->TenantName }}" class="rounded" style="max-height: 120px; width: auto; object-fit: contain;">
+                                            @else
+                                                <div class="bg-light rounded d-inline-flex align-items-center justify-content-center company-logo-card">
+                                                    <i class="ri-building-line fs-1 text-secondary"></i>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <h6 class="company-title">{{ $tenant->TenantName ?? 'Unnamed' }}</h6>
                                     <div class="tenant-card-meta row g-3 justify-content-center">
-										@if(filled($saleStatus))
+                                        @if(filled($saleStatus))
                                             <div class="ribbon ribbon-top-left mt-0 {{ $saleBadgeClass }}">
                                                 <span>{{ $saleStatus }}</span>
                                             </div>
@@ -247,16 +283,6 @@
                                                 <span>No status</span>
                                             </span>
                                         @endif
-										<?php /*?>@if(filled($saleStatus))
-                                            <div class="tenant-sale-badge {{ $saleBadgeClass }} col-md-4">
-                                                <i class="{{ $saleIcon }}" aria-hidden="true"></i>
-                                                <span>{{ $saleStatus }}</span>
-                                            </div>
-                                        @else
-                                            <span class="tenant-sale-badge tenant-sale--empty col-md-4">
-                                                <span>No status</span>
-                                            </span>
-                                        @endif<?php */?>
                                         @if($expiry)
                                             <div class="tenant-expiry text-muted col-md-10 {{ $expiry->isPast() ? 'tenant-expiry--past' : ($expirySoon ? 'tenant-expiry--soon' : '') }}">
                                                 <i class="ri-calendar-event-line align-middle me-1"></i>
@@ -272,10 +298,17 @@
                                             </div>
                                         @endif
                                     </div>
-                                    <a href="{{ route('tenants.select', $tenant->ID) }}" class="btn btn-success label-btn label-end rounded-pill">
-                                        Select 
-										<i class="ri-arrow-right-line label-btn-icon ms-2 rounded-pill"></i>
-                                    </a>
+                                    @if($isExpired)
+                                        <button class="btn btn-secondary label-btn label-end rounded-pill" disabled style="opacity: 0.6; cursor: not-allowed;">
+                                            Expired 
+                                            <i class="ri-lock-2-line label-btn-icon ms-2 rounded-pill"></i>
+                                        </button>
+                                    @else
+                                        <a href="{{ route('tenants.select', $tenant->ID) }}" class="btn btn-success label-btn label-end rounded-pill">
+                                            Select 
+                                            <i class="ri-arrow-right-line label-btn-icon ms-2 rounded-pill"></i>
+                                        </a>
+                                    @endif
                                 </div>
                             </div>
                         </div>

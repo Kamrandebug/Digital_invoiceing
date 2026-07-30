@@ -649,7 +649,7 @@ function switcherClick() {
             }
         });
         let html = document.querySelector('html');
-        html.setAttribute("data-toggled", "double-menu-open");
+        html.removeAttribute("data-toggled");
     })
     // reset all end
 
@@ -828,9 +828,13 @@ function ResetAllFn() {
     // reseting to ltr
     ltrFn();
 
-    // reseting to vertical
-    doubletFn();
-    html.setAttribute("data-toggled", "double-menu-close");
+    // reseting to vertical default menu style
+    html.setAttribute('data-nav-layout', 'vertical');
+    html.setAttribute('data-vertical-style', 'default');
+    html.removeAttribute('data-nav-style');
+    html.removeAttribute('data-toggled');
+    localStorage.removeItem('vyzornavstyles');
+    iconOverayFn();
     mainContent.removeEventListener('click', clearNavDropdown);
 
     // reseting page style
@@ -853,12 +857,12 @@ function ResetAllFn() {
     document.querySelector('#switcher-header-scroll').checked = false;
 
     // reseting sidemenu layout styles
-    document.querySelector('#switcher-default-menu').checked = false;
+    document.querySelector('#switcher-default-menu').checked = true;
     document.querySelector('#switcher-closed-menu').checked = false;
     document.querySelector('#switcher-icontext-menu').checked = false;
     document.querySelector('#switcher-icon-overlay').checked = false;
     document.querySelector('#switcher-detached').checked = false;
-    document.querySelector('#switcher-double-menu').checked = true;
+    document.querySelector('#switcher-double-menu').checked = false;
 
     // resetting theme primary
     document.querySelector("#switcher-primary").checked = false
