@@ -298,27 +298,6 @@
                             @error('Category')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             @endif
                         </div>
-                        <div class="col-md-6">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Custom Unit</label>
-                            @if($isReadonly)<div class="_pfp-detail-value">{{ $product->UnitName ?? $product->Unit ?? '-' }}</div>
-                            @else
-                            <div class="d-flex gap-1 align-items-center">
-                                <select name="Unit" id="{{ $uid }}_Unit" class="form-select @error('Unit') is-invalid @enderror flex-grow-1" style="min-width:0;">
-                                    <option value="">Select Unit</option>
-                                    @foreach($units as $un)
-                                        <option value="{{ $un->id }}" {{ (string) $pfpSelectedUnit === (string) $un->id ? 'selected' : '' }}>{{ $un->UnitName }}</option>
-                                    @endforeach
-                                </select>
-                                <button type="button" class="btn btn-sm btn-primary pfp-line-add-entity-btn flex-shrink-0" id="{{ $uid }}_newUnitBtn" title="New unit" aria-label="New unit"><i class="ri-add-line"></i></button>
-                            </div>
-                            @error('Unit')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            @if(!$isReadonly)
-                            <div class="text-muted small mt-1">
-                                <i class="ri-information-line"></i> Unit selection affects the HS Code Qty (FBR Qty) column on invoices.
-                            </div>
-                            @endif
-                            @endif
-                        </div>
                         <div class="col-md-3">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">
                                 {{ $isCreate ? 'Opening Qty' : 'Current Qty' }}
@@ -435,8 +414,12 @@
                                 <div class="_pfp-detail-value">{{ $product->HsCode ?? '-' }}</div>
                             </div>
                             <div class="col-md-4">
-                                <label class="_pfp-detail-label">UOM</label>
+                                <label class="_pfp-detail-label">HsCode UOM</label>
                                 <div class="_pfp-detail-value">{{ $taxDisplayLabels ? ($taxDisplayLabels['uom'] ?? '—') : ($product->UOM ?? '-') }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="_pfp-detail-label">Custom Unit</label>
+                                <div class="_pfp-detail-value">{{ $product->UnitName ?? $product->Unit ?? '-' }}</div>
                             </div>
                             <div class="col-12">
                                 <label class="_pfp-detail-label">Description</label>
@@ -477,7 +460,7 @@
                                         @error('HsCode')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">UOM</label>
+                                        <label class="form-label">HsCode UOM</label>
                                         <select name="UOM"
                                                 class="form-select @error('UOM') is-invalid @enderror"
                                                 data-selected="{{ old('UOM', $product->UOM ?? '') }}">
@@ -485,7 +468,22 @@
                                         </select>
                                         @error('UOM')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
-                                    <div class="col-md-4 d-none d-md-block"></div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Custom Unit</label>
+                                        <div class="d-flex gap-1 align-items-center">
+                                            <select name="Unit" id="{{ $uid }}_Unit" class="form-select @error('Unit') is-invalid @enderror flex-grow-1" style="min-width:0;">
+                                                <option value="">Select Unit</option>
+                                                @foreach($units as $un)
+                                                    <option value="{{ $un->id }}" {{ (string) $pfpSelectedUnit === (string) $un->id ? 'selected' : '' }}>{{ $un->UnitName }}</option>
+                                                @endforeach
+                                            </select>
+                                            <button type="button" class="btn btn-sm btn-primary pfp-line-add-entity-btn flex-shrink-0" id="{{ $uid }}_newUnitBtn" title="New unit" aria-label="New unit"><i class="ri-add-line"></i></button>
+                                        </div>
+                                        @error('Unit')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        <div class="text-muted small mt-1">
+                                            <i class="ri-information-line"></i> Unit selection affects the HS Code Qty (FBR Qty) column on invoices.
+                                        </div>
+                                    </div>
                                     <div class="col-12">
                                         <label class="form-label">Description</label>
                                         <textarea name="SaleInformation"

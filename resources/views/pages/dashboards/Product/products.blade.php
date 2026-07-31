@@ -123,7 +123,7 @@
                             <th>Name</th>
                             <th>Type</th>
                             <th>HsCode</th>
-                            <th>UOM</th>
+                            <th>HsCode UOM</th>
                             <th>SaleType</th>
                             <th>Rate</th>
                             <th>Status</th>
