@@ -10,6 +10,9 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SaleReportController;
 use App\Http\Controllers\TenantListController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\AuditLogController;
 use App\Models\Task;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -186,6 +189,36 @@ Route::middleware(['auth', 'tenant'])->prefix('reports')->name('reports.')->grou
     Route::get('/sale', [SaleReportController::class, 'index'])->name('sale');
     Route::get('/sale/export', [SaleReportController::class, 'exportCsv'])->name('sale.export');
     Route::get('/sale/print', [SaleReportController::class, 'printView'])->name('sale.print');
+});
+
+// ── Roles & Permissions ───────────────────────────────────────
+Route::middleware(['auth', 'tenant'])->prefix('roles')->name('roles.')->group(function () {
+    Route::get('/', [RoleController::class, 'index'])->name('index');
+    Route::get('/create', [RoleController::class, 'create'])->name('create');
+    Route::post('/save', [RoleController::class, 'save_transaction'])->name('save_transaction');
+    Route::get('/modal', [RoleController::class, 'modal'])->name('modal');
+    Route::get('/{id}/modal', [RoleController::class, 'modal'])->name('modal.id');
+    Route::get('/{id}/edit', [RoleController::class, 'edit'])->name('edit');
+    Route::put('/{id}/update', [RoleController::class, 'edit_transaction'])->name('edit_transaction');
+    Route::delete('/{id}/delete', [RoleController::class, 'delete_transaction'])->name('delete_transaction');
+});
+
+// ── Users Management ──────────────────────────────────────────
+Route::middleware(['auth', 'tenant'])->prefix('users')->name('users.')->group(function () {
+    Route::get('/', [UserController::class, 'index'])->name('index');
+    Route::get('/create', [UserController::class, 'create'])->name('create');
+    Route::post('/save', [UserController::class, 'save_transaction'])->name('save_transaction');
+    Route::get('/modal', [UserController::class, 'modal'])->name('modal');
+    Route::get('/{id}/modal', [UserController::class, 'modal'])->name('modal.id');
+    Route::get('/{id}/edit', [UserController::class, 'edit'])->name('edit');
+    Route::put('/{id}/update', [UserController::class, 'edit_transaction'])->name('edit_transaction');
+    Route::delete('/{id}/delete', [UserController::class, 'delete_transaction'])->name('delete_transaction');
+});
+
+// ── Audit Logs ────────────────────────────────────────────────
+Route::middleware(['auth', 'tenant'])->prefix('audit-logs')->name('audit_logs.')->group(function () {
+    Route::get('/', [AuditLogController::class, 'index'])->name('index');
+    Route::get('/history', [AuditLogController::class, 'history'])->name('history');
 });
 
 require __DIR__.'/auth.php';

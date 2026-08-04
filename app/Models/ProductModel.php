@@ -207,6 +207,15 @@ class ProductModel extends Model
             WHERE t.RequestID = ?
         ", [$requestID]);
 
+        try {
+            $inserted = DB::connection('tenant')->table('tbl_product')->where('RequestID', $requestID)->first();
+            if ($inserted) {
+                \App\Services\AuditLogService::log('CREATE', 'PRODUCT', $inserted->ID, null, (array)$inserted);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log product creation: ' . $e->getMessage());
+        }
+
         return [
             'status' => true,
             'message' => null,
@@ -260,6 +269,17 @@ class ProductModel extends Model
             ];
         }
 
+        // Fetch old values before updating
+        $oldRecord = null;
+        try {
+            $tempRow = DB::connection('tenant')->table('temp_product')->where('RequestID', $requestID)->first();
+            if ($tempRow && !empty($tempRow->TID)) {
+                $oldRecord = DB::connection('tenant')->table('tbl_product')->where('ID', $tempRow->TID)->first();
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to fetch old product details for audit: ' . $e->getMessage());
+        }
+
         DB::connection('landlord')->statement("
             UPDATE {$tenantDbQuoted}.tbl_product uu
             JOIN (
@@ -305,6 +325,18 @@ class ProductModel extends Model
                 uu.UpdatedOn          = u.UpdatedOn
         ", [$requestID]);
 
+        // Fetch new values after updating
+        try {
+            if ($oldRecord) {
+                $newRecord = DB::connection('tenant')->table('tbl_product')->where('ID', $oldRecord->ID)->first();
+                if ($newRecord) {
+                    \App\Services\AuditLogService::log('UPDATE', 'PRODUCT', $oldRecord->ID, (array)$oldRecord, (array)$newRecord);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log product edit: ' . $e->getMessage());
+        }
+
         return [
             'status' => true,
             'message' => null,
@@ -317,6 +349,20 @@ class ProductModel extends Model
     public static function delete_transaction($validated = [])
     {
         $requestID = $validated['RequestID'] ?? '';
+
+        // Fetch old values before deleting
+        $oldRecord = null;
+        $productId = null;
+        try {
+            $tempRow = DB::connection('tenant')->table('temp_product')->where('RequestID', $requestID)->first();
+            if ($tempRow && !empty($tempRow->TID)) {
+                $productId = $tempRow->TID;
+                $oldRecord = DB::connection('tenant')->table('tbl_product')->where('ID', $productId)->first();
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to fetch old product details for delete audit: ' . $e->getMessage());
+        }
+
         DB::unprepared("
             UPDATE tbl_product uu
             JOIN (
@@ -329,6 +375,14 @@ class ProductModel extends Model
                 uu.UpdatedBy = u.UpdatedBy,
                 uu.UpdatedOn = u.UpdatedOn
         ");
+
+        try {
+            if ($productId && $oldRecord) {
+                \App\Services\AuditLogService::log('DELETE', 'PRODUCT', $productId, (array)$oldRecord, null);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log product deletion: ' . $e->getMessage());
+        }
     }
 
     /**

@@ -167,13 +167,23 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
         DB::statement("
             INSERT INTO tbl_customer (AccountNo,PartyType,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
-                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn)
+                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn,RequestID)
             SELECT 	AccountNo,PartyType,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
-                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn
+                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn,RequestID
             FROM 	temp_customer
             WHERE RequestID = ?
         ", [$requestID]);
+
+        try {
+            $inserted = DB::connection('tenant')->table('tbl_customer')->where('RequestID', $requestID)->first();
+            if ($inserted) {
+                $module = ((int)$inserted->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
+                \App\Services\AuditLogService::log('CREATE', $module, $inserted->ID, null, (array)$inserted);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log customer creation: ' . $e->getMessage());
+        }
 
         return [
             'status' => true,
@@ -218,6 +228,17 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 'status' => false,
                 'message' => $errorSummary->ErrMsg ?: 'Unable to update customer due to invalid data.',
             ];
+        }
+
+        // Fetch old values before updating
+        $oldRecord = null;
+        try {
+            $tempRow = DB::connection('tenant')->table('temp_customer')->where('RequestID', $requestID)->first();
+            if ($tempRow && !empty($tempRow->TID)) {
+                $oldRecord = DB::connection('tenant')->table('tbl_customer')->where('ID', $tempRow->TID)->first();
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to fetch old customer details for audit: ' . $e->getMessage());
         }
 
         DB::statement("
@@ -272,6 +293,19 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 uu.UpdatedOn = u.UpdatedOn
         ", [$requestID]);
 
+        // Fetch new values after updating
+        try {
+            if ($oldRecord) {
+                $newRecord = DB::connection('tenant')->table('tbl_customer')->where('ID', $oldRecord->ID)->first();
+                if ($newRecord) {
+                    $module = ((int)$newRecord->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
+                    \App\Services\AuditLogService::log('UPDATE', $module, $oldRecord->ID, (array)$oldRecord, (array)$newRecord);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log customer edit: ' . $e->getMessage());
+        }
+
         return [
             'status' => true,
             'message' => null,
@@ -284,6 +318,20 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
     public static function delete_transaction($validated = [])
     {
         $requestID = $validated['RequestID'] ?? '';
+
+        // Fetch old values before deleting
+        $oldRecord = null;
+        $customerId = null;
+        try {
+            $tempRow = DB::connection('tenant')->table('temp_customer')->where('RequestID', $requestID)->first();
+            if ($tempRow && !empty($tempRow->TID)) {
+                $customerId = $tempRow->TID;
+                $oldRecord = DB::connection('tenant')->table('tbl_customer')->where('ID', $customerId)->first();
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to fetch old customer details for delete audit: ' . $e->getMessage());
+        }
+
         DB::unprepared("
             UPDATE tbl_customer uu
             JOIN (
@@ -296,6 +344,15 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 uu.UpdatedBy = u.UpdatedBy,
                 uu.UpdatedOn = u.UpdatedOn
         ");
+
+        try {
+            if ($customerId && $oldRecord) {
+                $module = ((int)$oldRecord->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
+                \App\Services\AuditLogService::log('DELETE', $module, $customerId, (array)$oldRecord, null);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log customer deletion: ' . $e->getMessage());
+        }
     }
 
 

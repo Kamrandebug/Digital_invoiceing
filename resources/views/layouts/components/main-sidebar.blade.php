@@ -131,7 +131,29 @@
                         </li>
                     </ul>
                 </li>
-               <?php /*?> <li class="slide has-sub">
+                
+                <!-- Start::Management -->
+                <li class="slide__category"><span class="category-name">Management</span></li>
+                <li class="slide {{ request()->routeIs('users.*') ? 'active' : '' }}">
+                    <a href="{{ route('users.index') }}" class="side-menu__item">
+                        <i class="ri-user-settings-line menu-icon"></i>
+                        <span class="side-menu__label">Users</span>
+                    </a>
+                </li>
+                <li class="slide {{ request()->routeIs('roles.*') ? 'active' : '' }}">
+                    <a href="{{ route('roles.index') }}" class="side-menu__item">
+                        <i class="ri-shield-keyhole-line menu-icon"></i>
+                        <span class="side-menu__label">Roles & Permissions</span>
+                    </a>
+                </li>
+                <li class="slide {{ request()->routeIs('audit_logs.*') ? 'active' : '' }}">
+                    <a href="{{ route('audit_logs.index') }}" class="side-menu__item">
+                        <i class="ri-history-line menu-icon"></i>
+                        <span class="side-menu__label">Audit Logs</span>
+                    </a>
+                </li>
+                <!-- End::Management -->
+                {{-- <li class="slide has-sub">
                     <a href="javascript:void(0);" class="side-menu__item">
                         <svg xmlns="http://www.w3.org/2000/svg" class="side-menu__icon" viewBox="0 0 256 256">
                             <rect width="256" height="256" fill="none" />
@@ -159,7 +181,7 @@
                         <li class="slide side-menu__label1">
                             <a href="javascript:void(0)">Dashboards</a>
                         </li>
-                        {{-- <li class="slide {{ request()->is('index') ? 'active' : '' }}">
+                        <li class="slide {{ request()->is('index') ? 'active' : '' }}">
                             <a href="{{ url('index') }}" class="side-menu__item">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="side-menu-doublemenu__icon"
                                     viewBox="0 0 256 256">
@@ -181,7 +203,7 @@
                                         stroke-linejoin="round" stroke-width="16" />
                                 </svg>
                                 Sales</a>
-                        </li> --}}
+                        </li>
                         <li class="slide has-sub {{ request()->is('index') ? 'active' : '' }}">
                             <a href="javascript:void(0);" class="side-menu__item">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="side-menu-doublemenu__icon"
@@ -212,7 +234,7 @@
                             </ul>
                         </li>
                     </ul>
-                </li><?php */?>
+                </li> --}}
                 <!-- End::slide -->
 
                 <!-- Logout -->

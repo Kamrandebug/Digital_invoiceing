@@ -412,6 +412,22 @@ class InvoiceModel extends Model
 
         self::persistInvoiceFromTemp($requestID, $tenantDbQuoted);
 
+        try {
+            $tempDetail = DB::connection('tenant')->table('tbl_temp_invoice_detail')->where('RequestID', $requestID)->first();
+            if ($tempDetail) {
+                $header = DB::connection('tenant')->table('tbl_sales_invoice_header')->where('InvoiceID', $tempDetail->InvoiceID)->first();
+                if ($header) {
+                    $lines = DB::connection('tenant')->table('tbl_sales_invoice_detail')->where('InvoiceID', $tempDetail->InvoiceID)->get()->toArray();
+                    \App\Services\AuditLogService::log('CREATE', 'INVOICE', $header->ID, null, [
+                        'header' => (array)$header,
+                        'lines' => $lines
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log invoice creation: ' . $e->getMessage());
+        }
+
         return [
             'status' => true,
             'message' => null,
@@ -436,6 +452,25 @@ class InvoiceModel extends Model
             return $validationError;
         }
 
+        $oldInvoice = null;
+        $invoiceId = null;
+        try {
+            $tempDetail = DB::connection('tenant')->table('tbl_temp_invoice_detail')->where('RequestID', $requestID)->first();
+            if ($tempDetail && !empty($tempDetail->TID)) {
+                $oldHeader = DB::connection('tenant')->table('tbl_sales_invoice_header')->where('ID', $tempDetail->TID)->first();
+                if ($oldHeader) {
+                    $invoiceId = $oldHeader->InvoiceID;
+                    $oldLines = DB::connection('tenant')->table('tbl_sales_invoice_detail')->where('InvoiceID', $invoiceId)->get()->toArray();
+                    $oldInvoice = [
+                        'header' => (array)$oldHeader,
+                        'lines' => $oldLines
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to fetch old invoice details for edit audit: ' . $e->getMessage());
+        }
+
         DB::connection('landlord')->statement("
             DELETE FROM {$tenantDbQuoted}.tbl_sales_invoice_detail
             WHERE InvoiceID IN (
@@ -452,6 +487,19 @@ class InvoiceModel extends Model
 
         self::persistInvoiceFromTemp($requestID, $tenantDbQuoted);
 
+        try {
+            if ($invoiceId && $oldInvoice) {
+                $newHeader = DB::connection('tenant')->table('tbl_sales_invoice_header')->where('InvoiceID', $invoiceId)->first();
+                $newLines = DB::connection('tenant')->table('tbl_sales_invoice_detail')->where('InvoiceID', $invoiceId)->get()->toArray();
+                \App\Services\AuditLogService::log('UPDATE', 'INVOICE', $newHeader ? $newHeader->ID : null, $oldInvoice, [
+                    'header' => $newHeader ? (array)$newHeader : null,
+                    'lines' => $newLines
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log invoice edit: ' . $e->getMessage());
+        }
+
         return [
             'status' => true,
             'message' => null,
@@ -460,6 +508,25 @@ class InvoiceModel extends Model
 
     public static function delete_transaction($requestID)
     {
+        $oldInvoice = null;
+        $headerId = null;
+        try {
+            $tempDetail = DB::connection('tenant')->table('tbl_temp_invoice_detail')->where('RequestID', $requestID)->first();
+            if ($tempDetail && !empty($tempDetail->TID)) {
+                $headerId = $tempDetail->TID;
+                $oldHeader = DB::connection('tenant')->table('tbl_sales_invoice_header')->where('ID', $headerId)->first();
+                if ($oldHeader) {
+                    $oldLines = DB::connection('tenant')->table('tbl_sales_invoice_detail')->where('InvoiceID', $oldHeader->InvoiceID)->get()->toArray();
+                    $oldInvoice = [
+                        'header' => (array)$oldHeader,
+                        'lines' => $oldLines
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to fetch old invoice details for delete audit: ' . $e->getMessage());
+        }
+
         DB::unprepared("
             UPDATE tbl_sales_invoice_header uu
             JOIN (
@@ -472,6 +539,14 @@ class InvoiceModel extends Model
                 uu.UpdatedBy = u.UpdatedBy,
                 uu.UpdatedOn = u.UpdatedOn
         ");
+
+        try {
+            if ($headerId && $oldInvoice) {
+                \App\Services\AuditLogService::log('DELETE', 'INVOICE', $headerId, $oldInvoice, null);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log invoice deletion: ' . $e->getMessage());
+        }
     }
 
     /**

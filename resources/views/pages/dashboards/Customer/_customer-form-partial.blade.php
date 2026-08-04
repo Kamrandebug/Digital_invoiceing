@@ -180,6 +180,13 @@
     @endif
 @endif
 
+@if(!$isCreate)
+    <div class="d-flex justify-content-end mb-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center" onclick="showAuditHistory('CUSTOMER', {{ $customer->ID }})">
+            <i class="ri-history-line me-1"></i> Audit History
+        </button>
+    </div>
+@endif
 
 {{-- ── Form open tag (skipped in view/readonly mode) ──────────── --}}
 @if(!$isReadonly)

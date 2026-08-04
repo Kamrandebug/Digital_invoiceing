@@ -1,4 +1,4 @@
-﻿{{--
+{{--
     Supplier List
 --}}
 
@@ -227,6 +227,11 @@
                                                 @csrf
                                                 @method('DELETE')
                                             </form>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="dropdown-item" onclick="showAuditHistory('SUPPLIER', {{ $customer->ID }})">
+                                                <i class="ri-history-line me-2"></i> Audit Log
+                                            </button>
                                         </li>
 									  </ul>
 									</div>
