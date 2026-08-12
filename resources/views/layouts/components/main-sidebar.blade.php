@@ -59,64 +59,184 @@
                 </svg>
             </div>
             <ul class="main-menu">
-                <!-- Start::slide__category -->
-                <li class="slide__category"><span class="category-name">Main</span></li>
-                <!-- End::slide__category -->
 
-                <!-- Start::slide -->
-				<li class="slide">
+                @php
+                    // ── Gather user permissions from session ──────────────────────────────────
+                    // Format: ['Products' => ['ViewOnly'=>1,'Add'=>1,...], 'Customers' => [...], ...]
+                    // Empty array = Owner/no-role = show everything
+                    $sidebarPermissions = session('selected_tenant.permissions', []);
+                    $isOwnerOrNoRole    = empty($sidebarPermissions);
+
+                    // ── Check IsPurchased flag (controls Purchases/Suppliers visibility) ───────
+                    $isPurchased = false;
+                    try {
+                        if (\Illuminate\Support\Facades\Schema::hasTable('tbl_business_info')) {
+                            $businessInfo = \Illuminate\Support\Facades\DB::table('tbl_business_info')
+                                ->where('IsArchive', 0)
+                                ->orderBy('ID')
+                                ->first(['IsPurchased']);
+                            $isPurchased = $businessInfo ? (bool) $businessInfo->IsPurchased : false;
+                        }
+                    } catch (\Throwable $e) { /* fallback false */ }
+
+                    // ── Load menu groups from DB ──────────────────────────────────────────────
+                    // Exclude Reports (ID=4) from dynamic loop — it is rendered as a fixed block
+                    // Exclude Management (ID=5) from dynamic loop — rendered separately after Reports
+                    $menuGroups = collect();
+                    try {
+                        $allMainModules = \Illuminate\Support\Facades\DB::connection('tenant')
+                            ->table('tbl_main_module')
+                            ->where('Status', 1)
+                            ->whereNotIn('ID', [4]) // Only Reports (ID=4) is fixed; Management (ID=5) is dynamic
+                            ->orderBy('DisplayOrder')
+                            ->get();
+
+                        $allModules = \Illuminate\Support\Facades\DB::connection('tenant')
+                            ->table('tbl_module')
+                            ->where('Status', 1)
+                            ->orderBy('DisplayOrder')
+                            ->get()
+                            ->groupBy('MainModuleID');
+
+                        foreach ($allMainModules as $mainMod) {
+                            $children = $allModules->get($mainMod->ID, collect());
+
+                            // Filter children by permission (skip if no ViewOnly access)
+                            $visibleChildren = $children->filter(function ($mod) use ($sidebarPermissions, $isOwnerOrNoRole, $isPurchased) {
+                                // Hide Purchases & Suppliers if not IsPurchased
+                                if (in_array(strtolower($mod->CurrentPage ?? ''), ['purchases', 'suppliers']) && !$isPurchased) {
+                                    return false;
+                                }
+                                // Owner / no role = show all
+                                if ($isOwnerOrNoRole) return true;
+                                // Check ViewOnly permission
+                                return ($sidebarPermissions[$mod->Name]['ViewOnly'] ?? 0) == 1;
+                            });
+
+                            if ($visibleChildren->isNotEmpty()) {
+                                $menuGroups->push([
+                                    'category'  => $mainMod,
+                                    'children'  => $visibleChildren,
+                                ]);
+                            }
+                        }
+
+                    } catch (\Throwable $e) {
+                        \Log::error('Sidebar menu load failed: ' . $e->getMessage());
+                    }
+
+                    // ── Route helper: map CurrentPage slug → named route ──────────────────────
+                    $routeMap = [
+                        'products'   => ['url'   => url('products')],
+                        'customers'  => ['url'   => url('customers-list')],
+                        'suppliers'  => ['route' => 'suppliers.index'],
+                        'purchases'  => ['route' => 'purchases.index'],
+                        'invoices'   => ['route' => 'invoices.index'],
+                        'users'      => ['route' => 'users.index'],
+                        'roles'      => ['route' => 'roles.index'],
+                        'audit-logs' => ['route' => 'audit_logs.index'],
+                    ];
+
+                    // ── Active route helper ───────────────────────────────────────────────────
+                    $routeNameMap = [
+                        'products'   => 'products.*',
+                        'customers'  => 'customers.*',
+                        'suppliers'  => 'suppliers.*',
+                        'purchases'  => 'purchases.*',
+                        'invoices'   => 'invoices.*',
+                        'users'      => 'users.*',
+                        'roles'      => 'roles.*',
+                        'audit-logs' => 'audit_logs.*',
+                    ];
+                @endphp
+
+                {{-- ═══════════════════════════════════════════════════════════
+                     1. DASHBOARD — Always first, fixed
+                ═══════════════════════════════════════════════════════════ --}}
+                <li class="slide__category"><span class="category-name">Main</span></li>
+                <li class="slide {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                     <a href="{{ route('dashboard') }}" class="side-menu__item">
                         <i class="ri-pie-chart-line menu-icon"></i>
                         <span class="side-menu__label">Dashboard</span>
                     </a>
                 </li>
-				<li class="slide">
-					<a href="{{ url('products') }}" class="side-menu__item">
-						<i class="ri-box-3-line menu-icon"></i>
-                        <span class="side-menu__label">Products</span>
-					</a>
-				</li>
-				<li class="slide">
-					<a href="{{ url('customers-list') }}" class="side-menu__item">
-						<i class="ri-group-line menu-icon"></i>
-                        <span class="side-menu__label">Customers</span>
-					</a>
-				</li>
-				<li class="slide">
-					<a href="{{ route('invoices.index') }}" class="side-menu__item">
-						<i class="ri-receipt-line menu-icon"></i>
-                        <span class="side-menu__label">Invoices</span>
-					</a>
-				</li>
-				@php
-					$isPurchased = false;
-					try {
-						if (\Illuminate\Support\Facades\Schema::hasTable('tbl_business_info')) {
-							$businessInfo = \Illuminate\Support\Facades\DB::table('tbl_business_info')
-								->where('IsArchive', 0)
-								->orderBy('ID')
-								->first(['IsPurchased']);
-							$isPurchased = $businessInfo ? (bool) $businessInfo->IsPurchased : false;
-						}
-					} catch (\Throwable $e) {
-						// Fallback to false if database/table is not available or query fails
-					}
-				@endphp
-				@if ($isPurchased)
-				<li class="slide">
-					<a href="{{ route('suppliers.index') }}" class="side-menu__item">
-						<i class="ri-truck-line menu-icon"></i>
-                        <span class="side-menu__label">Suppliers</span>
-					</a>
-				</li>
-				<li class="slide">
-					<a href="{{ route('purchases.index') }}" class="side-menu__item">
-						<i class="ri-shopping-cart-line menu-icon"></i>
-                        <span class="side-menu__label">Purchases</span>
-					</a>
-				</li>
-				@endif
-				<li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
+
+                {{-- ═══════════════════════════════════════════════════════════
+                     2. DYNAMIC MODULES — From tbl_main_module + tbl_module
+                        - Single child (e.g. Products) → direct <li> link
+                        - Multiple children (Sales, Purchases) → collapsible has-sub
+                ═══════════════════════════════════════════════════════════ --}}
+                @foreach ($menuGroups as $group)
+                    @php
+                        $childCount = $group['children']->count();
+                        // Determine if any child route is currently active
+                        $groupActive = $group['children']->contains(function ($mod) use ($routeNameMap) {
+                            $pattern = $routeNameMap[strtolower($mod->CurrentPage ?? '')] ?? null;
+                            return $pattern && request()->routeIs($pattern);
+                        });
+                        $catIcon = $group['category']->MainModuleIcon ?: 'ri-folder-line';
+                    @endphp
+
+                    @if ($childCount === 1)
+                        {{-- ── Single child: render as direct link (e.g. Products) ── --}}
+                        @php
+                            $mod      = $group['children']->first();
+                            $slug     = strtolower($mod->CurrentPage ?? '');
+                            $routeConf = $routeMap[$slug] ?? null;
+                            $href     = $routeConf
+                                ? (isset($routeConf['route']) ? route($routeConf['route']) : $routeConf['url'])
+                                : url($mod->ModuleURL ?? '#');
+                            $routePattern = $routeNameMap[$slug] ?? null;
+                            $isActive = $routePattern && request()->routeIs($routePattern);
+                            $icon     = $mod->MainModuleIcon ?: 'ri-circle-line';
+                        @endphp
+                        <li class="slide {{ $isActive ? 'active' : '' }}">
+                            <a href="{{ $href }}" class="side-menu__item">
+                                <i class="{{ $icon }} menu-icon"></i>
+                                <span class="side-menu__label">{{ $mod->Name }}</span>
+                            </a>
+                        </li>
+
+                    @else
+                        {{-- ── Multiple children: collapsible submenu (Sales, Purchases) ── --}}
+                        <li class="slide has-sub {{ $groupActive ? 'open active' : '' }}">
+                            <a href="javascript:void(0);" class="side-menu__item">
+                                <i class="{{ $catIcon }} menu-icon"></i>
+                                <span class="side-menu__label">{{ $group['category']->Name }}</span>
+                                <i class="ri-arrow-right-s-line side-menu__angle"></i>
+                            </a>
+                            <ul class="slide-menu child1" style="{{ $groupActive ? 'display:block;' : '' }}">
+                                <li class="slide side-menu__label1">
+                                    <a href="javascript:void(0)">{{ $group['category']->Name }}</a>
+                                </li>
+                                @foreach ($group['children'] as $mod)
+                                    @php
+                                        $slug      = strtolower($mod->CurrentPage ?? '');
+                                        $routeConf = $routeMap[$slug] ?? null;
+                                        $href      = $routeConf
+                                            ? (isset($routeConf['route']) ? route($routeConf['route']) : $routeConf['url'])
+                                            : url($mod->ModuleURL ?? '#');
+                                        $routePattern = $routeNameMap[$slug] ?? null;
+                                        $isActive  = $routePattern && request()->routeIs($routePattern);
+                                        $icon      = $mod->MainModuleIcon ?: 'ri-circle-line';
+                                    @endphp
+                                    <li class="slide {{ $isActive ? 'active' : '' }}">
+                                        <a href="{{ $href }}" class="side-menu__item">
+                                            <i class="{{ $icon }} menu-icon"></i>
+                                            <span class="side-menu__label">{{ $mod->Name }}</span>
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </li>
+                    @endif
+                @endforeach
+
+                {{-- ═══════════════════════════════════════════════════════════
+                     3. REPORTS — Fixed, always before Management
+                ═══════════════════════════════════════════════════════════ --}}
+                <li class="slide__category"><span class="category-name">Reports</span></li>
+                <li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
                     <a href="javascript:void(0);" class="side-menu__item">
                         <i class="ri-bar-chart-2-line menu-icon"></i>
                         <span class="side-menu__label">Reports</span>
@@ -131,113 +251,16 @@
                         </li>
                     </ul>
                 </li>
-                
-                <!-- Start::Management -->
-                <li class="slide__category"><span class="category-name">Management</span></li>
-                <li class="slide {{ request()->routeIs('users.*') ? 'active' : '' }}">
-                    <a href="{{ route('users.index') }}" class="side-menu__item">
-                        <i class="ri-user-settings-line menu-icon"></i>
-                        <span class="side-menu__label">Users</span>
-                    </a>
-                </li>
-                <li class="slide {{ request()->routeIs('roles.*') ? 'active' : '' }}">
-                    <a href="{{ route('roles.index') }}" class="side-menu__item">
-                        <i class="ri-shield-keyhole-line menu-icon"></i>
-                        <span class="side-menu__label">Roles & Permissions</span>
-                    </a>
-                </li>
-                <li class="slide {{ request()->routeIs('audit_logs.*') ? 'active' : '' }}">
-                    <a href="{{ route('audit_logs.index') }}" class="side-menu__item">
-                        <i class="ri-history-line menu-icon"></i>
-                        <span class="side-menu__label">Audit Logs</span>
-                    </a>
-                </li>
-                <!-- End::Management -->
-                {{-- <li class="slide has-sub">
-                    <a href="javascript:void(0);" class="side-menu__item">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="side-menu__icon" viewBox="0 0 256 256">
-                            <rect width="256" height="256" fill="none" />
-                            <path d="M133.66,34.34a8,8,0,0,0-11.32,0L40,116.69V216h64V152h48v64h64V116.69Z"
-                                opacity="0.2" />
-                            <line x1="16" y1="216" x2="240" y2="216" fill="none"
-                                stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                stroke-width="16" />
-                            <polyline points="152 216 152 152 104 152 104 216" fill="none" stroke="currentColor"
-                                stroke-linecap="round" stroke-linejoin="round" stroke-width="16" />
-                            <line x1="40" y1="116.69" x2="40" y2="216" fill="none"
-                                stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                stroke-width="16" />
-                            <line x1="216" y1="216" x2="216" y2="116.69" fill="none"
-                                stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                stroke-width="16" />
-                            <path d="M24,132.69l98.34-98.35a8,8,0,0,1,11.32,0L232,132.69" fill="none"
-                                stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                stroke-width="16" />
-                        </svg>
-                        <span class="side-menu__label">Dashboards</span>
-                        <i class="ri-arrow-right-s-line side-menu__angle"></i>
-                    </a>
-                    <ul class="slide-menu child1">
-                        <li class="slide side-menu__label1">
-                            <a href="javascript:void(0)">Dashboards</a>
-                        </li>
-                        <li class="slide {{ request()->is('index') ? 'active' : '' }}">
-                            <a href="{{ url('index') }}" class="side-menu__item">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="side-menu-doublemenu__icon"
-                                    viewBox="0 0 256 256">
-                                    <rect width="256" height="256" fill="none" />
-                                    <path
-                                        d="M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z"
-                                        opacity="0.2" />
-                                    <path
-                                        d="M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z"
-                                        fill="none" stroke="currentColor" stroke-linecap="round"
-                                        stroke-linejoin="round" stroke-width="16" />
-                                    <circle cx="96" cy="96" r="16" fill="none" stroke="currentColor"
-                                        stroke-linecap="round" stroke-linejoin="round" stroke-width="16" />
-                                    <circle cx="160" cy="160" r="16" fill="none"
-                                        stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                        stroke-width="16" />
-                                    <line x1="88" y1="168" x2="168" y2="88"
-                                        fill="none" stroke="currentColor" stroke-linecap="round"
-                                        stroke-linejoin="round" stroke-width="16" />
-                                </svg>
-                                Sales</a>
-                        </li>
-                        <li class="slide has-sub {{ request()->is('index') ? 'active' : '' }}">
-                            <a href="javascript:void(0);" class="side-menu__item">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="side-menu-doublemenu__icon"
-                                    width="32" height="32" viewBox="0 0 256 256">
-                                    <path
-                                        d="M224,56V200a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V56a8,8,0,0,1,8-8H216A8,8,0,0,1,224,56Z"
-                                        opacity="0.2"></path>
-                                    <path
-                                        d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,160H40V56H216V200ZM176,88a48,48,0,0,1-96,0,8,8,0,0,1,16,0,32,32,0,0,0,64,0,8,8,0,0,1,16,0Z">
-                                    </path>
-                                </svg>
-                                Ecommerce<span class="badge bg-primary-transparent ms-2">9</span>
-                                <i class="ri-arrow-right-s-line side-menu__angle"></i>
-                            </a>
-                            <ul class="slide-menu child2">
-                                <li class="slide">
-                                    <a href="{{ url('index2') }}" class="side-menu__item">Dashboard</a>
-                                </li>
-                                <li class="slide">
-                                    <a href="{{ url('customers-list') }}" class="side-menu__item">Customers</a>
-                                </li>
-                                <li class="slide">
-                                    <a href="{{ url('products') }}" class="side-menu__item">Products</a>
-                                </li>
-                                <li class="slide">
-                                    <a href="{{ route('invoices.index') }}" class="side-menu__item">Invoices</a>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li> --}}
-                <!-- End::slide -->
 
-                <!-- Logout -->
+                {{-- ═══════════════════════════════════════════════════════════
+                     4. MANAGEMENT — Now fully dynamic in the main loop above
+                        (ID=5 no longer excluded from whereNotIn, so it renders
+                         as a collapsible has-sub automatically)
+                ═══════════════════════════════════════════════════════════ --}}
+
+                {{-- ═══════════════════════════════════════════════════════════
+                     5. LOGOUT — Always last, fixed
+                ═══════════════════════════════════════════════════════════ --}}
                 <li class="slide__category"><span class="category-name">Account</span></li>
                 <li class="slide">
                     <form method="POST" action="{{ route('logout') }}">
@@ -263,6 +286,7 @@
                 </li>
 
             </ul>
+
             <div class="slide-right" id="slide-right"><svg xmlns="http://www.w3.org/2000/svg" fill="#7b8191"
                     width="24" height="24" viewBox="0 0 24 24">
                     <path d="M10.707 17.707 16.414 12l-5.707-5.707-1.414 1.414L13.586 12l-4.293 4.293z"></path>
@@ -303,5 +327,82 @@
         </div>
     </div>
     @endif
+
+{{-- ── Custom Submenu Styling ──────────────────────────────────────────────── --}}
+<style>
+    /* ── Submenu container: left accent border + indented background ── */
+    .slide-menu.child1 {
+        border-left: 2px solid var(--primary-color, #6c63ff);
+        margin-left: 1.85rem;
+        padding-left: 0 !important;
+        background: transparent;
+        border-radius: 0 0 6px 6px;
+    }
+
+    /* ── Submenu items: smaller text, more padding, muted color ── */
+    .slide-menu.child1 .slide a.side-menu__item {
+        font-size: 0.82rem !important;
+        padding: 0.45rem 0.75rem 0.45rem 1rem !important;
+        color: var(--menu-prime-color, #7b8191) !important;
+        border-radius: 5px;
+        margin: 1px 6px;
+        gap: 0.5rem;
+    }
+
+    /* ── Submenu icons: smaller than parent ── */
+    .slide-menu.child1 .slide a.side-menu__item .menu-icon {
+        font-size: 0.95rem !important;
+        width: 18px !important;
+        min-width: 18px !important;
+        opacity: 0.75;
+    }
+
+    /* ── Hover: soft primary tinted background ── */
+    .slide-menu.child1 .slide a.side-menu__item:hover {
+        background: rgba(var(--primary-rgb, 108, 99, 255), 0.08) !important;
+        color: var(--primary-color, #6c63ff) !important;
+    }
+    .slide-menu.child1 .slide a.side-menu__item:hover .menu-icon {
+        opacity: 1;
+        color: var(--primary-color, #6c63ff) !important;
+    }
+
+    /* ── Active submenu item: solid primary highlight ── */
+    .slide-menu.child1 .slide.active > a.side-menu__item,
+    .slide-menu.child1 .slide > a.side-menu__item.active {
+        background: rgba(var(--primary-rgb, 108, 99, 255), 0.12) !important;
+        color: var(--primary-color, #6c63ff) !important;
+        font-weight: 600 !important;
+    }
+    .slide-menu.child1 .slide.active > a.side-menu__item .menu-icon {
+        opacity: 1;
+        color: var(--primary-color, #6c63ff) !important;
+    }
+
+    /* ── Hide the "label1" repeat header inside submenu ── */
+    .slide-menu.child1 .side-menu__label1 {
+        display: none !important;
+    }
+
+    /* ── Parent collapsible item: slightly bolder when open ── */
+    .slide.has-sub.open > a.side-menu__item {
+        font-weight: 600;
+    }
+    .slide.has-sub.open > a.side-menu__item .menu-icon {
+        color: var(--primary-color, #6c63ff);
+    }
+
+    /* ── Dark mode adjustments ── */
+    [data-theme-mode="dark"] .slide-menu.child1 {
+        border-left-color: var(--primary-color, #6c63ff);
+    }
+    [data-theme-mode="dark"] .slide-menu.child1 .slide a.side-menu__item {
+        color: rgba(255,255,255,0.55) !important;
+    }
+    [data-theme-mode="dark"] .slide-menu.child1 .slide a.side-menu__item:hover {
+        color: var(--primary-color, #6c63ff) !important;
+        background: rgba(var(--primary-rgb, 108, 99, 255), 0.15) !important;
+    }
+</style>
 
 </aside>

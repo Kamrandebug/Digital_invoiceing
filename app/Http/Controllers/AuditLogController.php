@@ -59,6 +59,21 @@ class AuditLogController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Module and Record ID are required.'], 400);
         }
 
+        $moduleMap = [
+            'PRODUCT' => 'Products',
+            'CUSTOMER' => 'Customers',
+            'SUPPLIER' => 'Suppliers',
+            'USER' => 'Users',
+            'ROLE' => 'Roles',
+            'INVOICE' => 'Invoices',
+            'PURCHASE' => 'Purchases',
+        ];
+        $permModule = $moduleMap[strtoupper($module)] ?? ucfirst(strtolower($module));
+        $permissions = session('selected_tenant.permissions', []);
+        if (isset($permissions[$permModule]) && (int)($permissions[$permModule]['ViewOnly'] ?? 0) !== 1) {
+            return response()->json(['status' => 'error', 'message' => 'Access Denied: You do not have permission to view audit history for this module.'], 403);
+        }
+
         $logs = DB::connection('tenant')->table('tbl_audit_log as a')
             ->leftJoin('tbl_user as u', 'a.UserID', '=', 'u.ID')
             ->select('a.*', DB::raw("COALESCE(NULLIF(TRIM(CONCAT(u.FirstName, ' ', u.LastName)), ''), 'System') as UserName"))

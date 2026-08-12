@@ -76,6 +76,7 @@
             <!-- Start::main-modal -->
             @include('layouts.components.modal')
             @include('layouts.components.business-modal')
+            @include('layouts.components.profile-modal')
             <!-- End::main-modal -->
 
             @yield('modals')  

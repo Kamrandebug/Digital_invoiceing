@@ -161,30 +161,36 @@
         </div>
         @if($isView)
         <div class="col text-end">
+            @tenantCan('Customers', 'Modify')
             <a href="{{ route('customers.edit', $customer->ID) }}"
                class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
                 <i class="fas fa-edit"></i> Edit Customer
             </a>
+            @endtenantCan
         </div>
         @endif
     </div>
 </div>
     @elseif($isView)
     <div class="d-flex justify-content-end mb-2">
+        @tenantCan('Customers', 'Modify')
         <button type="button"
                 class="btn btn-light btn-sm fw-bold text-primary shadow-sm"
                 onclick="openCustomerModal('edit', {{ $customer->ID }})">
             <i class="fas fa-edit"></i> Edit Customer
         </button>
+        @endtenantCan
     </div>
     @endif
 @endif
 
 @if(!$isCreate)
     <div class="d-flex justify-content-end mb-2">
+        @tenantCan('Customers', 'ViewOnly')
         <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center" onclick="showAuditHistory('CUSTOMER', {{ $customer->ID }})">
             <i class="ri-history-line me-1"></i> Audit History
         </button>
+        @endtenantCan
     </div>
 @endif
 

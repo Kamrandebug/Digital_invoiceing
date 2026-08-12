@@ -218,6 +218,22 @@ class UserController extends Controller
     public function modal(Request $request, $id = null)
     {
         $mode = $request->query('mode', 'create');
+        $permissions = session('selected_tenant.permissions', []);
+
+        if ($mode === 'edit' && (int)($permissions['Users']['Modify'] ?? 0) !== 1) {
+            if ($id && (int)($permissions['Users']['ViewOnly'] ?? 0) === 1) {
+                $mode = 'show';
+            } else {
+                return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to edit users.</div>', 403);
+            }
+        }
+        if ($mode === 'create' && (int)($permissions['Users']['Add'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to add users.</div>', 403);
+        }
+        if ($mode === 'show' && (int)($permissions['Users']['ViewOnly'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to view users.</div>', 403);
+        }
+
         $user = null;
 
         if ($id && in_array($mode, ['edit', 'show'])) {

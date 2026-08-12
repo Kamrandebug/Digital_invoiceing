@@ -287,6 +287,22 @@ class ProductController extends Controller
     public function modal(Request $request, $id = null)
     {
         $mode    = $request->query('mode', 'create');
+        $permissions = session('selected_tenant.permissions', []);
+
+        if ($mode === 'edit' && (int)($permissions['Products']['Modify'] ?? 0) !== 1) {
+            if ($id && (int)($permissions['Products']['ViewOnly'] ?? 0) === 1) {
+                $mode = 'show';
+            } else {
+                return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to edit products.</div>', 403);
+            }
+        }
+        if ($mode === 'create' && (int)($permissions['Products']['Add'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to add products.</div>', 403);
+        }
+        if ($mode === 'show' && (int)($permissions['Products']['ViewOnly'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to view products.</div>', 403);
+        }
+
         $product = null;
 
         $taxDisplayLabels = null;

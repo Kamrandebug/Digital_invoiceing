@@ -27,22 +27,32 @@
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Customer Management</h1>
         <div class="d-flex float-end">
+			@tenantCan('Customers', 'Add')
 			<button type="button"
         class="btn btn-sm btn-primary btn-wave waves-light"
         onclick="openCustomerModal('create')">
     <i class="ri-add-line fw-medium align-middle me-1"></i> Add Customer
-</button>
-<!--				<button type="button" class="btn btn-sm btn-primary btn-wave waves-light" onclick="window.location.href='{{ route('customers.create') }}'"><i class="ri-add-line fw-medium align-middle me-1"></i> Add Customer</button>-->
+			</button>
+			@endtenantCan
+
+			@if(session('selected_tenant.permissions.Customers.Import') == 1 || session('selected_tenant.permissions.Customers.Print') == 1 || session('selected_tenant.permissions.Customers.Export') == 1)
 			<div class="dropdown ms-2">
 				<button class="btn btn-icon btn-secondary-light btn-sm btn-wave waves-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 					<i class="ti ti-dots-vertical"></i>
 				</button>
 				<ul class="dropdown-menu">
+					@tenantCan('Customers', 'Import')
 					<li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+					@endtenantCan
+					@tenantCan('Customers', 'Print')
 					<li><a class="dropdown-item" href="#">Bulk Print</a></li>
+					@endtenantCan
+					@tenantCan('Customers', 'Export')
 					<li><a class="dropdown-item" href="{{ route('customers.export-csv') }}">Export CSV</a></li>
+					@endtenantCan
 				</ul>
 			</div>
+			@endif
 		</div>
     </div>
 </div>
@@ -198,9 +208,13 @@
 							<td>
 								
 								<div class="btn-group btn-listing">
+									  @tenantCan('Customers', 'ViewOnly')
 									  <button class="btn btn-outline-primary btn-list-left" onclick="openCustomerModal('show', {{ $customer->ID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
+									  @endtenantCan
+
+									  @if(session('selected_tenant.permissions.Customers.Modify') == 1 || session('selected_tenant.permissions.Customers.Delete') == 1)
 									  <button type="button"
                                               class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2"
                                               data-bs-toggle="dropdown"
@@ -210,11 +224,15 @@
 										<span class="sr-only">Toggle Dropdown</span>
 									  </button>
 									  <ul class="dropdown-menu dropdown-menu-end">
+										@tenantCan('Customers', 'Modify')
 										<li>
 										    <button type="button" class="dropdown-item" onclick="openCustomerModal('edit', {{ $customer->ID }})">
 											    <i class="fas fa-edit"></i> Edit
 										    </button>
 										</li>
+										@endtenantCan
+
+										@tenantCan('Customers', 'Delete')
 										<li>
                                             <button type="button"
                                                     class="dropdown-item text-danger"
@@ -228,12 +246,15 @@
                                                 @method('DELETE')
                                             </form>
                                         </li>
+										@endtenantCan
+
                                         <li>
                                             <button type="button" class="dropdown-item" onclick="showAuditHistory('CUSTOMER', {{ $customer->ID }})">
                                                 <i class="ri-history-line me-2"></i> Audit Log
                                             </button>
                                         </li>
 									  </ul>
+									  @endif
 									</div>
 								
 								
@@ -246,9 +267,11 @@
 								<p class="text-muted mb-2">No customers found.</p>
 								{{-- Add button --}}
 								@if(!request('search') && !request('start_date') && !request('end_date'))
+								@tenantCan('Customers', 'Add')
 								<button class="btn btn-primary" onclick="openCustomerModal('create')">
 								<i class="fas fa-plus"></i> Add Your First Customer
 						</button>
+								@endtenantCan
 								@else
 								<p class="text-muted small">Try adjusting your search or filters.</p>
 								@endif

@@ -447,7 +447,24 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
  */
 public function modal(Request $request, $id = null)
 {
-    $mode     = $request->query('mode', 'create');
+    $mode        = $request->query('mode', 'create');
+    $module      = $this->routePrefix() === 'suppliers' ? 'Suppliers' : 'Customers';
+    $permissions = session('selected_tenant.permissions', []);
+
+    if ($mode === 'edit' && (int)($permissions[$module]['Modify'] ?? 0) !== 1) {
+        if ($id && (int)($permissions[$module]['ViewOnly'] ?? 0) === 1) {
+            $mode = 'show';
+        } else {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to edit '.$this->entitySingular().'.</div>', 403);
+        }
+    }
+    if ($mode === 'create' && (int)($permissions[$module]['Add'] ?? 0) !== 1) {
+        return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to add '.$this->entitySingular().'.</div>', 403);
+    }
+    if ($mode === 'show' && (int)($permissions[$module]['ViewOnly'] ?? 0) !== 1) {
+        return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to view '.$this->entitySingular().'.</div>', 403);
+    }
+
     $customer = null;
 
     if ($id && in_array($mode, ['edit', 'show'])) {

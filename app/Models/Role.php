@@ -122,7 +122,6 @@ class Role extends Model
     public static function edit_transaction($validated)
     {
         $requestID = $validated['RequestID'] ?? '';
-        $roleId = (int) ($validated['RoleID'] ?? 0);
 
         DB::connection('tenant')->statement("
             UPDATE `temp_role` uu
@@ -132,7 +131,7 @@ class Role extends Model
                         WHEN COALESCE(TRIM(t.`Name`), '') = '' THEN 'Role Name is required'
                         WHEN EXISTS (
                             SELECT 1 FROM `tbl_role` r 
-                            WHERE r.Name = t.Name AND r.Status <> 2 AND r.ID <> ?
+                            WHERE r.Name = t.Name AND r.Status <> 2 AND r.ID <> t.TID
                         ) THEN 'Role name already exists'
                         ELSE 'Pass'
                     END AS ErrorCode
@@ -140,7 +139,7 @@ class Role extends Model
                 WHERE t.RequestID = ?
             ) u ON (u.ID = uu.ID)
             SET uu.ErrorCode = u.ErrorCode
-        ", [$roleId, $requestID]);
+        ", [$requestID]);
 
         $errorSummary = DB::connection('tenant')->selectOne("
             SELECT
@@ -162,6 +161,8 @@ class Role extends Model
         $tempRole = DB::connection('tenant')->table('temp_role')
             ->where('RequestID', $requestID)
             ->first();
+
+        $roleId = $tempRole ? (int)$tempRole->TID : 0;
 
         // Update tbl_role
         DB::connection('tenant')->table('tbl_role')

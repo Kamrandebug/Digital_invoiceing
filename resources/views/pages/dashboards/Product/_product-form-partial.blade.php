@@ -231,13 +231,17 @@
     @if(!$isCreate)
     <div class="d-flex justify-content-end gap-2 mb-2">
         @if($isReadonly)
+            @tenantCan('Products', 'Modify')
             <button type="button" class="btn btn-light btn-sm fw-bold text-primary" onclick="openProductModal('edit', {{ $product->ID }})">
                 <i class="fas fa-edit"></i> Edit Product
             </button>
+            @endtenantCan
         @endif
+        @tenantCan('Products', 'ViewOnly')
         <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center" onclick="showAuditHistory('PRODUCT', {{ $product->ID }})">
             <i class="ri-history-line me-1"></i> Audit History
         </button>
+        @endtenantCan
     </div>
     @endif
 @endif

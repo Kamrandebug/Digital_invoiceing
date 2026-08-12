@@ -99,6 +99,22 @@ class InvoiceController extends Controller
     public function modal(Request $request, $id = null)
     {
         $mode = $request->query('mode', 'create');
+        $permissions = session('selected_tenant.permissions', []);
+
+        if ($mode === 'edit' && (int)($permissions['Invoices']['Modify'] ?? 0) !== 1) {
+            if ($id && (int)($permissions['Invoices']['ViewOnly'] ?? 0) === 1) {
+                $mode = 'show';
+            } else {
+                return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to edit invoices.</div>', 403);
+            }
+        }
+        if ($mode === 'create' && (int)($permissions['Invoices']['Add'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to add invoices.</div>', 403);
+        }
+        if ($mode === 'show' && (int)($permissions['Invoices']['ViewOnly'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to view invoices.</div>', 403);
+        }
+
         $invoice = null;
         $items = collect();
 

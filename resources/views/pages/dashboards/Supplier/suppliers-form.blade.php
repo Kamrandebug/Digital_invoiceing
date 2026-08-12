@@ -1,4 +1,4 @@
-﻿{{--
+{{--
     Supplier Form
 --}}
 
@@ -284,9 +284,11 @@
         </div>
         @if($isReadonly)
         <div class="col-md-2 text-end">
+            @tenantCan('Suppliers', 'Modify')
             <a href="{{ route('suppliers.edit', $customer->ID ?? 0) }}" class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
                 <i class="fas fa-edit"></i> Edit Supplier
             </a>
+            @endtenantCan
         </div>
         @endif
     </div>

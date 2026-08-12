@@ -53,22 +53,52 @@ class RoleController extends Controller
         ]);
 
         $permissions = $request->input('permissions', []);
-        $modules = Module::where('Status', 1)->get();
+        $modules = DB::connection('tenant')->table('tbl_module')
+            ->leftJoin('tbl_role_detail_template', function ($join) {
+                $join->on('tbl_module.ID', '=', 'tbl_role_detail_template.ModuleID')
+                     ->where('tbl_role_detail_template.TemplateID', '=', 1);
+            })
+            ->where('tbl_module.Status', 1)
+            ->select(
+                'tbl_module.ID',
+                'tbl_role_detail_template.ViewOnly as TplViewOnly',
+                'tbl_role_detail_template.Add as TplAdd',
+                'tbl_role_detail_template.Modify as TplModify',
+                'tbl_role_detail_template.Delete as TplDelete',
+                'tbl_role_detail_template.Print as TplPrint',
+                'tbl_role_detail_template.Import as TplImport',
+                'tbl_role_detail_template.Export as TplExport'
+            )
+            ->get();
 
         foreach ($modules as $mod) {
             $modPerm = $permissions[$mod->ID] ?? [];
-            DB::connection('tenant')->table('temp_role_detail')->insert([
-                'RoleID' => $nextId,
-                'ModuleID' => $mod->ID,
-                'ViewOnly' => isset($modPerm['ViewOnly']) ? 1 : 0,
-                'Add' => isset($modPerm['Add']) ? 1 : 0,
-                'Modify' => isset($modPerm['Modify']) ? 1 : 0,
-                'Delete' => isset($modPerm['Delete']) ? 1 : 0,
-                'Print' => isset($modPerm['Print']) ? 1 : 0,
-                'Import' => isset($modPerm['Import']) ? 1 : 0,
-                'Export' => isset($modPerm['Export']) ? 1 : 0,
-                'RequestID' => $requestId,
-            ]);
+            $view = ($mod->TplViewOnly && isset($modPerm['ViewOnly'])) ? 1 : 0;
+            $add = ($mod->TplAdd && isset($modPerm['Add'])) ? 1 : 0;
+            $modify = ($mod->TplModify && isset($modPerm['Modify'])) ? 1 : 0;
+            $delete = ($mod->TplDelete && isset($modPerm['Delete'])) ? 1 : 0;
+            $print = ($mod->TplPrint && isset($modPerm['Print'])) ? 1 : 0;
+            $import = ($mod->TplImport && isset($modPerm['Import'])) ? 1 : 0;
+            $export = ($mod->TplExport && isset($modPerm['Export'])) ? 1 : 0;
+
+            if ($add || $modify || $delete || $print || $import || $export) {
+                $view = 1;
+            }
+
+            if ($view || $add || $modify || $delete || $print || $import || $export) {
+                DB::connection('tenant')->table('temp_role_detail')->insert([
+                    'RoleID' => $nextId,
+                    'ModuleID' => $mod->ID,
+                    'ViewOnly' => $view,
+                    'Add' => $add,
+                    'Modify' => $modify,
+                    'Delete' => $delete,
+                    'Print' => $print,
+                    'Import' => $import,
+                    'Export' => $export,
+                    'RequestID' => $requestId,
+                ]);
+            }
         }
 
         $result = Role::save_transaction([
@@ -135,22 +165,52 @@ class RoleController extends Controller
         ]);
 
         $permissions = $request->input('permissions', []);
-        $modules = Module::where('Status', 1)->get();
+        $modules = DB::connection('tenant')->table('tbl_module')
+            ->leftJoin('tbl_role_detail_template', function ($join) {
+                $join->on('tbl_module.ID', '=', 'tbl_role_detail_template.ModuleID')
+                     ->where('tbl_role_detail_template.TemplateID', '=', 1);
+            })
+            ->where('tbl_module.Status', 1)
+            ->select(
+                'tbl_module.ID',
+                'tbl_role_detail_template.ViewOnly as TplViewOnly',
+                'tbl_role_detail_template.Add as TplAdd',
+                'tbl_role_detail_template.Modify as TplModify',
+                'tbl_role_detail_template.Delete as TplDelete',
+                'tbl_role_detail_template.Print as TplPrint',
+                'tbl_role_detail_template.Import as TplImport',
+                'tbl_role_detail_template.Export as TplExport'
+            )
+            ->get();
 
         foreach ($modules as $mod) {
             $modPerm = $permissions[$mod->ID] ?? [];
-            DB::connection('tenant')->table('temp_role_detail')->insert([
-                'RoleID' => $id,
-                'ModuleID' => $mod->ID,
-                'ViewOnly' => isset($modPerm['ViewOnly']) ? 1 : 0,
-                'Add' => isset($modPerm['Add']) ? 1 : 0,
-                'Modify' => isset($modPerm['Modify']) ? 1 : 0,
-                'Delete' => isset($modPerm['Delete']) ? 1 : 0,
-                'Print' => isset($modPerm['Print']) ? 1 : 0,
-                'Import' => isset($modPerm['Import']) ? 1 : 0,
-                'Export' => isset($modPerm['Export']) ? 1 : 0,
-                'RequestID' => $requestId,
-            ]);
+            $view = ($mod->TplViewOnly && isset($modPerm['ViewOnly'])) ? 1 : 0;
+            $add = ($mod->TplAdd && isset($modPerm['Add'])) ? 1 : 0;
+            $modify = ($mod->TplModify && isset($modPerm['Modify'])) ? 1 : 0;
+            $delete = ($mod->TplDelete && isset($modPerm['Delete'])) ? 1 : 0;
+            $print = ($mod->TplPrint && isset($modPerm['Print'])) ? 1 : 0;
+            $import = ($mod->TplImport && isset($modPerm['Import'])) ? 1 : 0;
+            $export = ($mod->TplExport && isset($modPerm['Export'])) ? 1 : 0;
+
+            if ($add || $modify || $delete || $print || $import || $export) {
+                $view = 1;
+            }
+
+            if ($view || $add || $modify || $delete || $print || $import || $export) {
+                DB::connection('tenant')->table('temp_role_detail')->insert([
+                    'RoleID' => $id,
+                    'ModuleID' => $mod->ID,
+                    'ViewOnly' => $view,
+                    'Add' => $add,
+                    'Modify' => $modify,
+                    'Delete' => $delete,
+                    'Print' => $print,
+                    'Import' => $import,
+                    'Export' => $export,
+                    'RequestID' => $requestId,
+                ]);
+            }
         }
 
         $result = Role::edit_transaction([
@@ -216,6 +276,22 @@ class RoleController extends Controller
     public function modal(Request $request, $id = null)
     {
         $mode = $request->query('mode', 'create');
+        $permissions = session('selected_tenant.permissions', []);
+
+        if ($mode === 'edit' && (int)($permissions['Roles']['Modify'] ?? 0) !== 1) {
+            if ($id && (int)($permissions['Roles']['ViewOnly'] ?? 0) === 1) {
+                $mode = 'show';
+            } else {
+                return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to edit roles.</div>', 403);
+            }
+        }
+        if ($mode === 'create' && (int)($permissions['Roles']['Add'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to add roles.</div>', 403);
+        }
+        if ($mode === 'show' && (int)($permissions['Roles']['ViewOnly'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to view roles.</div>', 403);
+        }
+
         $role = null;
         $details = collect();
 
@@ -227,7 +303,24 @@ class RoleController extends Controller
             $details = DB::connection('tenant')->table('tbl_role_detail')->where('RoleID', $id)->get()->keyBy('ModuleID');
         }
 
-        $modules = Module::where('Status', 1)->orderBy('DisplayOrder', 'asc')->get();
+        $modules = DB::connection('tenant')->table('tbl_module')
+            ->leftJoin('tbl_role_detail_template', function ($join) {
+                $join->on('tbl_module.ID', '=', 'tbl_role_detail_template.ModuleID')
+                     ->where('tbl_role_detail_template.TemplateID', '=', 1);
+            })
+            ->where('tbl_module.Status', 1)
+            ->orderBy('tbl_module.DisplayOrder', 'asc')
+            ->select(
+                'tbl_module.*',
+                'tbl_role_detail_template.ViewOnly as TplViewOnly',
+                'tbl_role_detail_template.Add as TplAdd',
+                'tbl_role_detail_template.Modify as TplModify',
+                'tbl_role_detail_template.Delete as TplDelete',
+                'tbl_role_detail_template.Print as TplPrint',
+                'tbl_role_detail_template.Import as TplImport',
+                'tbl_role_detail_template.Export as TplExport'
+            )
+            ->get();
 
         return view('pages.dashboards.Roles._role-form-partial', [
             'mode' => $mode,

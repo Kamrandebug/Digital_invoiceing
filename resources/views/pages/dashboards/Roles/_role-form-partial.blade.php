@@ -34,9 +34,11 @@
 
 @if($mode !== 'create')
     <div class="d-flex justify-content-end mb-2">
+        @tenantCan('Roles', 'ViewOnly')
         <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center" onclick="showAuditHistory('ROLE', {{ $role->ID }})">
             <i class="ri-history-line me-1"></i> Audit History
         </button>
+        @endtenantCan
     </div>
 @endif
 
@@ -94,74 +96,102 @@
                             <strong>{{ $module->Name }}</strong>
                         </td>
                         <td>
-                            <div class="checkbox-wrapper">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       name="permissions[{{ $module->ID }}][ViewOnly]" 
-                                       value="1" 
-                                       {{ old("permissions.{$module->ID}.ViewOnly", $detail && $detail->ViewOnly ? 'checked' : '') }}
-                                       {{ $mode === 'show' ? 'disabled' : '' }}>
-                            </div>
+                            @if($module->TplViewOnly)
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           name="permissions[{{ $module->ID }}][ViewOnly]" 
+                                           value="1" 
+                                           {{ old("permissions.{$module->ID}.ViewOnly", $detail && $detail->ViewOnly ? 'checked' : '') }}
+                                           {{ $mode === 'show' ? 'disabled' : '' }}>
+                                </div>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                         <td>
-                            <div class="checkbox-wrapper">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       name="permissions[{{ $module->ID }}][Add]" 
-                                       value="1" 
-                                       {{ old("permissions.{$module->ID}.Add", $detail && $detail->Add ? 'checked' : '') }}
-                                       {{ $mode === 'show' ? 'disabled' : '' }}>
-                            </div>
+                            @if($module->TplAdd)
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           name="permissions[{{ $module->ID }}][Add]" 
+                                           value="1" 
+                                           {{ old("permissions.{$module->ID}.Add", $detail && $detail->Add ? 'checked' : '') }}
+                                           {{ $mode === 'show' ? 'disabled' : '' }}>
+                                </div>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                         <td>
-                            <div class="checkbox-wrapper">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       name="permissions[{{ $module->ID }}][Modify]" 
-                                       value="1" 
-                                       {{ old("permissions.{$module->ID}.Modify", $detail && $detail->Modify ? 'checked' : '') }}
-                                       {{ $mode === 'show' ? 'disabled' : '' }}>
-                            </div>
+                            @if($module->TplModify)
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           name="permissions[{{ $module->ID }}][Modify]" 
+                                           value="1" 
+                                           {{ old("permissions.{$module->ID}.Modify", $detail && $detail->Modify ? 'checked' : '') }}
+                                           {{ $mode === 'show' ? 'disabled' : '' }}>
+                                </div>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                         <td>
-                            <div class="checkbox-wrapper">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       name="permissions[{{ $module->ID }}][Delete]" 
-                                       value="1" 
-                                       {{ old("permissions.{$module->ID}.Delete", $detail && $detail->Delete ? 'checked' : '') }}
-                                       {{ $mode === 'show' ? 'disabled' : '' }}>
-                            </div>
+                            @if($module->TplDelete)
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           name="permissions[{{ $module->ID }}][Delete]" 
+                                           value="1" 
+                                           {{ old("permissions.{$module->ID}.Delete", $detail && $detail->Delete ? 'checked' : '') }}
+                                           {{ $mode === 'show' ? 'disabled' : '' }}>
+                                </div>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                         <td>
-                            <div class="checkbox-wrapper">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       name="permissions[{{ $module->ID }}][Print]" 
-                                       value="1" 
-                                       {{ old("permissions.{$module->ID}.Print", $detail && $detail->Print ? 'checked' : '') }}
-                                       {{ $mode === 'show' ? 'disabled' : '' }}>
-                            </div>
+                            @if($module->TplPrint)
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           name="permissions[{{ $module->ID }}][Print]" 
+                                           value="1" 
+                                           {{ old("permissions.{$module->ID}.Print", $detail && $detail->Print ? 'checked' : '') }}
+                                           {{ $mode === 'show' ? 'disabled' : '' }}>
+                                </div>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                         <td>
-                            <div class="checkbox-wrapper">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       name="permissions[{{ $module->ID }}][Import]" 
-                                       value="1" 
-                                       {{ old("permissions.{$module->ID}.Import", $detail && $detail->Import ? 'checked' : '') }}
-                                       {{ $mode === 'show' ? 'disabled' : '' }}>
-                            </div>
+                            @if($module->TplImport)
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           name="permissions[{{ $module->ID }}][Import]" 
+                                           value="1" 
+                                           {{ old("permissions.{$module->ID}.Import", $detail && $detail->Import ? 'checked' : '') }}
+                                           {{ $mode === 'show' ? 'disabled' : '' }}>
+                                </div>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                         <td>
-                            <div class="checkbox-wrapper">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       name="permissions[{{ $module->ID }}][Export]" 
-                                       value="1" 
-                                       {{ old("permissions.{$module->ID}.Export", $detail && $detail->Export ? 'checked' : '') }}
-                                       {{ $mode === 'show' ? 'disabled' : '' }}>
-                            </div>
+                            @if($module->TplExport)
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           name="permissions[{{ $module->ID }}][Export]" 
+                                           value="1" 
+                                           {{ old("permissions.{$module->ID}.Export", $detail && $detail->Export ? 'checked' : '') }}
+                                           {{ $mode === 'show' ? 'disabled' : '' }}>
+                                </div>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                     </tr>
                 @endforeach

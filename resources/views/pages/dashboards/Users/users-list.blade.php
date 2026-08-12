@@ -9,11 +9,13 @@
 <div class="page-header-breadcrumb mb-3">
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Tenant Users</h1>
+        @tenantCan('Users', 'Add')
         <div class="d-flex float-end">
             <button type="button" class="btn btn-sm btn-primary btn-wave waves-light" onclick="openUserModal('create')">
                 <i class="ri-add-line fw-medium align-middle me-1"></i> Add User
             </button>
         </div>
+        @endtenantCan
     </div>
 </div>
 
@@ -86,9 +88,13 @@
                             <td>{{ \Carbon\Carbon::parse($user->CreatedOn)->format('d M Y') }}</td>
                             <td>
                                 <div class="btn-group btn-listing">
+                                    @tenantCan('Users', 'ViewOnly')
                                     <button type="button" class="btn btn-outline-primary btn-list-left" onclick="openUserModal('show', {{ $user->ID }})">
                                         <i class="fas fa-eye"></i> View
                                     </button>
+                                    @endtenantCan
+
+                                    @if(session('selected_tenant.permissions.Users.Modify') == 1 || session('selected_tenant.permissions.Users.Delete') == 1)
                                     <button type="button"
                                             class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2"
                                             data-bs-toggle="dropdown"
@@ -98,11 +104,15 @@
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
+                                        @tenantCan('Users', 'Modify')
                                         <li>
                                             <button type="button" class="dropdown-item" onclick="openUserModal('edit', {{ $user->ID }})">
                                                 <i class="fas fa-edit me-2"></i> Edit
                                             </button>
                                         </li>
+                                        @endtenantCan
+                                        
+                                        @tenantCan('Users', 'Delete')
                                         <li>
                                             <form action="{{ route('users.delete_transaction', $user->ID) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this user from this tenant?')">
                                                 @csrf
@@ -112,12 +122,15 @@
                                                 </button>
                                             </form>
                                         </li>
+                                        @endtenantCan
+
                                         <li>
                                             <button type="button" class="dropdown-item" onclick="showAuditHistory('USER', {{ $user->ID }})">
                                                 <i class="ri-history-line me-2"></i> Audit Log
                                             </button>
                                         </li>
                                     </ul>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

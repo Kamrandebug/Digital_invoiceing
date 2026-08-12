@@ -16,19 +16,29 @@
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Product Management</h1>
         <div class="d-flex float-end">
+            @tenantCan('Products', 'Add')
             <button type="button" class="btn btn-sm btn-primary btn-wave waves-light" onclick="openProductModal('create')">
                 <i class="ri-add-line fw-medium align-middle me-1"></i> Add Product
             </button>
+            @endtenantCan
+            @if(session('selected_tenant.permissions.Products.Import') == 1 || session('selected_tenant.permissions.Products.Print') == 1 || session('selected_tenant.permissions.Products.Export') == 1)
             <div class="dropdown ms-2">
                 <button class="btn btn-icon btn-secondary-light btn-sm btn-wave waves-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-dots-vertical"></i>
                 </button>
                 <ul class="dropdown-menu">
+                    @tenantCan('Products', 'Import')
                     <li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+                    @endtenantCan
+                    @tenantCan('Products', 'Print')
                     <li><a class="dropdown-item" href="#">Bulk Print</a></li>
+                    @endtenantCan
+                    @tenantCan('Products', 'Export')
                     <li><a class="dropdown-item" href="{{ route('products.exportCSV', request()->query()) }}">Export CSV</a></li>
+                    @endtenantCan
                 </ul>
             </div>
+            @endif
         </div>
     </div>
 </div>
@@ -159,9 +169,12 @@
                             </td>
                             <td>
 								<div class="btn-group btn-listing">
+									  @tenantCan('Products', 'ViewOnly')
 									  <button class="btn btn-outline-primary btn-list-left" onclick="openProductModal('show', {{ $product->ID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
+									  @endtenantCan
+									  @if(session('selected_tenant.permissions.Products.Modify') == 1 || session('selected_tenant.permissions.Products.Delete') == 1)
 									  <button type="button"
                                               class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2"
                                               data-bs-toggle="dropdown"
@@ -171,12 +184,15 @@
 										<span class="sr-only">Toggle Dropdown</span>
 									  </button>
 									  <ul class="dropdown-menu dropdown-menu-end">
+										@tenantCan('Products', 'Modify')
 										<li>
 											<button class="dropdown-item"
 													onclick="openProductModal('edit', {{ $product->ID }})">
 												<i class="fas fa-edit"></i> Edit
 											</button>
 										</li>
+										@endtenantCan
+										@tenantCan('Products', 'Delete')
 										<li>
 											<button class="dropdown-item text-danger" title="Archive"
 												onclick="confirmDelete({{ $product->ID }}, '{{ addslashes($product->Name ?? '') }}')">
@@ -189,12 +205,14 @@
 												@method('DELETE')
 											</form>
 										</li>
+										@endtenantCan
 										<li>
 											<button type="button" class="dropdown-item" onclick="showAuditHistory('PRODUCT', {{ $product->ID }})">
 												<i class="ri-history-line me-2"></i> Audit Log
 											</button>
 										</li>
 									  </ul>
+									  @endif
 									</div>
 								
 								
@@ -228,9 +246,11 @@
                                 @if(request('search') || request('start_date') || request('end_date'))
                                     <p class="text-muted small">Try adjusting your search or filters.</p>
                                 @else
+                                    @tenantCan('Products', 'Add')
                                     <button type="button" class="btn btn-primary" onclick="openProductModal('create')">
                                         <i class="fas fa-plus"></i> Add Your First Product
                                     </button>
+                                    @endtenantCan
                                 @endif
                             </td>
                         </tr>

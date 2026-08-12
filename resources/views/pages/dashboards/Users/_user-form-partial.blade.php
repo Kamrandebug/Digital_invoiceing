@@ -1,9 +1,11 @@
 {{-- User Form Partial --}}
 @if($mode !== 'create')
     <div class="d-flex justify-content-end mb-2">
+        @tenantCan('Users', 'ViewOnly')
         <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center" onclick="showAuditHistory('USER', {{ $user->ID }})">
             <i class="ri-history-line me-1"></i> Audit History
         </button>
+        @endtenantCan
     </div>
 @endif
 

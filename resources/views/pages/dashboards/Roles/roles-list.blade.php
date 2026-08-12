@@ -10,9 +10,11 @@
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Role Management</h1>
         <div class="d-flex float-end">
+            @tenantCan('Roles', 'Add')
             <button type="button" class="btn btn-sm btn-primary btn-wave waves-light" onclick="openRoleModal('create')">
                 <i class="ri-add-line fw-medium align-middle me-1"></i> Add Role
             </button>
+            @endtenantCan
         </div>
     </div>
 </div>
@@ -90,23 +92,31 @@
                             <td>{{ \Carbon\Carbon::parse($role->CreatedOn)->format('d M Y') }}</td>
                             <td>
                                 <div class="btn-group btn-listing">
+                                    @tenantCan('Roles', 'ViewOnly')
                                     <button type="button" class="btn btn-outline-primary btn-list-left" onclick="openRoleModal('show', {{ $role->ID }})">
                                         <i class="fas fa-eye"></i> View
                                     </button>
+                                    @endtenantCan
+
+                                    @if(session('selected_tenant.permissions.Roles.Modify') == 1 || session('selected_tenant.permissions.Roles.Delete') == 1)
                                     <button type="button"
-                                            class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2"
-                                            data-bs-toggle="dropdown"
-                                            data-bs-auto-close="true"
-                                            data-bs-popper-config='{"strategy":"fixed"}'
-                                            aria-expanded="false">
+                                             class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2"
+                                             data-bs-toggle="dropdown"
+                                             data-bs-auto-close="true"
+                                             data-bs-popper-config='{"strategy":"fixed"}'
+                                             aria-expanded="false">
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
+                                        @tenantCan('Roles', 'Modify')
                                         <li>
                                             <button type="button" class="dropdown-item" onclick="openRoleModal('edit', {{ $role->ID }})">
                                                 <i class="fas fa-edit me-2"></i> Edit
                                             </button>
                                         </li>
+                                        @endtenantCan
+
+                                        @tenantCan('Roles', 'Delete')
                                         <li>
                                             <form action="{{ route('roles.delete_transaction', $role->ID) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this role?')">
                                                 @csrf
@@ -116,12 +126,15 @@
                                                 </button>
                                             </form>
                                         </li>
+                                        @endtenantCan
+
                                         <li>
                                             <button type="button" class="dropdown-item" onclick="showAuditHistory('ROLE', {{ $role->ID }})">
                                                 <i class="ri-history-line me-2"></i> Audit Log
                                             </button>
                                         </li>
                                     </ul>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -211,6 +224,7 @@ function openRoleModal(mode, roleId = null) {
     .then(res => { if (!res.ok) throw new Error('Server error: ' + res.status); return res.text(); })
     .then(html => {
         modalBody.innerHTML = html;
+        initializePermissionsMatrix();
 
         // Wire Save Button to Form AJAX Submit
         saveBtn.onclick = function () {
@@ -301,5 +315,50 @@ function showToast(type, message) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
 }
+
+// ── Initialize and Enforce Permissions Matrix ──
+function initializePermissionsMatrix() {
+    const modalBody = document.getElementById('role_modal_body');
+    if (!modalBody) return;
+    const rows = modalBody.querySelectorAll('.permissions-table tbody tr');
+    rows.forEach(row => {
+        const viewCheckbox = row.querySelector('input[name$="[ViewOnly]"]');
+        const otherCheckboxes = row.querySelectorAll('input[type="checkbox"]:not([name$="[ViewOnly]"])');
+        if (viewCheckbox) {
+            let anyChecked = false;
+            otherCheckboxes.forEach(cb => {
+                if (cb.checked) anyChecked = true;
+            });
+            if (anyChecked) {
+                viewCheckbox.checked = true;
+            }
+        }
+    });
+}
+
+// Event delegation for permissions matrix checkbox interaction
+document.getElementById('role_modal_body').addEventListener('change', function(e) {
+    const target = e.target;
+    if (target && target.type === 'checkbox' && target.classList.contains('form-check-input')) {
+        const row = target.closest('tr');
+        if (!row) return;
+        const viewCheckbox = row.querySelector('input[name$="[ViewOnly]"]');
+        const otherCheckboxes = row.querySelectorAll('input[type="checkbox"]:not([name$="[ViewOnly]"])');
+        
+        if (viewCheckbox) {
+            if (target === viewCheckbox) {
+                // If ViewOnly was unchecked, uncheck all other checkboxes in the same row
+                if (!viewCheckbox.checked) {
+                    otherCheckboxes.forEach(cb => cb.checked = false);
+                }
+            } else {
+                // If any other checkbox was checked, ensure ViewOnly is checked
+                if (target.checked) {
+                    viewCheckbox.checked = true;
+                }
+            }
+        }
+    }
+});
 </script>
 @endsection

@@ -41,22 +41,32 @@
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Invoice Management</h1>
         <div class="d-flex float-end">
+            @tenantCan('Invoices', 'Add')
             <button type="button"
                     class="btn btn-sm btn-primary btn-wave waves-light"
                     onclick="openInvoiceModal('create')">
                 <i class="ri-add-line fw-medium align-middle me-1"></i> Add Invoice
             </button>
+            @endtenantCan
+            @if(session('selected_tenant.permissions.Invoices.Import') == 1 || session('selected_tenant.permissions.Invoices.Print') == 1 || session('selected_tenant.permissions.Invoices.Export') == 1)
             <div class="dropdown ms-2">
                 <button class="btn btn-icon btn-secondary-light btn-sm btn-wave waves-light"
                         type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-dots-vertical"></i>
                 </button>
                 <ul class="dropdown-menu">
+                    @tenantCan('Invoices', 'Import')
                     <li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+                    @endtenantCan
+                    @tenantCan('Invoices', 'Print')
                     <li><a class="dropdown-item" href="#">Bulk Print</a></li>
+                    @endtenantCan
+                    @tenantCan('Invoices', 'Export')
                     <li><a class="dropdown-item" href="{{ route('invoices.export-csv') }}">Export CSV</a></li>
+                    @endtenantCan
                 </ul>
             </div>
+            @endif
         </div>
     </div>
 </div>
@@ -227,9 +237,12 @@
                             <td>
 								<div class="action-wrapper d-inline-flex justify-content-end">
 									<div class="btn-group btn-listing">
+									  @tenantCan('Invoices', 'ViewOnly')
 									  <button type="button" class="btn btn-outline-primary btn-list-left" onclick="openInvoiceModal('show', {{ $invoice->HeaderID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
+									  @endtenantCan
+									  @if(session('selected_tenant.permissions.Invoices.Modify') == 1 || session('selected_tenant.permissions.Invoices.Delete') == 1 || session('selected_tenant.permissions.Invoices.Print') == 1)
 									  <button type="button"
                                               class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split"
                                               data-bs-toggle="dropdown"
@@ -240,21 +253,27 @@
 									  </button>
 									  <ul class="dropdown-menu dropdown-menu-end">
 										@if(!$fbrLocked)
+										@tenantCan('Invoices', 'Modify')
 										<li>
 											<button type="button" class="dropdown-item"
 													onclick="openInvoiceModal('edit', {{ $invoice->HeaderID }})">
 												<i class="fas fa-edit"></i> Edit
 											</button>
 										</li>
+										@endtenantCan
 										@endif
+										
+										@tenantCan('Invoices', 'Print')
 										<li>
 											<button type="button" class="dropdown-item"
 													onclick="openPrintModal({{ $invoice->HeaderID }}, '{{ $invoice->DocNo ?? 'Invoice' }}')">
 												<i class="fas fa-print"></i> Print
 											</button>
 										</li>
+										@endtenantCan
 
 										@if(empty(trim((string) ($invoice->FbrTransactionID ?? ''))))
+										@tenantCan('Invoices', 'Modify')
 										<li>
 											<button type="button" class="dropdown-item"
 													onclick="confirmPostFbr({{ $invoice->HeaderID }}, '{{ addslashes($invoice->DocNo ?? '') }}')">
@@ -266,9 +285,11 @@
 												@csrf
 											</form>
 										</li>
+										@endtenantCan
 										@endif
 
 										@if(!$fbrLocked)
+										@tenantCan('Invoices', 'Delete')
 										<li>
                                             <button type="button"
                                                     class="dropdown-item text-danger"
@@ -282,8 +303,10 @@
                                                 @method('DELETE')
                                             </form>
 										</li>
+										@endtenantCan
 										@endif
 									  </ul>
+									  @endif
 									</div>
 								</div>
 
@@ -317,9 +340,11 @@
                                 <i class="fas fa-file-invoice-dollar fa-3x text-muted mb-3 d-block"></i>
                                 <p class="text-muted mb-2">No invoices found.</p>
                                 @if(!request('search') && !request('start_date') && !request('end_date'))
+                                    @tenantCan('Invoices', 'Add')
                                     <button class="btn btn-primary" onclick="openInvoiceModal('create')">
                                         <i class="fas fa-plus"></i> Create Your First Invoice
                                     </button>
+                                    @endtenantCan
                                 @else
                                     <p class="text-muted small">Try adjusting your search or filters.</p>
                                 @endif

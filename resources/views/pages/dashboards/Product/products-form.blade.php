@@ -117,9 +117,11 @@
         </div>
         @if($isReadonly)
         <div class="col-md-2 text-end">
+            @tenantCan('Products', 'Modify')
             <a href="{{ route('products.edit', $product->ID ?? 0) }}" class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
                 <i class="fas fa-edit"></i> Edit Product
             </a>
+            @endtenantCan
         </div>
         @endif
     </div>

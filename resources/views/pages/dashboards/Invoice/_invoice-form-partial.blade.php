@@ -726,9 +726,9 @@
                     </td>
                     <td class="ifp-col-net">
                         @if($isReadonly)
-                            <span class="small fw-bold">{{ number_format($item->Total ?? 0, 2) }}</span>
+                            <span class="small fw-bold">{{ number_format($item->TotalValues ?? 0, 2) }}</span>
                         @else
-                            <input type="text" name="items[{{ $idx }}][Total]" class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="{{ number_format((float) ($item->Total ?? 0), 2, '.', ',') }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][Total]" class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="{{ number_format((float) ($item->TotalValues ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     <td class="ifp-col-extra-tax">
