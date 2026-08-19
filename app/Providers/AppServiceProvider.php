@@ -25,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Register custom tenant permissions helper
         Blade::if('tenantCan', function (string $module, string $action) {
+            if (session('selected_tenant.user_type') === 'admin') {
+                return true;
+            }
             $permissions = session('selected_tenant.permissions', []);
             return (int)($permissions[$module][$action] ?? 0) === 1;
         });

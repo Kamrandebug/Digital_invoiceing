@@ -121,11 +121,30 @@ class InitializeTenantContext
                 }
 
                 if ($tenantUser) {
+                    $userType = strtolower(trim((string)($tenantUser->UserType ?? 'user')));
                     $request->session()->put('selected_tenant.user_id', $tenantUser->ID);
                     $request->session()->put('selected_tenant.role_id', $tenantUser->RoleID);
+                    $request->session()->put('selected_tenant.user_type', $userType);
 
                     // Load active modular permissions into session
-                    if ($tenantUser->RoleID) {
+                    if ($userType === 'admin') {
+                        $allModules = DB::connection('tenant')->table('tbl_module')
+                            ->pluck('Name');
+
+                        $adminPermissions = [];
+                        foreach ($allModules as $modName) {
+                            $adminPermissions[$modName] = [
+                                'ViewOnly' => 1,
+                                'Add' => 1,
+                                'Modify' => 1,
+                                'Delete' => 1,
+                                'Print' => 1,
+                                'Import' => 1,
+                                'Export' => 1,
+                            ];
+                        }
+                        $request->session()->put('selected_tenant.permissions', $adminPermissions);
+                    } elseif ($tenantUser->RoleID) {
                         $roleDetails = DB::connection('tenant')->table('tbl_role_detail')
                             ->join('tbl_module', 'tbl_role_detail.ModuleID', '=', 'tbl_module.ID')
                             ->where('tbl_role_detail.RoleID', $tenantUser->RoleID)

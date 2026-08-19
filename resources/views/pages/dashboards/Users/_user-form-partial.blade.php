@@ -56,15 +56,24 @@
         </div>
     </div>
 
-    <div class="mb-3">
-        <label for="role_id" class="form-label fw-medium text-dark">Assigned Role <span class="text-danger">*</span></label>
-        <select class="form-select" id="role_id" name="RoleID" required {{ $mode === 'show' ? 'disabled' : '' }}>
-            <option value="">-- Select Role --</option>
-            @foreach($roles as $role)
-                <option value="{{ $role->ID }}" {{ (int)old('RoleID', $user->RoleID ?? 0) === (int)$role->ID ? 'selected' : '' }}>
-                    {{ $role->Name }}
-                </option>
-            @endforeach
-        </select>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label for="user_type" class="form-label fw-medium text-dark">User Type <span class="text-danger">*</span></label>
+            <select class="form-select" id="user_type" name="UserType" required {{ $mode === 'show' ? 'disabled' : '' }}>
+                <option value="user" {{ strtolower($user->UserType ?? 'user') === 'user' ? 'selected' : '' }}>Standard User (Role Rights)</option>
+                <option value="admin" {{ strtolower($user->UserType ?? 'user') === 'admin' ? 'selected' : '' }}>Admin (Full System Access)</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="role_id" class="form-label fw-medium text-dark">Assigned Role <span class="text-danger">*</span></label>
+            <select class="form-select" id="role_id" name="RoleID" required {{ $mode === 'show' ? 'disabled' : '' }}>
+                <option value="">-- Select Role --</option>
+                @foreach($roles as $role)
+                    <option value="{{ $role->ID }}" {{ (int)old('RoleID', $user->RoleID ?? 0) === (int)$role->ID ? 'selected' : '' }}>
+                        {{ $role->Name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
     </div>
 </form>

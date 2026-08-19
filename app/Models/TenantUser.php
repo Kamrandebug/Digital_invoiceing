@@ -26,6 +26,7 @@ class TenantUser extends Model
         'LastName',
         'Statusi',
         'RoleID',
+        'UserType',
         'ErrorCode',
         'RequestID',
         'CreatedBy',
@@ -94,8 +95,8 @@ class TenantUser extends Model
 
         // We will insert from temp_user into tbl_user
         DB::connection('tenant')->statement("
-            INSERT INTO tbl_user (MasterUserID, Email, FirstName, LastName, Status, RoleID, CreatedBy, CreatedOn, RequestID)
-            SELECT TID, Email, FirstName, LastName, 1, RoleID, CreatedBy, CreatedOn, RequestID
+            INSERT INTO tbl_user (MasterUserID, Email, FirstName, LastName, Status, RoleID, UserType, CreatedBy, CreatedOn, RequestID)
+            SELECT TID, Email, FirstName, LastName, 1, RoleID, COALESCE(UserType, 'user'), CreatedBy, CreatedOn, RequestID
             FROM temp_user
             WHERE RequestID = ?
         ", [$requestID]);
@@ -153,6 +154,7 @@ class TenantUser extends Model
                 uu.FirstName = u.FirstName,
                 uu.LastName = u.LastName,
                 uu.RoleID = u.RoleID,
+                uu.UserType = COALESCE(u.UserType, 'user'),
                 uu.UpdatedBy = u.UpdatedBy,
                 uu.UpdatedOn = u.UpdatedOn
             WHERE u.RequestID = ?

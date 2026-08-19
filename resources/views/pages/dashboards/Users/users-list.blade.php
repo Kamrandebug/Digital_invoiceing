@@ -72,6 +72,7 @@
                             <th>Name</th>
                             <th>Email Address</th>
                             <th>Role</th>
+                            <th>Type</th>
                             <th>Added On</th>
                             <th class="action-col">Action</th>
                         </tr>
@@ -84,6 +85,13 @@
                             <td>{{ $user->Email }}</td>
                             <td>
                                 <span class="badge bg-secondary-light text-secondary">{{ $user->RoleName ?: 'No role assigned' }}</span>
+                            </td>
+                            <td>
+                                @if(strtolower($user->UserType ?? 'user') === 'admin')
+                                    <span class="badge bg-primary-transparent text-primary"><i class="fas fa-shield-alt me-1"></i> Admin</span>
+                                @else
+                                    <span class="badge bg-info-transparent text-info">User</span>
+                                @endif
                             </td>
                             <td>{{ \Carbon\Carbon::parse($user->CreatedOn)->format('d M Y') }}</td>
                             <td>

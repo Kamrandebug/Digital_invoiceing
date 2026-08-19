@@ -32,12 +32,14 @@ class UserController extends Controller
             'FirstName' => 'required|string|max:50',
             'LastName' => 'required|string|max:50',
             'RoleID' => 'required|integer',
+            'UserType' => 'nullable|string|in:admin,user',
         ]);
 
         $email = strtolower(trim($request->Email));
         $firstName = trim($request->FirstName);
         $lastName = trim($request->LastName);
         $roleId = (int)$request->RoleID;
+        $userType = strtolower(trim($request->input('UserType', 'user')));
 
         $tenantId = session('selected_tenant.id');
         if (!$tenantId) {
@@ -93,6 +95,7 @@ class UserController extends Controller
             'LastName' => $lastName,
             'Statusi' => 1,
             'RoleID' => $roleId,
+            'UserType' => $userType,
             'CreatedBy' => $currentUser,
             'CreatedOn' => $now,
             'RequestID' => $requestId,
@@ -133,12 +136,14 @@ class UserController extends Controller
             'FirstName' => 'required|string|max:50',
             'LastName' => 'required|string|max:50',
             'RoleID' => 'required|integer',
+            'UserType' => 'nullable|string|in:admin,user',
         ]);
 
         $email = strtolower(trim($request->Email));
         $firstName = trim($request->FirstName);
         $lastName = trim($request->LastName);
         $roleId = (int)$request->RoleID;
+        $userType = strtolower(trim($request->input('UserType', 'user')));
 
         $requestId = 'REQ-' . strtoupper(Str::random(10));
         $currentUser = session('selected_tenant.user_id') ?: 1;
@@ -158,6 +163,7 @@ class UserController extends Controller
             'LastName' => $lastName,
             'Statusi' => 1,
             'RoleID' => $roleId,
+            'UserType' => $userType,
             'UpdatedBy' => $currentUser,
             'UpdatedOn' => $now,
             'RequestID' => $requestId,
