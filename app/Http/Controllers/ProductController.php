@@ -330,16 +330,20 @@ class ProductController extends Controller
             }
         }
 
-        return view('pages.dashboards.Product._product-form-partial', [
-            'mode'               => $mode,
-            'product'            => $product ?? new ProductModel(),
-            'inModal'            => true,
-            'taxDisplayLabels'   => $taxDisplayLabels,
-            'categories'         => $this->lookupCategories(),
-            'units'              => $this->lookupUnits(),
-            'defaultCategoryId'  => $this->defaultCategoryId(),
-            'defaultUnitId'      => $this->defaultUnitId(),
-        ]);
+        return response()
+            ->view('pages.dashboards.Product._product-form-partial', [
+                'mode'               => $mode,
+                'product'            => $product ?? new ProductModel(),
+                'inModal'            => true,
+                'taxDisplayLabels'   => $taxDisplayLabels,
+                'categories'         => $this->lookupCategories(),
+                'units'              => $this->lookupUnits(),
+                'defaultCategoryId'  => $this->defaultCategoryId(),
+                'defaultUnitId'      => $this->defaultUnitId(),
+            ])
+            ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /**

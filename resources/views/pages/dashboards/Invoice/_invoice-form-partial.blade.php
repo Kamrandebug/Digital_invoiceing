@@ -2599,11 +2599,12 @@
         if (saveLabelEl) saveLabelEl.textContent = 'Save Customer';
         modalBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted mb-0">Loading…</p></div>';
         bsModal.show();
-        var url = @json(route('customers.modal')) + '?mode=create';
+        var url = @json(route('customers.modal')) + '?mode=create&_t=' + Date.now();
         fetch(url, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': ifpCsrfToken()
+                'X-CSRF-TOKEN': ifpCsrfToken(),
+                'Cache-Control': 'no-cache'
             },
             credentials: 'same-origin'
         })
@@ -2645,6 +2646,12 @@
                 })
                 .then(function(pair) {
                     if (pair.data && pair.data.status === 'success') {
+                        if (typeof window.clearCustomerModalDrafts === 'function') {
+                            window.clearCustomerModalDrafts();
+                        }
+                        Object.keys(localStorage).forEach(function(k) {
+                            if (k.startsWith('cfp_') || k.startsWith('customer_')) localStorage.removeItem(k);
+                        });
                         bsModal.hide();
                         if (pair.data.customer) {
                             var mainCust = document.getElementById(uid + '_CustomerID');

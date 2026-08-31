@@ -177,6 +177,7 @@ Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->gr
     // ⚠️ Static segments BEFORE /{id} wildcard
     Route::get('/export/csv', [InvoiceController::class, 'exportCSV'])->name('export-csv');
     Route::get('/modal', [InvoiceController::class, 'modal'])->name('modal');
+    Route::post('/bulk-post-fbr', [InvoiceController::class, 'bulkPostFbr'])->name('bulk-post-fbr');
 
     Route::get('/{id}/edit', [InvoiceController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
     Route::post('/{id}/update', [InvoiceController::class, 'edit_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('edit_transaction');

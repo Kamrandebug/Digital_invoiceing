@@ -17,10 +17,13 @@ class InvoiceController extends Controller
 
     public function index(Request $request)
     {
+        $fbrStatus = $request->input('fbr_status', 'not_posted');
+
         $filters = [
             'search' => $request->input('search'),
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),
+            'fbr_status' => $fbrStatus,
         ];
 
         $rules = [];
@@ -41,9 +44,15 @@ class InvoiceController extends Controller
             $request->validate($rules, $messages);
         }
 
-        $invoices = InvoiceModel::getlistingdata($filters)->paginate(15);
+        $tabCounts = InvoiceModel::getFbrStatusCounts([
+            'search' => $request->input('search'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+        ]);
 
-        return view('pages.dashboards.Invoice.invoice-list', compact('invoices'));
+        $invoices = InvoiceModel::getlistingdata($filters)->paginate(20);
+
+        return view('pages.dashboards.Invoice.invoice-list', compact('invoices', 'tabCounts', 'fbrStatus'));
     }
 
     /**
@@ -68,6 +77,45 @@ class InvoiceController extends Controller
         return redirect()
             ->route('invoices.index')
             ->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    /**
+     * Bulk POST multiple invoice payloads to FBR.
+     */
+    public function bulkPostFbr(Request $request)
+    {
+        $canPost = (auth()->check() && (int)(auth()->user()->UserType ?? 0) === 2)
+            || session('selected_tenant.user_type') === 'admin'
+            || (int)(session('selected_tenant.permissions.Invoices.Import') ?? 0) === 1;
+
+        if (! $canPost) {
+            return redirect()
+                ->route('invoices.index')
+                ->with('error', 'You do not have permission to post invoices to FBR.');
+        }
+
+        $ids = $request->input('invoice_ids', []);
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+        $ids = array_filter(array_map('intval', (array) $ids));
+
+        if (empty($ids)) {
+            return redirect()
+                ->route('invoices.index')
+                ->with('error', 'No invoices selected to post to FBR.');
+        }
+
+        $result = InvoiceModel::bulk_post_to_fbr($ids);
+
+        $msg = "FBR Bulk Post: {$result['posted_count']} of {$result['total']} invoices posted successfully.";
+        if ($result['failed_count'] > 0) {
+            $msg .= " ({$result['failed_count']} failed/rejected)";
+        }
+
+        return redirect()
+            ->route('invoices.index', ['fbr_status' => $request->input('fbr_status', 'not_posted')])
+            ->with($result['posted_count'] > 0 ? 'success' : 'error', $msg);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -599,6 +647,7 @@ class InvoiceController extends Controller
             'search' => $request->input('search'),
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),
+            'fbr_status' => $request->input('fbr_status', 'not_posted'),
         ])->get();
 
         $callback = function () use ($invoices) {

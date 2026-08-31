@@ -943,57 +943,10 @@
         const form   = document.getElementById(formId);
         const inputs = form.querySelectorAll('input, textarea, select');
 
-        // Restore
-        if (!document.querySelector('.alert-danger')) {
-            inputs.forEach(input => {
-                if (input.type === 'hidden' || input.type === 'password') return;
-
-                const key         = storagePrefix + input.name;
-                const storedValue = localStorage.getItem(key);
-
-                if (storedValue !== null) {
-                    if (input.type === 'checkbox' || input.type === 'radio') {
-                        const shouldBeChecked = (storedValue === 'true');
-                        if (input.checked !== shouldBeChecked) {
-                            input.checked = shouldBeChecked;
-                            input.dispatchEvent(new Event('change'));
-                        }
-                    } else {
-                        if (input.value !== storedValue) {
-                            input.value = storedValue;
-                            input.dispatchEvent(new Event('input'));
-                        }
-                    }
-                }
-            });
-        }
-
-        // Save
+        // Always purge stale draft items for product form
         inputs.forEach(input => {
-            const saveHandler = function() {
-                if (this.type === 'hidden' || this.type === 'password') return;
-
-                const key = storagePrefix + this.name;
-                let value;
-
-                if (this.type === 'checkbox' || this.type === 'radio') {
-                    value = this.checked;
-                } else {
-                    value = this.value;
-                }
-
-                localStorage.setItem(key, value);
-            };
-
-            input.addEventListener('input', saveHandler);
-            input.addEventListener('change', saveHandler);
-        });
-
-        // Clear on submit
-        form.addEventListener('submit', function() {
-            inputs.forEach(input => {
-                localStorage.removeItem(storagePrefix + input.name);
-            });
+            localStorage.removeItem(storagePrefix + input.name);
+            localStorage.removeItem('product_form_draft');
         });
     }
 

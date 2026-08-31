@@ -246,8 +246,97 @@ class InvoiceModel extends Model
             $query->whereDate('h.InvoiceDate', '<=', $filters['end_date']);
         }
 
-        // 4. Order by latest created date
+        // 4. FBR Status Filter
+        if (!empty($filters['fbr_status'])) {
+            $fbrStatus = strtolower(trim((string)$filters['fbr_status']));
+            if ($fbrStatus === 'not_posted') {
+                $query->where(function ($q) {
+                    $q->whereNull('h.FbrTransactionID')
+                      ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                })->where(function ($q) {
+                    $q->whereNull('h.FbrResponseJson')
+                      ->orWhereRaw("TRIM(h.FbrResponseJson) = ''");
+                });
+            } elseif ($fbrStatus === 'posted' || $fbrStatus === 'valid' || $fbrStatus === 'successfully_posted') {
+                $query->whereNotNull('h.FbrTransactionID')
+                      ->whereRaw("TRIM(h.FbrTransactionID) != ''");
+            } elseif ($fbrStatus === 'error' || $fbrStatus === 'failed') {
+                $query->whereNotNull('h.FbrResponseJson')
+                      ->whereRaw("TRIM(h.FbrResponseJson) != ''")
+                      ->where(function ($q) {
+                          $q->whereNull('h.FbrTransactionID')
+                            ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                      });
+            }
+        }
+
+        // 5. Order by latest created date
         return $query->orderByDesc('h.CreatedOn');
+    }
+
+    /**
+     * Get real-time count badges for each FBR response status tab
+     */
+    public static function getFbrStatusCounts(array $filters = []): array
+    {
+        $baseQuery = DB::table('tbl_sales_invoice_header as h')
+            ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
+            ->where('h.Status', '!=', 2);
+
+        if (!empty($filters['search'])) {
+            $s = $filters['search'];
+            $baseQuery->where(function ($q) use ($s) {
+                $q->where('h.DocNo', 'LIKE', "%{$s}%")
+                  ->orWhere('cust.BusinessName', 'LIKE', "%{$s}%")
+                  ->orWhereRaw(
+                      'COALESCE(NULLIF(TRIM(cust.DisplayName),\'\'), '
+                      . 'TRIM(CONCAT(COALESCE(cust.FirstName,\'\'),\' \',COALESCE(cust.LastName,\'\')))) LIKE ?',
+                      ["%{$s}%"]
+                  );
+            });
+        }
+
+        if (!empty($filters['start_date'])) {
+            $baseQuery->whereDate('h.InvoiceDate', '>=', $filters['start_date']);
+        }
+
+        if (!empty($filters['end_date'])) {
+            $baseQuery->whereDate('h.InvoiceDate', '<=', $filters['end_date']);
+        }
+
+        $allCount = (clone $baseQuery)->count();
+
+        $notPostedCount = (clone $baseQuery)
+            ->where(function ($q) {
+                $q->whereNull('h.FbrTransactionID')
+                  ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+            })
+            ->where(function ($q) {
+                $q->whereNull('h.FbrResponseJson')
+                  ->orWhereRaw("TRIM(h.FbrResponseJson) = ''");
+            })
+            ->count();
+
+        $postedCount = (clone $baseQuery)
+            ->whereNotNull('h.FbrTransactionID')
+            ->whereRaw("TRIM(h.FbrTransactionID) != ''")
+            ->count();
+
+        $errorCount = (clone $baseQuery)
+            ->whereNotNull('h.FbrResponseJson')
+            ->whereRaw("TRIM(h.FbrResponseJson) != ''")
+            ->where(function ($q) {
+                $q->whereNull('h.FbrTransactionID')
+                  ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+            })
+            ->count();
+
+        return [
+            'all' => $allCount,
+            'not_posted' => $notPostedCount,
+            'posted' => $postedCount,
+            'error' => $errorCount,
+        ];
     }
 
     // ══════════════════════════════════════════════════════════
@@ -874,5 +963,46 @@ SQL;
         }
 
         return null;
+    }
+
+    /**
+     * Bulk post multiple invoices to FBR.
+     *
+     * @param  array<int|string>  $headerIds
+     * @return array{success: bool, total: int, posted_count: int, failed_count: int, errors: array<string>}
+     */
+    public static function bulk_post_to_fbr(array $headerIds): array
+    {
+        $postedCount = 0;
+        $failedCount = 0;
+        $errors = [];
+
+        foreach ($headerIds as $id) {
+            $headerId = (int) $id;
+            if ($headerId <= 0) {
+                continue;
+            }
+
+            try {
+                $res = self::post_to_fbr($headerId);
+                if (! empty($res['success'])) {
+                    $postedCount++;
+                } else {
+                    $failedCount++;
+                    $errors[] = "Invoice #{$headerId}: " . ($res['message'] ?? 'Post failed');
+                }
+            } catch (\Throwable $e) {
+                $failedCount++;
+                $errors[] = "Invoice #{$headerId}: " . $e->getMessage();
+            }
+        }
+
+        return [
+            'success' => $failedCount === 0,
+            'total' => count($headerIds),
+            'posted_count' => $postedCount,
+            'failed_count' => $failedCount,
+            'errors' => $errors,
+        ];
     }
 }

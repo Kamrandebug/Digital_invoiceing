@@ -17,7 +17,7 @@
     /* Invoice list: action column — global .action-col is 100px max and breaks split + dropdown */
     #invoicesTable th.action-col,
     #invoicesTable td:last-child {
-        min-width: 10rem;
+        min-width: 9.5rem;
         max-width: none !important;
         width: auto !important;
         text-align: end;
@@ -30,6 +30,177 @@
     #invoicesTable .dropdown-menu {
         z-index: 1060;
     }
+
+    /* ── Compact Table Styling for 20 Records Per Page ── */
+    #invoicesTable {
+        font-size: 12.5px;
+        margin-bottom: 0;
+    }
+    #invoicesTable thead th {
+        padding: 0.35rem 0.55rem !important;
+        font-size: 12px;
+        font-weight: 600;
+        vertical-align: middle;
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    #invoicesTable tbody td {
+        padding: 0.28rem 0.55rem !important;
+        vertical-align: middle;
+        line-height: 1.3;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    #invoicesTable .form-check-input {
+        margin-top: 0;
+        vertical-align: middle;
+        width: 14px;
+        height: 14px;
+    }
+    #invoicesTable .fbr-response-btn {
+        padding: 2px 7px !important;
+        font-size: 10.5px !important;
+        line-height: 1.2;
+    }
+    #invoicesTable .badge {
+        padding: 2px 7px;
+        font-size: 10.5px;
+        font-weight: 500;
+    }
+    #invoicesTable .btn-listing .btn {
+        padding: 2px 8px !important;
+        font-size: 11.5px !important;
+        line-height: 1.35 !important;
+    }
+    #invoicesTable .btn-listing .btn i {
+        font-size: 11px;
+    }
+
+    /* ── FBR Response Table Tabs Theming & Border Styling ── */
+    .invoice-card-tab-header {
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 8px 14px 0 14px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+    .invoice-table-tabs {
+        border-bottom: none;
+        margin-bottom: 0;
+        display: flex;
+        gap: 6px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    .invoice-table-tabs .nav-link {
+        border: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+        padding: 7px 15px;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: #475569;
+        background: #ffffff;
+        margin-bottom: -1px;
+        transition: all 0.15s ease-in-out;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .invoice-table-tabs .nav-link:hover {
+        color: #1e293b;
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    .invoice-table-tabs .nav-link.active {
+        background: #ffffff;
+        border-color: #cbd5e1 #cbd5e1 #ffffff;
+        border-bottom: 1px solid #ffffff !important;
+        font-weight: 600;
+        position: relative;
+        z-index: 2;
+        box-shadow: 0 -2px 6px rgba(0,0,0,0.04);
+    }
+    .invoice-table-tabs .nav-link .badge {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.15s ease-in-out;
+    }
+
+    /* Tab 1: Not Posted (Blue / Primary Theme) */
+    .invoice-table-tabs .tab-not-posted { border-color: #dbeafe; }
+    .invoice-table-tabs .tab-not-posted:hover { border-color: #60a5fa; }
+    .invoice-table-tabs .tab-not-posted .tab-icon { color: #0284c7; }
+    .invoice-table-tabs .tab-not-posted .tab-badge { background-color: #e0f2fe; color: #0369a1; }
+    .invoice-table-tabs .tab-not-posted.active {
+        color: #0284c7;
+        border-top: 3px solid #0284c7 !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .invoice-table-tabs .tab-not-posted.active .tab-badge {
+        background-color: #0284c7;
+        color: #ffffff;
+    }
+
+    /* Tab 2: Successfully Posted (Emerald Green Theme) */
+    .invoice-table-tabs .tab-posted { border-color: #dcfce7; }
+    .invoice-table-tabs .tab-posted:hover { border-color: #4ade80; }
+    .invoice-table-tabs .tab-posted .tab-icon { color: #16a34a; }
+    .invoice-table-tabs .tab-posted .tab-badge { background-color: #dcfce7; color: #15803d; }
+    .invoice-table-tabs .tab-posted.active {
+        color: #16a34a;
+        border-top: 3px solid #16a34a !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .invoice-table-tabs .tab-posted.active .tab-badge {
+        background-color: #16a34a;
+        color: #ffffff;
+    }
+
+    /* Tab 3: FBR Error (Danger Red Theme) */
+    .invoice-table-tabs .tab-error { border-color: #fee2e2; }
+    .invoice-table-tabs .tab-error:hover { border-color: #f87171; }
+    .invoice-table-tabs .tab-error .tab-icon { color: #dc2626; }
+    .invoice-table-tabs .tab-error .tab-badge { background-color: #fee2e2; color: #b91c1c; }
+    .invoice-table-tabs .tab-error.active {
+        color: #dc2626;
+        border-top: 3px solid #dc2626 !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .invoice-table-tabs .tab-error.active .tab-badge {
+        background-color: #dc2626;
+        color: #ffffff;
+    }
+
+    /* Tab 4: All Invoices (Slate Neutral Theme) */
+    .invoice-table-tabs .tab-all { border-color: #e2e8f0; }
+    .invoice-table-tabs .tab-all:hover { border-color: #94a3b8; }
+    .invoice-table-tabs .tab-all .tab-icon { color: #64748b; }
+    .invoice-table-tabs .tab-all .tab-badge { background-color: #f1f5f9; color: #475569; }
+    .invoice-table-tabs .tab-all.active {
+        color: #1e293b;
+        border-top: 3px solid #475569 !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .invoice-table-tabs .tab-all.active .tab-badge {
+        background-color: #475569;
+        color: #ffffff;
+    }
 </style>
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
@@ -37,6 +208,11 @@
 @endsection
 
 @section('content')
+@php
+    $canPostFbr = (auth()->check() && (int)(auth()->user()->UserType ?? 0) === 2)
+        || session('selected_tenant.user_type') === 'admin'
+        || (int)(session('selected_tenant.permissions.Invoices.Import') ?? 0) === 1;
+@endphp
 <div class="page-header-breadcrumb mb-3">
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Invoice Management</h1>
@@ -62,7 +238,7 @@
                     <li><a class="dropdown-item" href="#">Bulk Print</a></li>
                     @endtenantCan
                     @tenantCan('Invoices', 'Export')
-                    <li><a class="dropdown-item" href="{{ route('invoices.export-csv') }}">Export CSV</a></li>
+                    <li><a class="dropdown-item" href="{{ route('invoices.export-csv', ['fbr_status' => $fbrStatus ?? 'not_posted', 'search' => request('search'), 'start_date' => request('start_date'), 'end_date' => request('end_date')]) }}">Export CSV</a></li>
                     @endtenantCan
                 </ul>
             </div>
@@ -95,11 +271,12 @@
 {{-- ── Filter Bar ── --}}
 <div class="row">
     <div class="col-xs-12">
-        <div class="card custom-card mb-1">
+        <div class="card custom-card mb-2">
             <div class="card-body p-2">
                 <div class="row">
                     <div class="col-md-9">
                         <form action="{{ route('invoices.index') }}" method="GET" class="listing-filters-form">
+                            <input type="hidden" name="fbr_status" id="fbrStatusInput" value="{{ $fbrStatus ?? 'not_posted' }}">
                             <div class="row g-2">
                                 <div class="col-md-4">
                                     <div class="header-search d-md-block d-none">
@@ -111,7 +288,7 @@
                                                placeholder="Search by doc no, customer..."
                                                onkeyup="debounceSearch()">
                                         <a href="javascript:void(0);" class="header-search-icon border-0" style="top:25px;">
-                                            <i class="bi bi-search fs-12"></i>
+                                             <i class="bi bi-search fs-12"></i>
                                         </a>
                                     </div>
                                 </div>
@@ -147,7 +324,7 @@
                                         </div>
                                         <div class="col listing-filter-actions-col">
                                             <button class="btn btn-sm btn-primary btn-margin" type="button"
-                                                    onclick="window.location.href='{{ route('invoices.index') }}'">
+                                                    onclick="window.location.href='{{ route('invoices.index', ['fbr_status' => $fbrStatus ?? 'not_posted']) }}'">
                                                 <i class="fas fa-times"></i> Clear Filters
                                             </button>
                                         </div>
@@ -162,9 +339,66 @@
     </div>
 </div>
 
-{{-- ── Invoice Table ── --}}
+{{-- ── Invoice Table with Tab Looks ── --}}
 <div class="col-xs-12">
     <div class="card custom-card">
+        <div class="card-header invoice-card-tab-header d-flex justify-content-between align-items-center">
+            <ul class="nav nav-tabs invoice-table-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link tab-not-posted {{ ($fbrStatus ?? 'not_posted') === 'not_posted' ? 'active' : '' }}"
+                       href="javascript:void(0);"
+                       onclick="filterFbrStatus('not_posted')">
+                        <i class="fas fa-clock tab-icon"></i> Not Posted
+                        <span class="badge tab-badge">
+                            {{ number_format($tabCounts['not_posted'] ?? 0) }}
+                        </span>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link tab-posted {{ in_array($fbrStatus ?? '', ['posted', 'valid', 'successfully_posted']) ? 'active' : '' }}"
+                       href="javascript:void(0);"
+                       onclick="filterFbrStatus('posted')">
+                        <i class="fas fa-check-circle tab-icon"></i> Successfully Posted
+                        <span class="badge tab-badge">
+                            {{ number_format($tabCounts['posted'] ?? 0) }}
+                        </span>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link tab-error {{ in_array($fbrStatus ?? '', ['error', 'failed']) ? 'active' : '' }}"
+                       href="javascript:void(0);"
+                       onclick="filterFbrStatus('error')">
+                        <i class="fas fa-exclamation-triangle tab-icon"></i> FBR Error
+                        <span class="badge tab-badge">
+                            {{ number_format($tabCounts['error'] ?? 0) }}
+                        </span>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link tab-all {{ ($fbrStatus ?? '') === 'all' ? 'active' : '' }}"
+                       href="javascript:void(0);"
+                       onclick="filterFbrStatus('all')">
+                        <i class="fas fa-list tab-icon"></i> All Invoices
+                        <span class="badge tab-badge">
+                            {{ number_format($tabCounts['all'] ?? 0) }}
+                        </span>
+                    </a>
+                </li>
+            </ul>
+
+            @if($canPostFbr && in_array($fbrStatus ?? 'not_posted', ['not_posted', 'error', 'failed']))
+            <div class="ms-auto d-flex align-items-center py-1">
+                <button type="button" 
+                        id="bulkPostFbrBtn" 
+                        class="btn btn-sm btn-primary btn-wave waves-light shadow-sm"
+                        onclick="openBulkPostModal()">
+                    <i class="fas fa-paper-plane me-1"></i> 
+                    <span id="bulkPostBtnLabel">Post to FBR</span>
+                    <span id="bulkPostCountBadge" class="badge bg-white text-primary ms-1 d-none">0</span>
+                </button>
+            </div>
+            @endif
+        </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="invoices-table table text-nowrap listing-table" id="invoicesTable">
@@ -185,14 +419,22 @@
                         @php
                             $fbrTxId = trim((string) ($invoice->FbrTransactionID ?? ''));
                             $fbrRespRaw = trim((string) ($invoice->FbrResponseJson ?? ''));
-                            $fbrRespForCheck = strtolower($fbrRespRaw);
-                            $fbrIsValid = $fbrRespForCheck !== '' && str_contains($fbrRespForCheck, 'valid');
-                            $fbrLocked = $fbrTxId !== '' && $fbrIsValid;
+                            $fbrLocked = $fbrTxId !== '';
+                            $totalAmt = (float) ($invoice->TotalAmount ?? 0);
                         @endphp
                         <tr>
                             {{-- HeaderID is the unique key from getlistingdata() --}}
                             <td>
-                                <input type="checkbox" class="invoice-checkbox form-check-input" value="{{ $invoice->HeaderID }}" />
+                                <input type="checkbox" 
+                                       class="invoice-checkbox form-check-input" 
+                                       value="{{ $invoice->HeaderID }}"
+                                       data-id="{{ $invoice->HeaderID }}"
+                                       data-docno="{{ $invoice->DocNo ?? 'N/A' }}"
+                                       data-date="{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d/m/Y') : '-' }}"
+                                       data-customer="{{ $invoice->CustomerDisplayName ?? 'N/A' }}"
+                                       data-net="{{ $totalAmt }}"
+                                       data-net-formatted="{{ number_format($totalAmt, 2) }} PKR"
+                                       onchange="onInvoiceCheckboxChange()" />
                             </td>
 
                             <td>
@@ -212,12 +454,11 @@
                             <td>
                                 @php
                                     $resp = $invoice->FbrResponseJson ?? '';
+                                    $hasTxId = !empty(trim((string)($invoice->FbrTransactionID ?? '')));
                                 @endphp
-                                @if(!empty($resp))
+                                @if(!empty($resp) || $hasTxId)
                                     @php
-                                        $isValid = \Illuminate\Support\Str::contains($resp, '\"Valid\"')
-                                            || \Illuminate\Support\Str::contains($resp, '"Valid"')
-                                            || \Illuminate\Support\Str::contains($resp, 'Valid');
+                                        $isValid = $hasTxId;
                                         $badgeClass = $isValid
                                             ? 'bg-success-subtle text-success'
                                             : 'bg-secondary-subtle text-secondary';
@@ -576,6 +817,75 @@
         </div>
     </div>
 </div>
+{{-- Bulk Post to FBR Review Modal --}}
+<div class="modal fade" id="bulkPostFbrModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h6 class="modal-title fw-semibold text-primary">
+                    <i class="fas fa-paper-plane me-2"></i> Review & Post to FBR
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                {{-- Summary row --}}
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="border rounded p-2 bg-light text-center">
+                            <span class="text-muted fs-12 d-block">Selected Invoices</span>
+                            <span class="fw-bold fs-16 text-primary" id="modalBulkCount">0</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2 bg-light text-center">
+                            <span class="text-muted fs-12 d-block">Total Net Value</span>
+                            <span class="fw-bold fs-16 text-success" id="modalBulkTotalAmount">0.00 PKR</span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Preview Table --}}
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="fw-medium fs-13 text-muted mb-0">Selected Invoices Preview</label>
+                    <small class="text-muted">Click ❌ to remove an invoice from this batch</small>
+                </div>
+                <div class="table-responsive border rounded" style="max-height: 280px; overflow-y: auto;">
+                    <table class="table table-sm text-nowrap align-middle mb-0" id="modalBulkPreviewTable">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>DocNo</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th class="text-end">Net Amount</th>
+                                <th class="text-center" style="width: 50px;">Remove</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalBulkPreviewBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info py-2 px-3 mt-3 mb-0 fs-12 d-flex align-items-center">
+                    <i class="fas fa-info-circle me-2 fs-14"></i>
+                    <span>Submitting will transmit these invoices to the FBR live portal. Ensure invoice details are correct before posting.</span>
+                </div>
+
+                <form id="bulkPostFbrForm" action="{{ route('invoices.bulk-post-fbr') }}" method="POST" class="d-none">
+                    @csrf
+                    <input type="hidden" name="fbr_status" value="{{ $fbrStatus ?? 'not_posted' }}">
+                    <div id="bulkPostHiddenInputs"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-primary" id="modalConfirmSubmitFbrBtn" onclick="submitBulkFbrForm()">
+                    <i class="fas fa-paper-plane me-1"></i> <span id="modalSubmitBtnLabel">Confirm & Submit to FBR</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @endsection
 
@@ -672,15 +982,30 @@
         }
     });
 
+    // ── FBR Status Tab Filter ────────────────────────────────
+    function filterFbrStatus(status) {
+        const search = document.getElementById('searchInvoices') ? document.getElementById('searchInvoices').value : '';
+        const start  = document.getElementById('startDate') ? document.getElementById('startDate').value : '';
+        const end    = document.getElementById('endDate') ? document.getElementById('endDate').value : '';
+        const params = new URLSearchParams();
+        if (status) params.set('fbr_status', status);
+        if (search) params.set('search', search);
+        if (start)  params.set('start_date', start);
+        if (end)    params.set('end_date', end);
+        window.location.href = '{{ route("invoices.index") }}?' + params.toString();
+    }
+
     // ── Debounced search ──────────────────────────────────────
     let searchTimer = null;
     function debounceSearch() {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(function () {
-            const search = document.getElementById('searchInvoices').value;
-            const start  = document.getElementById('startDate').value;
-            const end    = document.getElementById('endDate').value;
+            const search    = document.getElementById('searchInvoices') ? document.getElementById('searchInvoices').value : '';
+            const start     = document.getElementById('startDate') ? document.getElementById('startDate').value : '';
+            const end       = document.getElementById('endDate') ? document.getElementById('endDate').value : '';
+            const fbrStatus = document.getElementById('fbrStatusInput') ? document.getElementById('fbrStatusInput').value : 'not_posted';
             const params = new URLSearchParams();
+            if (fbrStatus) params.set('fbr_status', fbrStatus);
             if (search) params.set('search', search);
             if (start)  params.set('start_date', start);
             if (end)    params.set('end_date', end);
@@ -688,12 +1013,138 @@
         }, 500);
     }
 
-    // ── Select all ────────────────────────────────────────────
+    // ── Select all & Bulk Post Selection ─────────────────────
+    function onInvoiceCheckboxChange() {
+        const checkedBoxes = document.querySelectorAll('.invoice-checkbox:checked');
+        const count = checkedBoxes.length;
+        const badge = document.getElementById('bulkPostCountBadge');
+        const label = document.getElementById('bulkPostBtnLabel');
+
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('d-none');
+                if (label) label.textContent = 'Post Selected to FBR';
+            } else {
+                badge.classList.add('d-none');
+                if (label) label.textContent = 'Post to FBR';
+            }
+        }
+
+        // Update selectAll state
+        const allBoxes = document.querySelectorAll('.invoice-checkbox');
+        const selectAllBox = document.getElementById('selectAll');
+        if (selectAllBox && allBoxes.length > 0) {
+            selectAllBox.checked = (allBoxes.length === count);
+        }
+    }
+
     function toggleSelectAll() {
         const checked = document.getElementById('selectAll').checked;
         document.querySelectorAll('.invoice-checkbox').forEach(function(cb) {
             cb.checked = checked;
         });
+        onInvoiceCheckboxChange();
+    }
+
+    function openBulkPostModal() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.invoice-checkbox:checked'));
+        if (checkedBoxes.length === 0) {
+            alert('Please select at least one invoice to post to FBR.');
+            return;
+        }
+
+        renderBulkModalPreview();
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('bulkPostFbrModal'));
+        modal.show();
+    }
+
+    function renderBulkModalPreview() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.invoice-checkbox:checked'));
+        const tbody = document.getElementById('modalBulkPreviewBody');
+        const countEl = document.getElementById('modalBulkCount');
+        const totalEl = document.getElementById('modalBulkTotalAmount');
+        const submitBtnLabel = document.getElementById('modalSubmitBtnLabel');
+
+        let totalAmount = 0;
+        let html = '';
+
+        checkedBoxes.forEach(function(cb) {
+            const id = cb.value;
+            const docNo = cb.getAttribute('data-docno') || 'N/A';
+            const date = cb.getAttribute('data-date') || '-';
+            const customer = cb.getAttribute('data-customer') || 'N/A';
+            const netVal = parseFloat(cb.getAttribute('data-net')) || 0;
+            const netFormatted = cb.getAttribute('data-net-formatted') || (netVal.toFixed(2) + ' PKR');
+
+            totalAmount += netVal;
+
+            html += `
+                <tr id="modal_row_${id}">
+                    <td class="fw-medium">${docNo}</td>
+                    <td>${date}</td>
+                    <td>${customer}</td>
+                    <td class="text-end fw-semibold">${netFormatted}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-xs btn-outline-danger" 
+                                style="padding: 2px 6px; font-size: 11px;"
+                                onclick="removeModalBulkRow('${id}')" 
+                                title="Remove from batch">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        if (tbody) tbody.innerHTML = html;
+        if (countEl) countEl.textContent = checkedBoxes.length;
+        if (totalEl) totalEl.textContent = totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PKR';
+        if (submitBtnLabel) submitBtnLabel.textContent = `Confirm & Submit (${checkedBoxes.length}) to FBR`;
+    }
+
+    function removeModalBulkRow(id) {
+        const cb = document.querySelector(`.invoice-checkbox[value="${id}"]`);
+        if (cb) {
+            cb.checked = false;
+        }
+        onInvoiceCheckboxChange();
+
+        const remaining = document.querySelectorAll('.invoice-checkbox:checked');
+        if (remaining.length === 0) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('bulkPostFbrModal'));
+            if (modal) modal.hide();
+        } else {
+            renderBulkModalPreview();
+        }
+    }
+
+    function submitBulkFbrForm() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.invoice-checkbox:checked'));
+        if (checkedBoxes.length === 0) {
+            alert('No invoices selected.');
+            return;
+        }
+
+        const container = document.getElementById('bulkPostHiddenInputs');
+        if (container) {
+            container.innerHTML = '';
+            checkedBoxes.forEach(function(cb) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'invoice_ids[]';
+                input.value = cb.value;
+                container.appendChild(input);
+            });
+        }
+
+        const btn = document.getElementById('modalConfirmSubmitFbrBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Submitting to FBR...';
+        }
+
+        document.getElementById('bulkPostFbrForm').submit();
     }
 
     // ══════════════════════════════════════════════════════════

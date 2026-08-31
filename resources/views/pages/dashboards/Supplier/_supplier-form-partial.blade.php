@@ -971,39 +971,20 @@
         @endif
 
         const inputs = form.querySelectorAll('input:not([type=hidden]):not([type=password]), textarea, select');
-        
-        // ONLY restore from localStorage if NOT in 'create' mode (to ensure empty form on new add)
-        // OR if you really want drafts for create, you must ensure they are cleared on success.
-        // Given the user report, disabling restore for create is the safest fix.
-        @if(!$isCreate)
-        if (!document.querySelector('.is-invalid')) {
-            inputs.forEach(inp => {
-                /* WHT fields must match DB on edit — do not overwrite with stale draft */
-                if (inp.name === 'AdvanceTaxRate' || inp.name === 'IsAdvancedTax') return;
-                const val = localStorage.getItem(prefix + inp.name);
-                if (val === null) return;
-                if (inp.type === 'checkbox' || inp.type === 'radio') {
-                    inp.checked = val === 'true';
-                    inp.dispatchEvent(new Event('change'));
-                } else { inp.value = val; }
-            });
-        }
-        @else
-        // In create mode, proactively CLEAR any stale draft data
-        inputs.forEach(inp => localStorage.removeItem(prefix + inp.name));
-        @endif
 
+        // Clean up any stale draft items for this supplier / mode
         inputs.forEach(inp => {
-            const save = function () {
-                localStorage.setItem(prefix + this.name,
-                    (this.type === 'checkbox' || this.type === 'radio') ? this.checked : this.value);
-            };
-            inp.addEventListener('input', save);
-            inp.addEventListener('change', save);
+            localStorage.removeItem(prefix + inp.name);
+            localStorage.removeItem('cfp_{{ $mode }}_{{ $customer->ID ?? "new" }}_' + inp.name);
+            localStorage.removeItem('sfp_{{ $mode }}_{{ $supplier->ID ?? "new" }}_' + inp.name);
         });
-        form.addEventListener('submit', () =>
-            inputs.forEach(inp => localStorage.removeItem(prefix + inp.name))
-        );
+
+        // Clear all supplier drafts helper
+        window.clearSupplierModalDrafts = function() {
+            Object.keys(localStorage).forEach(k => {
+                if (k.startsWith('sfp_') || k.startsWith('cfp_')) localStorage.removeItem(k);
+            });
+        };
     }
 })();
 </script>

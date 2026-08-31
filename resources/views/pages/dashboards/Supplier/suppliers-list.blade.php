@@ -442,14 +442,16 @@ function openSupplierModal(mode, customerId = null) {
 
     bsModal.show();
 
+    const timestamp = Date.now();
     let url = mode === 'create'
-        ? '{{ route("suppliers.modal") }}?mode=create'
-        : `/suppliers/${customerId}/modal?mode=${mode}`;
+        ? '{{ route("suppliers.modal") }}?mode=create&_t=' + timestamp
+        : `/suppliers/${customerId}/modal?mode=${mode}&_t=` + timestamp;
 
     fetch(url, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            'Cache-Control': 'no-cache'
         }
     })
     .then(res => { if (!res.ok) throw new Error('Server error: ' + res.status); return res.text(); })
@@ -498,6 +500,13 @@ function openSupplierModal(mode, customerId = null) {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
+                    // Purge draft keys from localStorage
+                    if (typeof window.clearSupplierModalDrafts === 'function') {
+                        window.clearSupplierModalDrafts();
+                    }
+                    Object.keys(localStorage).forEach(k => {
+                        if (k.startsWith('sfp_') || k.startsWith('supplier_') || k.startsWith('cfp_')) localStorage.removeItem(k);
+                    });
                     bsModal.hide();
                     // Show success toast on list page
                     showToast('success', data.message);

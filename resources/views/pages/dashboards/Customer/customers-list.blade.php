@@ -446,14 +446,16 @@ function openCustomerModal(mode, customerId = null) {
 
     bsModal.show();
 
+    const timestamp = Date.now();
     let url = mode === 'create'
-        ? '{{ route("customers.modal") }}?mode=create'
-        : `/customers/${customerId}/modal?mode=${mode}`;
+        ? '{{ route("customers.modal") }}?mode=create&_t=' + timestamp
+        : `/customers/${customerId}/modal?mode=${mode}&_t=` + timestamp;
 
     fetch(url, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            'Cache-Control': 'no-cache'
         }
     })
     .then(res => { if (!res.ok) throw new Error('Server error: ' + res.status); return res.text(); })
@@ -502,6 +504,13 @@ function openCustomerModal(mode, customerId = null) {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
+                    // Purge draft keys from localStorage
+                    if (typeof window.clearCustomerModalDrafts === 'function') {
+                        window.clearCustomerModalDrafts();
+                    }
+                    Object.keys(localStorage).forEach(k => {
+                        if (k.startsWith('cfp_') || k.startsWith('customer_')) localStorage.removeItem(k);
+                    });
                     bsModal.hide();
                     // Show success toast on list page
                     showToast('success', data.message);
