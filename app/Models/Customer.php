@@ -139,7 +139,26 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
             (
                 SELECT 	t.ID,
                     CASE
-                    WHEN t.BusinessName IS NULL OR t.BusinessName = '' THEN 'Invalid Business Name'
+                    WHEN t.BusinessName IS NULL OR TRIM(t.BusinessName) = '' 
+                        THEN 'Missing Business Name'
+                    WHEN t.County IS NULL OR TRIM(t.County) = '' 
+                        THEN 'Missing Province'
+                    WHEN t.AccountNo IS NULL OR TRIM(t.AccountNo) = '' 
+                        THEN 'Missing AccountNo'
+                    WHEN t.Status NOT IN (0, 1) 
+                        THEN 'Invalid Status (Must be 1 for Active or 0 for InActive)'
+                    WHEN (
+                        SELECT COUNT(*) 
+                        FROM temp_customer tc 
+                        WHERE tc.RequestID = t.RequestID AND tc.AccountNo = t.AccountNo
+                    ) > 1 
+                        THEN 'Duplicate AccountNo in batch'
+                    WHEN EXISTS (
+                        SELECT 1 
+                        FROM tbl_customer cust 
+                        WHERE cust.AccountNo = t.AccountNo AND cust.Status != 2
+                    ) 
+                        THEN CONCAT('AccountNo ', t.AccountNo, ' already exists in database')
                     ELSE 'Pass' END AS `ErrMsg`
                 FROM `temp_customer` t
                 WHERE t.RequestID = ?
@@ -172,12 +191,12 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
                 Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn,RequestID
             FROM 	temp_customer
-            WHERE RequestID = ?
+            WHERE RequestID = ? AND ErrMsg = 'Pass'
         ", [$requestID]);
 
         try {
-            $inserted = DB::connection('tenant')->table('tbl_customer')->where('RequestID', $requestID)->first();
-            if ($inserted) {
+            $insertedRecords = DB::connection('tenant')->table('tbl_customer')->where('RequestID', $requestID)->get();
+            foreach ($insertedRecords as $inserted) {
                 $module = ((int)$inserted->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
                 \App\Services\AuditLogService::log('CREATE', $module, $inserted->ID, null, (array)$inserted);
             }

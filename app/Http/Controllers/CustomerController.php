@@ -944,4 +944,223 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
 
         return response()->stream($callback, 200, $headers);
     }
+
+    /**
+     * Download customer import template
+     */
+    public function downloadImportTemplate()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle($this->entitySingular().'s');
+
+        // Headers without PartyType and Status
+        $headers = [
+            'RegistrationNo/NTN *', 'Title', 'FirstName', 'LastName', 'BusinessName *', 'DisplayName', 
+            'Email', 'Mobile', 'Phone', 'Website', 'Address', 'City', 'Province *', 'PostalCode', 'Country', 
+            'SameAsBilling', 'BillingAddress', 'BillingCity', 'BillingProvince', 'BillingPostalCode', 
+            'BillingCountry', 'NTN', 'SalesTaxNumber', 'CNIC', 'IsAdvanceTax', 'AdvanceTax', 
+            'IsFiler', 'RegisterType', 'FilerStatus', 'FilerStatusDate', 'Notes', 
+            'SalesTaxWithheldAtSource', 'ExtraTax %', 'FurtherTax %', 'FedTax %'
+        ];
+
+        $sheet->fromArray([$headers], NULL, 'A1');
+
+        // Base header styling (Dark Teal background)
+        $sheet->getStyle('A1:AI1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '136056']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']]]
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(28);
+
+        // Required columns yellow highlighting: A1 (RegistrationNo/NTN *), E1 (BusinessName *), M1 (Province *)
+        $requiredStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => '713F12'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF08A']], // Distinct yellow
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM, 'color' => ['rgb' => 'EAB308']]]
+        ];
+        $sheet->getStyle('A1')->applyFromArray($requiredStyle); // RegistrationNo/NTN *
+        $sheet->getStyle('E1')->applyFromArray($requiredStyle); // BusinessName *
+        $sheet->getStyle('M1')->applyFromArray($requiredStyle); // Province *
+
+        // Sample Data Rows (Without PartyType and Status, with 2 decimals on tax rates)
+        $prefix = $this->accountNoPrefix();
+        $sampleData = [
+            [
+                $prefix.'-000001', 'Mr', 'Salman', 'Khalid', 'MK SUPER MARKET', 'MK SUPER MARKET', 
+                'salman@example.com', '03001234567', '04231234567', 'https://example.com', 'Main Boulevard, Gulberg', 'Lahore', 'PUNJAB', '54000', 'Pakistan', 
+                '1', 'Main Boulevard, Gulberg', 'Lahore', 'PUNJAB', '54000', 'Pakistan', 
+                '7020599', '44444', '35202-1234567-1', '0', '0.00', 
+                '1', 'Registered', 'Active', '2026-01-01', 'Sample Active Filer', 
+                '0.00', '0.00', '0.00', '0.00'
+            ],
+            [
+                $prefix.'-000002', 'Engr', 'Khurram', 'Jafar', 'Jaffery Soft', 'Jaffery Soft', 
+                'khurram@example.com', '03211234567', '', '', 'Blue Area', 'Islamabad', 'ISLAMABAD CAPITAL TERRITORY', '44000', 'Pakistan', 
+                '1', 'Blue Area', 'Islamabad', 'ISLAMABAD CAPITAL TERRITORY', '44000', 'Pakistan', 
+                '', '', '', '0', '0.00', 
+                '0', 'Un-Registered', 'In-Active', '', 'Sample Non-Filer', 
+                '0.00', '0.00', '0.00', '0.00'
+            ],
+            [
+                $prefix.'-000003', 'Mr', 'Bilal', 'Tariq', 'Bilal Enterprises', 'Bilal Enterprises', 
+                'bilal@example.com', '03331234567', '', '', 'Korangi Industrial Area', 'Karachi', 'SINDH', '74900', 'Pakistan', 
+                '1', 'Korangi Industrial Area', 'Karachi', 'SINDH', '74900', 'Pakistan', 
+                '8988888', '999999', '42101-1234567-1', '1', '1.50', 
+                '1', 'Registered', 'Active', '2026-02-15', 'Sample with Advance Tax', 
+                '50.00', '2.00', '1.00', '1.00'
+            ]
+        ];
+
+        $sheet->fromArray($sampleData, NULL, 'A2');
+
+        // Set explicit 2-decimal formatting on number/rate columns
+        $sheet->getStyle('Z2:Z4')->getNumberFormat()->setFormatCode('0.00'); // AdvanceTax
+        $sheet->getStyle('AF2:AI4')->getNumberFormat()->setFormatCode('0.00'); // SalesTaxWithheld, ExtraTax, FurtherTax, FedTax
+
+        // Auto size columns
+        foreach (range('A', 'Z') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        foreach (['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI'] as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = $this->entitySingular().'_Import_Template.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /**
+     * Import customers from Excel or CSV
+     */
+    public function importCustomers(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:xlsx,xls,csv,txt|max:10240',
+        ], [
+            'import_file.required' => 'Please select an Excel or CSV file to import.',
+            'import_file.mimes' => 'Import file must be an Excel workbook (.xlsx, .xls) or CSV file (.csv).',
+            'import_file.max' => 'Import file must not exceed 10 MB.',
+        ]);
+
+        try {
+            $requestId = (string) Str::uuid();
+            $userId = auth()->id() ?? 1;
+            $now = now()->toDateTimeString();
+
+            $import = new \App\Imports\CustomerImport($this->partyTypeForCreate());
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('import_file'));
+            $rows = $import->mappedRows();
+
+            if (empty($rows)) {
+                $msg = 'No data rows found in the import file.';
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => 'error', 'message' => $msg], 422);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+
+            // Fetch current maximum ID in temp_customer and tbl_customer to assign sequential IDs
+            $maxId = (int) (DB::table('temp_customer')->max('ID') ?? 0);
+            $maxCustId = (int) (DB::table('tbl_customer')->max('ID') ?? 0);
+            $currentId = max($maxId, $maxCustId);
+
+            $insertRows = [];
+            foreach ($rows as $index => $row) {
+                $currentId++;
+                $accountNo = trim((string)($row['AccountNo'] ?? ''));
+                if ($accountNo === '') {
+                    $accountNo = $this->accountNoPrefix().'-'.str_pad((string)$currentId, 6, '0', STR_PAD_LEFT);
+                }
+
+                $insertRows[] = [
+                    'ID'                       => $currentId,
+                    'TID'                      => $currentId,
+                    'IsArchive'                => 0,
+                    'VoucherID'                => 0,
+                    'AccountNo'                => $accountNo,
+                    'PartyType'                => $row['PartyType'] ?? $this->partyTypeForCreate(),
+                    'Title'                    => $row['Title'] ?? null,
+                    'FirstName'                => $row['FirstName'] ?? null,
+                    'LastName'                 => $row['LastName'] ?? null,
+                    'BusinessName'             => $row['BusinessName'] ?? null,
+                    'DisplayName'              => $row['DisplayName'] ?? $row['BusinessName'],
+                    'Email'                    => $row['Email'] ?? null,
+                    'Mobile'                   => $row['Mobile'] ?? null,
+                    'Phone'                    => $row['Phone'] ?? '',
+                    'Website'                  => $row['Website'] ?? '',
+                    'Address'                  => $row['Address'] ?? null,
+                    'PartyBalance'             => 0.00,
+                    'City'                     => $row['City'] ?? null,
+                    'County'                   => $row['County'] ?? null,
+                    'PostalCode'               => $row['PostalCode'] ?? null,
+                    'Country'                  => $row['Country'] ?? 'Pakistan',
+                    'SameAsBilling'            => $row['SameAsBilling'] ?? 1,
+                    'BillingAddress'           => $row['BillingAddress'] ?? null,
+                    'BillingCity'              => $row['BillingCity'] ?? null,
+                    'BillingCounty'            => $row['BillingCounty'] ?? null,
+                    'BillingCountry'           => $row['BillingCountry'] ?? 'Pakistan',
+                    'BillingPostalCode'        => $row['BillingPostalCode'] ?? null,
+                    'FullBillingAddress'       => $row['FullBillingAddress'] ?? null,
+                    'NTN'                      => $row['NTN'] ?? null,
+                    'SalesTaxNumber'           => $row['SalesTaxNumber'] ?? '',
+                    'CNIC'                     => $row['CNIC'] ?? null,
+                    'IsFiler'                  => $row['IsFiler'] ?? 0,
+                    'RegisterType'             => $row['RegisterType'] ?? null,
+                    'FilerStatus'              => $row['FilerStatus'] ?? null,
+                    'FilerStatusDate'          => $row['FilerStatusDate'] ?? null,
+                    'IsAdvanceTax'             => $row['IsAdvanceTax'] ?? 0,
+                    'AdvanceTax'               => $row['AdvanceTax'] ?? 0.00,
+                    'Notes'                    => $row['Notes'] ?? null,
+                    'SalesTaxWithheldAtSource' => $row['SalesTaxWithheldAtSource'] ?? null,
+                    'ExtraTax'                 => (float)($row['ExtraTax'] ?? 0),
+                    'FurtherTax'               => (float)($row['FurtherTax'] ?? 0),
+                    'FedPayable'               => (float)($row['FedPayable'] ?? 0),
+                    'Status'                   => 1,
+                    'CreatedBy'                => (int)$userId,
+                    'CreatedOn'                => $now,
+                    'UpdatedBy'                => (int)$userId,
+                    'UpdatedOn'                => $now,
+                    'IsDashboard'              => 0,
+                    'RequestID'                => $requestId,
+                ];
+            }
+
+            foreach (array_chunk($insertRows, 200) as $chunk) {
+                DB::table('temp_customer')->insert($chunk);
+            }
+
+            $saveResult = Customer::save_transaction(['RequestID' => $requestId]);
+            if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+                $errorMsg = $saveResult['message'] ?? 'Unable to import '.$this->entitySingular().'.';
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => 'error', 'message' => $errorMsg], 422);
+                }
+                return redirect()->back()->with('error', $errorMsg);
+            }
+
+            $successMsg = count($insertRows).' '.$this->entitySingular().'(s) imported successfully!';
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'success', 'message' => $successMsg]);
+            }
+
+            return redirect()->route($this->routePrefix().'.index')->with('success', $successMsg);
+        } catch (\Throwable $e) {
+            \Log::error('Customer import failed', ['error' => $e->getMessage()]);
+            $err = 'Import failed: '.$e->getMessage();
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'error', 'message' => $err], 500);
+            }
+            return redirect()->back()->with('error', $err);
+        }
+    }
 }

@@ -66,6 +66,8 @@ Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->
 
     // ⚠️ Static segments BEFORE /{id} wildcard
     Route::get('/export/csv', [CustomerController::class, 'exportCSV'])->name('export-csv');
+    Route::get('/import/template', [CustomerController::class, 'downloadImportTemplate'])->name('import-template');
+    Route::post('/import', [CustomerController::class, 'importCustomers'])->middleware('tenant.role:owner,admin,accountant')->name('import');
     Route::post('/verify-fbr', [CustomerController::class, 'verifyFbr'])->middleware('tenant.role:owner,admin,accountant')->name('verify_fbr');
     Route::get('/modal', [CustomerController::class, 'modal'])->name('modal');
 
@@ -84,6 +86,8 @@ Route::middleware(['auth', 'tenant'])->prefix('suppliers')->name('suppliers.')->
     Route::post('/save', [SupplierController::class, 'save_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('save_transaction');
 
     Route::get('/export/csv', [SupplierController::class, 'exportCSV'])->name('export-csv');
+    Route::get('/import/template', [SupplierController::class, 'downloadImportTemplate'])->name('import-template');
+    Route::post('/import', [SupplierController::class, 'importCustomers'])->middleware('tenant.role:owner,admin,accountant')->name('import');
     Route::post('/verify-fbr', [SupplierController::class, 'verifyFbr'])->middleware('tenant.role:owner,admin,accountant')->name('verify_fbr');
     Route::get('/modal', [SupplierController::class, 'modal'])->name('modal');
 

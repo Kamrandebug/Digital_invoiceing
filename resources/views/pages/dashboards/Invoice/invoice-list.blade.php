@@ -201,6 +201,94 @@
         background-color: #475569;
         color: #ffffff;
     }
+    /* ── Bulk Post FBR Modal Custom Styling ── */
+    #bulkPostFbrModal .modal-dialog {
+        max-width: 1020px;
+        width: 95%;
+        margin: 1.75rem auto;
+    }
+    #bulkPostFbrModal .modal-content {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    #bulkPostFbrModal .modal-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+    }
+    #bulkPostFbrModal .fbr-modal-stat-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        transition: all 0.15s ease;
+    }
+    #bulkPostFbrModal .fbr-modal-stat-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+    #bulkPostFbrModal .fbr-stat-label {
+        font-size: 10.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: #64748b;
+        margin-bottom: 3px;
+        display: block;
+    }
+    #bulkPostFbrModal .fbr-stat-val {
+        font-size: 14.5px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+    #bulkPostFbrModal .fbr-table-container {
+        flex: 1 1 auto;
+        min-height: 400px;
+        max-height: 58vh;
+        overflow-y: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #ffffff;
+    }
+    #modalBulkPreviewTable {
+        font-size: 12px;
+        margin-bottom: 0;
+        width: 100%;
+    }
+    #modalBulkPreviewTable thead th {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: #475569;
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 8px 10px;
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    #modalBulkPreviewTable tbody td {
+        padding: 7px 10px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 12px;
+        color: #334155;
+        white-space: nowrap;
+    }
+    #modalBulkPreviewTable tfoot th {
+        padding: 8px 10px;
+        font-size: 12px;
+        background-color: #f8fafc;
+        border-top: 2px solid #e2e8f0;
+        white-space: nowrap;
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        box-shadow: 0 -2px 5px rgba(0,0,0,0.03);
+    }
 </style>
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
@@ -421,6 +509,11 @@
                             $fbrRespRaw = trim((string) ($invoice->FbrResponseJson ?? ''));
                             $fbrLocked = $fbrTxId !== '';
                             $totalAmt = (float) ($invoice->TotalAmount ?? 0);
+                            $totalGst = (float) ($invoice->TotalGST ?? 0);
+                            $subTotal = (float) ($invoice->SubTotal ?? 0);
+                            if ($subTotal == 0 && $totalAmt > 0) {
+                                $subTotal = max(0, $totalAmt - $totalGst);
+                            }
                         @endphp
                         <tr>
                             {{-- HeaderID is the unique key from getlistingdata() --}}
@@ -432,6 +525,10 @@
                                        data-docno="{{ $invoice->DocNo ?? 'N/A' }}"
                                        data-date="{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d/m/Y') : '-' }}"
                                        data-customer="{{ $invoice->CustomerDisplayName ?? 'N/A' }}"
+                                       data-amount="{{ $subTotal }}"
+                                       data-amount-formatted="{{ number_format($subTotal, 2) }} PKR"
+                                       data-gst="{{ $totalGst }}"
+                                       data-gst-formatted="{{ number_format($totalGst, 2) }} PKR"
                                        data-net="{{ $totalAmt }}"
                                        data-net-formatted="{{ number_format($totalAmt, 2) }} PKR"
                                        onchange="onInvoiceCheckboxChange()" />
@@ -819,43 +916,62 @@
 </div>
 {{-- Bulk Post to FBR Review Modal --}}
 <div class="modal fade" id="bulkPostFbrModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header border-bottom">
-                <h6 class="modal-title fw-semibold text-primary">
-                    <i class="fas fa-paper-plane me-2"></i> Review & Post to FBR
-                </h6>
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom py-2 px-3 bg-light">
+                <div>
+                    <h6 class="modal-title fw-semibold text-primary mb-0" style="font-size: 15px;">
+                        <i class="fas fa-paper-plane me-2"></i> Review & Post to FBR
+                    </h6>
+                    <small class="text-muted" style="font-size: 11.5px;">Review selected invoices and tax breakup before transmitting to FBR live portal.</small>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-3">
-                {{-- Summary row --}}
+                {{-- Summary Metrics Cards --}}
                 <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <div class="border rounded p-2 bg-light text-center">
-                            <span class="text-muted fs-12 d-block">Selected Invoices</span>
-                            <span class="fw-bold fs-16 text-primary" id="modalBulkCount">0</span>
+                    <div class="col-sm-3 col-6">
+                        <div class="fbr-modal-stat-card text-center">
+                            <span class="fbr-stat-label">Selected Invoices</span>
+                            <span class="fbr-stat-val text-primary" id="modalBulkCount">0</span>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="border rounded p-2 bg-light text-center">
-                            <span class="text-muted fs-12 d-block">Total Net Value</span>
-                            <span class="fw-bold fs-16 text-success" id="modalBulkTotalAmount">0.00 PKR</span>
+                    <div class="col-sm-3 col-6">
+                        <div class="fbr-modal-stat-card text-center">
+                            <span class="fbr-stat-label">Amount (Excl. Tax)</span>
+                            <span class="fbr-stat-val text-dark" id="modalBulkAmount">0.00 PKR</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-3 col-6">
+                        <div class="fbr-modal-stat-card text-center">
+                            <span class="fbr-stat-label">GST Amount</span>
+                            <span class="fbr-stat-val text-warning" id="modalBulkGst">0.00 PKR</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-3 col-6">
+                        <div class="fbr-modal-stat-card text-center">
+                            <span class="fbr-stat-label">Total Net Value</span>
+                            <span class="fbr-stat-val text-success" id="modalBulkTotalAmount">0.00 PKR</span>
                         </div>
                     </div>
                 </div>
 
                 {{-- Preview Table --}}
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <label class="fw-medium fs-13 text-muted mb-0">Selected Invoices Preview</label>
-                    <small class="text-muted">Click ❌ to remove an invoice from this batch</small>
+                    <label class="fw-semibold text-muted mb-0" style="font-size: 12.5px;">Selected Invoices Preview</label>
+                    <small class="text-muted" style="font-size: 11px;">
+                        Click <i class="fas fa-times text-danger"></i> to remove an invoice from this batch
+                    </small>
                 </div>
-                <div class="table-responsive border rounded" style="max-height: 280px; overflow-y: auto;">
-                    <table class="table table-sm text-nowrap align-middle mb-0" id="modalBulkPreviewTable">
-                        <thead class="table-light sticky-top">
+                <div class="fbr-table-container table-responsive">
+                    <table class="table table-sm text-nowrap align-middle mb-0" id="modalBulkPreviewTable" style="font-size: 12px;">
+                        <thead class="table-light sticky-top" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;">
                             <tr>
                                 <th>DocNo</th>
                                 <th>Date</th>
                                 <th>Customer</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">GST Amount</th>
                                 <th class="text-end">Net Amount</th>
                                 <th class="text-center" style="width: 50px;">Remove</th>
                             </tr>
@@ -863,12 +979,21 @@
                         <tbody id="modalBulkPreviewBody">
                             <!-- Populated dynamically via JS -->
                         </tbody>
+                        <tfoot class="table-light sticky-bottom fw-semibold" style="font-size: 12px; border-top: 2px solid #e2e8f0;">
+                            <tr>
+                                <th colspan="3" class="text-end">Totals:</th>
+                                <th class="text-end" id="modalBulkFooterAmount">0.00 PKR</th>
+                                <th class="text-end text-warning" id="modalBulkFooterGst">0.00 PKR</th>
+                                <th class="text-end text-success fw-bold" id="modalBulkFooterNet">0.00 PKR</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
 
-                <div class="alert alert-info py-2 px-3 mt-3 mb-0 fs-12 d-flex align-items-center">
-                    <i class="fas fa-info-circle me-2 fs-14"></i>
-                    <span>Submitting will transmit these invoices to the FBR live portal. Ensure invoice details are correct before posting.</span>
+                <div class="alert alert-info py-2 px-3 mt-3 mb-0 d-flex align-items-center" style="font-size: 12px;">
+                    <i class="fas fa-info-circle me-2 fs-14 text-info"></i>
+                    <span>Submitting will transmit these invoices to the FBR live portal. Ensure invoice details and tax calculations are correct before posting.</span>
                 </div>
 
                 <form id="bulkPostFbrForm" action="{{ route('invoices.bulk-post-fbr') }}" method="POST" class="d-none">
@@ -877,7 +1002,7 @@
                     <div id="bulkPostHiddenInputs"></div>
                 </form>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer py-2 px-3 border-top bg-light">
                 <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-sm btn-primary" id="modalConfirmSubmitFbrBtn" onclick="submitBulkFbrForm()">
                     <i class="fas fa-paper-plane me-1"></i> <span id="modalSubmitBtnLabel">Confirm & Submit to FBR</span>
@@ -1063,10 +1188,17 @@
         const checkedBoxes = Array.from(document.querySelectorAll('.invoice-checkbox:checked'));
         const tbody = document.getElementById('modalBulkPreviewBody');
         const countEl = document.getElementById('modalBulkCount');
+        const amountEl = document.getElementById('modalBulkAmount');
+        const gstEl = document.getElementById('modalBulkGst');
         const totalEl = document.getElementById('modalBulkTotalAmount');
+        const footerAmountEl = document.getElementById('modalBulkFooterAmount');
+        const footerGstEl = document.getElementById('modalBulkFooterGst');
+        const footerNetEl = document.getElementById('modalBulkFooterNet');
         const submitBtnLabel = document.getElementById('modalSubmitBtnLabel');
 
-        let totalAmount = 0;
+        let totalAmountVal = 0;
+        let totalGstVal = 0;
+        let totalNetVal = 0;
         let html = '';
 
         checkedBoxes.forEach(function(cb) {
@@ -1074,20 +1206,29 @@
             const docNo = cb.getAttribute('data-docno') || 'N/A';
             const date = cb.getAttribute('data-date') || '-';
             const customer = cb.getAttribute('data-customer') || 'N/A';
+            const amountVal = parseFloat(cb.getAttribute('data-amount')) || 0;
+            const gstVal = parseFloat(cb.getAttribute('data-gst')) || 0;
             const netVal = parseFloat(cb.getAttribute('data-net')) || 0;
-            const netFormatted = cb.getAttribute('data-net-formatted') || (netVal.toFixed(2) + ' PKR');
 
-            totalAmount += netVal;
+            totalAmountVal += amountVal;
+            totalGstVal += gstVal;
+            totalNetVal += netVal;
+
+            const amountFormatted = amountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PKR';
+            const gstFormatted = gstVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PKR';
+            const netFormatted = netVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PKR';
 
             html += `
                 <tr id="modal_row_${id}">
-                    <td class="fw-medium">${docNo}</td>
+                    <td class="fw-semibold text-dark">${docNo}</td>
                     <td>${date}</td>
                     <td>${customer}</td>
-                    <td class="text-end fw-semibold">${netFormatted}</td>
+                    <td class="text-end" style="font-variant-numeric: tabular-nums;">${amountFormatted}</td>
+                    <td class="text-end text-muted" style="font-variant-numeric: tabular-nums;">${gstFormatted}</td>
+                    <td class="text-end fw-bold text-success" style="font-variant-numeric: tabular-nums;">${netFormatted}</td>
                     <td class="text-center">
-                        <button type="button" class="btn btn-xs btn-outline-danger" 
-                                style="padding: 2px 6px; font-size: 11px;"
+                        <button type="button" class="btn btn-xs btn-outline-danger rounded-circle p-0" 
+                                style="width: 24px; height: 24px; line-height: 22px; font-size: 10.5px;"
                                 onclick="removeModalBulkRow('${id}')" 
                                 title="Remove from batch">
                             <i class="fas fa-times"></i>
@@ -1099,7 +1240,19 @@
 
         if (tbody) tbody.innerHTML = html;
         if (countEl) countEl.textContent = checkedBoxes.length;
-        if (totalEl) totalEl.textContent = totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PKR';
+        
+        const formattedAmountTotal = totalAmountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PKR';
+        const formattedGstTotal = totalGstVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PKR';
+        const formattedNetTotal = totalNetVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PKR';
+
+        if (amountEl) amountEl.textContent = formattedAmountTotal;
+        if (gstEl) gstEl.textContent = formattedGstTotal;
+        if (totalEl) totalEl.textContent = formattedNetTotal;
+
+        if (footerAmountEl) footerAmountEl.textContent = formattedAmountTotal;
+        if (footerGstEl) footerGstEl.textContent = formattedGstTotal;
+        if (footerNetEl) footerNetEl.textContent = formattedNetTotal;
+
         if (submitBtnLabel) submitBtnLabel.textContent = `Confirm & Submit (${checkedBoxes.length}) to FBR`;
     }
 

@@ -42,7 +42,7 @@
 				</button>
 				<ul class="dropdown-menu">
 					@tenantCan('Customers', 'Import')
-					<li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+					<li><a class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#customerImportModal"><i class="fas fa-file-import me-1 text-primary"></i> Import</a></li>
 					@endtenantCan
 					@tenantCan('Customers', 'Print')
 					<li><a class="dropdown-item" href="#">Bulk Print</a></li>
@@ -589,5 +589,75 @@ function showToast(type, message) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
 }
+
+function handleCustomerImportSubmit(form) {
+    const btn = document.getElementById('btnSubmitCustomerImport');
+    const txt = document.getElementById('btnSubmitImportText');
+    if (btn) {
+        btn.disabled = true;
+        if (txt) txt.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Importing...';
+    }
+}
 </script>
+
+{{-- Customer Import Modal --}}
+<div class="modal fade" id="customerImportModal" tabindex="-1" aria-labelledby="customerImportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('customers.import') }}" method="POST" enctype="multipart/form-data" id="customerImportForm" onsubmit="handleCustomerImportSubmit(this)">
+                @csrf
+                <div class="modal-header border-bottom py-2 px-3 bg-light">
+                    <h6 class="modal-title fw-semibold text-primary mb-0" id="customerImportModalLabel" style="font-size: 15px;">
+                        <i class="fas fa-file-import me-2"></i> Import Customers
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    {{-- Download Sample Template Strip --}}
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-light border rounded">
+                        <div>
+                            <div class="fw-semibold text-dark fs-13"><i class="fas fa-file-excel text-success me-1"></i> Sample Template</div>
+                            <small class="text-muted">Download pre-formatted Excel/CSV template</small>
+                        </div>
+                        <a href="{{ route('customers.import-template') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download me-1"></i> Download Template
+                        </a>
+                    </div>
+
+                    {{-- File Input --}}
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label fw-semibold fs-13 text-dark">
+                            Select File <span class="text-danger">*</span>
+                        </label>
+                        <input type="file" 
+                               name="import_file" 
+                               id="import_file" 
+                               class="form-control form-control-sm" 
+                               accept=".xlsx, .xls, .csv, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+                               required>
+                        <small class="text-muted d-block mt-1">Supported formats: <strong>.xlsx, .xls, .csv</strong> (Max: 10MB)</small>
+                    </div>
+
+                    {{-- Guidelines & Compulsory Fields --}}
+                    <div class="alert alert-secondary py-2 px-3 mb-0" style="font-size: 12px; background-color: #f8fafc; border-color: #e2e8f0;">
+                        <div class="fw-semibold text-dark mb-1"><i class="fas fa-info-circle text-info me-1"></i> Import Guidelines:</div>
+                        <ul class="mb-1 ps-3 text-muted" style="line-height: 1.5;">
+                            <li><strong class="text-danger">Required Columns (Highlighted Yellow in Template):</strong> <code>RegistrationNo/NTN *</code>, <code>BusinessName *</code>, <code>Province *</code>.</li>
+                            <li><strong>PartyType:</strong> Automatically set to <code>1</code> (Customer).</li>
+                            <li><strong>Status:</strong> Automatically set to <code>1</code> (Active).</li>
+                            <li><strong>SameAsBilling:</strong> <code>1</code> = Yes, <code>0</code> = No (Defaults to 1).</li>
+                            <li><strong>IsFiler:</strong> <code>1</code> = Filer, <code>0</code> = Non-Filer (Defaults to 0).</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3 border-top bg-light">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-primary" id="btnSubmitCustomerImport">
+                        <i class="fas fa-upload me-1"></i> <span id="btnSubmitImportText">Upload & Import</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
