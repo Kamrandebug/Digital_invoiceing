@@ -106,6 +106,7 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
         $query->where(function($q) use ($search) {
             $q->where('DisplayName',   'LIKE', "%{$search}%")
               ->orWhere('BusinessName', 'LIKE', "%{$search}%")
+              ->orWhere('AccountNo',    'LIKE', "%{$search}%")
               ->orWhere('FirstName',    'LIKE', "%{$search}%")
               ->orWhere('LastName',     'LIKE', "%{$search}%")
               ->orWhere('Address',      'LIKE', "%{$search}%")
@@ -150,15 +151,17 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                     WHEN (
                         SELECT COUNT(*) 
                         FROM temp_customer tc 
-                        WHERE tc.RequestID = t.RequestID AND tc.AccountNo = t.AccountNo
+                        WHERE tc.RequestID = t.RequestID 
+                          AND LOWER(TRIM(tc.AccountNo)) = LOWER(TRIM(t.AccountNo))
                     ) > 1 
-                        THEN 'Duplicate AccountNo in batch'
+                        THEN CONCAT('Duplicate AccountNo \'', TRIM(t.AccountNo), '\' in batch')
                     WHEN EXISTS (
                         SELECT 1 
                         FROM tbl_customer cust 
-                        WHERE cust.AccountNo = t.AccountNo AND cust.Status != 2
+                        WHERE LOWER(TRIM(cust.AccountNo)) = LOWER(TRIM(t.AccountNo))
+                          AND (cust.Status != 2 OR cust.Status IS NULL)
                     ) 
-                        THEN CONCAT('AccountNo ', t.AccountNo, ' already exists in database')
+                        THEN CONCAT('AccountNo \'', TRIM(t.AccountNo), '\' already exists')
                     ELSE 'Pass' END AS `ErrMsg`
                 FROM `temp_customer` t
                 WHERE t.RequestID = ?
@@ -166,39 +169,55 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
             SET	uu.ErrMsg = u.ErrMsg;
         ", [$requestID]);
 
-        $errorSummary = DB::selectOne("
-            SELECT
-                IFNULL(COUNT(*),0) AS cnt,
-                GROUP_CONCAT(DISTINCT t.ErrMsg ORDER BY t.ErrMsg SEPARATOR ', ') AS ErrMsg
-            FROM `temp_customer` t
-            WHERE t.`ErrMsg` IS NOT NULL
-              AND t.`ErrMsg` <> 'Pass'
-              AND t.RequestID = ?
-        ", [$requestID]);
+        $failedRows = DB::table('temp_customer')
+            ->where('RequestID', $requestID)
+            ->whereNotNull('ErrMsg')
+            ->where('ErrMsg', '<>', 'Pass')
+            ->orderBy('ExcelRow', 'asc')
+            ->orderBy('ID', 'asc')
+            ->get(['ID', 'ExcelRow', 'ErrMsg']);
 
-        if ((int) ($errorSummary->cnt ?? 0) > 0) {
+        if ($failedRows->isNotEmpty()) {
+            $errors = [];
+            foreach ($failedRows as $row) {
+                $rowPrefix = !empty($row->ExcelRow) ? "Row {$row->ExcelRow}:" : "Row ID {$row->ID}:";
+                $errors[] = "{$rowPrefix} {$row->ErrMsg}";
+            }
+
             return [
                 'status' => false,
-                'message' => $errorSummary->ErrMsg ?: 'Unable to add customer due to invalid data.',
+                'message' => implode("<br>", $errors),
+                'errors' => $errors,
             ];
         }
 
         DB::statement("
             INSERT INTO tbl_customer (AccountNo,PartyType,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
-                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn,RequestID)
+                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn)
             SELECT 	AccountNo,PartyType,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
-                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn,RequestID
+                Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn
             FROM 	temp_customer
             WHERE RequestID = ? AND ErrMsg = 'Pass'
         ", [$requestID]);
 
         try {
-            $insertedRecords = DB::connection('tenant')->table('tbl_customer')->where('RequestID', $requestID)->get();
-            foreach ($insertedRecords as $inserted) {
-                $module = ((int)$inserted->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
-                \App\Services\AuditLogService::log('CREATE', $module, $inserted->ID, null, (array)$inserted);
+            $accountNos = DB::connection('tenant')->table('temp_customer')
+                ->where('RequestID', $requestID)
+                ->where('ErrMsg', 'Pass')
+                ->pluck('AccountNo')
+                ->filter()
+                ->all();
+
+            if (!empty($accountNos)) {
+                $insertedRecords = DB::connection('tenant')->table('tbl_customer')
+                    ->whereIn('AccountNo', $accountNos)
+                    ->get();
+                foreach ($insertedRecords as $inserted) {
+                    $module = ((int)$inserted->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
+                    \App\Services\AuditLogService::log('CREATE', $module, $inserted->ID, null, (array)$inserted);
+                }
             }
         } catch (\Throwable $e) {
             \Log::error('Failed to log customer creation: ' . $e->getMessage());

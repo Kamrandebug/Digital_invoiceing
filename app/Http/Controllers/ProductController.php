@@ -1909,4 +1909,210 @@ class ProductController extends Controller
             app(StockService::class)->refreshStockStatus($productId);
         }
     }
+
+    /**
+     * Download Excel import sample template for Products.
+     */
+    public function downloadImportTemplate()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Products Import');
+
+        // Headers
+        $headers = [
+            'Product Code *',
+            'Product Name *',
+            'Product Type',
+            'Sale Price *',
+            'Fixed Notified Value (TP Rate)',
+            'HS Code',
+            'UOM',
+            'Sale Type',
+            'Sale Type Rate',
+            'SRO Schedule',
+            'SRO Item Serial No',
+            'Product Description'
+        ];
+
+        $sheet->fromArray([$headers], NULL, 'A1');
+
+        // Base header styling (Dark Teal background)
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '136056']], // Dark Teal matching Customer/Supplier
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']]]
+        ];
+        $sheet->getStyle('A1:L1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(28);
+
+        // Highlight Required Fields
+        $requiredStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => '713F12'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF08A']], // Yellow highlight
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM, 'color' => ['rgb' => 'EAB308']]]
+        ];
+        $sheet->getStyle('A1')->applyFromArray($requiredStyle); // Product Code *
+        $sheet->getStyle('B1')->applyFromArray($requiredStyle); // Product Name *
+        $sheet->getStyle('D1')->applyFromArray($requiredStyle); // Sale Price *
+
+        // Sample Data Rows
+        $sampleData = [
+            [
+                'PRD-000001', 'Paracetamol 500mg Tablets', 'Product', 150.00, 0.00, 
+                '3004.9099', 'Numbers, pieces, units', 'Goods at standard rate (default)', '18%', 
+                '', '', 'Pain relief paracetamol tablets 500mg blister pack'
+            ],
+            [
+                'PRD-000002', 'Consultation & Technical Services', 'Services', 2500.00, 0.00, 
+                '9815.9000', 'Numbers, pieces, units', 'Services at Standard Rate', '16%', 
+                '', '', 'Professional consultation service hourly rate'
+            ],
+            [
+                'PRD-000003', 'Industrial Raw Sugar (Bag 50kg)', 'Product', 6500.00, 120.00, 
+                '1701.9910', 'KG', 'Goods at Reduced Rate', '1%', 
+                'EIGHTH SCHEDULE Table 1', '70', 'Refined industrial white sugar 50kg bag'
+            ]
+        ];
+
+        $sheet->fromArray($sampleData, NULL, 'A2');
+
+        // Set explicit 2-decimal formatting on number/rate columns
+        $sheet->getStyle('D2:E4')->getNumberFormat()->setFormatCode('0.00'); // SalePrice, TPRate
+
+        // Auto size columns
+        foreach (range('A', 'L') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'Product_Import_Template.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /**
+     * Import products from Excel or CSV
+     */
+    public function importProducts(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:xlsx,xls,csv,txt|max:10240',
+        ], [
+            'import_file.required' => 'Please select an Excel or CSV file to import.',
+            'import_file.mimes'    => 'Import file must be an Excel workbook (.xlsx, .xls) or CSV file (.csv).',
+            'import_file.max'      => 'Import file must not exceed 10 MB.',
+        ]);
+
+        try {
+            $requestId = (string) Str::uuid();
+            $userId = auth()->id() ?? 1;
+            $now = now()->toDateTimeString();
+
+            $import = new \App\Imports\ProductImport();
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('import_file'));
+            $rows = $import->mappedRows();
+
+            if (empty($rows)) {
+                $msg = 'No data rows found in the import file.';
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => 'error', 'message' => $msg], 422);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+
+            // Fetch current maximum ID in temp_product and tbl_product to assign sequential IDs
+            $maxId = (int) (DB::table('temp_product')->max('ID') ?? 0);
+            $maxProdId = (int) (DB::table('tbl_product')->max('ID') ?? 0);
+            $currentId = max($maxId, $maxProdId);
+
+            $insertRows = [];
+            foreach ($rows as $index => $row) {
+                $currentId++;
+                $code = trim((string)($row['Code'] ?? ''));
+                if ($code === '') {
+                    $code = 'PRD-' . str_pad((string)$currentId, 6, '0', STR_PAD_LEFT);
+                }
+
+                $tpRate = (float)($row['TPRate'] ?? 0);
+                $isFixedRate = ($tpRate > 1) ? 1 : 0;
+
+                $insertRows[] = [
+                    'ID'                 => $currentId,
+                    'TID'                => $currentId,
+                    'ExcelRow'           => $row['RowNo'] ?? ($index + 2),
+                    'VoucherID'          => 0,
+                    'Name'               => $row['Name'] ?? null,
+                    'Code'               => $code,
+                    'Type'               => $row['Type'] ?? 'Product',
+                    'CategoryID'         => 1,
+                    'CurrentQuantity'    => 0.0,
+                    'Unit'               => 1,
+                    'SalePrice'          => (float)($row['SalePrice'] ?? 0),
+                    'Cost'               => (float)($row['Cost'] ?? 0),
+                    'TPRate'             => $tpRate,
+                    'IsFixedRate'        => $isFixedRate,
+                    'Weight'             => (float)($row['Weight'] ?? 0),
+                    'Image'              => null,
+                    'HsCode'             => $row['HsCode'] ?? null,
+                    'UOM'                => $row['UOM'] ?? null,
+                    'Uom_Desc'           => $row['Uom_Desc'] ?? null,
+                    'SaleType'           => $row['SaleType'] ?? null,
+                    'SaleTypeDesc'       => $row['SaleTypeDesc'] ?? null,
+                    'SaleTypeToRate'     => $row['SaleTypeToRate'] ?? null,
+                    'SaleTypeToRateDesc' => $row['SaleTypeToRateDesc'] ?? null,
+                    'SroSchedule'        => $row['SroSchedule'] ?? null,
+                    'SroScheduleDesc'    => $row['SroScheduleDesc'] ?? null,
+                    'SroItem'            => $row['SroItem'] ?? null,
+                    'SroItemSerialNo'    => $row['SroItemSerialNo'] ?? null,
+                    'SaleInformation'    => $row['SaleInformation'] ?? ($row['Name'] ?? $code),
+                    'Status'             => 1,
+                    'CreatedBy'          => (int)$userId,
+                    'CreatedOn'          => $now,
+                    'UpdatedBy'          => (int)$userId,
+                    'UpdatedOn'          => $now,
+                    'ErrMsg'             => null,
+                    'Flag'               => 0,
+                    'RequestID'          => $requestId,
+                ];
+            }
+
+            foreach (array_chunk($insertRows, 200) as $chunk) {
+                DB::table('temp_product')->insert($chunk);
+            }
+
+            $saveResult = ProductModel::save_transaction(['RequestID' => $requestId]);
+            if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+                $errorMsg = $saveResult['message'] ?? 'Unable to import products.';
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => 'error', 
+                        'message' => $errorMsg, 
+                        'errors' => $saveResult['errors'] ?? [$errorMsg]
+                    ], 422);
+                }
+                return redirect()->back()->with('error', $errorMsg);
+            }
+
+            $successMsg = count($insertRows).' Product(s) imported successfully!';
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'success', 'message' => $successMsg]);
+            }
+
+            return redirect()->route('products.index')->with('success', $successMsg);
+        } catch (\Throwable $e) {
+            \Log::error('Product import failed', ['error' => $e->getMessage()]);
+            $err = 'Import failed: '.$e->getMessage();
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'error', 'message' => $err], 500);
+            }
+            return redirect()->back()->with('error', $err);
+        }
+    }
 }

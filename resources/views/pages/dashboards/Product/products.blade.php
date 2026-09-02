@@ -6,8 +6,7 @@
 @extends('layouts.master')
 
 @section('styles')
-<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
-
+<!--<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">-->
 @endsection
 
 @section('content')
@@ -28,7 +27,7 @@
                 </button>
                 <ul class="dropdown-menu">
                     @tenantCan('Products', 'Import')
-                    <li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#productImportModal"><i class="fas fa-file-import me-1 text-primary"></i> Import</a></li>
                     @endtenantCan
                     @tenantCan('Products', 'Print')
                     <li><a class="dropdown-item" href="#">Bulk Print</a></li>
@@ -45,25 +44,25 @@
 
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
-    <i class="fas fa-check-circle"></i> {{ session('success') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 @if(session('error'))
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <i class="fas fa-exclamation-circle me-1"></i> {!! session('error') !!}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 @if($errors->any())
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-triangle"></i>
+    <i class="fas fa-exclamation-triangle me-1"></i>
     @foreach ($errors->all() as $error)
-        {{ $error }}
+        {{ $error }}<br>
     @endforeach
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
@@ -322,10 +321,67 @@
     </div>
 </div>
 
+<!-- Product Import Modal -->
+<div class="modal fade" id="productImportModal" tabindex="-1" aria-labelledby="productImportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('products.import') }}" method="POST" enctype="multipart/form-data" id="productImportForm" onsubmit="handleProductImportSubmit(this)">
+                @csrf
+                <div class="modal-header border-bottom py-2 px-3 bg-light">
+                    <h6 class="modal-title fw-semibold text-primary mb-0" id="productImportModalLabel" style="font-size: 15px;">
+                        <i class="fas fa-file-import me-2"></i> Import Products
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    {{-- Download Sample Template Strip --}}
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-light border rounded">
+                        <div>
+                            <div class="fw-semibold text-dark fs-13"><i class="fas fa-file-excel text-success me-1"></i> Sample Template</div>
+                            <small class="text-muted">Download pre-formatted Excel/CSV template</small>
+                        </div>
+                        <a href="{{ route('products.import-template') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download me-1"></i> Download Template
+                        </a>
+                    </div>
+
+                    {{-- File Input --}}
+                    <div class="mb-0">
+                        <label for="product_import_file" class="form-label fw-semibold fs-13 text-dark">
+                            Select File <span class="text-danger">*</span>
+                        </label>
+                        <input type="file" 
+                               name="import_file" 
+                               id="product_import_file" 
+                               class="form-control form-control-sm" 
+                               accept=".xlsx, .xls, .csv, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+                               required>
+                        <small class="text-muted d-block mt-1">Supported formats: <strong>.xlsx, .xls, .csv</strong> (Max: 10MB)</small>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3 border-top bg-light">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-primary" id="btnSubmitProductImport">
+                        <i class="fas fa-upload me-1"></i> <span id="btnSubmitProductImportText">Upload & Import</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
 <script>
+function handleProductImportSubmit(form) {
+    const btn = document.getElementById('btnSubmitProductImport');
+    const txt = document.getElementById('btnSubmitProductImportText');
+    if (btn) {
+        btn.disabled = true;
+        if (txt) txt.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Importing...';
+    }
+}
     let deleteProductId = null;
 
     function confirmDelete(id, name) {

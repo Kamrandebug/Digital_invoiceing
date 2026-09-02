@@ -162,6 +162,8 @@ Route::middleware(['auth', 'tenant'])->prefix('products')->name('products.')->gr
     Route::post('/lookups/unit', [ProductController::class, 'storeQuickUnit'])->middleware('tenant.role:owner,admin,accountant')->name('lookups.unit-store');
 
     Route::get('/export/csv', [ProductController::class, 'exportCSV'])->name('exportCSV');
+    Route::get('/import/template', [ProductController::class, 'downloadImportTemplate'])->name('import-template');
+    Route::post('/import', [ProductController::class, 'importProducts'])->middleware('tenant.role:owner,admin,accountant')->name('import');
     Route::get('/modal', [ProductController::class, 'modal'])->name('modal');
     Route::get('/{id}/modal', [ProductController::class, 'modal'])->name('modal.id');
 

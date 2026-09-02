@@ -151,17 +151,84 @@ class ProductModel extends Model
         $requestID = $validated['RequestID'] ?? '';
         $tenantDbQuoted = self::tenantDatabaseQuoted();
 
+        // 1. Unified ID Resolution Query (Strict Lookup — No Forced Defaults)
+        DB::connection('landlord')->statement("
+            UPDATE {$tenantDbQuoted}.`temp_product` t
+            LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fhu 
+              ON (
+                  fhu.`hs_CODE` = TRIM(t.`HsCode`) 
+                  AND (fhu.`description` = TRIM(t.`Uom_Desc`) OR fhu.`uoM_ID` = t.`UOM`)
+              )
+            LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc 
+              ON (
+                  fttc.`transactioN_DESC` = TRIM(t.`SaleTypeDesc`) 
+                  OR fttc.`transactioN_TYPE_ID` = t.`SaleType`
+              )
+            LEFT JOIN `core_digital_invoicing`.`fbr_sale_type_to_rate` fsttr 
+              ON (
+                  fsttr.`transactioN_TYPE_ID` = COALESCE(fttc.`transactioN_TYPE_ID`, t.`SaleType`)
+                  AND (fsttr.`ratE_DESC` = TRIM(t.`SaleTypeToRateDesc`) OR fsttr.`ratE_ID` = t.`SaleTypeToRate`)
+              )
+            LEFT JOIN `core_digital_invoicing`.`fbr_sro_schedule` fss 
+              ON (
+                  fss.`ratE_ID` = COALESCE(fsttr.`ratE_ID`, t.`SaleTypeToRate`)
+                  AND (fss.`srO_DESC` = TRIM(t.`SroScheduleDesc`) OR fss.`srO_ID` = t.`SroSchedule`)
+              )
+            LEFT JOIN `core_digital_invoicing`.`fbr_sro_item` fsi 
+              ON (
+                  fsi.`srO_ID` = COALESCE(fss.`srO_ID`, t.`SroSchedule`)
+                  AND (fsi.`srO_ITEM_DESC` = TRIM(t.`SroItemSerialNo`) OR fsi.`srO_ITEM_ID` = t.`SroItem`)
+              )
+            SET 
+                t.`SaleInformation` = COALESCE(NULLIF(TRIM(t.`SaleInformation`), ''), t.`Name`),
+                t.`UOM`             = fhu.`uoM_ID`,
+                t.`SaleType`        = fttc.`transactioN_TYPE_ID`,
+                t.`SaleTypeToRate`  = fsttr.`ratE_ID`,
+                t.`SroSchedule`     = fss.`srO_ID`,
+                t.`SroItem`         = fsi.`srO_ITEM_ID`
+            WHERE t.`RequestID` = ?
+        ", [$requestID]);
+
+        // 2. Validation Query (Catches Invalid/Unmatched Lookups and missing required data)
         DB::connection('landlord')->statement("
             UPDATE {$tenantDbQuoted}.`temp_product` uu
             JOIN (
                 SELECT t.ID,
                     CASE
+                        -- Basic required fields
                         WHEN COALESCE(TRIM(t.`Name`), '') = '' THEN 'Invalid Product Name'
                         WHEN COALESCE(TRIM(t.`Code`), '') = '' THEN 'Invalid Product Code'
+                        
+                        -- Batch & Database Duplicates
+                        WHEN (
+                            SELECT COUNT(*) FROM {$tenantDbQuoted}.`temp_product` tp 
+                            WHERE tp.RequestID = t.RequestID 
+                              AND LOWER(TRIM(tp.Code)) = LOWER(TRIM(t.Code))
+                        ) > 1 THEN CONCAT('Product Code \'', TRIM(t.Code), '\' duplicated in batch')
                         WHEN EXISTS (
                             SELECT 1 FROM {$tenantDbQuoted}.`tbl_product` p
-                            WHERE p.`Code` = BINARY t.`Code` AND p.`Status` <> 2
-                        ) THEN 'Product Code already exist'
+                            WHERE LOWER(TRIM(p.`Code`)) = LOWER(TRIM(t.`Code`)) 
+                              AND (p.`Status` <> 2 OR p.`Status` IS NULL)
+                        ) THEN CONCAT('Product Code \'', TRIM(t.Code), '\' already exists')
+
+                        -- FBR Lookup Validations (Reports exact invalid text if provided but unresolved)
+                        WHEN COALESCE(TRIM(t.`HsCode`), '') <> '' 
+                          AND NOT EXISTS (
+                              SELECT 1 FROM `core_digital_invoicing`.`fbr_hscode_uom` h 
+                              WHERE h.`hs_CODE` = TRIM(t.`HsCode`)
+                          ) THEN CONCAT('Invalid HS Code \'', TRIM(t.HsCode), '\'')
+
+                        WHEN COALESCE(TRIM(t.`Uom_Desc`), '') <> '' AND t.`UOM` IS NULL 
+                            THEN CONCAT('Invalid UOM \'', TRIM(t.Uom_Desc), '\' for HS Code \'', COALESCE(TRIM(t.HsCode), 'N/A'), '\'')
+                        WHEN COALESCE(TRIM(t.`SaleTypeDesc`), '') <> '' AND t.`SaleType` IS NULL 
+                            THEN CONCAT('Invalid Sale Type \'', TRIM(t.SaleTypeDesc), '\'')
+                        WHEN COALESCE(TRIM(t.`SaleTypeToRateDesc`), '') <> '' AND t.`SaleTypeToRate` IS NULL 
+                            THEN CONCAT('Invalid Sale Type Rate \'', TRIM(t.SaleTypeToRateDesc), '\'')
+                        WHEN COALESCE(TRIM(t.`SroScheduleDesc`), '') <> '' AND t.`SroSchedule` IS NULL 
+                            THEN CONCAT('Invalid SRO Schedule \'', TRIM(t.SroScheduleDesc), '\'')
+                        WHEN COALESCE(TRIM(t.`SroItemSerialNo`), '') <> '' AND t.`SroItem` IS NULL 
+                            THEN CONCAT('Invalid SRO Item \'', TRIM(t.SroItemSerialNo), '\'')
+
                         ELSE 'Pass'
                     END AS ErrMsg
                 FROM {$tenantDbQuoted}.`temp_product` t
@@ -170,20 +237,25 @@ class ProductModel extends Model
             SET uu.ErrMsg = u.ErrMsg
         ", [$requestID]);
 
-        $errorSummary = DB::connection('landlord')->selectOne("
-            SELECT
-                IFNULL(COUNT(*), 0) AS cnt,
-                GROUP_CONCAT(DISTINCT t.ErrMsg ORDER BY t.ErrMsg SEPARATOR ', ') AS ErrMsg
-            FROM {$tenantDbQuoted}.`temp_product` t
-            WHERE t.`ErrMsg` IS NOT NULL
-              AND t.`ErrMsg` <> 'Pass'
-              AND t.RequestID = ?
-        ", [$requestID]);
+        $failedRows = DB::connection('tenant')->table('temp_product')
+            ->where('RequestID', $requestID)
+            ->whereNotNull('ErrMsg')
+            ->where('ErrMsg', '<>', 'Pass')
+            ->orderBy('ExcelRow', 'asc')
+            ->orderBy('ID', 'asc')
+            ->get();
 
-        if ((int) ($errorSummary->cnt ?? 0) > 0) {
+        if ($failedRows->isNotEmpty()) {
+            $errors = [];
+            foreach ($failedRows as $row) {
+                $rowPrefix = !empty($row->ExcelRow) ? "Row {$row->ExcelRow}:" : "Row ID {$row->ID}:";
+                $errors[] = "{$rowPrefix} {$row->ErrMsg}";
+            }
+
             return [
                 'status' => false,
-                'message' => $errorSummary->ErrMsg ?: 'Unable to add product due to invalid data.',
+                'message' => implode("<br>", $errors),
+                'errors' => $errors,
             ];
         }
 
@@ -195,22 +267,22 @@ class ProductModel extends Model
             )
             SELECT
                 VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,IsFixedRate,Weight,Image,
-                HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
-                SaleTypeToRate,fsttr.`ratE_DESC` AS SaleTypeToRateDesc,SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
-                SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
+                HsCode,UOM,COALESCE(t.Uom_Desc, fho.`description`),SaleType,COALESCE(t.SaleTypeDesc, fttc.`transactioN_DESC`),
+                SaleTypeToRate,COALESCE(t.SaleTypeToRateDesc, fsttr.`ratE_DESC`),SroSchedule,COALESCE(t.SroScheduleDesc, fss.`srO_DESC`),
+                SroItem,COALESCE(t.SroItemSerialNo, fsi.`srO_ITEM_DESC`),SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
             FROM {$tenantDbQuoted}.temp_product t
             LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fho ON (fho.`uoM_ID` = t.UOM AND fho.hs_CODE = t.HsCode)
             LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc ON (fttc.`transactioN_TYPE_ID` = t.SaleType)
             LEFT JOIN `core_digital_invoicing`.`fbr_sale_type_to_rate` fsttr ON (fsttr.`ratE_ID` = t.SaleTypeToRate AND fsttr.`transactioN_TYPE_ID` = fttc.`transactioN_TYPE_ID`)
             LEFT JOIN `core_digital_invoicing`.`fbr_sro_schedule` fss ON (fss.`srO_ID` = t.SroSchedule)
             LEFT JOIN `core_digital_invoicing`.`fbr_sro_item` fsi ON (fsi.`srO_ITEM_ID` = t.SroItem)
-            WHERE t.RequestID = ?
+            WHERE t.RequestID = ? AND (t.ErrMsg = 'Pass' OR t.ErrMsg IS NULL)
         ", [$requestID]);
 
         try {
-            $inserted = DB::connection('tenant')->table('tbl_product')->where('RequestID', $requestID)->first();
-            if ($inserted) {
-                \App\Services\AuditLogService::log('CREATE', 'PRODUCT', $inserted->ID, null, (array)$inserted);
+            $inserted = DB::connection('tenant')->table('tbl_product')->where('RequestID', $requestID)->get();
+            foreach ($inserted as $prod) {
+                \App\Services\AuditLogService::log('CREATE', 'PRODUCT', $prod->ID, null, (array)$prod);
             }
         } catch (\Throwable $e) {
             \Log::error('Failed to log product creation: ' . $e->getMessage());

@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('styles')
-<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
+<!--<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">-->
 @endsection
 
 @section('content')
@@ -21,15 +21,15 @@
 
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
-    <i class="fas fa-check-circle"></i> {{ session('success') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 @if(session('error'))
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <i class="fas fa-exclamation-circle me-1"></i> {!! session('error') !!}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
@@ -177,7 +177,7 @@
 <script>
 // ── Auto-hide alerts ──
 setTimeout(function() {
-    const alerts = document.querySelectorAll('.alert');
+    const alerts = document.querySelectorAll('.alert-success');
     alerts.forEach(alert => {
         alert.classList.remove('show');
         setTimeout(() => alert.remove(), 150);

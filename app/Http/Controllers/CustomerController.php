@@ -954,20 +954,20 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle($this->entitySingular().'s');
 
-        // Headers without PartyType and Status
+        // Headers without PartyType, Status, and IsFiler (IsFiler is derived from RegisterType)
         $headers = [
             'RegistrationNo/NTN *', 'Title', 'FirstName', 'LastName', 'BusinessName *', 'DisplayName', 
             'Email', 'Mobile', 'Phone', 'Website', 'Address', 'City', 'Province *', 'PostalCode', 'Country', 
             'SameAsBilling', 'BillingAddress', 'BillingCity', 'BillingProvince', 'BillingPostalCode', 
             'BillingCountry', 'NTN', 'SalesTaxNumber', 'CNIC', 'IsAdvanceTax', 'AdvanceTax', 
-            'IsFiler', 'RegisterType', 'FilerStatus', 'FilerStatusDate', 'Notes', 
+            'RegisterType', 'FilerStatus', 'FilerStatusDate', 'Notes', 
             'SalesTaxWithheldAtSource', 'ExtraTax %', 'FurtherTax %', 'FedTax %'
         ];
 
         $sheet->fromArray([$headers], NULL, 'A1');
 
         // Base header styling (Dark Teal background)
-        $sheet->getStyle('A1:AI1')->applyFromArray([
+        $sheet->getStyle('A1:AH1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
             'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '136056']],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
@@ -985,7 +985,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
         $sheet->getStyle('E1')->applyFromArray($requiredStyle); // BusinessName *
         $sheet->getStyle('M1')->applyFromArray($requiredStyle); // Province *
 
-        // Sample Data Rows (Without PartyType and Status, with 2 decimals on tax rates)
+        // Sample Data Rows (Without PartyType, Status, and IsFiler; with 2 decimals on tax rates)
         $prefix = $this->accountNoPrefix();
         $sampleData = [
             [
@@ -993,7 +993,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
                 'salman@example.com', '03001234567', '04231234567', 'https://example.com', 'Main Boulevard, Gulberg', 'Lahore', 'PUNJAB', '54000', 'Pakistan', 
                 '1', 'Main Boulevard, Gulberg', 'Lahore', 'PUNJAB', '54000', 'Pakistan', 
                 '7020599', '44444', '35202-1234567-1', '0', '0.00', 
-                '1', 'Registered', 'Active', '2026-01-01', 'Sample Active Filer', 
+                'Registered', 'Active', '2026-01-01', 'Sample Active Filer', 
                 '0.00', '0.00', '0.00', '0.00'
             ],
             [
@@ -1001,7 +1001,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
                 'khurram@example.com', '03211234567', '', '', 'Blue Area', 'Islamabad', 'ISLAMABAD CAPITAL TERRITORY', '44000', 'Pakistan', 
                 '1', 'Blue Area', 'Islamabad', 'ISLAMABAD CAPITAL TERRITORY', '44000', 'Pakistan', 
                 '', '', '', '0', '0.00', 
-                '0', 'Un-Registered', 'In-Active', '', 'Sample Non-Filer', 
+                'Un-Registered', 'In-Active', '', 'Sample Non-Filer', 
                 '0.00', '0.00', '0.00', '0.00'
             ],
             [
@@ -1009,7 +1009,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
                 'bilal@example.com', '03331234567', '', '', 'Korangi Industrial Area', 'Karachi', 'SINDH', '74900', 'Pakistan', 
                 '1', 'Korangi Industrial Area', 'Karachi', 'SINDH', '74900', 'Pakistan', 
                 '8988888', '999999', '42101-1234567-1', '1', '1.50', 
-                '1', 'Registered', 'Active', '2026-02-15', 'Sample with Advance Tax', 
+                'Registered', 'Active', '2026-02-15', 'Sample with Advance Tax', 
                 '50.00', '2.00', '1.00', '1.00'
             ]
         ];
@@ -1018,13 +1018,13 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
 
         // Set explicit 2-decimal formatting on number/rate columns
         $sheet->getStyle('Z2:Z4')->getNumberFormat()->setFormatCode('0.00'); // AdvanceTax
-        $sheet->getStyle('AF2:AI4')->getNumberFormat()->setFormatCode('0.00'); // SalesTaxWithheld, ExtraTax, FurtherTax, FedTax
+        $sheet->getStyle('AE2:AH4')->getNumberFormat()->setFormatCode('0.00'); // SalesTaxWithheld, ExtraTax, FurtherTax, FedTax
 
         // Auto size columns
         foreach (range('A', 'Z') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
-        foreach (['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI'] as $col) {
+        foreach (['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH'] as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -1082,9 +1082,13 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
                     $accountNo = $this->accountNoPrefix().'-'.str_pad((string)$currentId, 6, '0', STR_PAD_LEFT);
                 }
 
+                $regType = strtolower(trim((string)($row['RegisterType'] ?? '')));
+                $isFiler = in_array($regType, ['registered', '1', 'yes', 'true', 'filer']) ? 1 : 0;
+
                 $insertRows[] = [
                     'ID'                       => $currentId,
                     'TID'                      => $currentId,
+                    'ExcelRow'                 => $row['RowNo'] ?? ($index + 2),
                     'IsArchive'                => 0,
                     'VoucherID'                => 0,
                     'AccountNo'                => $accountNo,
@@ -1114,7 +1118,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
                     'NTN'                      => $row['NTN'] ?? null,
                     'SalesTaxNumber'           => $row['SalesTaxNumber'] ?? '',
                     'CNIC'                     => $row['CNIC'] ?? null,
-                    'IsFiler'                  => $row['IsFiler'] ?? 0,
+                    'IsFiler'                  => $isFiler,
                     'RegisterType'             => $row['RegisterType'] ?? null,
                     'FilerStatus'              => $row['FilerStatus'] ?? null,
                     'FilerStatusDate'          => $row['FilerStatusDate'] ?? null,
@@ -1143,7 +1147,11 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
             if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
                 $errorMsg = $saveResult['message'] ?? 'Unable to import '.$this->entitySingular().'.';
                 if ($request->expectsJson()) {
-                    return response()->json(['status' => 'error', 'message' => $errorMsg], 422);
+                    return response()->json([
+                        'status' => 'error', 
+                        'message' => $errorMsg, 
+                        'errors' => $saveResult['errors'] ?? [$errorMsg]
+                    ], 422);
                 }
                 return redirect()->back()->with('error', $errorMsg);
             }

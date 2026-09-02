@@ -338,21 +338,21 @@
 {{-- Session Messages --}}
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
-    <i class="fas fa-check-circle"></i> {{ session('success') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 @if(session('error'))
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <i class="fas fa-exclamation-circle me-1"></i> {!! session('error') !!}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 @if($errors->any())
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-triangle"></i>
-    @foreach ($errors->all() as $error) {{ $error }} @endforeach
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <i class="fas fa-exclamation-triangle me-1"></i>
+    @foreach ($errors->all() as $error) {{ $error }}<br> @endforeach
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
@@ -1072,9 +1072,9 @@
             debounceSearch();
         });
     });
-    // ── Auto-hide flash alerts ────────────────────────────────
+    // ── Auto-hide flash success alerts (errors remain until dismissed) ──────
     setTimeout(function () {
-        document.querySelectorAll('.alert').forEach(function(a) {
+        document.querySelectorAll('.alert-success').forEach(function(a) {
             a.classList.remove('show');
             setTimeout(function() { a.remove(); }, 150);
         });

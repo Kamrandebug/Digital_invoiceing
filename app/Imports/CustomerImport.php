@@ -169,8 +169,11 @@ class CustomerImport implements ToCollection
         $isAdvanceTax = $this->parseBoolean($this->getHeaderValue($values, $headerMap, 'isadvancetax'), 0);
         $advanceTax = (float)($this->getHeaderValue($values, $headerMap, 'advancetax') ?: 0.0);
 
-        $isFiler = $this->parseBoolean($this->getHeaderValue($values, $headerMap, 'isfiler'), 0);
         $registerType = $this->getHeaderValue($values, $headerMap, 'registertype');
+        $regClean = strtolower(trim((string)($registerType ?? '')));
+        $isFiler = in_array($regClean, ['registered', '1', 'yes', 'true', 'filer']) 
+            ? 1 
+            : $this->parseBoolean($this->getHeaderValue($values, $headerMap, 'isfiler'), 0);
         $filerStatus = $this->getHeaderValue($values, $headerMap, 'filerstatus');
         $filerStatusDate = $this->parseDate($this->getHeaderValue($values, $headerMap, 'filerstatusdate'));
 

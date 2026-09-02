@@ -59,26 +59,26 @@
 {{-- Messages --}}
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
-	<i class="fas fa-check-circle"></i> {{ session('success') }}
-	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	<i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 @if(session('error'))
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-	<i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	<i class="fas fa-exclamation-circle me-1"></i> {!! session('error') !!}
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 {{-- Errors --}}
 @if($errors->any())
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
-	<i class="fas fa-exclamation-triangle"></i> 
+	<i class="fas fa-exclamation-triangle me-1"></i> 
 	@foreach ($errors->all() as $error)
-		{{ $error }}
+		{{ $error }}<br>
 	@endforeach
-	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 <div class="row">
@@ -169,6 +169,7 @@
 					<thead>
 						<tr>
 							<th><input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+							<th>Code</th>
 							<th>Name <i class="fas fa-sort"></i></th>
 							<th>NTN</th>
 							<th>Province</th>
@@ -182,6 +183,7 @@
 						@forelse($customers as $customer)
 						<tr>
 							<td><input type="checkbox" class="customer-checkbox form-check-input" value="{{ $customer->ID }}"></td>
+							<td><span class="badge bg-light text-dark fw-semibold border">{{ $customer->AccountNo ?? '-' }}</span></td>
 							<td>
 								<strong>{{ $customer->BusinessName ?? ($customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName)) }}</strong>
 								@if($customer->DisplayName)
@@ -262,7 +264,7 @@
 						</tr>
 						@empty
 						<tr>
-							<td colspan="8" class="text-center py-5">
+							<td colspan="9" class="text-center py-5">
 								<i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
 								<p class="text-muted mb-2">No customers found.</p>
 								{{-- Add button --}}
@@ -363,10 +365,10 @@
 <script>
     let deleteCustomerId = null;
 
-    // Auto-hide alerts
+    // Auto-hide only success alerts after 5 seconds; keep error alerts visible until dismissed manually
     setTimeout(function() {
-        const alerts = document.querySelectorAll('.alert');
-        alerts.forEach(alert => {
+        const successAlerts = document.querySelectorAll('.alert-success');
+        successAlerts.forEach(alert => {
             alert.classList.remove('show');
             setTimeout(() => alert.remove(), 150);
         });
@@ -625,7 +627,7 @@ function handleCustomerImportSubmit(form) {
                     </div>
 
                     {{-- File Input --}}
-                    <div class="mb-3">
+                    <div class="mb-0">
                         <label for="import_file" class="form-label fw-semibold fs-13 text-dark">
                             Select File <span class="text-danger">*</span>
                         </label>
@@ -636,18 +638,6 @@ function handleCustomerImportSubmit(form) {
                                accept=".xlsx, .xls, .csv, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
                                required>
                         <small class="text-muted d-block mt-1">Supported formats: <strong>.xlsx, .xls, .csv</strong> (Max: 10MB)</small>
-                    </div>
-
-                    {{-- Guidelines & Compulsory Fields --}}
-                    <div class="alert alert-secondary py-2 px-3 mb-0" style="font-size: 12px; background-color: #f8fafc; border-color: #e2e8f0;">
-                        <div class="fw-semibold text-dark mb-1"><i class="fas fa-info-circle text-info me-1"></i> Import Guidelines:</div>
-                        <ul class="mb-1 ps-3 text-muted" style="line-height: 1.5;">
-                            <li><strong class="text-danger">Required Columns (Highlighted Yellow in Template):</strong> <code>RegistrationNo/NTN *</code>, <code>BusinessName *</code>, <code>Province *</code>.</li>
-                            <li><strong>PartyType:</strong> Automatically set to <code>1</code> (Customer).</li>
-                            <li><strong>Status:</strong> Automatically set to <code>1</code> (Active).</li>
-                            <li><strong>SameAsBilling:</strong> <code>1</code> = Yes, <code>0</code> = No (Defaults to 1).</li>
-                            <li><strong>IsFiler:</strong> <code>1</code> = Filer, <code>0</code> = Non-Filer (Defaults to 0).</li>
-                        </ul>
                     </div>
                 </div>
                 <div class="modal-footer py-2 px-3 border-top bg-light">
