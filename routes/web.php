@@ -194,6 +194,17 @@ Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->gr
     Route::get('/{id}', [InvoiceController::class, 'show'])->name('show');
 });
 
+// ── Bulk Invoices ─────────────────────────────────────────────
+use App\Http\Controllers\BulkInvoiceController;
+
+Route::middleware(['auth', 'tenant'])->prefix('bulk-invoices')->name('bulk-invoices.')->group(function () {
+    Route::get('/', [BulkInvoiceController::class, 'index'])->name('index');
+    Route::get('/import/template', [BulkInvoiceController::class, 'downloadImportTemplate'])->name('import-template');
+    Route::post('/import', [BulkInvoiceController::class, 'importInvoices'])->middleware('tenant.role:owner,admin,accountant')->name('import');
+    Route::get('/{id}/invoices', [BulkInvoiceController::class, 'getBatchInvoices'])->name('invoices');
+    Route::post('/rollback/{id}', [BulkInvoiceController::class, 'rollbackBatch'])->middleware('tenant.role:owner,admin,accountant')->name('rollback');
+});
+
 // ── Reports ───────────────────────────────────────────────────
 Route::middleware(['auth', 'tenant'])->prefix('reports')->name('reports.')->group(function () {
     Route::get('/sale', [SaleReportController::class, 'index'])->name('sale');

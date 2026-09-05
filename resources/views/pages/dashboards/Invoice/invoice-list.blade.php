@@ -318,9 +318,9 @@
                         type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-dots-vertical"></i>
                 </button>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu dropdown-menu-end">
                     @tenantCan('Invoices', 'Import')
-                    <li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+                    <li><a class="dropdown-item" href="{{ route('bulk-invoices.index') }}"><i class="fas fa-layer-group me-1 text-primary"></i> Bulk Invoices / Import</a></li>
                     @endtenantCan
                     @tenantCan('Invoices', 'Print')
                     <li><a class="dropdown-item" href="#">Bulk Print</a></li>

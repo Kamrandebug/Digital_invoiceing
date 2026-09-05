@@ -228,6 +228,7 @@ class InvoiceModel extends Model
             $s = $filters['search'];
             $query->where(function ($q) use ($s) {
                 $q->where('h.DocNo', 'LIKE', "%{$s}%")
+                  ->orWhere('h.RequestID', 'LIKE', "%{$s}%")
                   ->orWhere('cust.BusinessName', 'LIKE', "%{$s}%")
                   ->orWhereRaw(
                       'COALESCE(NULLIF(TRIM(cust.DisplayName),\'\'), '
@@ -248,8 +249,8 @@ class InvoiceModel extends Model
 
         // 4. FBR Status Filter
         if (!empty($filters['fbr_status'])) {
-            $fbrStatus = strtolower(trim((string)$filters['fbr_status']));
-            if ($fbrStatus === 'not_posted') {
+            $status = $filters['fbr_status'];
+            if ($status === 'not_posted') {
                 $query->where(function ($q) {
                     $q->whereNull('h.FbrTransactionID')
                       ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
@@ -257,20 +258,28 @@ class InvoiceModel extends Model
                     $q->whereNull('h.FbrResponseJson')
                       ->orWhereRaw("TRIM(h.FbrResponseJson) = ''");
                 });
-            } elseif ($fbrStatus === 'posted' || $fbrStatus === 'valid' || $fbrStatus === 'successfully_posted') {
+            } elseif ($status === 'posted') {
                 $query->whereNotNull('h.FbrTransactionID')
-                      ->whereRaw("TRIM(h.FbrTransactionID) != ''");
-            } elseif ($fbrStatus === 'error' || $fbrStatus === 'failed') {
-                $query->whereNotNull('h.FbrResponseJson')
-                      ->whereRaw("TRIM(h.FbrResponseJson) != ''")
-                      ->where(function ($q) {
-                          $q->whereNull('h.FbrTransactionID')
+                      ->whereRaw("TRIM(h.FbrTransactionID) <> ''")
+                      ->whereRaw("LOWER(TRIM(h.FbrResponseJson)) NOT LIKE '%error%'")
+                      ->whereRaw("LOWER(TRIM(h.FbrResponseJson)) NOT LIKE '%fail%'");
+            } elseif ($status === 'error') {
+                $query->where(function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('h.FbrTransactionID')
                             ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                    })->whereNotNull('h.FbrResponseJson')
+                      ->whereRaw("TRIM(h.FbrResponseJson) <> ''");
+                })->orWhere(function ($q) {
+                    $q->whereNotNull('h.FbrResponseJson')
+                      ->where(function ($sub) {
+                          $sub->whereRaw("LOWER(TRIM(h.FbrResponseJson)) LIKE '%error%'")
+                              ->orWhereRaw("LOWER(TRIM(h.FbrResponseJson)) LIKE '%fail%'");
                       });
+                });
             }
         }
 
-        // 5. Order by latest created date
         return $query->orderByDesc('h.CreatedOn');
     }
 
@@ -287,6 +296,7 @@ class InvoiceModel extends Model
             $s = $filters['search'];
             $baseQuery->where(function ($q) use ($s) {
                 $q->where('h.DocNo', 'LIKE', "%{$s}%")
+                  ->orWhere('h.RequestID', 'LIKE', "%{$s}%")
                   ->orWhere('cust.BusinessName', 'LIKE', "%{$s}%")
                   ->orWhereRaw(
                       'COALESCE(NULLIF(TRIM(cust.DisplayName),\'\'), '
