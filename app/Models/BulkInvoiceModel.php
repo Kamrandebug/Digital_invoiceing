@@ -152,20 +152,20 @@ class BulkInvoiceModel extends Model
                   AND (fsi.`srO_ITEM_DESC` = TRIM(t.`SroItemSerialNo`) OR fsi.`srO_ITEM_ID` = t.`SroItemID`)
               )
             SET 
-                t.`CustomerID`       = c.`ID`,
-                t.`ProductID`        = p.`ID`,
+                t.`CustomerID`         = c.`ID`,
+                t.`ProductID`          = p.`ID`,
                 t.`ProductDescription` = COALESCE(NULLIF(TRIM(t.`ProductDescription`), ''), p.`SaleInformation`, p.`Name`),
-                t.`UomID`            = fhu.`uoM_ID`,
-                t.`Uom_Desc`         = fhu.`description`,
-                t.`SaleTypeID`       = fttc.`transactioN_TYPE_ID`,
-                t.`SaleTypeDesc`     = fttc.`transactioN_DESC`,
-                t.`SaleTypeToRateID` = fsttr.`ratE_ID`,
-                t.`SaleTypeToRateDesc` = fsttr.`ratE_DESC`,
-                t.`SroScheduleID`    = fss.`srO_ID`,
-                t.`SroScheduleDesc`  = fss.`srO_DESC`,
-                t.`SroItemID`        = fsi.`srO_ITEM_ID`,
-                t.`SroItemSerialNo`  = fsi.`srO_ITEM_DESC`,
-                t.`TotalValues`      = IFNULL(t.`ValueSalesExcludingST`, 0.00) + IFNULL(t.`SalesTaxApplicable`, 0.00)
+                t.`UomID`              = fhu.`uoM_ID`,
+                t.`Uom_Desc`           = COALESCE(fhu.`description`, t.`Uom_Desc`),
+                t.`SaleTypeID`         = fttc.`transactioN_TYPE_ID`,
+                t.`SaleTypeDesc`       = COALESCE(fttc.`transactioN_DESC`, t.`SaleTypeDesc`),
+                t.`SaleTypeToRateID`   = fsttr.`ratE_ID`,
+                t.`SaleTypeToRateDesc` = COALESCE(fsttr.`ratE_DESC`, t.`SaleTypeToRateDesc`),
+                t.`SroScheduleID`      = fss.`srO_ID`,
+                t.`SroScheduleDesc`    = COALESCE(fss.`srO_DESC`, t.`SroScheduleDesc`),
+                t.`SroItemID`          = fsi.`srO_ITEM_ID`,
+                t.`SroItemSerialNo`    = COALESCE(fsi.`srO_ITEM_DESC`, t.`SroItemSerialNo`),
+                t.`TotalValues`        = IFNULL(t.`ValueSalesExcludingST`, 0.00) + IFNULL(t.`SalesTaxApplicable`, 0.00)
             WHERE t.`RequestID` = ?
         ", [$requestID]);
 
@@ -178,12 +178,37 @@ class BulkInvoiceModel extends Model
                         -- Basic required invoice fields
                         WHEN COALESCE(TRIM(t.`DocNo`), '') = '' THEN 'Invalid Invoice / Ref No'
                         WHEN COALESCE(TRIM(t.`InvoiceDate`), '') = '' THEN 'Invalid Invoice Date'
-                        WHEN COALESCE(t.`Quantity`, 0) <= 0 THEN 'Quantity must be greater than 0'
-                        WHEN COALESCE(t.`ValueSalesExcludingST`, 0) < 0 THEN 'Value Sales Excluding ST cannot be negative'
-                        
-                        -- Customer & Product Validations
+                        WHEN (
+                            SELECT COUNT(DISTINCT DATE(t2.`InvoiceDate`)) 
+                            FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t2 
+                            WHERE t2.RequestID = t.RequestID AND t2.DocNo = t.DocNo
+                        ) > 1 THEN CONCAT('Different Invoice Dates for same Invoice / Ref No \'', TRIM(t.DocNo), '\'')
+                        WHEN (
+                            SELECT COUNT(DISTINCT t2.`CustomerCode`) 
+                            FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t2 
+                            WHERE t2.RequestID = t.RequestID AND t2.DocNo = t.DocNo
+                        ) > 1 THEN CONCAT('Different Customers for same Invoice / Ref No \'', TRIM(t.DocNo), '\'')
+                        WHEN (
+                            SELECT COUNT(DISTINCT t2.`SaleOfTerm`) 
+                            FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t2 
+                            WHERE t2.RequestID = t.RequestID AND t2.DocNo = t.DocNo
+                        ) > 1 THEN CONCAT('Different Sale Of Term for same Invoice / Ref No \'', TRIM(t.DocNo), '\'')
+                        WHEN (
+                            SELECT COUNT(DISTINCT t2.`InvoiceType`) 
+                            FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t2 
+                            WHERE t2.RequestID = t.RequestID AND t2.DocNo = t.DocNo
+                        ) > 1 THEN CONCAT('Different Invoice Types for same Invoice / Ref No \'', TRIM(t.DocNo), '\'')
+                        WHEN EXISTS (
+                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_sales_invoice_header` h
+                            WHERE LOWER(TRIM(h.`DocNo`)) = LOWER(TRIM(t.`DocNo`)) 
+                              AND (h.`Status` <> 2 OR h.`Status` IS NULL)
+                        ) THEN CONCAT('Invoice / Ref No \'', TRIM(t.DocNo), '\' already exists')
+
+                        -- Customer Validations
                         WHEN COALESCE(TRIM(t.`CustomerCode`), '') = '' THEN 'Missing Customer'
                         WHEN t.`CustomerID` IS NULL THEN CONCAT('Invalid / Unregistered Customer \'', TRIM(t.CustomerCode), '\'')
+
+                        -- Product Validations
                         WHEN COALESCE(TRIM(t.`ProductCode`), '') = '' THEN 'Missing Product'
                         WHEN t.`ProductID` IS NULL THEN CONCAT('Invalid / Unregistered Product \'', TRIM(t.ProductCode), '\'')
 
@@ -208,25 +233,22 @@ class BulkInvoiceModel extends Model
                         WHEN COALESCE(TRIM(t.`SroItemSerialNo`), '') <> '' AND t.`SroItemID` IS NULL 
                             THEN CONCAT('Invalid SRO Item \'', TRIM(t.SroItemSerialNo), '\'')
 
-                        -- Existing Invoice Check in live tbl_sales_invoice_header
-                        WHEN EXISTS (
-                            SELECT 1 FROM {$tenantDbQuoted}.`tbl_sales_invoice_header` h
-                            WHERE BINARY h.`DocNo` = BINARY t.`DocNo`
-                              AND IFNULL(h.`Status`, 0) <> 2
-                        ) THEN CONCAT('Invoice No \'', TRIM(t.DocNo), '\' already exists in system')
+                        -- Numerical Validations
+                        WHEN t.`Quantity` <= 0 THEN 'Quantity must be greater than 0'
+                        WHEN t.`ValueSalesExcludingST` < 0 THEN 'Value of Sales cannot be negative'
+                        WHEN t.`SalesTaxApplicable` < 0 THEN 'Sales Tax cannot be negative'
 
                         ELSE 'Pass'
                     END AS ErrMsg
                 FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
                 WHERE t.RequestID = ?
             ) u ON (u.ID = uu.ID)
-            SET uu.ErrMsg = u.ErrMsg
+            SET uu.ErrMsg = u.ErrMsg;
         ", [$requestID]);
 
-        // 3. Collect validation errors ordered by ExcelRow
+        // 3. Check for any validation errors
         $failedRows = DB::connection('tenant')->table('tbl_temp_invoice_detail')
             ->where('RequestID', $requestID)
-            ->whereNotNull('ErrMsg')
             ->where('ErrMsg', '<>', 'Pass')
             ->orderBy('ExcelRow', 'asc')
             ->orderBy('ID', 'asc')
@@ -283,7 +305,7 @@ class BulkInvoiceModel extends Model
         foreach ($distinctInvoices as $inv) {
             $headerId = DB::connection('tenant')->table('tbl_sales_invoice_header')->insertGetId([
                 'InvoiceNumber'                   => 1,
-                'InvoiceType'                     => $inv->InvoiceType,
+                'InvoiceType'                     => (int) ($inv->InvoiceType ?: 4),
                 'InvoiceDate'                     => $inv->InvoiceDate,
                 'DocNo'                           => $inv->DocNo,
                 'DocNo2'                          => $inv->DocNo2,

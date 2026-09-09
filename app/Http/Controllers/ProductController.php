@@ -1915,9 +1915,85 @@ class ProductController extends Controller
      */
     public function downloadImportTemplate()
     {
+        // Fetch Distinct Lookup Lists from Master/FBR Database
+        $uomList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_uom')
+            ->distinct()
+            ->whereNotNull('description')
+            ->whereRaw("TRIM(description) <> ''")
+            ->orderBy('description')
+            ->pluck('description')
+            ->toArray();
+
+        $transList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_trans_type_code')
+            ->distinct()
+            ->whereNotNull('transactioN_DESC')
+            ->whereRaw("TRIM(transactioN_DESC) <> ''")
+            ->orderBy('transactioN_DESC')
+            ->pluck('transactioN_DESC')
+            ->toArray();
+
+        $ratesList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_sale_type_to_rate')
+            ->distinct()
+            ->whereNotNull('ratE_DESC')
+            ->whereRaw("TRIM(ratE_DESC) <> ''")
+            ->orderBy('ratE_DESC')
+            ->pluck('ratE_DESC')
+            ->toArray();
+
+        $sroList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_sro_schedule')
+            ->distinct()
+            ->whereNotNull('srO_DESC')
+            ->whereRaw("TRIM(srO_DESC) <> ''")
+            ->orderBy('srO_DESC')
+            ->pluck('srO_DESC')
+            ->toArray();
+
+        $sroItemList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_sro_item')
+            ->distinct()
+            ->whereNotNull('srO_ITEM_DESC')
+            ->whereRaw("TRIM(srO_ITEM_DESC) <> ''")
+            ->orderBy('srO_ITEM_DESC')
+            ->pluck('srO_ITEM_DESC')
+            ->toArray();
+
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Products Import');
+
+        // Create Hidden Lookup Sheet
+        $lookupSheet = $spreadsheet->createSheet();
+        $lookupSheet->setTitle('Lookup_Data');
+        $lookupSheet->setSheetState(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet::SHEETSTATE_VERYHIDDEN);
+
+        $lookupSheet->setCellValue('A1', 'UOM');
+        foreach ($uomList as $i => $v) { $lookupSheet->setCellValue('A' . ($i + 2), $v); }
+        if (!empty($uomList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_UOM_PRD', $lookupSheet, '$A$2:$A$' . (count($uomList) + 1)));
+        }
+
+        $lookupSheet->setCellValue('B1', 'SaleType');
+        foreach ($transList as $i => $v) { $lookupSheet->setCellValue('B' . ($i + 2), $v); }
+        if (!empty($transList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_SALETYPE_PRD', $lookupSheet, '$B$2:$B$' . (count($transList) + 1)));
+        }
+
+        $lookupSheet->setCellValue('C1', 'Rate');
+        foreach ($ratesList as $i => $v) { $lookupSheet->setCellValue('C' . ($i + 2), $v); }
+        if (!empty($ratesList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_RATES_PRD', $lookupSheet, '$C$2:$C$' . (count($ratesList) + 1)));
+        }
+
+        $lookupSheet->setCellValue('D1', 'SroSchedule');
+        foreach ($sroList as $i => $v) { $lookupSheet->setCellValue('D' . ($i + 2), $v); }
+        if (!empty($sroList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_SRO_PRD', $lookupSheet, '$D$2:$D$' . (count($sroList) + 1)));
+        }
+
+        $lookupSheet->setCellValue('E1', 'SroItem');
+        foreach ($sroItemList as $i => $v) { $lookupSheet->setCellValue('E' . ($i + 2), $v); }
+        if (!empty($sroItemList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_SROITEM_PRD', $lookupSheet, '$E$2:$E$' . (count($sroItemList) + 1)));
+        }
 
         // Headers
         $headers = [
@@ -1940,7 +2016,7 @@ class ProductController extends Controller
         // Base header styling (Dark Teal background)
         $headerStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '136056']], // Dark Teal matching Customer/Supplier
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '136056']],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
             'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']]]
         ];
@@ -1950,12 +2026,17 @@ class ProductController extends Controller
         // Highlight Required Fields
         $requiredStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => '713F12'], 'size' => 11],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF08A']], // Yellow highlight
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF08A']],
             'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM, 'color' => ['rgb' => 'EAB308']]]
         ];
         $sheet->getStyle('A1')->applyFromArray($requiredStyle); // Product Code *
         $sheet->getStyle('B1')->applyFromArray($requiredStyle); // Product Name *
         $sheet->getStyle('D1')->applyFromArray($requiredStyle); // Sale Price *
+
+        // Format text/code columns and numeric columns for rows 2 to 500
+        $sheet->getStyle('A2:C500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('F2:L500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('D2:E500')->getNumberFormat()->setFormatCode('0.00'); // SalePrice, TPRate
 
         // Sample Data Rows
         $sampleData = [
@@ -1976,10 +2057,78 @@ class ProductController extends Controller
             ]
         ];
 
-        $sheet->fromArray($sampleData, NULL, 'A2');
+        foreach ($sampleData as $rowIndex => $rowValues) {
+            $r = $rowIndex + 2;
+            foreach ($rowValues as $colIndex => $val) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+                if (in_array($colLetter, ['D', 'E']) && is_numeric($val) && $val !== '') {
+                    $sheet->setCellValue("{$colLetter}{$r}", (float)$val);
+                } else {
+                    $sheet->setCellValueExplicit("{$colLetter}{$r}", (string)$val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                }
+            }
+        }
 
-        // Set explicit 2-decimal formatting on number/rate columns
-        $sheet->getStyle('D2:E4')->getNumberFormat()->setFormatCode('0.00'); // SalePrice, TPRate
+        // Data Validation Dropdowns (Rows 2 to 500)
+        for ($row = 2; $row <= 500; $row++) {
+            // Col C: Product Type
+            $valType = $sheet->getCell("C{$row}")->getDataValidation();
+            $valType->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+            $valType->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+            $valType->setAllowBlank(true);
+            $valType->setShowDropDown(true);
+            $valType->setFormula1('"Product,Services"');
+
+            // Col G: UOM
+            if (!empty($uomList)) {
+                $valUom = $sheet->getCell("G{$row}")->getDataValidation();
+                $valUom->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valUom->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valUom->setAllowBlank(true);
+                $valUom->setShowDropDown(true);
+                $valUom->setFormula1('LST_UOM_PRD');
+            }
+
+            // Col H: Sale Type
+            if (!empty($transList)) {
+                $valSaleType = $sheet->getCell("H{$row}")->getDataValidation();
+                $valSaleType->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valSaleType->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valSaleType->setAllowBlank(true);
+                $valSaleType->setShowDropDown(true);
+                $valSaleType->setFormula1('LST_SALETYPE_PRD');
+            }
+
+            // Col I: Sale Type Rate
+            if (!empty($ratesList)) {
+                $valRate = $sheet->getCell("I{$row}")->getDataValidation();
+                $valRate->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valRate->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valRate->setAllowBlank(true);
+                $valRate->setShowDropDown(true);
+                $valRate->setFormula1('LST_RATES_PRD');
+            }
+
+            // Col J: SRO Schedule
+            if (!empty($sroList)) {
+                $valSro = $sheet->getCell("J{$row}")->getDataValidation();
+                $valSro->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valSro->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valSro->setAllowBlank(true);
+                $valSro->setShowDropDown(true);
+                $valSro->setFormula1('LST_SRO_PRD');
+            }
+
+            // Col K: SRO Item Serial No
+            if (!empty($sroItemList)) {
+                $valSroItem = $sheet->getCell("K{$row}")->getDataValidation();
+                $valSroItem->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valSroItem->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valSroItem->setAllowBlank(true);
+                $valSroItem->setShowDropDown(true);
+                $valSroItem->setFormula1('LST_SROITEM_PRD');
+            }
+        }
 
         // Auto size columns
         foreach (range('A', 'L') as $col) {

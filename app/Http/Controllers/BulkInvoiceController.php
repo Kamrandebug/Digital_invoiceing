@@ -8,10 +8,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
+use PhpOffice\PhpSpreadsheet\NamedRange;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class BulkInvoiceController extends Controller
@@ -46,15 +50,114 @@ class BulkInvoiceController extends Controller
     }
 
     /**
-     * Download pre-formatted 21-column Excel template for Bulk Invoicing
+     * Download pre-formatted 21-column Excel template with dropdown validations
      */
     public function downloadImportTemplate()
     {
+        // 1. Fetch Distinct Lookup Lists from Master/FBR Database
+        $uomList = DB::connection('landlord')->table('core_digital_invoicing.fbr_uom')
+            ->distinct()
+            ->whereNotNull('description')
+            ->whereRaw("TRIM(description) <> ''")
+            ->orderBy('description')
+            ->pluck('description')
+            ->toArray();
+
+        $transList = DB::connection('landlord')->table('core_digital_invoicing.fbr_trans_type_code')
+            ->distinct()
+            ->whereNotNull('transactioN_DESC')
+            ->whereRaw("TRIM(transactioN_DESC) <> ''")
+            ->orderBy('transactioN_DESC')
+            ->pluck('transactioN_DESC')
+            ->toArray();
+
+        $ratesList = DB::connection('landlord')->table('core_digital_invoicing.fbr_sale_type_to_rate')
+            ->distinct()
+            ->whereNotNull('ratE_DESC')
+            ->whereRaw("TRIM(ratE_DESC) <> ''")
+            ->orderBy('ratE_DESC')
+            ->pluck('ratE_DESC')
+            ->toArray();
+
+        $sroList = DB::connection('landlord')->table('core_digital_invoicing.fbr_sro_schedule')
+            ->distinct()
+            ->whereNotNull('srO_DESC')
+            ->whereRaw("TRIM(srO_DESC) <> ''")
+            ->orderBy('srO_DESC')
+            ->pluck('srO_DESC')
+            ->toArray();
+
+        $sroItemList = DB::connection('landlord')->table('core_digital_invoicing.fbr_sro_item')
+            ->distinct()
+            ->whereNotNull('srO_ITEM_DESC')
+            ->whereRaw("TRIM(srO_ITEM_DESC) <> ''")
+            ->orderBy('srO_ITEM_DESC')
+            ->pluck('srO_ITEM_DESC')
+            ->toArray();
+
+        $termsList = DB::connection('landlord')->table('core_digital_invoicing.tbl_sale_of_term')
+            ->where('id', '>', 1)
+            ->distinct()
+            ->selectRaw('COALESCE(RetrunValue, TermName) as term')
+            ->pluck('term')
+            ->toArray();
+
+        if (empty($termsList)) {
+            $termsList = ['CASH', 'CREDIT', 'ADVANCE'];
+        }
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Invoice Import');
 
-        // 21 Columns (14 Required with *, 7 Optional)
+        // 2. Create Hidden Lookup Sheet
+        $lookupSheet = $spreadsheet->createSheet();
+        $lookupSheet->setTitle('Lookup_Data');
+        $lookupSheet->setSheetState(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet::SHEETSTATE_VERYHIDDEN);
+
+        // Populate Terms List
+        $lookupSheet->setCellValue('A1', 'SaleOfTerm');
+        foreach ($termsList as $i => $v) { $lookupSheet->setCellValue('A' . ($i + 2), $v); }
+        if (!empty($termsList)) {
+            $spreadsheet->addNamedRange(new NamedRange('LST_TERMS', $lookupSheet, '$A$2:$A$' . (count($termsList) + 1)));
+        }
+
+        // Populate SaleType List
+        $lookupSheet->setCellValue('B1', 'SaleType');
+        foreach ($transList as $i => $v) { $lookupSheet->setCellValue('B' . ($i + 2), $v); }
+        if (!empty($transList)) {
+            $spreadsheet->addNamedRange(new NamedRange('LST_SALETYPE', $lookupSheet, '$B$2:$B$' . (count($transList) + 1)));
+        }
+
+        // Populate FBR Rate List
+        $lookupSheet->setCellValue('C1', 'FBRRate');
+        foreach ($ratesList as $i => $v) { $lookupSheet->setCellValue('C' . ($i + 2), $v); }
+        if (!empty($ratesList)) {
+            $spreadsheet->addNamedRange(new NamedRange('LST_RATES', $lookupSheet, '$C$2:$C$' . (count($ratesList) + 1)));
+        }
+
+        // Populate UOM List
+        $lookupSheet->setCellValue('D1', 'UOM');
+        foreach ($uomList as $i => $v) { $lookupSheet->setCellValue('D' . ($i + 2), $v); }
+        if (!empty($uomList)) {
+            $spreadsheet->addNamedRange(new NamedRange('LST_UOM', $lookupSheet, '$D$2:$D$' . (count($uomList) + 1)));
+        }
+
+        // Populate SRO Schedule List
+        $lookupSheet->setCellValue('E1', 'SroSchedule');
+        foreach ($sroList as $i => $v) { $lookupSheet->setCellValue('E' . ($i + 2), $v); }
+        if (!empty($sroList)) {
+            $spreadsheet->addNamedRange(new NamedRange('LST_SRO', $lookupSheet, '$E$2:$E$' . (count($sroList) + 1)));
+        }
+
+        // Populate SRO Item List
+        $lookupSheet->setCellValue('F1', 'SroItem');
+        foreach ($sroItemList as $i => $v) { $lookupSheet->setCellValue('F' . ($i + 2), $v); }
+        if (!empty($sroItemList)) {
+            $spreadsheet->addNamedRange(new NamedRange('LST_SROITEM', $lookupSheet, '$F$2:$F$' . (count($sroItemList) + 1)));
+        }
+
+        // 3. 21 Columns (14 Required with *, 7 Optional)
         $headers = [
             'InvoiceType *',
             'InvoiceDate *',
@@ -103,30 +206,114 @@ class BulkInvoiceController extends Controller
             $sheet->getStyle("{$col}1")->applyFromArray($requiredStyle);
         }
 
+        // Format text/code columns and numeric columns for rows 2 to 500
+        $sheet->getStyle('A2:J500')->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('L2:L500')->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('S2:U500')->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('K2:K500')->getNumberFormat()->setFormatCode('0.00'); // Quantity
+        $sheet->getStyle('M2:R500')->getNumberFormat()->setFormatCode('0.00'); // Values & Taxes
+
         // Sample Data Rows
         $sampleData = [
             [
                 'Sale Invoice', '2026-03-01', 'INV-REF-001', 'CASH', '1000001',
-                'PRD-000001', '2710.1931', 'High Speed Diesel (HSD)', 'Petroleum Products', '18.00%',
-                100.00, 'Liter', 1000.00, '', 180.00, '', '', '', '', '', 'No Levy',
+                'PRD-000001', '2710.1931', 'High Speed Diesel (HSD)', 'Goods at standard rate (default)', '18%',
+                100.00, 'Litre', 1000.00, '', 180.00, '', '', '', '', '', 'No Levy',
             ],
             [
                 'Sale Invoice', '2026-03-01', 'INV-REF-001', 'CASH', '1000001',
-                'PRD-000002', '3004.9099', 'Paracetamol 500mg Tablets', 'Goods at standard rate (default)', '18.00%',
-                50.00, 'Packs', 7500.00, '', 1350.00, '', '', '', '', '', 'No Levy',
+                'PRD-000002', '3004.9099', 'Paracetamol 500mg Tablets', 'Goods at standard rate (default)', '18%',
+                50.00, 'Numbers, pieces, units', 7500.00, '', 1350.00, '', '', '', '', '', 'No Levy',
             ],
             [
                 'Sale Invoice', '2026-03-02', 'INV-REF-002', 'CREDIT', '1000002',
-                'PRD-000003', '1701.9910', 'Industrial Raw Sugar (Bag 50kg)', 'Goods at Reduced Rate', '1.00%',
-                20.00, 'KG', 130000.00, 120.00, 1300.00, '', '', '', 'EIGHTH SCHEDULE Table 1', '70', 'No Levy',
+                'PRD-000003', '1701.9910', 'Industrial Raw Sugar (Bag 50kg)', 'Goods at Reduced Rate', '1%',
+                20.00, 'KG', '', 130000.00, 1300.00, '', '', '', 'EIGHTH SCHEDULE Table 1', '70', 'No Levy',
             ],
         ];
 
-        $sheet->fromArray($sampleData, NULL, 'A2');
+        foreach ($sampleData as $rowIndex => $rowValues) {
+            $r = $rowIndex + 2;
+            foreach ($rowValues as $colIndex => $val) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+                if (in_array($colLetter, ['K', 'M', 'N', 'O', 'P', 'Q', 'R']) && is_numeric($val) && $val !== '') {
+                    $sheet->setCellValue("{$colLetter}{$r}", (float)$val);
+                } else {
+                    $sheet->setCellValueExplicit("{$colLetter}{$r}", (string)$val, DataType::TYPE_STRING);
+                }
+            }
+        }
 
-        // Number formatting
-        $sheet->getStyle('K2:K4')->getNumberFormat()->setFormatCode('0.00'); // Quantity
-        $sheet->getStyle('M2:R4')->getNumberFormat()->setFormatCode('0.00'); // Values & Taxes
+        // 4. Attach In-Cell Dropdown Data Validations (Rows 2 to 500)
+        for ($row = 2; $row <= 500; $row++) {
+            // Col A: InvoiceType
+            $valType = $sheet->getCell("A{$row}")->getDataValidation();
+            $valType->setType(DataValidation::TYPE_LIST);
+            $valType->setErrorStyle(DataValidation::STYLE_INFORMATION);
+            $valType->setAllowBlank(true);
+            $valType->setShowDropDown(true);
+            $valType->setFormula1('"Sale Invoice,Debit Note,Credit Note"');
+
+            // Col D: SaleOfTerm
+            if (!empty($termsList)) {
+                $valTerm = $sheet->getCell("D{$row}")->getDataValidation();
+                $valTerm->setType(DataValidation::TYPE_LIST);
+                $valTerm->setErrorStyle(DataValidation::STYLE_INFORMATION);
+                $valTerm->setAllowBlank(true);
+                $valTerm->setShowDropDown(true);
+                $valTerm->setFormula1('LST_TERMS');
+            }
+
+            // Col I: SaleType
+            if (!empty($transList)) {
+                $valSaleType = $sheet->getCell("I{$row}")->getDataValidation();
+                $valSaleType->setType(DataValidation::TYPE_LIST);
+                $valSaleType->setErrorStyle(DataValidation::STYLE_INFORMATION);
+                $valSaleType->setAllowBlank(true);
+                $valSaleType->setShowDropDown(true);
+                $valSaleType->setFormula1('LST_SALETYPE');
+            }
+
+            // Col J: FBR Rate
+            if (!empty($ratesList)) {
+                $valRate = $sheet->getCell("J{$row}")->getDataValidation();
+                $valRate->setType(DataValidation::TYPE_LIST);
+                $valRate->setErrorStyle(DataValidation::STYLE_INFORMATION);
+                $valRate->setAllowBlank(true);
+                $valRate->setShowDropDown(true);
+                $valRate->setFormula1('LST_RATES');
+            }
+
+            // Col L: UOM
+            if (!empty($uomList)) {
+                $valUom = $sheet->getCell("L{$row}")->getDataValidation();
+                $valUom->setType(DataValidation::TYPE_LIST);
+                $valUom->setErrorStyle(DataValidation::STYLE_INFORMATION);
+                $valUom->setAllowBlank(true);
+                $valUom->setShowDropDown(true);
+                $valUom->setFormula1('LST_UOM');
+            }
+
+            // Col S: SroSchedule
+            if (!empty($sroList)) {
+                $valSro = $sheet->getCell("S{$row}")->getDataValidation();
+                $valSro->setType(DataValidation::TYPE_LIST);
+                $valSro->setErrorStyle(DataValidation::STYLE_INFORMATION);
+                $valSro->setAllowBlank(true);
+                $valSro->setShowDropDown(true);
+                $valSro->setFormula1('LST_SRO');
+            }
+
+            // Col T: SroItemSerialNo
+            if (!empty($sroItemList)) {
+                $valSroItem = $sheet->getCell("T{$row}")->getDataValidation();
+                $valSroItem->setType(DataValidation::TYPE_LIST);
+                $valSroItem->setErrorStyle(DataValidation::STYLE_INFORMATION);
+                $valSroItem->setAllowBlank(true);
+                $valSroItem->setShowDropDown(true);
+                $valSroItem->setFormula1('LST_SROITEM');
+            }
+        }
 
         // Auto size columns
         foreach (range('A', 'U') as $col) {
@@ -184,7 +371,7 @@ class BulkInvoiceController extends Controller
             foreach ($rows as $index => $row) {
                 $insertRows[] = [
                     'ExcelRow'                        => $row['RowNo'] ?? ($index + 2),
-                    'InvoiceType'                     => $row['InvoiceType'] ?? 'Sale Invoice',
+                    'InvoiceType'                     => BulkInvoiceImport::parseInvoiceType($row['InvoiceType'] ?? 4),
                     'InvoiceDate'                     => $row['InvoiceDate'] ?? date('Y-m-d'),
                     'DocNo'                           => $row['DocNo'] ?? null,
                     'InvoiceRefNo'                    => $row['InvoiceRefNo'] ?? null,
@@ -283,6 +470,7 @@ class BulkInvoiceController extends Controller
 
         $details = DB::connection('tenant')->table('tbl_sales_invoice_detail as d')
             ->leftJoin('tbl_product as p', 'p.ID', '=', 'd.ProductID')
+            ->where('d.RequestID', $requestId)
             ->whereIn('d.InvoiceID', $headerIds)
             ->select(
                 'd.ID as DetailID',

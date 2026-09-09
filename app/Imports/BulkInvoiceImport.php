@@ -4,12 +4,23 @@ namespace App\Imports;
 
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithCalculatedFormulas;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class BulkInvoiceImport implements ToCollection
+class BulkInvoiceImport implements ToCollection, WithCalculatedFormulas, WithMultipleSheets
 {
     /** @var list<array<string, mixed>> */
     private array $rows = [];
     private array $validationErrors = [];
+
+    /**
+     * WithMultipleSheets: only process the first sheet (index 0 = Invoice Import).
+     * This prevents the hidden Lookup_Data sheet from being read as data.
+     */
+    public function sheets(): array
+    {
+        return [0 => $this];
+    }
 
     public function collection(Collection $rows): void
     {
@@ -56,11 +67,54 @@ class BulkInvoiceImport implements ToCollection
         return $this->validationErrors;
     }
 
+    public static function parseInvoiceType(mixed $val): int
+    {
+        if (is_numeric($val) && (int)$val > 0) {
+            return (int)$val;
+        }
+        $clean = strtolower(trim((string)$val));
+        if (in_array($clean, ['sale invoice', 'sales invoice', 'sale', 'sales', 'si', 'tax invoice', 'invoice', ''])) {
+            return 4;
+        }
+        if (in_array($clean, ['credit note', 'cn', 'credit'])) {
+            return 3;
+        }
+        if (in_array($clean, ['debit note', 'dn', 'debit'])) {
+            return 2;
+        }
+        return 4; // Default to 4 (Sale Invoice)
+    }
+
+    public static function normalizeRate(mixed $val): ?string
+    {
+        if ($val === null) return null;
+        $str = trim((string)$val);
+        if ($str === '') return null;
+
+        if (str_ends_with($str, '%')) {
+            return $str;
+        }
+
+        if (is_numeric($str)) {
+            $num = (float)$str;
+            if ($num == 0.0) {
+                return '0%';
+            }
+            if ($num > 0 && $num < 1.0) {
+                $percentage = round($num * 100, 4);
+                return rtrim(rtrim((string)$percentage, '0'), '.') . '%';
+            }
+            return rtrim(rtrim((string)$num, '0'), '.') . '%';
+        }
+
+        return $str;
+    }
+
     private function buildHeaderMap(array $firstRow): array
     {
         $map = [];
         $knownKeys = [
-            'invoicetype'                     => ['invoicetype', 'invoice_type', 'invoice type', 'invoicetype *', 'invoice type *', 'doctype', 'doc_type'],
+            'invoicetype'                     => ['invoicetype', 'invoice_type', 'invoice type', 'invoicetype *', 'invoice type *', 'doctype', 'doc_type', 'type'],
             'invoicedate'                     => ['invoicedate', 'invoice_date', 'invoice date', 'invoicedate *', 'invoice date *', 'date', 'date *'],
             'invoicerefno'                    => ['invoicerefno', 'invoice_ref_no', 'invoice ref no', 'invoicerefno *', 'invoice ref no *', 'docno', 'doc_no', 'doc no', 'invoiceno', 'invoice_no', 'invoice no'],
             'saleofterm'                      => ['saleofterm', 'sale_of_term', 'sale of term', 'saleofterm *', 'sale of term *', 'term', 'terms', 'paymentterm'],
@@ -71,7 +125,7 @@ class BulkInvoiceImport implements ToCollection
             'saletype'                        => ['saletype', 'sale_type', 'sale type', 'saletype *', 'sale type *', 'saletypedesc', 'transactiontype'],
             'fbrrate'                         => ['fbrrate', 'fbr_rate', 'fbr rate', 'fbr rate *', 'fbrrate *', 'rate', 'taxrate', 'saletypetorate'],
             'quantity'                        => ['quantity', 'qty', 'quantity *', 'qty *'],
-            'uom'                             => ['uom', 'uom_desc', 'uom *', 'uom desc *', 'unit of measure'],
+            'uom'                             => ['uom', 'uom_desc', 'uom *', 'uom desc *', 'unit of measure', 'unit', 'uomdesc', 'uomdescription', 'uom_description'],
             'valuesalesexcludingst'           => ['valuesalesexcludingst', 'value_sales_excluding_st', 'value sales excluding st', 'valuesalesexcludingst *', 'salesvalue', 'amount', 'netamount'],
             'fixednotifiedvalueorretailprice' => ['fixednotifiedvalueorretailprice', 'fixed_notified_value_or_retail_price', 'fixed notified value', 'retailprice', 'tprate'],
             'salestaxapplicable'              => ['salestaxapplicable', 'sales_tax_applicable', 'sales tax applicable', 'salestaxapplicable *', 'gstamount', 'salestax'],
@@ -116,13 +170,15 @@ class BulkInvoiceImport implements ToCollection
             return null; // Ignore blank row
         }
 
-        $invoiceType = $this->getHeaderValue($values, $headerMap, 'invoicetype', 'Sale Invoice');
+        $invoiceTypeRaw = $this->getHeaderValue($values, $headerMap, 'invoicetype', 'Sale Invoice');
+        $invoiceType = self::parseInvoiceType($invoiceTypeRaw);
         $invoiceDate = $this->parseDate($this->getHeaderValue($values, $headerMap, 'invoicedate'));
         $saleOfTerm = $this->getHeaderValue($values, $headerMap, 'saleofterm', 'CASH');
         $hsCode = $this->normalizeHsCode($this->getHeaderValue($values, $headerMap, 'hscode'));
         $productDescription = $this->getHeaderValue($values, $headerMap, 'productdescription');
         $saleType = $this->getHeaderValue($values, $headerMap, 'saletype');
-        $rate = $this->getHeaderValue($values, $headerMap, 'fbrrate');
+        $rateRaw = $this->getHeaderValue($values, $headerMap, 'fbrrate');
+        $rate = self::normalizeRate($rateRaw);
         $qty = (float) $this->getHeaderValue($values, $headerMap, 'quantity', 0);
         $uom = $this->getHeaderValue($values, $headerMap, 'uom');
         $amount = (float) $this->getHeaderValue($values, $headerMap, 'valuesalesexcludingst', 0);
@@ -164,7 +220,7 @@ class BulkInvoiceImport implements ToCollection
 
     private function mapPositional(array $v, int $rowNum): ?array
     {
-        $invoiceType = trim((string)($v[0] ?? 'Sale Invoice')) ?: 'Sale Invoice';
+        $invoiceType = self::parseInvoiceType($v[0] ?? 'Sale Invoice');
         $invoiceDate = $this->parseDate(trim((string)($v[1] ?? '')));
         $docNo = trim((string)($v[2] ?? ''));
         $saleOfTerm = trim((string)($v[3] ?? 'CASH')) ?: 'CASH';
@@ -178,7 +234,7 @@ class BulkInvoiceImport implements ToCollection
         $hsCode = $this->normalizeHsCode(trim((string)($v[6] ?? '')));
         $productDescription = trim((string)($v[7] ?? ''));
         $saleType = trim((string)($v[8] ?? ''));
-        $rate = trim((string)($v[9] ?? ''));
+        $rate = self::normalizeRate($v[9] ?? '');
         $qty = (float)($v[10] ?? 0);
         $uom = trim((string)($v[11] ?? ''));
         $amount = (float)($v[12] ?? 0);

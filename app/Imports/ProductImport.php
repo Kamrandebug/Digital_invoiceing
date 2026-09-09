@@ -56,6 +56,31 @@ class ProductImport implements ToCollection
         return $this->validationErrors;
     }
 
+    public static function normalizeRate(mixed $val): ?string
+    {
+        if ($val === null) return null;
+        $str = trim((string)$val);
+        if ($str === '') return null;
+
+        if (str_ends_with($str, '%')) {
+            return $str;
+        }
+
+        if (is_numeric($str)) {
+            $num = (float)$str;
+            if ($num == 0.0) {
+                return '0%';
+            }
+            if ($num > 0 && $num < 1.0) {
+                $percentage = round($num * 100, 4);
+                return rtrim(rtrim((string)$percentage, '0'), '.') . '%';
+            }
+            return rtrim(rtrim((string)$num, '0'), '.') . '%';
+        }
+
+        return $str;
+    }
+
     private function buildHeaderMap(array $firstRow): array
     {
         $map = [];
@@ -114,7 +139,7 @@ class ProductImport implements ToCollection
 
         $uomInput = $this->getHeaderValue($values, $headerMap, 'uom');
         $saleTypeInput = $this->getHeaderValue($values, $headerMap, 'saletype');
-        $rateInput = $this->getHeaderValue($values, $headerMap, 'saletypetorate');
+        $rateInput = self::normalizeRate($this->getHeaderValue($values, $headerMap, 'saletypetorate'));
         $sroScheduleInput = $this->getHeaderValue($values, $headerMap, 'sroschedule');
         $sroItemInput = $this->getHeaderValue($values, $headerMap, 'sroitemserialno');
         $saleInformation = $this->getHeaderValue($values, $headerMap, 'saleinformation');
@@ -170,7 +195,7 @@ class ProductImport implements ToCollection
 
         $uomInput = trim((string)($v[6] ?? ''));
         $saleTypeInput = trim((string)($v[7] ?? ''));
-        $rateInput = trim((string)($v[8] ?? ''));
+        $rateInput = self::normalizeRate($v[8] ?? '');
         $sroScheduleInput = trim((string)($v[9] ?? ''));
         $sroItemInput = trim((string)($v[10] ?? ''));
         $saleInformation = trim((string)($v[11] ?? ''));

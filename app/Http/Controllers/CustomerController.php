@@ -1014,11 +1014,23 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
             ]
         ];
 
-        $sheet->fromArray($sampleData, NULL, 'A2');
+        // Format text/code columns and numeric columns for rows 2 to 500
+        $sheet->getStyle('A2:Y500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('AA2:AD500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('Z2:Z500')->getNumberFormat()->setFormatCode('0.00'); // AdvanceTax
+        $sheet->getStyle('AE2:AH500')->getNumberFormat()->setFormatCode('0.00'); // SalesTaxWithheld, ExtraTax, FurtherTax, FedTax
 
-        // Set explicit 2-decimal formatting on number/rate columns
-        $sheet->getStyle('Z2:Z4')->getNumberFormat()->setFormatCode('0.00'); // AdvanceTax
-        $sheet->getStyle('AE2:AH4')->getNumberFormat()->setFormatCode('0.00'); // SalesTaxWithheld, ExtraTax, FurtherTax, FedTax
+        foreach ($sampleData as $rowIndex => $rowValues) {
+            $r = $rowIndex + 2;
+            foreach ($rowValues as $colIndex => $val) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+                if (in_array($colLetter, ['Z', 'AE', 'AF', 'AG', 'AH']) && is_numeric($val) && $val !== '') {
+                    $sheet->setCellValue("{$colLetter}{$r}", (float)$val);
+                } else {
+                    $sheet->setCellValueExplicit("{$colLetter}{$r}", (string)$val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                }
+            }
+        }
 
         // Auto size columns
         foreach (range('A', 'Z') as $col) {
