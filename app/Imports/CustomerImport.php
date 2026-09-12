@@ -4,13 +4,23 @@ namespace App\Imports;
 
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithCalculatedFormulas;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class CustomerImport implements ToCollection
+class CustomerImport implements ToCollection, WithCalculatedFormulas, WithMultipleSheets
 {
     /** @var list<array<string, mixed>> */
     private array $rows = [];
     private array $validationErrors = [];
     private int $defaultPartyType;
+
+    /**
+     * WithMultipleSheets: only process the first sheet.
+     */
+    public function sheets(): array
+    {
+        return [0 => $this];
+    }
 
     public function __construct(int $defaultPartyType = 1)
     {
