@@ -159,7 +159,7 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                         SELECT 1 
                         FROM tbl_customer cust 
                         WHERE LOWER(TRIM(cust.AccountNo)) = LOWER(TRIM(t.AccountNo))
-                          AND (cust.Status != 2 OR cust.Status IS NULL)
+                          AND cust.Status IN (0, 1)
                     ) 
                         THEN CONCAT('AccountNo \'', TRIM(t.AccountNo), '\' already exists')
                     ELSE 'Pass' END AS `ErrMsg`
