@@ -127,7 +127,7 @@ class BulkInvoiceImport implements ToCollection, WithCalculatedFormulas, WithMul
             'quantity'                        => ['quantity', 'qty', 'quantity *', 'qty *'],
             'uom'                             => ['uom', 'uom_desc', 'uom *', 'uom desc *', 'unit of measure', 'unit', 'uomdesc', 'uomdescription', 'uom_description'],
             'valuesalesexcludingst'           => ['valuesalesexcludingst', 'value_sales_excluding_st', 'value sales excluding st', 'valuesalesexcludingst *', 'salesvalue', 'amount', 'netamount'],
-            'fixednotifiedvalueorretailprice' => ['fixednotifiedvalueorretailprice', 'fixed_notified_value_or_retail_price', 'fixed notified value', 'retailprice', 'tprate'],
+            'fixednotifiedvalueorretailprice' => ['fixednotifiedvalueorretailprice', 'fixed_notified_value_or_retail_price', 'fixed notified value', 'fixednotifiedvalue', 'retailprice', 'tprate', 'fixed notified value (tp rate)', 'fixednotifiedvalue (tp rate)', 'fixednotifiedvaluetprate'],
             'salestaxapplicable'              => ['salestaxapplicable', 'sales_tax_applicable', 'sales tax applicable', 'salestaxapplicable *', 'gstamount', 'salestax'],
             'extratax'                        => ['extratax', 'extra_tax', 'extra tax'],
             'furthertax'                      => ['furthertax', 'further_tax', 'further tax'],

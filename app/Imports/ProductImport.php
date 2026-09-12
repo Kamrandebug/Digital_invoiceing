@@ -100,7 +100,7 @@ class ProductImport implements ToCollection, WithCalculatedFormulas, WithMultipl
             'name'            => ['productname', 'product_name', 'product name', 'itemname', 'item_name', 'product name *', 'name *', 'name'],
             'producttype'     => ['producttype', 'product_type', 'product type', 'itemtype', 'type'],
             'saleprice'       => ['saleprice', 'sale_price', 'sale price', 'price', 'unitprice', 'unit_price', 'sale price *', 'price *'],
-            'tprate'          => ['tprate', 'tp_rate', 'tp rate', 'fixednotifiedvalue', 'fixed_notified_value', 'fixed notified value', 'fixed value', 'notified value'],
+            'tprate'          => ['tprate', 'tp_rate', 'tp rate', 'fixednotifiedvalue', 'fixed_notified_value', 'fixed notified value', 'fixed value', 'notified value', 'fixed notified value (tp rate)', 'fixednotifiedvalue (tp rate)', 'fixednotifiedvaluetprate', 'fixed_notified_value_tp_rate', 'tp rate / fixed notified value', 'fixed notified value or retail price'],
             'hscode'          => ['hscode', 'hs_code', 'hs code', 'hscodes'],
             'uom'             => ['uom', 'uom_desc', 'uom desc', 'uom description', 'unit of measure', 'unit of measurement'],
             'saletype'        => ['saletype', 'sale_type', 'sale type', 'saletypedesc', 'sale_type_desc', 'sale type desc', 'transaction type'],
@@ -145,7 +145,7 @@ class ProductImport implements ToCollection, WithCalculatedFormulas, WithMultipl
         $productType = $this->getHeaderValue($values, $headerMap, 'producttype', 'Product');
         $salePrice = (float) $this->getHeaderValue($values, $headerMap, 'saleprice', 0);
         $tpRate = (float) $this->getHeaderValue($values, $headerMap, 'tprate', 0);
-        $isFixedRate = ($tpRate > 1) ? 1 : 0;
+        $isFixedRate = ($tpRate > 0) ? 1 : 0;
         $hsCode = $this->getHeaderValue($values, $headerMap, 'hscode');
 
         $uomInput = $this->getHeaderValue($values, $headerMap, 'uom');
@@ -201,7 +201,7 @@ class ProductImport implements ToCollection, WithCalculatedFormulas, WithMultipl
         $productType = trim((string)($v[2] ?? 'Product')) ?: 'Product';
         $salePrice = (float)($v[3] ?? 0);
         $tpRate = (float)($v[4] ?? 0);
-        $isFixedRate = ($tpRate > 1) ? 1 : 0;
+        $isFixedRate = ($tpRate > 0) ? 1 : 0;
         $hsCode = trim((string)($v[5] ?? ''));
 
         $uomInput = trim((string)($v[6] ?? ''));

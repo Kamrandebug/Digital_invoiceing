@@ -2001,7 +2001,7 @@ class ProductController extends Controller
             'Product Name *',
             'Product Type',
             'Sale Price *',
-            'Fixed Notified Value (TP Rate)',
+            'Fixed Notified Value',
             'HS Code',
             'UOM',
             'Sale Type',
@@ -2036,7 +2036,8 @@ class ProductController extends Controller
         // Format text/code columns and numeric columns for rows 2 to 500
         $sheet->getStyle('A2:C500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
         $sheet->getStyle('F2:L500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
-        $sheet->getStyle('D2:E500')->getNumberFormat()->setFormatCode('0.00'); // SalePrice, TPRate
+        $sheet->getStyle('D2:D500')->getNumberFormat()->setFormatCode('0.00'); // SalePrice
+        $sheet->getStyle('E2:E500')->getNumberFormat()->setFormatCode('0.0000'); // TPRate (Fixed Notified Value)
 
         // Sample Data Rows
         $sampleData = [
@@ -2190,7 +2191,7 @@ class ProductController extends Controller
                 }
 
                 $tpRate = (float)($row['TPRate'] ?? 0);
-                $isFixedRate = ($tpRate > 1) ? 1 : 0;
+                $isFixedRate = ($tpRate > 0) ? 1 : 0;
 
                 $insertRows[] = [
                     'ID'                 => $currentId,

@@ -133,23 +133,23 @@ class BulkInvoiceModel extends Model
               )
             LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc 
               ON (
-                  fttc.`transactioN_DESC` = TRIM(t.`SaleTypeDesc`) 
+                  TRIM(fttc.`transactioN_DESC`) = TRIM(t.`SaleTypeDesc`) 
                   OR fttc.`transactioN_TYPE_ID` = t.`SaleTypeID`
               )
             LEFT JOIN `core_digital_invoicing`.`fbr_sale_type_to_rate` fsttr 
               ON (
                   fsttr.`transactioN_TYPE_ID` = COALESCE(fttc.`transactioN_TYPE_ID`, t.`SaleTypeID`)
-                  AND (fsttr.`ratE_DESC` = TRIM(t.`SaleTypeToRateDesc`) OR fsttr.`ratE_ID` = t.`SaleTypeToRateID`)
+                  AND (TRIM(fsttr.`ratE_DESC`) = TRIM(t.`SaleTypeToRateDesc`) OR fsttr.`ratE_ID` = t.`SaleTypeToRateID`)
               )
             LEFT JOIN `core_digital_invoicing`.`fbr_sro_schedule` fss 
               ON (
                   fss.`ratE_ID` = COALESCE(fsttr.`ratE_ID`, t.`SaleTypeToRateID`)
-                  AND (fss.`srO_DESC` = TRIM(t.`SroScheduleDesc`) OR fss.`srO_ID` = t.`SroScheduleID`)
+                  AND (TRIM(fss.`srO_DESC`) = TRIM(t.`SroScheduleDesc`) OR fss.`srO_ID` = t.`SroScheduleID`)
               )
             LEFT JOIN `core_digital_invoicing`.`fbr_sro_item` fsi 
               ON (
                   fsi.`srO_ID` = COALESCE(fss.`srO_ID`, t.`SroScheduleID`)
-                  AND (fsi.`srO_ITEM_DESC` = TRIM(t.`SroItemSerialNo`) OR fsi.`srO_ITEM_ID` = t.`SroItemID`)
+                  AND (TRIM(fsi.`srO_ITEM_DESC`) = TRIM(t.`SroItemSerialNo`) OR fsi.`srO_ITEM_ID` = t.`SroItemID`)
               )
             SET 
                 t.`CustomerID`         = c.`ID`,

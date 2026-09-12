@@ -156,28 +156,28 @@ class ProductModel extends Model
             UPDATE {$tenantDbQuoted}.`temp_product` t
             LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fhu 
               ON (
-                  fhu.`hs_CODE` = TRIM(t.`HsCode`) 
-                  AND (fhu.`description` = TRIM(t.`Uom_Desc`) OR fhu.`uoM_ID` = t.`UOM`)
+                  TRIM(fhu.`hs_CODE`) = TRIM(t.`HsCode`) 
+                  AND (TRIM(fhu.`description`) = TRIM(t.`Uom_Desc`) OR fhu.`uoM_ID` = t.`UOM`)
               )
             LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc 
               ON (
-                  fttc.`transactioN_DESC` = TRIM(t.`SaleTypeDesc`) 
+                  TRIM(fttc.`transactioN_DESC`) = TRIM(t.`SaleTypeDesc`) 
                   OR fttc.`transactioN_TYPE_ID` = t.`SaleType`
               )
             LEFT JOIN `core_digital_invoicing`.`fbr_sale_type_to_rate` fsttr 
               ON (
                   fsttr.`transactioN_TYPE_ID` = COALESCE(fttc.`transactioN_TYPE_ID`, t.`SaleType`)
-                  AND (fsttr.`ratE_DESC` = TRIM(t.`SaleTypeToRateDesc`) OR fsttr.`ratE_ID` = t.`SaleTypeToRate`)
+                  AND (TRIM(fsttr.`ratE_DESC`) = TRIM(t.`SaleTypeToRateDesc`) OR fsttr.`ratE_ID` = t.`SaleTypeToRate`)
               )
             LEFT JOIN `core_digital_invoicing`.`fbr_sro_schedule` fss 
               ON (
                   fss.`ratE_ID` = COALESCE(fsttr.`ratE_ID`, t.`SaleTypeToRate`)
-                  AND (fss.`srO_DESC` = TRIM(t.`SroScheduleDesc`) OR fss.`srO_ID` = t.`SroSchedule`)
+                  AND (TRIM(fss.`srO_DESC`) = TRIM(t.`SroScheduleDesc`) OR fss.`srO_ID` = t.`SroSchedule`)
               )
             LEFT JOIN `core_digital_invoicing`.`fbr_sro_item` fsi 
               ON (
                   fsi.`srO_ID` = COALESCE(fss.`srO_ID`, t.`SroSchedule`)
-                  AND (fsi.`srO_ITEM_DESC` = TRIM(t.`SroItemSerialNo`) OR fsi.`srO_ITEM_ID` = t.`SroItem`)
+                  AND (TRIM(fsi.`srO_ITEM_DESC`) = TRIM(t.`SroItemSerialNo`) OR fsi.`srO_ITEM_ID` = t.`SroItem`)
               )
             SET 
                 t.`SaleInformation` = COALESCE(NULLIF(TRIM(t.`SaleInformation`), ''), t.`Name`),
@@ -215,7 +215,7 @@ class ProductModel extends Model
                         WHEN COALESCE(TRIM(t.`HsCode`), '') <> '' 
                           AND NOT EXISTS (
                               SELECT 1 FROM `core_digital_invoicing`.`fbr_hscode_uom` h 
-                              WHERE h.`hs_CODE` = TRIM(t.`HsCode`)
+                              WHERE TRIM(h.`hs_CODE`) = TRIM(t.`HsCode`)
                           ) THEN CONCAT('Invalid HS Code \'', TRIM(t.HsCode), '\'')
 
                         WHEN COALESCE(TRIM(t.`Uom_Desc`), '') <> '' AND t.`UOM` IS NULL 
@@ -271,7 +271,7 @@ class ProductModel extends Model
                 SaleTypeToRate,COALESCE(t.SaleTypeToRateDesc, fsttr.`ratE_DESC`),SroSchedule,COALESCE(t.SroScheduleDesc, fss.`srO_DESC`),
                 SroItem,COALESCE(t.SroItemSerialNo, fsi.`srO_ITEM_DESC`),SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
             FROM {$tenantDbQuoted}.temp_product t
-            LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fho ON (fho.`uoM_ID` = t.UOM AND fho.hs_CODE = t.HsCode)
+            LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fho ON (fho.`uoM_ID` = t.UOM AND TRIM(fho.hs_CODE) = TRIM(t.HsCode))
             LEFT JOIN `core_digital_invoicing`.`fbr_trans_type_code` fttc ON (fttc.`transactioN_TYPE_ID` = t.SaleType)
             LEFT JOIN `core_digital_invoicing`.`fbr_sale_type_to_rate` fsttr ON (fsttr.`ratE_ID` = t.SaleTypeToRate AND fsttr.`transactioN_TYPE_ID` = fttc.`transactioN_TYPE_ID`)
             LEFT JOIN `core_digital_invoicing`.`fbr_sro_schedule` fss ON (fss.`srO_ID` = t.SroSchedule)
