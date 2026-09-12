@@ -950,24 +950,50 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
      */
     public function downloadImportTemplate()
     {
+        // 1. Load FBR Provinces from core_digital_invoicing.fbr_province
+        $provinceList = [];
+        try {
+            $provinceList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_province')
+                ->distinct()
+                ->whereNotNull('stateProvinceDesc')
+                ->whereRaw("TRIM(stateProvinceDesc) <> ''")
+                ->orderBy('stateProvinceDesc')
+                ->pluck('stateProvinceDesc')
+                ->toArray();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to load FBR provinces for template: ' . $e->getMessage());
+        }
+
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle($this->entitySingular().'s');
 
-        // Headers without PartyType, Status, and IsFiler (IsFiler is derived from RegisterType)
+        // Create Hidden Lookup Sheet for Provinces
+        if (!empty($provinceList)) {
+            $lookupSheet = $spreadsheet->createSheet();
+            $lookupSheet->setTitle('Lookup_Data');
+            $lookupSheet->setSheetState(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet::SHEETSTATE_VERYHIDDEN);
+
+            $lookupSheet->setCellValue('A1', 'Province');
+            foreach ($provinceList as $i => $v) {
+                $lookupSheet->setCellValue('A' . ($i + 2), $v);
+            }
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_PROVINCES', $lookupSheet, '$A$2:$A$' . (count($provinceList) + 1)));
+        }
+
+        // Headers (without SameAsBilling/Billing columns, FilerStatus, FilerStatusDate, IsAdvanceTax; AdvanceTax renamed to CustomerAdvWHT)
         $headers = [
-            'RegistrationNo/NTN *', 'Title', 'FirstName', 'LastName', 'BusinessName *', 'DisplayName', 
+            $this->entitySingular().' Code *', 'Title', 'FirstName', 'LastName', 'BusinessName *', 'DisplayName', 
             'Email', 'Mobile', 'Phone', 'Website', 'Address', 'City', 'Province *', 'PostalCode', 'Country', 
-            'SameAsBilling', 'BillingAddress', 'BillingCity', 'BillingProvince', 'BillingPostalCode', 
-            'BillingCountry', 'NTN', 'SalesTaxNumber', 'CNIC', 'IsAdvanceTax', 'AdvanceTax', 
-            'RegisterType', 'FilerStatus', 'FilerStatusDate', 'Notes', 
+            'NTN', 'SalesTaxNumber', 'CNIC', 'CustomerAdvWHT', 
+            'RegisterType', 'Notes', 'Status',
             'SalesTaxWithheldAtSource', 'ExtraTax %', 'FurtherTax %', 'FedTax %'
         ];
 
         $sheet->fromArray([$headers], NULL, 'A1');
 
         // Base header styling (Dark Teal background)
-        $sheet->getStyle('A1:AH1')->applyFromArray([
+        $sheet->getStyle('A1:Z1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
             'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '136056']],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
@@ -975,56 +1001,53 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
         ]);
         $sheet->getRowDimension(1)->setRowHeight(28);
 
-        // Required columns yellow highlighting: A1 (RegistrationNo/NTN *), E1 (BusinessName *), M1 (Province *)
+        // Required columns yellow highlighting: A1 (Code *), E1 (BusinessName *), M1 (Province *)
         $requiredStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => '713F12'], 'size' => 11],
             'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF08A']], // Distinct yellow
             'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM, 'color' => ['rgb' => 'EAB308']]]
         ];
-        $sheet->getStyle('A1')->applyFromArray($requiredStyle); // RegistrationNo/NTN *
+        $sheet->getStyle('A1')->applyFromArray($requiredStyle); // Code *
         $sheet->getStyle('E1')->applyFromArray($requiredStyle); // BusinessName *
         $sheet->getStyle('M1')->applyFromArray($requiredStyle); // Province *
 
-        // Sample Data Rows (Without PartyType, Status, and IsFiler; with 2 decimals on tax rates)
+        // Sample Data Rows
         $prefix = $this->accountNoPrefix();
         $sampleData = [
             [
                 $prefix.'-000001', 'Mr', 'Salman', 'Khalid', 'MK SUPER MARKET', 'MK SUPER MARKET', 
                 'salman@example.com', '03001234567', '04231234567', 'https://example.com', 'Main Boulevard, Gulberg', 'Lahore', 'PUNJAB', '54000', 'Pakistan', 
-                '1', 'Main Boulevard, Gulberg', 'Lahore', 'PUNJAB', '54000', 'Pakistan', 
-                '7020599', '44444', '35202-1234567-1', '0', '0.00', 
-                'Registered', 'Active', '2026-01-01', 'Sample Active Filer', 
-                '0.00', '0.00', '0.00', '0.00'
+                '7020599', '44444', '35202-1234567-1', 0.00, 
+                'Registered', 'Sample Active Filer', 'Active',
+                0.00, 0.00, 0.00, 0.00
             ],
             [
                 $prefix.'-000002', 'Engr', 'Khurram', 'Jafar', 'Jaffery Soft', 'Jaffery Soft', 
-                'khurram@example.com', '03211234567', '', '', 'Blue Area', 'Islamabad', 'ISLAMABAD CAPITAL TERRITORY', '44000', 'Pakistan', 
-                '1', 'Blue Area', 'Islamabad', 'ISLAMABAD CAPITAL TERRITORY', '44000', 'Pakistan', 
-                '', '', '', '0', '0.00', 
-                'Un-Registered', 'In-Active', '', 'Sample Non-Filer', 
-                '0.00', '0.00', '0.00', '0.00'
+                'khurram@example.com', '03211234567', '', '', 'Blue Area', 'Islamabad', 'CAPITAL TERRITORY', '44000', 'Pakistan', 
+                '', '', '', 0.00, 
+                'Un-Registered', 'Sample Non-Filer', 'InActive',
+                0.00, 0.00, 0.00, 0.00
             ],
             [
                 $prefix.'-000003', 'Mr', 'Bilal', 'Tariq', 'Bilal Enterprises', 'Bilal Enterprises', 
                 'bilal@example.com', '03331234567', '', '', 'Korangi Industrial Area', 'Karachi', 'SINDH', '74900', 'Pakistan', 
-                '1', 'Korangi Industrial Area', 'Karachi', 'SINDH', '74900', 'Pakistan', 
-                '8988888', '999999', '42101-1234567-1', '1', '1.50', 
-                'Registered', 'Active', '2026-02-15', 'Sample with Advance Tax', 
-                '50.00', '2.00', '1.00', '1.00'
+                '8988888', '999999', '42101-1234567-1', 1.50, 
+                'Registered', 'Sample with Advance Tax', 'Active',
+                50.00, 2.00, 1.00, 1.00
             ]
         ];
 
         // Format text/code columns and numeric columns for rows 2 to 500
-        $sheet->getStyle('A2:Y500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
-        $sheet->getStyle('AA2:AD500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
-        $sheet->getStyle('Z2:Z500')->getNumberFormat()->setFormatCode('0.00'); // AdvanceTax
-        $sheet->getStyle('AE2:AH500')->getNumberFormat()->setFormatCode('0.00'); // SalesTaxWithheld, ExtraTax, FurtherTax, FedTax
+        $sheet->getStyle('A2:R500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('T2:V500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('S2:S500')->getNumberFormat()->setFormatCode('0.00'); // CustomerAdvWHT
+        $sheet->getStyle('W2:Z500')->getNumberFormat()->setFormatCode('0.00'); // SalesTaxWithheld, ExtraTax, FurtherTax, FedTax
 
         foreach ($sampleData as $rowIndex => $rowValues) {
             $r = $rowIndex + 2;
             foreach ($rowValues as $colIndex => $val) {
                 $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
-                if (in_array($colLetter, ['Z', 'AE', 'AF', 'AG', 'AH']) && is_numeric($val) && $val !== '') {
+                if (in_array($colLetter, ['S', 'W', 'X', 'Y', 'Z']) && is_numeric($val) && $val !== '') {
                     $sheet->setCellValue("{$colLetter}{$r}", (float)$val);
                 } else {
                     $sheet->setCellValueExplicit("{$colLetter}{$r}", (string)$val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
@@ -1032,11 +1055,37 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
             }
         }
 
+        // Data Validation Dropdowns (Rows 2 to 500)
+        for ($row = 2; $row <= 500; $row++) {
+            // Col M: Province *
+            if (!empty($provinceList)) {
+                $valProv = $sheet->getCell("M{$row}")->getDataValidation();
+                $valProv->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valProv->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valProv->setAllowBlank(true);
+                $valProv->setShowDropDown(true);
+                $valProv->setFormula1('LST_PROVINCES');
+            }
+
+            // Col T: RegisterType (Registered, Un-Registered)
+            $valRegType = $sheet->getCell("T{$row}")->getDataValidation();
+            $valRegType->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+            $valRegType->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+            $valRegType->setAllowBlank(true);
+            $valRegType->setShowDropDown(true);
+            $valRegType->setFormula1('"Registered,Un-Registered"');
+
+            // Col V: Status (Active, InActive)
+            $valStatus = $sheet->getCell("V{$row}")->getDataValidation();
+            $valStatus->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+            $valStatus->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+            $valStatus->setAllowBlank(true);
+            $valStatus->setShowDropDown(true);
+            $valStatus->setFormula1('"Active,InActive"');
+        }
+
         // Auto size columns
         foreach (range('A', 'Z') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-        foreach (['AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH'] as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 

@@ -76,7 +76,7 @@ class CustomerImport implements ToCollection, WithCalculatedFormulas, WithMultip
     {
         $map = [];
         $knownKeys = [
-            'accountno' => ['registrationnontn', 'registrationno/ntn', 'registrationno', 'regno', 'reg_no', 'registration number', 'accountno', 'account_no', 'account number', 'account#', 'code'],
+            'accountno' => ['customercode', 'customer_code', 'customer code', 'customer code *', 'customerno', 'customer_no', 'customer no', 'suppliercode', 'supplier_code', 'supplier code', 'supplier code *', 'supplierno', 'supplier_no', 'supplier no', 'registrationnontn', 'registrationno/ntn', 'registrationno', 'regno', 'reg_no', 'registration number', 'accountno', 'account_no', 'account number', 'account#', 'code', 'code *'],
             'partytype' => ['partytype', 'party_type', 'type'],
             'title' => ['title', 'salutation'],
             'firstname' => ['firstname', 'first_name', 'first name'],
@@ -103,7 +103,7 @@ class CustomerImport implements ToCollection, WithCalculatedFormulas, WithMultip
             'salestaxnumber' => ['salestaxnumber', 'salestaxno', 'strn', 'sales tax number', 'sales_tax_number'],
             'cnic' => ['cnic', 'cnic no', 'cnic_no', 'national id'],
             'isadvancetax' => ['isadvancetax', 'is_advance_tax', 'is advance tax', 'advance tax applicable'],
-            'advancetax' => ['advancetax', 'advance_tax', 'advance tax rate', 'advance tax'],
+            'advancetax' => ['customeradvwht', 'customer_adv_wht', 'customer adv wht', 'supplieradvwht', 'supplier_adv_wht', 'supplier adv wht', 'advwht', 'adv_wht', 'adv wht', 'advancetax', 'advance_tax', 'advance tax rate', 'advance tax'],
             'isfiler' => ['isfiler', 'is_filer', 'is filer', 'filer status type'],
             'registertype' => ['registertype', 'register_type', 'register type', 'registration type'],
             'filerstatus' => ['filerstatus', 'filer_status', 'filer status'],
@@ -176,8 +176,8 @@ class CustomerImport implements ToCollection, WithCalculatedFormulas, WithMultip
         $salesTaxNumber = $this->getHeaderValue($values, $headerMap, 'salestaxnumber');
         $cnic = $this->getHeaderValue($values, $headerMap, 'cnic');
 
-        $isAdvanceTax = $this->parseBoolean($this->getHeaderValue($values, $headerMap, 'isadvancetax'), 0);
         $advanceTax = (float)($this->getHeaderValue($values, $headerMap, 'advancetax') ?: 0.0);
+        $isAdvanceTax = ($advanceTax > 0) ? 1 : $this->parseBoolean($this->getHeaderValue($values, $headerMap, 'isadvancetax'), 0);
 
         $registerType = $this->getHeaderValue($values, $headerMap, 'registertype');
         $regClean = strtolower(trim((string)($registerType ?? '')));
@@ -193,8 +193,8 @@ class CustomerImport implements ToCollection, WithCalculatedFormulas, WithMultip
         $furtherTax = (float)($this->getHeaderValue($values, $headerMap, 'furthertax') ?: 0.0);
         $fedPayable = (float)($this->getHeaderValue($values, $headerMap, 'fedpayable') ?: 0.0);
 
-        // Fixed Values: Status = 1 (Active), PartyType = 1 (Customer) or 2 (Supplier)
-        $status = 1;
+        // Status & PartyType
+        $status = $this->parseStatus($this->getHeaderValue($values, $headerMap, 'status'), 1);
         $partyType = $this->defaultPartyType;
 
         return [
