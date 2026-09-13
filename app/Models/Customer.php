@@ -245,6 +245,13 @@ $query = DB::table('tbl_customer');
                 SELECT 	t.ID,
                     CASE
                     WHEN t.BusinessName IS NULL OR t.BusinessName = '' THEN 'Invalid Business Name'
+                    WHEN t.AccountNo IS NOT NULL AND TRIM(t.AccountNo) <> '' AND EXISTS (
+                        SELECT 1
+                        FROM tbl_customer cust
+                        WHERE LOWER(TRIM(cust.AccountNo)) = LOWER(TRIM(t.AccountNo))
+                          AND cust.ID != t.TID
+                          AND cust.Status IN (0, 1)
+                    ) THEN CONCAT('Customer Code ''', TRIM(t.AccountNo), ''' is already used by another customer')
                     ELSE 'Pass' END AS `ErrMsg`
                 FROM `temp_customer` t
                 WHERE t.RequestID = ?

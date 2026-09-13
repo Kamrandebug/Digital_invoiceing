@@ -20,7 +20,7 @@
         z-index: 1060;
     }
 
-    /* Compact Table Styling matching Invoice List */
+    /* ── Compact Table Styling — mirrors #invoicesTable exactly ── */
     #bulkInvoicesTable {
         font-size: 12.5px;
         margin-bottom: 0;
@@ -43,6 +43,15 @@
         padding: 2px 7px;
         font-size: 10.5px;
         font-weight: 500;
+    }
+    /* Action buttons — same size as invoice list */
+    #bulkInvoicesTable .btn-listing .btn {
+        padding: 2px 8px !important;
+        font-size: 11.5px !important;
+        line-height: 1.35 !important;
+    }
+    #bulkInvoicesTable .btn-listing .btn i {
+        font-size: 11px;
     }
 </style>
 @endsection
@@ -72,15 +81,15 @@
 
 {{-- Messages --}}
 @if(session('success'))
-<div class="alert alert-success alert-dismissible fade show custom-alert-icon shadow-sm mb-3" role="alert">
-    <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 @if(session('error'))
-<div class="alert alert-danger alert-dismissible fade show custom-alert-icon shadow-sm mb-3" role="alert">
-    <i class="fas fa-exclamation-triangle me-2"></i> {!! session('error') !!}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-1"></i> {!! session('error') !!}
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
@@ -177,117 +186,136 @@
 </div>
 
 {{-- Main Table Card --}}
-<div class="card custom-card border-0 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="bulkInvoicesTable">
-                <thead>
-                    <tr>
-                        <th style="width: 50px;">#</th>
-                        <th>Request Title / Source</th>
-                        <th>Request ID</th>
-                        <th>Source Type</th>
-                        <th class="text-center">Invoices</th>
-                        <th class="text-center">Items</th>
-                        <th class="text-end">Total Amount (PKR)</th>
-                        <th class="text-end">Total Tax (PKR)</th>
-                        <th>Created Date</th>
-                        <th class="action-col text-end">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($batches as $index => $batch)
-                    <tr>
-                        <td class="text-muted">{{ $batches->firstItem() + $index }}</td>
-                        <td>
-                            <div class="fw-semibold text-dark">{{ $batch->Title }}</div>
-                            @if(!empty($batch->SourceReference))
-                                <small class="text-muted"><i class="fas fa-file-excel text-success me-1"></i> {{ $batch->SourceReference }}</small>
-                            @endif
-                        </td>
-                        <td>
-                            <code class="fs-11 text-secondary">{{ substr($batch->RequestID, 0, 8) }}...{{ substr($batch->RequestID, -4) }}</code>
-                        </td>
-                        <td>
-                            @if($batch->SourceType === 'EXCEL_IMPORT')
-                                <span class="badge bg-primary-transparent text-primary"><i class="fas fa-file-import me-1"></i> Excel Import</span>
-                            @else
-                                <span class="badge bg-info-transparent text-info"><i class="fas fa-layer-group me-1"></i> Purchase Breakup</span>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-success-transparent text-success fw-semibold fs-11">{{ $batch->TotalInvoices }}</span>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-light text-dark fw-medium fs-11">{{ $batch->TotalItems }}</span>
-                        </td>
-                        <td class="text-end fw-semibold text-dark">
-                            {{ number_format($batch->TotalAmount, 2) }}
-                        </td>
-                        <td class="text-end text-muted">
-                            {{ number_format($batch->TotalTax, 2) }}
-                        </td>
-                        <td>
-                            <div class="fs-12 text-dark">{{ date('d M Y', strtotime($batch->CreatedOn)) }}</div>
-                            <small class="text-muted">{{ date('h:i A', strtotime($batch->CreatedOn)) }}</small>
-                        </td>
-                        <td class="action-col text-end">
-                            <div class="action-wrapper d-inline-flex justify-content-end">
-                                <div class="btn-group btn-listing">
-                                    <button type="button" 
-                                            class="btn btn-outline-primary btn-list-left" 
-                                            onclick="viewBatchInvoices('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}')"
-                                            title="View Invoices in this batch">
-                                        <i class="fas fa-eye me-1"></i> View Invoices
-                                    </button>
-                                    <button type="button" 
-                                            class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split" 
-                                            data-bs-toggle="dropdown" 
-                                            data-bs-auto-close="true"
-                                            data-bs-popper-config='{"strategy":"fixed"}'
-                                            aria-expanded="false">
-                                        <span class="visually-hidden">Toggle Dropdown</span>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow">
-                                        <li>
-                                            <button type="button" class="dropdown-item" onclick="viewBatchInvoices('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}')">
-                                                <i class="fas fa-list me-2 text-primary"></i> View Invoices ({{ $batch->TotalInvoices }})
-                                            </button>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" href="{{ route('invoices.index', ['search' => $batch->RequestID, 'fbr_status' => 'all']) }}" target="_blank">
-                                                <i class="fas fa-external-link-alt me-2 text-secondary"></i> Open in Invoices Page
-                                            </a>
-                                        </li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li>
-                                            <button type="button" class="dropdown-item text-danger" onclick="confirmBatchRollback('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}', {{ $batch->TotalInvoices }})">
-                                                <i class="fas fa-trash-alt me-2 text-danger"></i> Rollback Batch
-                                            </button>
-                                        </li>
-                                    </ul>
+<div class="col-xs-12">
+    <div class="card custom-card">
+        {{-- Card header — matches invoice list tab-header style --}}
+        <div class="card-header invoice-card-tab-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold fs-14 text-dark">Bulk Invoicing Requests</span>
+                <span class="badge bg-primary-transparent text-primary fs-11">{{ $batches->total() }}</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table text-nowrap listing-table" id="bulkInvoicesTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Request Title / Source</th>
+                            <th>Request ID</th>
+                            <th>Source Type</th>
+                            <th class="text-center">Invoices</th>
+                            <th class="text-center">Items</th>
+                            <th class="text-end">Total Amount (PKR)</th>
+                            <th class="text-end">Total Tax (PKR)</th>
+                            <th>Created Date</th>
+                            <th class="action-col text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($batches as $index => $batch)
+                        <tr>
+                            <td class="text-muted">{{ $batches->firstItem() + $index }}</td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ $batch->Title }}</div>
+                                @if(!empty($batch->SourceReference))
+                                    <small class="text-muted"><i class="fas fa-file-excel text-success me-1"></i> {{ $batch->SourceReference }}</small>
+                                @endif
+                            </td>
+                            <td>
+                                <code class="fs-11 text-secondary">{{ substr($batch->RequestID, 0, 8) }}...{{ substr($batch->RequestID, -4) }}</code>
+                            </td>
+                            <td>
+                                @if($batch->SourceType === 'EXCEL_IMPORT')
+                                    <span class="badge bg-primary-transparent text-primary"><i class="fas fa-file-import me-1"></i> Excel Import</span>
+                                @else
+                                    <span class="badge bg-info-transparent text-info"><i class="fas fa-layer-group me-1"></i> Purchase Breakup</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success-transparent text-success fw-semibold fs-11">{{ $batch->TotalInvoices }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark fw-medium fs-11">{{ $batch->TotalItems }}</span>
+                            </td>
+                            <td class="text-end fw-semibold text-dark">
+                                {{ number_format($batch->TotalAmount, 2) }}
+                            </td>
+                            <td class="text-end text-muted">
+                                {{ number_format($batch->TotalTax, 2) }}
+                            </td>
+                            <td>
+                                <div class="fs-12 text-dark">{{ date('d M Y', strtotime($batch->CreatedOn)) }}</div>
+                                <small class="text-muted">{{ date('h:i A', strtotime($batch->CreatedOn)) }}</small>
+                            </td>
+                            <td class="action-col text-end">
+                                <div class="action-wrapper d-inline-flex justify-content-end">
+                                    <div class="btn-group btn-listing">
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-list-left"
+                                                onclick="viewBatchInvoices('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}')"
+                                                title="View Invoices in this batch">
+                                            <i class="fas fa-eye me-1"></i> View Invoices
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split"
+                                                data-bs-toggle="dropdown"
+                                                data-bs-auto-close="true"
+                                                data-bs-popper-config='{"strategy":"fixed"}'
+                                                aria-expanded="false">
+                                            <span class="visually-hidden">Toggle Dropdown</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                                            <li>
+                                                <button type="button" class="dropdown-item" onclick="viewBatchInvoices('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}')">
+                                                    <i class="fas fa-list me-2 text-primary"></i> View Invoices ({{ $batch->TotalInvoices }})
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('invoices.index', ['search' => $batch->RequestID, 'fbr_status' => 'all']) }}" target="_blank">
+                                                    <i class="fas fa-external-link-alt me-2 text-secondary"></i> Open in Invoices Page
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger" onclick="confirmBatchRollback('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}', {{ $batch->TotalInvoices }})">
+                                                    <i class="fas fa-trash-alt me-2 text-danger"></i> Rollback Batch
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="10" class="text-center py-4 text-muted">
-                            <i class="fas fa-folder-open fs-24 d-block mb-2 text-secondary"></i>
-                            No bulk invoicing requests found. Click <strong>Import Invoices</strong> to upload your first batch.
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="10" class="text-center py-5">
+                                <i class="fas fa-folder-open fa-3x text-muted mb-3 d-block"></i>
+                                <p class="text-muted mb-2">No bulk invoicing requests found.</p>
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bulkInvoiceImportModal">
+                                    <i class="fas fa-file-import me-1"></i> Import Invoices
+                                </button>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-footer border-top-0">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-2">
+                <span class="text-muted fs-12">
+                    Showing {{ $batches->firstItem() ?? 0 }}
+                    to {{ $batches->lastItem() ?? 0 }}
+                    of {{ $batches->total() }} entries
+                </span>
+                <nav class="pagination-style-2">
+                    {{ $batches->appends($filters)->links('pagination::bootstrap-5') }}
+                </nav>
+            </div>
         </div>
     </div>
-    @if($batches->hasPages())
-    <div class="card-footer py-2 px-3 border-top bg-light d-flex justify-content-between align-items-center">
-        <small class="text-muted">Showing {{ $batches->firstItem() }} to {{ $batches->lastItem() }} of {{ $batches->total() }} batches</small>
-        {{ $batches->appends($filters)->links() }}
-    </div>
-    @endif
 </div>
 
 {{-- ── Batch Invoices Modal (View invoices against this request) ── --}}
