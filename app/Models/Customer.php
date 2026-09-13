@@ -388,36 +388,53 @@ $query = DB::table('tbl_customer');
         }
 
         // ── STEP 1: FK validation — block if customer is in use ──────────────
-        if ($customerId) {
-            $blockReason = self::validate_can_delete($customerId);
-            if ($blockReason !== null) {
-                return ['status' => false, 'message' => $blockReason];
-            }
+        $blockReason = self::validate_can_delete($requestID);
+        if ($blockReason !== null) {
+            return ['status' => false, 'message' => $blockReason];
         }
 
         // ── STEPS 2-4 inside a transaction — all-or-nothing ──────────────────
-        DB::transaction(function () use ($requestID, $userId, $now, $customerId, $oldRecord) {
+        // ── Bulk-ready: all three steps work on every TID in the RequestID batch ──
+        DB::transaction(function () use ($requestID, $userId, $now) {
 
-            // STEP 2: Copy full row → tbl_customer_history (INSERT / SELECT)
+            // STEP 2: Copy ALL matching rows → tbl_customer_history (INSERT / SELECT)
+            // Already bulk-ready: archives every TID tied to this RequestID in one shot.
             self::move_history_data($requestID, (int) $userId, $now, 'DELETE');
 
-            // STEP 3: Hard delete from tbl_customer
-            if ($customerId) {
-                DB::table('tbl_customer')->where('ID', $customerId)->delete();
-            }
+            // STEP 3: Hard delete ALL matched customers from tbl_customer
+            // DELETE JOIN through temp_customer — works for single or bulk, zero code change needed later.
+            DB::statement("
+                DELETE c
+                FROM tbl_customer c
+                INNER JOIN temp_customer t ON t.TID = c.ID
+                WHERE t.RequestID = ?
+            ", [$requestID]);
 
-            // STEP 4: Audit log (unchanged)
+            // STEP 4: Audit log — single JOIN query through temp_customer GROUP BY TID
+            // Works for single or bulk: reads all archived rows for this RequestID in one shot.
             try {
-                if ($customerId && $oldRecord) {
-                    $module = ((int) $oldRecord->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
+                $archivedRows = DB::connection('tenant')
+                    ->table('tbl_customer_history as h')
+                    ->join(
+                        DB::raw('(SELECT TID FROM temp_customer WHERE RequestID = ? GROUP BY TID) t'),
+                        'h.OriginalID', '=', 't.TID'
+                    )
+                    ->where('h.ActionOn', $now)
+                    ->addBinding($requestID, 'join')
+                    ->get();
+
+                foreach ($archivedRows as $archived) {
+                    $module = ((int) $archived->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
                     \App\Services\AuditLogService::log(
-                        'DELETE', $module, $customerId, (array) $oldRecord, null
+                        'DELETE', $module, $archived->OriginalID, (array) $archived, null
                     );
                 }
             } catch (\Throwable $e) {
                 Log::error('delete_transaction: failed to write audit log: ' . $e->getMessage());
             }
+
         });
+
 
         return ['status' => true, 'message' => null];
     }
@@ -427,39 +444,57 @@ $query = DB::table('tbl_customer');
     // ═══════════════════════════════════════════════════════════════════════
 
     /**
-     * Check whether this customer can be safely hard-deleted.
+     * Check whether the customer (resolved via temp_customer.TID) can be safely hard-deleted.
      *
-     * Returns null  → safe to proceed.
-     * Returns string → human-readable block reason (show to user).
+     * Accepts $requestID — consistent with the rest of the delete pipeline
+     * (move_history_data, delete_transaction all work through RequestID).
      *
-     * @param  int  $customerId  tbl_customer.ID
+     * Uses a single SELECT with JOINs through temp_customer to resolve TID
+     * and check FK references in one DB round-trip.
+     *
+     * Returns null   → safe to proceed.
+     * Returns string → human-readable block reason to show to the user.
+     *
+     * @param  string  $requestID
      */
-    private static function validate_can_delete(int $customerId): ?string
+    private static function validate_can_delete(string $requestID): ?string
     {
-        // Block if customer is referenced in any active sales invoice
-        $invoiceCount = DB::table('tbl_sales_invoice_header')
-            ->where('CustomerID', $customerId)
-            ->where('Status', '!=', 2)
-            ->count();
+        $result = DB::selectOne("
+            SELECT
+                -- Count active invoices linked to this customer via temp_customer.TID
+                (
+                    SELECT COUNT(*)
+                    FROM tbl_sales_invoice_header h
+                    INNER JOIN temp_customer t ON t.TID = h.CustomerID
+                    WHERE t.RequestID = ?
+                      AND h.Status != 2
+                ) AS invoice_count
+
+                -- -- Count active purchases linked to this supplier via temp_customer.TID
+                -- -- Temporarily disabled; uncomment when purchase validation is ready
+                -- ,(
+                --     SELECT COUNT(*)
+                --     FROM tbl_purchase_header p
+                --     INNER JOIN temp_customer t ON t.TID = p.SupplierID
+                --     WHERE t.RequestID = ?
+                --       AND p.Status != 2
+                -- ) AS purchase_count
+        ", [$requestID]);
+
+        $invoiceCount = (int) ($result->invoice_count ?? 0);
+        // $purchaseCount = (int) ($result->purchase_count ?? 0); // uncomment with query above
 
         if ($invoiceCount > 0) {
             return "Cannot delete: this customer has {$invoiceCount} active invoice(s). "
                  . 'Please void or archive those invoices first.';
         }
 
-        // -- Block if customer / supplier is referenced in any active purchase
-        // -- Temporarily disabled; uncomment when purchase validation is ready
-        // $purchaseCount = DB::table('tbl_purchase_header')
-        //     ->where('SupplierID', $customerId)
-        //     ->where('Status', '!=', 2)
-        //     ->count();
-
         // if ($purchaseCount > 0) {
         //     return "Cannot delete: this party is linked to {$purchaseCount} active purchase record(s). "
         //          . 'Please remove those records first.';
         // }
 
-        return null; // safe to delete
+        return null; // safe to proceed
     }
 
     /**
