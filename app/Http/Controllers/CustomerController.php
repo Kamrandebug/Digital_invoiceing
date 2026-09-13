@@ -833,7 +833,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
     }
     
     /**
-     * Archive customer
+     * Delete customer — moves row to tbl_customer_history, then hard-deletes from tbl_customer.
      */
     public function delete_transaction($id)
     {
@@ -843,40 +843,46 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
             if (! $customer) {
                 return redirect()->back()->with('error', $this->entitySingular().' not found.');
             }
-            
-            $requestId = (string) Str::uuid();
-            $userId = auth()->id() ?? 1;
-            $now = now()->toDateTimeString();
 
-            // Insert a row into temp_customer so model's delete_transaction can read it (no row with ID=$id exists in temp)
+            $requestId = (string) Str::uuid();
+            $userId    = auth()->id() ?? 1;
+            $now       = now()->toDateTimeString();
+
+            // Insert a minimal temp row so the model can resolve TID via RequestID
             $nextTempId = DB::table('temp_customer')->max('ID');
             $nextTempId = $nextTempId ? (int)$nextTempId + 1 : 1;
+
             DB::table('temp_customer')->insert([
-                'ID' => $nextTempId,
-                'TID' => $id,
+                'ID'        => $nextTempId,
+                'TID'       => $id,
                 'RequestID' => $requestId,
                 'AccountNo' => $customer->AccountNo ?? '0',
                 'PartyType' => $customer->PartyType ?? $this->partyTypeForCreate(),
-                'Title' => $customer->Title ?? 'Mr',
-                'FirstName' => $customer->FirstName ?? '',
-                'Status' => 2,
+                'Title'     => $customer->Title     ?? 'Mr',
+                'FirstName' => $customer->FirstName  ?? '',
+                'Status'    => $customer->Status     ?? 1,
                 'CreatedBy' => (int)($customer->CreatedBy ?? $userId),
-                'CreatedOn' => $customer->CreatedOn ?? $now,
+                'CreatedOn' => $customer->CreatedOn  ?? $now,
                 'UpdatedBy' => (int)$userId,
                 'UpdatedOn' => $now,
             ]);
 
-            // Execute model transaction (runs query inside model)
-            Customer::delete_transaction(['RequestID' => $requestId]);
-            
+            // Run delete pipeline: validate → move to history → hard delete → audit log
+            $result = Customer::delete_transaction(['RequestID' => $requestId]);
+
+            // FK validation blocked the delete — show reason to user
+            if (! ($result['status'] ?? true)) {
+                return redirect()->back()->with('error', $result['message']);
+            }
+
             return redirect()
                 ->to($this->partyRoute('index'))
-                ->with('success', $this->entitySingular().' archived successfully!');
-                
+                ->with('success', $this->entitySingular().' deleted successfully!');
+
         } catch (\Exception $e) {
             return redirect()
                 ->back()
-                ->with('error', 'Error deleting customer: ' . $e->getMessage());
+                ->with('error', 'Error deleting '.$this->entitySingular().': ' . $e->getMessage());
         }
     }
 
