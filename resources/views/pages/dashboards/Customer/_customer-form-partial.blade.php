@@ -266,6 +266,28 @@
 				@endif
 			</div>
 
+			{{-- Customer Code (AccountNo) --}}
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
+					Customer Code
+					@if(!$isReadonly)
+						<small class="text-muted fw-normal">(Optional — auto-generated)</small>
+					@endif
+				</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->AccountNo ?? '-' }}</div>
+				@else
+					<input type="text" name="AccountNo" id="{{ $uid }}_AccountNo"
+						   class="form-control form-control-sm @error('AccountNo') is-invalid @enderror"
+						   value="{{ old('AccountNo', $customer->AccountNo ?? '') }}"
+						   placeholder="e.g. CUST-000001 (leave blank to auto-generate)"
+						   maxlength="50"
+						   style="text-transform: uppercase;">
+					@error('AccountNo')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
+
+
 			{{-- Display Name --}}
 			<div class="col-md-3">
 				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">

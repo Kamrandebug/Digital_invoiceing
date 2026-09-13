@@ -201,6 +201,7 @@ try {
         'FirstName'         => ['nullable', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
         'LastName'          => ['nullable', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
         'BusinessName'      => ['nullable', 'string', 'max:200', 'regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
+        'AccountNo'         => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]+$/i'],
         'DisplayName'       => 'nullable|string|max:200',
         'Email'             => ['nullable', 'email', 'max:500', Rule::unique('tbl_customer', 'Email')],
         'Mobile'            => ['nullable', 'string', 'regex:/^(\+92|0)?[0-9]{10}$/', Rule::unique('tbl_customer', 'Mobile')],
@@ -301,7 +302,10 @@ try {
                 'TID'               => $nextId,
                 'IsArchive'         => 0,
                 'VoucherID'         => 0,
-                'AccountNo'         => $this->accountNoPrefix().'-'.str_pad((string) $nextId, 6, '0', STR_PAD_LEFT),
+                // Use typed code if provided, otherwise auto-generate (CUST-000001 format)
+                'AccountNo'         => (trim($request->input('AccountNo', '')) !== '')
+                                        ? strtoupper(trim($request->AccountNo))
+                                        : $this->accountNoPrefix().'-'.str_pad((string) $nextId, 6, '0', STR_PAD_LEFT),
                 'PartyType'         => $this->partyTypeForCreate(),
                 'Title'             => $request->Title,
                 'FirstName'         => $request->FirstName,
@@ -643,6 +647,7 @@ try {
         'FirstName'         => ['nullable', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
         'LastName'          => ['nullable', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
         'BusinessName'      => ['nullable', 'string', 'max:200', 'regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
+        'AccountNo'         => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]+$/i'],
         'DisplayName'       => 'nullable|string|max:200',
         'Email'             => ['nullable', 'email', 'max:500', Rule::unique('tbl_customer', 'Email')->ignore($id, 'ID')],
         'Mobile'            => ['nullable', 'string', 'regex:/^(\+92|0)?[0-9]{10}$/', Rule::unique('tbl_customer', 'Mobile')->ignore($id, 'ID')],
@@ -749,7 +754,10 @@ try {
                 'TID'               => $id,
                 'IsArchive'         => 0,
                 'VoucherID'         => $customer->VoucherID ?? 0,
-                'AccountNo'         => $customer->AccountNo ?? '0',
+                // Use typed code if changed; if cleared keep original (avoids breaking existing invoice refs)
+                'AccountNo'         => (trim($request->input('AccountNo', '')) !== '')
+                                        ? strtoupper(trim($request->AccountNo))
+                                        : ($customer->AccountNo ?? '0'),
                 'PartyType'         => $customer->PartyType ?? $this->partyTypeForCreate(),
                 'Title'             => $request->Title,
                 'FirstName'         => $request->FirstName,
