@@ -470,7 +470,6 @@ class BulkInvoiceController extends Controller
 
         $details = DB::connection('tenant')->table('tbl_sales_invoice_detail as d')
             ->leftJoin('tbl_product as p', 'p.ID', '=', 'd.ProductID')
-            ->where('d.RequestID', $requestId)
             ->whereIn('d.InvoiceID', $headerIds)
             ->select(
                 'd.ID as DetailID',

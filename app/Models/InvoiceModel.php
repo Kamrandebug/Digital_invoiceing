@@ -605,48 +605,250 @@ class InvoiceModel extends Model
         ];
     }
 
-    public static function delete_transaction($requestID)
+    // ══════════════════════════════════════════════════════════
+    //  DELETE TRANSACTION — History-first hard delete
+    //  Mirrors the Customer::delete_transaction() pattern.
+    //  Bulk-ready: controller inserts N rows into tbl_temp_invoice_detail
+    //  (same RequestID, one TID per invoice). Model code is unchanged for bulk.
+    // ══════════════════════════════════════════════════════════
+
+    /**
+     * Execute invoice delete pipeline:
+     *   1. validate_can_delete()    — block if any invoice is FBR-posted
+     *   2. move_history_header()    — INSERT INTO tbl_sales_invoice_header_history SELECT
+     *   3. move_history_detail()    — INSERT INTO tbl_sales_invoice_detail_history SELECT
+     *   4. Hard DELETE detail rows  — DELETE JOIN through temp_invoice_detail
+     *   5. Hard DELETE header rows  — DELETE JOIN through temp_invoice_detail
+     *   6. AuditLogService::log()
+     *
+     * Returns ['status' => bool, 'message' => string|null]
+     */
+    public static function delete_transaction(string $requestID): array
     {
-        $oldInvoice = null;
-        $headerId = null;
-        try {
-            $tempDetail = DB::connection('tenant')->table('tbl_temp_invoice_detail')->where('RequestID', $requestID)->first();
-            if ($tempDetail && !empty($tempDetail->TID)) {
-                $headerId = $tempDetail->TID;
-                $oldHeader = DB::connection('tenant')->table('tbl_sales_invoice_header')->where('ID', $headerId)->first();
-                if ($oldHeader) {
-                    $oldLines = DB::connection('tenant')->table('tbl_sales_invoice_detail')->where('InvoiceID', $oldHeader->InvoiceID)->get()->toArray();
-                    $oldInvoice = [
-                        'header' => (array)$oldHeader,
-                        'lines' => $oldLines
-                    ];
-                }
-            }
-        } catch (\Throwable $e) {
-            \Log::error('Failed to fetch old invoice details for delete audit: ' . $e->getMessage());
+        $userId = auth()->id() ?? 1;
+        $now    = now()->toDateTimeString();
+
+        // ── STEP 1: FBR guard ─────────────────────────────────────────────────
+        $blockReason = self::validate_can_delete($requestID);
+        if ($blockReason !== null) {
+            return ['status' => false, 'message' => $blockReason];
         }
 
-        DB::unprepared("
-            UPDATE tbl_sales_invoice_header uu
-            JOIN (
-                SELECT 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn, TID
-                FROM tbl_temp_invoice_detail
-                WHERE RequestID = '$requestID'
-            ) u ON uu.ID = u.TID
-            SET
-                uu.Status = u.Status,
-                uu.UpdatedBy = u.UpdatedBy,
-                uu.UpdatedOn = u.UpdatedOn
-        ");
+        // ── STEPS 2-6 inside a transaction — all-or-nothing ──────────────────
+        DB::transaction(function () use ($requestID, $userId, $now) {
 
-        try {
-            if ($headerId && $oldInvoice) {
-                \App\Services\AuditLogService::log('DELETE', 'INVOICE', $headerId, $oldInvoice, null);
+            // STEP 2: Snapshot header(s) → tbl_sales_invoice_header_history
+            self::move_history_header($requestID, $userId, $now, 'DELETE');
+
+            // STEP 3: Snapshot detail rows → tbl_sales_invoice_detail_history
+            self::move_history_detail($requestID, $userId, $now, 'DELETE');
+
+            // STEP 4: Hard delete all detail rows linked to these headers
+            // GROUP BY TID — deduplicates staging rows; bulk-ready with zero code change.
+            DB::statement("
+                DELETE d FROM tbl_sales_invoice_detail d
+                INNER JOIN (
+                    SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = ? GROUP BY TID
+                ) t ON d.InvoiceID = t.TID
+            ", [$requestID]);
+
+            // STEP 5: Hard delete header row(s)
+            DB::statement("
+                DELETE h FROM tbl_sales_invoice_header h
+                INNER JOIN (
+                    SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = ? GROUP BY TID
+                ) t ON h.ID = t.TID
+            ", [$requestID]);
+
+            // STEP 6: Audit log — read from history (row already archived, not in live table)
+            try {
+                $archivedHeaders = DB::table('tbl_sales_invoice_header_history as hh')
+                    ->join(
+                        DB::raw('(SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = ? GROUP BY TID) t'),
+                        'hh.OriginalID', '=', 't.TID'
+                    )
+                    ->where('hh.ActionOn', $now)
+                    ->addBinding($requestID, 'join')
+                    ->get();
+
+                foreach ($archivedHeaders as $archived) {
+                    \App\Services\AuditLogService::log(
+                        'DELETE', 'INVOICE', $archived->OriginalID, (array) $archived, null
+                    );
+                }
+            } catch (\Throwable $e) {
+                \Log::error('delete_transaction: failed to write audit log: ' . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            \Log::error('Failed to log invoice deletion: ' . $e->getMessage());
+        });
+
+        return ['status' => true, 'message' => null];
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  PRIVATE HELPERS — Invoice delete pipeline
+    // ══════════════════════════════════════════════════════════
+
+    /**
+     * Block delete if any invoice in the batch has already been posted to FBR.
+     * Resolves header IDs via temp_invoice_detail GROUP BY TID (bulk-ready).
+     *
+     * Returns null   → safe to delete.
+     * Returns string → human-readable block reason.
+     */
+    private static function validate_can_delete(string $requestID): ?string
+    {
+        $result = DB::selectOne("
+            SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM tbl_sales_invoice_header h
+                    INNER JOIN (
+                        SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = ? GROUP BY TID
+                    ) t ON h.ID = t.TID
+                    WHERE h.FbrTransactionID IS NOT NULL
+                      AND TRIM(h.FbrTransactionID) <> ''
+                ) AS fbr_posted_count
+        ", [$requestID]);
+
+        $fbrPostedCount = (int) ($result->fbr_posted_count ?? 0);
+
+        if ($fbrPostedCount > 0) {
+            return "Cannot delete: {$fbrPostedCount} invoice(s) in this selection have already been "
+                 . 'submitted to FBR and cannot be deleted.';
+        }
+
+        return null; // safe to proceed
+    }
+
+    /**
+     * Archive invoice header row(s) into tbl_sales_invoice_header_history.
+     * Uses a single INSERT INTO ... SELECT (no PHP round-trip).
+     * Bulk-ready: archives every TID tied to this RequestID in one shot.
+     */
+    private static function move_history_header(
+        string  $requestID,
+        int     $actionBy,
+        string  $actionOn,
+        string  $action     = 'DELETE',
+        ?string $actionNote = null
+    ): void {
+        $inserted = DB::statement("
+            INSERT INTO tbl_sales_invoice_header_history (
+                OriginalID,
+                InvoiceID, InvoiceNumber, InvoiceType, InvoiceDate,
+                DocNo, DocNo2, DocNo3,
+                CustomerID, SaleOfTerm,
+                BuyerNTNCNIC, BuyerBusinessName, BuyerProvince, BuyerAddress,
+                InvoiceRefNo, BuyerRegistrationType, ScenarioId,
+                TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,
+                SalesTaxApplicable, SalesTaxWithheldAtSource,
+                ExtraTax, FurtherTax, FedPayable, Discount,
+                NetAmount, FbrTransactionID, FbrResponseJson,
+                Statusi, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn,
+                Status, Typei, BuyerAddress1, DueDate, BillNumber, Notes, TermDays,
+                SubTotal, SubTotalBeforeDiscount, InvoiceTaxType,
+                GSTId, GSTAmount, GSTBalance,
+                DiscountAllowed, DiscountAmount, Total, Balance,
+                Filter1, Filter2, Filter3, Filter4,
+                Field1, Field2, Field3, Field4,
+                BulkBatchID, Arrears, IsShippingBelowGST,
+                Template, ToLocationID, Tax_ScheduleID,
+                RetailMargin, TOSale, VehicleRegNo,
+                RequestID,
+                Action, ActionBy, ActionOn, ActionNote
+            )
+            SELECT
+                h.ID,
+                h.InvoiceID, h.InvoiceNumber, h.InvoiceType, h.InvoiceDate,
+                h.DocNo, h.DocNo2, h.DocNo3,
+                h.CustomerID, h.SaleOfTerm,
+                h.BuyerNTNCNIC, h.BuyerBusinessName, h.BuyerProvince, h.BuyerAddress,
+                h.InvoiceRefNo, h.BuyerRegistrationType, h.ScenarioId,
+                h.TotalValues, h.ValueSalesExcludingST, h.FixedNotifiedValueOrRetailPrice,
+                h.SalesTaxApplicable, h.SalesTaxWithheldAtSource,
+                h.ExtraTax, h.FurtherTax, h.FedPayable, h.Discount,
+                h.NetAmount, h.FbrTransactionID, h.FbrResponseJson,
+                h.Statusi, h.CreatedBy, h.CreatedOn, h.UpdatedBy, h.UpdatedOn,
+                h.Status, h.Typei, h.BuyerAddress1, h.DueDate, h.BillNumber, h.Notes, h.TermDays,
+                h.SubTotal, h.SubTotalBeforeDiscount, h.InvoiceTaxType,
+                h.GSTId, h.GSTAmount, h.GSTBalance,
+                h.DiscountAllowed, h.DiscountAmount, h.Total, h.Balance,
+                h.Filter1, h.Filter2, h.Filter3, h.Filter4,
+                h.Field1, h.Field2, h.Field3, h.Field4,
+                h.BulkBatchID, h.Arrears, h.IsShippingBelowGST,
+                h.Template, h.ToLocationID, h.Tax_ScheduleID,
+                h.RetailMargin, h.TOSale, h.VehicleRegNo,
+                h.RequestID,
+                ?, ?, ?, ?
+            FROM tbl_sales_invoice_header h
+            INNER JOIN (
+                SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = ? GROUP BY TID
+            ) t ON h.ID = t.TID
+        ", [strtoupper($action), $actionBy, $actionOn, $actionNote, $requestID]);
+
+        if (! $inserted) {
+            throw new \RuntimeException(
+                "move_history_header: INSERT/SELECT returned false for RequestID={$requestID}. "
+                . 'Check that temp TID matches a valid tbl_sales_invoice_header.ID.'
+            );
         }
     }
+
+    /**
+     * Archive invoice detail row(s) into tbl_sales_invoice_detail_history.
+     * Joins tbl_sales_invoice_detail via InvoiceID = temp.TID (bulk-ready).
+     */
+    private static function move_history_detail(
+        string  $requestID,
+        int     $actionBy,
+        string  $actionOn,
+        string  $action     = 'DELETE',
+        ?string $actionNote = null
+    ): void {
+        DB::statement("
+            INSERT INTO tbl_sales_invoice_detail_history (
+                OriginalID,
+                InvoiceID, InvoiceDate, CustomerID, ProductID,
+                Quantity, Rate, Amount, FBRQty, Unit, Weight,
+                HsCode, ProductDescription,
+                UomID, Uom_Desc,
+                SaleTypeID, SaleTypeDesc,
+                SaleTypeToRateID, SaleTypeToRateDesc,
+                SroScheduleID, SroScheduleDesc,
+                SroItemID, SroItemSerialNo,
+                TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,
+                SalesTaxApplicable, SalesTaxWithheldAtSource,
+                ExtraTax, FurtherTax, FedPayable, Discount,
+                CreatedBy, CreatedOn, UpdatedBy, UpdatedOn,
+                GSTAmount, Status,
+                RequestID,
+                Action, ActionBy, ActionOn, ActionNote
+            )
+            SELECT
+                d.ID,
+                d.InvoiceID, d.InvoiceDate, d.CustomerID, d.ProductID,
+                d.Quantity, d.Rate, d.Amount, d.FBRQty, d.Unit, IFNULL(d.Weight, 0.00),
+                d.HsCode, d.ProductDescription,
+                d.UomID, d.Uom_Desc,
+                d.SaleTypeID, d.SaleTypeDesc,
+                d.SaleTypeToRateID, d.SaleTypeToRateDesc,
+                d.SroScheduleID, d.SroScheduleDesc,
+                d.SroItemID, d.SroItemSerialNo,
+                d.TotalValues, d.ValueSalesExcludingST, d.FixedNotifiedValueOrRetailPrice,
+                d.SalesTaxApplicable, d.SalesTaxWithheldAtSource,
+                d.ExtraTax, d.FurtherTax, d.FedPayable, d.Discount,
+                d.CreatedBy, d.CreatedOn, d.UpdatedBy, d.UpdatedOn,
+                d.GSTAmount, d.Status,
+                d.RequestID,
+                ?, ?, ?, ?
+            FROM tbl_sales_invoice_detail d
+            INNER JOIN (
+                SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = ? GROUP BY TID
+            ) t ON d.InvoiceID = t.TID
+        ", [strtoupper($action), $actionBy, $actionOn, $actionNote, $requestID]);
+    }
+
+
 
     /**
      * Build JSON from header + business + customer + lines (SQL), POST to FBR sandbox, save response on header.

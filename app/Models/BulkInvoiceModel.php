@@ -444,15 +444,28 @@ class BulkInvoiceModel extends Model
     }
 
     /**
-     * Rollback / Delete an entire bulk invoice batch
+     * Rollback / Hard-Delete an entire bulk invoice batch using the history-first pipeline.
+     * 
+     * Pipeline Steps:
+     *   1. FBR safety guard: block if any invoice in batch has been submitted to FBR
+     *   2. Move batch request metadata → tbl_bulk_invoice_request_history
+     *   3. Move invoice headers → tbl_sales_invoice_header_history
+     *   4. Move invoice line items → tbl_sales_invoice_detail_history
+     *   5. Hard DELETE line items from tbl_sales_invoice_detail
+     *   6. Hard DELETE headers from tbl_sales_invoice_header
+     *   7. Hard DELETE batch from tbl_bulk_invoice_request
+     *   8. Write audit log
      */
     public static function rollback_batch(string $requestID, int $userId = 1): array
     {
+        $now = now()->toDateTimeString();
+        $action = 'ROLLBACK';
+
         // 1. Check if any invoice in this batch has already been posted to FBR
         $postedCount = DB::connection('tenant')->table('tbl_sales_invoice_header')
             ->where('RequestID', $requestID)
             ->whereNotNull('FbrTransactionID')
-            ->where('FbrTransactionID', '<>', '')
+            ->whereRaw("TRIM(FbrTransactionID) <> ''")
             ->count();
 
         if ($postedCount > 0) {
@@ -462,40 +475,170 @@ class BulkInvoiceModel extends Model
             ];
         }
 
-        // 2. Soft-delete / Remove associated records atomically
-        DB::connection('tenant')->transaction(function () use ($requestID) {
-            // Delete invoice details
-            DB::connection('tenant')->table('tbl_sales_invoice_detail')
-                ->where('RequestID', $requestID)
-                ->delete();
+        // Fetch batch info for audit / note
+        $batch = DB::connection('tenant')->table('tbl_bulk_invoice_request')
+            ->where('RequestID', $requestID)
+            ->first();
 
-            // Delete invoice headers
-            DB::connection('tenant')->table('tbl_sales_invoice_header')
-                ->where('RequestID', $requestID)
-                ->delete();
+        $batchTitle = $batch->Title ?? 'Bulk Invoice Batch';
+        $actionNote = "Rollback Batch: " . $batchTitle;
 
-            // Mark batch request as deleted (Status = 2)
-            DB::connection('tenant')->table('tbl_bulk_invoice_request')
-                ->where('RequestID', $requestID)
-                ->update([
-                    'Status'    => 2,
-                    'UpdatedOn' => now(),
-                ]);
-        });
-
-        // 3. Audit log
+        // 2. Execute history archiving and hard deletion atomically
         try {
-            \App\Services\AuditLogService::log('DELETE', 'BULK_INVOICES', 0, null, [
-                'RequestID' => $requestID,
-                'Action'    => 'Rollback / Deleted Batch',
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('Failed to log bulk invoice rollback: ' . $e->getMessage());
-        }
+            DB::connection('tenant')->transaction(function () use ($requestID, $userId, $now, $action, $actionNote, $batch) {
+                // STEP A: Snapshot batch request → tbl_bulk_invoice_request_history
+                DB::connection('tenant')->statement("
+                    INSERT INTO tbl_bulk_invoice_request_history (
+                        OriginalID, RequestID, Action, ActionBy, ActionOn, ActionNote,
+                        Title, SourceType, SourceReference, TotalInvoices, TotalItems,
+                        TotalAmount, TotalTax, FbrPostedCount, Status, CreatedBy, CreatedOn,
+                        UpdatedBy, UpdatedOn
+                    )
+                    SELECT
+                        b.ID, b.RequestID, ?, ?, ?, ?,
+                        b.Title, b.SourceType, b.SourceReference, b.TotalInvoices, b.TotalItems,
+                        b.TotalAmount, b.TotalTax, b.FbrPostedCount, b.Status, b.CreatedBy, b.CreatedOn,
+                        ?, ?
+                    FROM tbl_bulk_invoice_request b
+                    WHERE b.RequestID = ?
+                ", [$action, $userId, $now, $actionNote, $userId, $now, $requestID]);
 
-        return [
-            'status'  => true,
-            'message' => 'Batch and all associated invoices were successfully removed.',
-        ];
+                // STEP B: Snapshot invoice headers → tbl_sales_invoice_header_history
+                DB::connection('tenant')->statement("
+                    INSERT INTO tbl_sales_invoice_header_history (
+                        OriginalID,
+                        InvoiceID, InvoiceNumber, InvoiceType, InvoiceDate,
+                        DocNo, DocNo2, DocNo3,
+                        CustomerID, SaleOfTerm,
+                        BuyerNTNCNIC, BuyerBusinessName, BuyerProvince, BuyerAddress,
+                        InvoiceRefNo, BuyerRegistrationType, ScenarioId,
+                        TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,
+                        SalesTaxApplicable, SalesTaxWithheldAtSource,
+                        ExtraTax, FurtherTax, FedPayable, Discount,
+                        NetAmount, FbrTransactionID, FbrResponseJson,
+                        Statusi, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn,
+                        Status, Typei, BuyerAddress1, DueDate, BillNumber, Notes, TermDays,
+                        SubTotal, SubTotalBeforeDiscount, InvoiceTaxType,
+                        GSTId, GSTAmount, GSTBalance,
+                        DiscountAllowed, DiscountAmount, Total, Balance,
+                        Filter1, Filter2, Filter3, Filter4,
+                        Field1, Field2, Field3, Field4,
+                        BulkBatchID, Arrears, IsShippingBelowGST,
+                        Template, ToLocationID, Tax_ScheduleID,
+                        RetailMargin, TOSale, VehicleRegNo,
+                        RequestID,
+                        Action, ActionBy, ActionOn, ActionNote
+                    )
+                    SELECT
+                        h.ID,
+                        h.InvoiceID, h.InvoiceNumber, h.InvoiceType, h.InvoiceDate,
+                        h.DocNo, h.DocNo2, h.DocNo3,
+                        h.CustomerID, h.SaleOfTerm,
+                        h.BuyerNTNCNIC, h.BuyerBusinessName, h.BuyerProvince, h.BuyerAddress,
+                        h.InvoiceRefNo, h.BuyerRegistrationType, h.ScenarioId,
+                        h.TotalValues, h.ValueSalesExcludingST, h.FixedNotifiedValueOrRetailPrice,
+                        h.SalesTaxApplicable, h.SalesTaxWithheldAtSource,
+                        h.ExtraTax, h.FurtherTax, h.FedPayable, h.Discount,
+                        h.NetAmount, h.FbrTransactionID, h.FbrResponseJson,
+                        h.Statusi, h.CreatedBy, h.CreatedOn, h.UpdatedBy, h.UpdatedOn,
+                        h.Status, h.Typei, h.BuyerAddress1, h.DueDate, h.BillNumber, h.Notes, h.TermDays,
+                        h.SubTotal, h.SubTotalBeforeDiscount, h.InvoiceTaxType,
+                        h.GSTId, h.GSTAmount, h.GSTBalance,
+                        h.DiscountAllowed, h.DiscountAmount, h.Total, h.Balance,
+                        h.Filter1, h.Filter2, h.Filter3, h.Filter4,
+                        h.Field1, h.Field2, h.Field3, h.Field4,
+                        h.BulkBatchID, h.Arrears, h.IsShippingBelowGST,
+                        h.Template, h.ToLocationID, h.Tax_ScheduleID,
+                        h.RetailMargin, h.TOSale, h.VehicleRegNo,
+                        h.RequestID,
+                        ?, ?, ?, ?
+                    FROM tbl_sales_invoice_header h
+                    WHERE h.RequestID = ?
+                ", [$action, $userId, $now, $actionNote, $requestID]);
+
+                // STEP C: Snapshot invoice detail rows → tbl_sales_invoice_detail_history
+                DB::connection('tenant')->statement("
+                    INSERT INTO tbl_sales_invoice_detail_history (
+                        OriginalID,
+                        InvoiceID, InvoiceDate, CustomerID, ProductID,
+                        Quantity, Rate, Amount, FBRQty, Unit, Weight,
+                        HsCode, ProductDescription,
+                        UomID, Uom_Desc,
+                        SaleTypeID, SaleTypeDesc,
+                        SaleTypeToRateID, SaleTypeToRateDesc,
+                        SroScheduleID, SroScheduleDesc,
+                        SroItemID, SroItemSerialNo,
+                        TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,
+                        SalesTaxApplicable, SalesTaxWithheldAtSource,
+                        ExtraTax, FurtherTax, FedPayable, Discount,
+                        CreatedBy, CreatedOn, UpdatedBy, UpdatedOn,
+                        GSTAmount, Status,
+                        RequestID,
+                        Action, ActionBy, ActionOn, ActionNote
+                    )
+                    SELECT
+                        d.ID,
+                        d.InvoiceID, d.InvoiceDate, d.CustomerID, d.ProductID,
+                        d.Quantity, d.Rate, d.Amount, d.FBRQty, d.Unit, IFNULL(d.Weight, 0.00),
+                        d.HsCode, d.ProductDescription,
+                        d.UomID, d.Uom_Desc,
+                        d.SaleTypeID, d.SaleTypeDesc,
+                        d.SaleTypeToRateID, d.SaleTypeToRateDesc,
+                        d.SroScheduleID, d.SroScheduleDesc,
+                        d.SroItemID, d.SroItemSerialNo,
+                        d.TotalValues, d.ValueSalesExcludingST, d.FixedNotifiedValueOrRetailPrice,
+                        d.SalesTaxApplicable, d.SalesTaxWithheldAtSource,
+                        d.ExtraTax, d.FurtherTax, d.FedPayable, d.Discount,
+                        d.CreatedBy, d.CreatedOn, d.UpdatedBy, d.UpdatedOn,
+                        d.GSTAmount, d.Status,
+                        d.RequestID,
+                        ?, ?, ?, ?
+                    FROM tbl_sales_invoice_detail d
+                    INNER JOIN tbl_sales_invoice_header h ON d.InvoiceID = h.ID
+                    WHERE h.RequestID = ?
+                ", [$action, $userId, $now, $actionNote, $requestID]);
+
+                // STEP D: Hard delete invoice details
+                DB::connection('tenant')->statement("
+                    DELETE d FROM tbl_sales_invoice_detail d
+                    INNER JOIN tbl_sales_invoice_header h ON d.InvoiceID = h.ID
+                    WHERE h.RequestID = ?
+                ", [$requestID]);
+
+                // STEP E: Hard delete invoice headers
+                DB::connection('tenant')->table('tbl_sales_invoice_header')
+                    ->where('RequestID', $requestID)
+                    ->delete();
+
+                // STEP F: Hard delete batch request
+                DB::connection('tenant')->table('tbl_bulk_invoice_request')
+                    ->where('RequestID', $requestID)
+                    ->delete();
+
+                // STEP G: Audit log
+                try {
+                    \App\Services\AuditLogService::log('DELETE', 'BULK_INVOICES', $batch->ID ?? 0, (array) $batch, [
+                        'RequestID'     => $requestID,
+                        'Action'        => 'Rollback / Hard Deleted Batch',
+                        'TotalInvoices' => $batch->TotalInvoices ?? 0,
+                        'TotalAmount'   => $batch->TotalAmount ?? 0,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::error('Failed to log bulk invoice rollback: ' . $e->getMessage());
+                }
+            });
+
+            return [
+                'status'  => true,
+                'message' => 'Batch and all associated invoices were safely archived to history and permanently removed from active tables.',
+            ];
+        } catch (\Throwable $e) {
+            Log::error('BulkInvoiceModel::rollback_batch exception: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return [
+                'status'  => false,
+                'message' => 'Rollback failed: ' . $e->getMessage(),
+            ];
+        }
     }
 }
+

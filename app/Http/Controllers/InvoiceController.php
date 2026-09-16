@@ -618,12 +618,17 @@ class InvoiceController extends Controller
                 'RequestID' => $requestId,
             ]);
 
-            InvoiceModel::delete_transaction($requestId);
+            $result = InvoiceModel::delete_transaction($requestId);
 
-            return redirect()->route('invoices.index')->with('success', 'Invoice archived successfully.');
+            // FBR guard blocked the delete — show reason to user
+            if (! ($result['status'] ?? true)) {
+                return redirect()->back()->with('error', $result['message']);
+            }
+
+            return redirect()->route('invoices.index')->with('success', 'Invoice deleted successfully.');
 
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error archiving invoice: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Error deleting invoice: '.$e->getMessage());
         }
     }
 

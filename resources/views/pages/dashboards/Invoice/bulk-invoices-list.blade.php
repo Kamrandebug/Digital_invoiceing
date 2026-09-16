@@ -53,6 +53,101 @@
     #bulkInvoicesTable .btn-listing .btn i {
         font-size: 11px;
     }
+
+    /* ── Batch Invoices Modal (View Invoices UI Aligned with Portal Theme) ── */
+    #batchInvoicesModal .modal-content {
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    #batchInvoicesModal .modal-header {
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0.65rem 1.15rem;
+    }
+    #batchInvoicesModal .modal-footer {
+        background-color: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        padding: 0.55rem 1.15rem;
+    }
+    #batchInvoicesDetailTable {
+        font-size: 12px;
+        margin-bottom: 0;
+    }
+    #batchInvoicesDetailTable thead th {
+        padding: 0.45rem 0.65rem !important;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: #475569;
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        vertical-align: middle;
+    }
+    #batchInvoicesDetailTable tbody td {
+        padding: 0.4rem 0.65rem !important;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+        line-height: 1.35;
+    }
+    #batchInvoicesDetailTable .batch-invoice-row {
+        transition: background-color 0.15s ease;
+    }
+    #batchInvoicesDetailTable .batch-invoice-row:hover {
+        background-color: #f8fafc;
+    }
+    .toggle-items-btn {
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: #475569;
+        background-color: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+    }
+    .toggle-items-btn:hover {
+        background-color: rgba(var(--primary-rgb, 111, 66, 193), 0.12);
+        color: var(--primary-color, #6f42c1);
+        border-color: rgba(var(--primary-rgb, 111, 66, 193), 0.3);
+    }
+    .toggle-items-btn.active {
+        background-color: var(--primary-color, #6f42c1);
+        color: #ffffff;
+        border-color: var(--primary-color, #6f42c1);
+    }
+    .batch-items-container {
+        background-color: #f8fafc;
+        border-top: 1px dashed #cbd5e1;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 12px 16px;
+    }
+    .batch-inner-table {
+        font-size: 11.5px;
+        background-color: #ffffff;
+        margin-bottom: 0;
+    }
+    .batch-inner-table thead th {
+        background-color: #f1f5f9 !important;
+        color: #475569;
+        font-size: 10.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        padding: 0.35rem 0.55rem !important;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .batch-inner-table tbody td {
+        padding: 0.35rem 0.55rem !important;
+        font-size: 11.5px;
+        vertical-align: middle;
+        border-color: #f1f5f9;
+    }
 </style>
 @endsection
 
@@ -165,7 +260,7 @@
             <div class="col-md-4">
                 <label class="form-label fs-12 text-muted mb-1">Search</label>
                 <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-light border-end-0"><i class="ri-search-line"></i></span>
+                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="ri-search-line"></i></span>
                     <input type="text" name="search" class="form-control form-control-sm border-start-0" placeholder="Title, Request ID, File..." value="{{ $filters['search'] ?? '' }}">
                 </div>
             </div>
@@ -321,29 +416,33 @@
 {{-- ── Batch Invoices Modal (View invoices against this request) ── --}}
 <div class="modal fade" id="batchInvoicesModal" tabindex="-1" aria-labelledby="batchInvoicesModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-bottom py-2 px-3 bg-light d-flex align-items-center justify-content-between">
-                <div>
-                    <h6 class="modal-title fw-semibold text-primary mb-0 fs-15" id="batchInvoicesModalLabel">
-                        <i class="fas fa-file-invoice-dollar me-2"></i> <span id="batchModalTitle">Batch Invoices</span>
-                    </h6>
-                    <small class="text-muted" id="batchModalSubtitle">Request ID: <code id="batchModalRequestId"></code></small>
+        <div class="modal-content">
+            <div class="modal-header d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <div>
+                        <h6 class="modal-title fw-semibold text-dark mb-0 fs-14 d-flex align-items-center" id="batchInvoicesModalLabel">
+                            <i class="ri-file-list-3-line text-primary me-2 fs-16"></i> <span id="batchModalTitle">Batch Invoices</span>
+                        </h6>
+                        <div class="mt-1 d-flex align-items-center gap-1">
+                            <span class="badge bg-light text-muted border font-monospace fs-10">Request ID: <span id="batchModalRequestId"></span></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-primary-transparent text-primary fw-semibold fs-11" id="batchModalInvoicesPill">0 Invoices</span>
-                    <span class="badge bg-success-transparent text-success fw-semibold fs-11" id="batchModalAmountPill">PKR 0.00</span>
+                    <span class="badge bg-primary-transparent text-primary fw-semibold fs-11 px-2 py-1" id="batchModalInvoicesPill">0 Invoices</span>
+                    <span class="badge bg-success-transparent text-success fw-semibold fs-11 px-2 py-1" id="batchModalAmountPill">PKR 0.00</span>
                     <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
             </div>
             <div class="modal-body p-3">
-                {{-- Quick search in modal --}}
+                {{-- Quick search & helper text in modal --}}
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                     <div class="input-group input-group-sm" style="max-width: 320px;">
-                        <span class="input-group-text bg-light border-end-0"><i class="ri-search-line"></i></span>
+                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="ri-search-line"></i></span>
                         <input type="text" id="batchInvoiceFilterInput" class="form-control border-start-0" placeholder="Filter invoices in this batch..." onkeyup="filterBatchInvoicesTable()">
                     </div>
-                    <div class="fs-12 text-muted" id="batchModalSummaryText">
-                        Showing all invoices generated in this request. Click <i class="fas fa-chevron-circle-down text-primary"></i> to view line items.
+                    <div class="fs-11 text-muted d-flex align-items-center gap-1" id="batchModalSummaryText">
+                        <i class="ri-information-line text-primary fs-13"></i> Showing all invoices in this batch. Click <i class="ri-arrow-down-s-line text-primary fw-bold"></i> to view line items.
                     </div>
                 </div>
 
@@ -352,24 +451,24 @@
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading batch invoices...</span>
                     </div>
-                    <p class="text-muted mt-2 fs-13">Loading invoices and line items...</p>
+                    <p class="text-muted mt-2 fs-12">Loading invoices and line items...</p>
                 </div>
 
                 {{-- Invoices Table Container --}}
-                <div id="batchModalTableContainer" class="table-responsive d-none">
-                    <table class="table table-sm table-hover align-middle border mb-0" id="batchInvoicesDetailTable" style="font-size: 12px;">
-                        <thead class="bg-light text-dark">
+                <div id="batchModalTableContainer" class="table-responsive rounded border d-none">
+                    <table class="table table-sm table-hover align-middle mb-0" id="batchInvoicesDetailTable">
+                        <thead>
                             <tr>
-                                <th style="width: 35px;" class="text-center">#</th>
+                                <th style="width: 38px;" class="text-center">#</th>
                                 <th style="width: 95px;">Date</th>
                                 <th>Customer</th>
-                                <th>DocNo</th>
-                                <th class="text-end">Net (PKR)</th>
-                                <th class="text-end">Tax (PKR)</th>
-                                <th class="text-end">Total (PKR)</th>
-                                <th>FBR Trans ID</th>
-                                <th class="text-center">FBR Status</th>
-                                <th class="text-center" style="width: 85px;">Action</th>
+                                <th style="width: 130px;">DocNo</th>
+                                <th class="text-end" style="width: 105px;">Net (PKR)</th>
+                                <th class="text-end" style="width: 95px;">Tax (PKR)</th>
+                                <th class="text-end" style="width: 115px;">Total (PKR)</th>
+                                <th style="width: 120px;">FBR Trans ID</th>
+                                <th class="text-center" style="width: 105px;">FBR Status</th>
+                                <th class="text-center" style="width: 65px;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="batchInvoicesTableBody">
@@ -378,11 +477,13 @@
                     </table>
                 </div>
             </div>
-            <div class="modal-footer py-2 px-3 border-top bg-light d-flex justify-content-between">
-                <a href="#" id="batchModalFullViewBtn" target="_blank" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-external-link-alt me-1"></i> Open in Full Invoices List
+            <div class="modal-footer d-flex justify-content-between align-items-center">
+                <a href="#" id="batchModalFullViewBtn" target="_blank" class="btn btn-sm btn-outline-primary btn-wave waves-light">
+                    <i class="ri-external-link-line me-1"></i> Open in Full Invoices List
                 </a>
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-sm btn-light border btn-wave waves-light" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-1"></i> Close
+                </button>
             </div>
         </div>
     </div>
@@ -531,8 +632,8 @@ function viewBatchInvoices(requestId, title) {
             const batch = data.batch || {};
             const invoices = data.invoices || [];
 
-            document.getElementById('batchModalInvoicesPill').textContent = (batch.TotalInvoices || invoices.length) + ' Invoices';
-            document.getElementById('batchModalAmountPill').textContent = 'PKR ' + Number(batch.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('batchModalInvoicesPill').innerHTML = '<i class="ri-file-text-line me-1"></i> ' + (batch.TotalInvoices || invoices.length) + ' Invoices';
+            document.getElementById('batchModalAmountPill').innerHTML = '<i class="ri-money-dollar-circle-line me-1"></i> PKR ' + Number(batch.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
             if (invoices.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No invoices found for this batch.</td></tr>';
@@ -543,72 +644,79 @@ function viewBatchInvoices(requestId, title) {
             invoices.forEach((inv, idx) => {
                 const isPosted = inv.FbrTransactionID && inv.FbrTransactionID.trim() !== '';
                 const fbrStatusBadge = isPosted 
-                    ? '<span class="badge bg-success-transparent text-success"><i class="fas fa-check-circle me-1"></i> Posted</span>'
-                    : '<span class="badge bg-info-transparent text-info"><i class="fas fa-clock me-1"></i> Not Posted</span>';
+                    ? '<span class="badge bg-success-transparent text-success"><i class="ri-checkbox-circle-fill me-1"></i> Posted</span>'
+                    : '<span class="badge bg-info-transparent text-info"><i class="ri-time-line me-1"></i> Not Posted</span>';
 
                 const customerDisplay = inv.CustomerName || inv.CustomerNTN || inv.CustomerCode || 'Walk-In';
-                const customerCodeSubtitle = inv.CustomerCode ? '<small class="text-muted d-block">' + inv.CustomerCode + '</small>' : '';
+                const customerCodeSubtitle = inv.CustomerCode ? '<small class="text-muted font-monospace fs-10 d-block">' + inv.CustomerCode + '</small>' : '';
 
                 html += `
                 <tr class="batch-invoice-row" id="inv-row-${inv.HeaderID}">
                     <td class="text-center">
-                        <button class="btn btn-xs btn-link p-0 text-primary toggle-items-btn" onclick="toggleBatchInvoiceItems(${inv.HeaderID})" title="Toggle Line Items">
-                            <i class="fas fa-chevron-circle-right fs-14" id="toggle-icon-${inv.HeaderID}"></i>
+                        <button type="button" class="btn btn-xs toggle-items-btn" id="toggle-btn-${inv.HeaderID}" onclick="toggleBatchInvoiceItems(${inv.HeaderID})" title="Toggle Line Items">
+                            <i class="ri-arrow-right-s-line fs-14" id="toggle-icon-${inv.HeaderID}"></i>
                         </button>
                     </td>
-                    <td>${inv.InvoiceDate || ''}</td>
+                    <td><span class="fs-12 text-dark font-monospace">${inv.InvoiceDate || ''}</span></td>
                     <td>
-                        <div class="fw-semibold text-dark">${customerDisplay}</div>
+                        <div class="fw-semibold text-dark fs-12">${customerDisplay}</div>
                         ${customerCodeSubtitle}
                     </td>
-                    <td><strong class="text-primary">${inv.DocNo || ''}</strong></td>
-                    <td class="text-end">${Number(inv.ValueSalesExcludingST || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    <td class="text-end">${Number(inv.SalesTaxApplicable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    <td class="text-end fw-semibold text-dark">${Number(inv.TotalValues || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    <td><code class="fs-11 text-secondary">${inv.FbrTransactionID || '-'}</code></td>
+                    <td><span class="badge bg-primary-transparent text-primary font-monospace fw-bold fs-11">${inv.DocNo || ''}</span></td>
+                    <td class="text-end font-monospace">${Number(inv.ValueSalesExcludingST || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace text-muted">${Number(inv.SalesTaxApplicable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td class="text-end font-monospace fw-semibold text-dark">${Number(inv.TotalValues || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td><span class="font-monospace fs-11 text-secondary">${inv.FbrTransactionID || '-'}</span></td>
                     <td class="text-center">${fbrStatusBadge}</td>
                     <td class="text-center">
-                        <a href="/invoices/${inv.HeaderID}/print-view" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" title="Print Invoice">
-                            <i class="fas fa-print"></i>
+                        <a href="/invoices/${inv.HeaderID}/print-view" target="_blank" class="btn btn-xs btn-icon btn-outline-light text-muted hover-primary" title="Print Invoice">
+                            <i class="ri-printer-line fs-13"></i>
                         </a>
                     </td>
                 </tr>
-                <tr class="d-none bg-light batch-items-row" id="items-row-${inv.HeaderID}">
-                    <td colspan="10" class="p-2">
-                        <div class="card card-body bg-white p-2 border shadow-none mb-0">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-semibold text-dark fs-11"><i class="fas fa-boxes me-1 text-primary"></i> Line Items (${inv.items_count || 0})</span>
-                                <small class="text-muted">Sale of Term: <strong>${inv.SaleOfTerm || 'CASH'}</strong></small>
+                <tr class="d-none batch-items-row" id="items-row-${inv.HeaderID}">
+                    <td colspan="10" class="p-0 border-0">
+                        <div class="batch-items-container">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary-transparent text-primary fw-semibold fs-11">
+                                    <i class="ri-shopping-bag-3-line me-1"></i> Line Items (${inv.items_count || (inv.items ? inv.items.length : 0)})
+                                </span>
+                                <span class="badge bg-white text-dark border font-monospace fs-11">
+                                    <span class="text-muted fw-normal">Sale of Term:</span> <strong class="text-primary">${inv.SaleOfTerm || 'CASH'}</strong>
+                                </span>
                             </div>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-sm mb-0" style="font-size: 11px;">
-                                    <thead class="table-light">
+                            <div class="table-responsive rounded border bg-white shadow-none">
+                                <table class="table table-sm table-bordered align-middle mb-0 batch-inner-table">
+                                    <thead>
                                         <tr>
-                                            <th>#</th>
+                                            <th style="width: 35px;" class="text-center">#</th>
                                             <th>Product / Code</th>
                                             <th>Description</th>
-                                            <th>HS Code</th>
-                                            <th>UOM</th>
-                                            <th class="text-end">Qty</th>
-                                            <th class="text-end">Rate</th>
-                                            <th class="text-end">Excl. Tax</th>
-                                            <th class="text-end">Tax</th>
-                                            <th class="text-end">Total</th>
+                                            <th style="width: 95px;" class="text-center">HS Code</th>
+                                            <th style="width: 65px;" class="text-center">UOM</th>
+                                            <th class="text-end" style="width: 75px;">Qty</th>
+                                            <th class="text-end" style="width: 85px;">Rate</th>
+                                            <th class="text-end" style="width: 95px;">Excl. Tax</th>
+                                            <th class="text-end" style="width: 85px;">Tax</th>
+                                            <th class="text-end" style="width: 100px;">Total</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         ${(inv.items || []).map((it, i) => `
                                             <tr>
-                                                <td class="text-center">${i + 1}</td>
-                                                <td><strong>${it.ProductCode || ''}</strong> ${it.ProductName ? '('+it.ProductName+')' : ''}</td>
-                                                <td>${it.ProductDescription || '-'}</td>
-                                                <td><code>${it.HsCode || '-'}</code></td>
-                                                <td>${it.Uom_Desc || '-'}</td>
-                                                <td class="text-end">${Number(it.Quantity || 0).toFixed(2)}</td>
-                                                <td class="text-end">${Number(it.Rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                                <td class="text-end">${Number(it.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                                <td class="text-end">${Number(it.GSTAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                                <td class="text-end fw-semibold">${Number(it.TotalValues || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td class="text-center text-muted fs-11">${i + 1}</td>
+                                                <td>
+                                                    <strong class="text-dark">${it.ProductCode || ''}</strong>
+                                                    ${it.ProductName ? '<span class="text-muted fs-11 ms-1">('+it.ProductName+')</span>' : ''}
+                                                </td>
+                                                <td class="text-dark fs-11">${it.ProductDescription || '-'}</td>
+                                                <td class="text-center"><span class="badge bg-light text-secondary border font-monospace fs-10">${it.HsCode || '-'}</span></td>
+                                                <td class="text-center text-muted font-monospace fs-11">${it.Uom_Desc || '-'}</td>
+                                                <td class="text-end font-monospace">${Number(it.Quantity || 0).toFixed(2)}</td>
+                                                <td class="text-end font-monospace">${Number(it.Rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td class="text-end font-monospace">${Number(it.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td class="text-end font-monospace text-muted">${Number(it.GSTAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td class="text-end font-monospace fw-semibold text-dark">${Number(it.TotalValues || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -635,20 +743,23 @@ function viewBatchInvoices(requestId, title) {
 function toggleBatchInvoiceItems(headerId) {
     const itemsRow = document.getElementById('items-row-' + headerId);
     const icon = document.getElementById('toggle-icon-' + headerId);
+    const btn = document.getElementById('toggle-btn-' + headerId);
     if (!itemsRow) return;
 
     if (itemsRow.classList.contains('d-none')) {
         itemsRow.classList.remove('d-none');
         if (icon) {
-            icon.classList.remove('fa-chevron-circle-right');
-            icon.classList.add('fa-chevron-circle-down');
+            icon.classList.remove('ri-arrow-right-s-line');
+            icon.classList.add('ri-arrow-down-s-line');
         }
+        if (btn) btn.classList.add('active');
     } else {
         itemsRow.classList.add('d-none');
         if (icon) {
-            icon.classList.remove('fa-chevron-circle-down');
-            icon.classList.add('fa-chevron-circle-right');
+            icon.classList.remove('ri-arrow-down-s-line');
+            icon.classList.add('ri-arrow-right-s-line');
         }
+        if (btn) btn.classList.remove('active');
     }
 }
 
