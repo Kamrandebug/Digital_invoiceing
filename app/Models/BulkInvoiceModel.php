@@ -165,7 +165,10 @@ class BulkInvoiceModel extends Model
                 t.`SroScheduleDesc`    = COALESCE(fss.`srO_DESC`, t.`SroScheduleDesc`),
                 t.`SroItemID`          = fsi.`srO_ITEM_ID`,
                 t.`SroItemSerialNo`    = COALESCE(fsi.`srO_ITEM_DESC`, t.`SroItemSerialNo`),
-                t.`TotalValues`        = IFNULL(t.`ValueSalesExcludingST`, 0.00) + IFNULL(t.`SalesTaxApplicable`, 0.00)
+                t.`TotalValues`        = IFNULL(t.`ValueSalesExcludingST`, 0.00) + IFNULL(t.`SalesTaxApplicable`, 0.00),
+                t.Rate                 = IFNULL(t.`ValueSalesExcludingST`, 0.00) / Quantity,
+                t.Amount               = IFNULL(t.`ValueSalesExcludingST`, 0.00),
+                t.TPRate               = IFNULL(t.`FixedNotifiedValueOrRetailPrice`, 0.00) / Quantity
             WHERE t.`RequestID` = ?
         ", [$requestID]);
 
@@ -353,7 +356,7 @@ class BulkInvoiceModel extends Model
                 InvoiceID, InvoiceDate, CustomerID, ProductID, Quantity, Rate, Amount, Unit, FBRQty, Weight, GSTAmount,
                 HsCode, ProductDescription, UomID, Uom_Desc, SaleTypeID, SaleTypeDesc,
                 SaleTypeToRateID, SaleTypeToRateDesc, SroScheduleID, SroScheduleDesc, SroItemID, SroItemSerialNo,
-                TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,
+                TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,TPRate,
                 SalesTaxApplicable, SalesTaxWithheldAtSource, ExtraTax, FurtherTax, FedPayable, Discount,
                 Status, CreatedBy, CreatedOn, RequestID
             )
@@ -384,6 +387,7 @@ class BulkInvoiceModel extends Model
                 IFNULL(t.TotalValues, 0.00),
                 IFNULL(t.ValueSalesExcludingST, 0.00),
                 IFNULL(t.FixedNotifiedValueOrRetailPrice, 0.00),
+                IFNULL(t.TPRate, 0.00),
                 IFNULL(t.SalesTaxApplicable, 0.00),
                 IFNULL(t.SalesTaxWithheldAtSource, 0.00),
                 IFNULL(t.ExtraTax, 0.00),
