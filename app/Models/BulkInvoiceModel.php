@@ -250,6 +250,9 @@ class BulkInvoiceModel extends Model
                         ELSE 'Pass'
                     END AS ErrMsg
                 FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
+                LEFT JOIN `core_digital_invoicing`.`fbr_sale_type_to_rate` fsttr ON (fsttr.ratE_ID = t.SaleTypeToRateID AND fsttr.`transactioN_TYPE_ID` = t.`SaleTypeID`)
+                LEFT JOIN {$tenantDbQuoted}.tbl_product p ON (p.Code = t.ProductCode)
+                LEFT JOIN {$tenantDbQuoted}.tbl_customer c ON (c.AccountNo = t.CustomerCode)
                 WHERE t.RequestID = ?
             ) u ON (u.ID = uu.ID)
             SET uu.ErrMsg = u.ErrMsg;
