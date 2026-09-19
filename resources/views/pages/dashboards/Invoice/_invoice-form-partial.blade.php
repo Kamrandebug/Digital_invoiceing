@@ -685,10 +685,16 @@
                     </td>
                     @if($inModal)
                     <td class="ifp-col-fixed">
+                        @php
+                            $fixedNotifiedVal = (float)($item->FixedNotifiedValueOrRetailPrice ?? 0);
+                            if ($fixedNotifiedVal <= 0 && (float)($item->TPRate ?? 0) > 0) {
+                                $fixedNotifiedVal = (float)$item->TPRate * (float)($item->Quantity ?? 1);
+                            }
+                        @endphp
                         @if($isReadonly)
-                            <span class="small">{{ number_format((float) ($item->TPRate ?? 0) * (float) ($item->Quantity ?? 0), 2) }}</span>
+                            <span class="small">{{ number_format($fixedNotifiedVal, 2) }}</span>
                         @else
-                            <input type="text" name="items[{{ $idx }}][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="{{ number_format((float) ($item->TPRate ?? 0) * (float) ($item->Quantity ?? 0), 2, '.', ',') }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="{{ number_format($fixedNotifiedVal, 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     @endif
@@ -1787,11 +1793,6 @@
             prodSel.addEventListener('change', function() {
                 applySelectedProductToRow(true);
             });
-
-            // On Edit modal open, pre-fill row using current selected product (without overriding typed description).
-            if (prodSel.value) {
-                applySelectedProductToRow(false);
-            }
         }
 
         applyCustomerMetaToRow(row);

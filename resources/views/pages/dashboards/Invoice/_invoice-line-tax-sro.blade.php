@@ -83,8 +83,12 @@
                         $extraTaxPctVal = (float) ($item->ExtraTax ?? 0);
                         $furtherTaxPctVal = (float) ($item->FurtherTax ?? 0);
                         $fedPayablePctVal = (float) ($item->FedPayable ?? 0);
+                        $itemFixedRate = (float) ($item?->TPRate ?? 0);
+                        if ($itemFixedRate <= 0 && (float)($item?->FixedNotifiedValueOrRetailPrice ?? 0) > 0 && (float)($item?->Quantity ?? 0) > 0) {
+                            $itemFixedRate = (float)$item->FixedNotifiedValueOrRetailPrice / (float)$item->Quantity;
+                        }
                         $isFixedRaw = strtolower(trim((string) ($item->ProductIsFixedRate ?? $item->IsFixedRate ?? '0')));
-                        $isFixedRateVal = in_array($isFixedRaw, ['1', 'true', 'yes', 'y', 'on'], true) ? 1 : 0;
+                        $isFixedRateVal = in_array($isFixedRaw, ['1', 'true', 'yes', 'y', 'on'], true) || $itemFixedRate > 0 || (float)($item?->FixedNotifiedValueOrRetailPrice ?? 0) > 0 ? 1 : 0;
                     @endphp
                     {{-- Listboxes first (same pattern as product modal Tax & SRO) --}}
                     <div class="ifp-tax-sro-listbox-area border-bottom mb-2 pb-2 px-2 pt-2">
@@ -151,7 +155,7 @@
                         <div class="col-12 col-md-4">
                             <div class="ifp-tax-sro-field mb-0">
                                 <label class="ifp-tax-sro-lbl" for="{{ $uid }}_fr_{{ $idx }}">Fixed Rate</label>
-                                <input type="number" step="0.01" id="{{ $uid }}_fr_{{ $idx }}" name="items[{{ $idx }}][TPRate]" class="form-control ifp-fixed-rate" value="{{ $item?->TPRate ?? 0 }}" readonly>
+                                <input type="number" step="0.01" id="{{ $uid }}_fr_{{ $idx }}" name="items[{{ $idx }}][TPRate]" class="form-control ifp-fixed-rate" value="{{ $itemFixedRate }}" readonly>
                             </div>
                         </div>
                         <div class="col-12 col-md-4">

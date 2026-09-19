@@ -165,10 +165,14 @@ class BulkInvoiceModel extends Model
                 t.`SroScheduleDesc`    = COALESCE(fss.`srO_DESC`, t.`SroScheduleDesc`),
                 t.`SroItemID`          = fsi.`srO_ITEM_ID`,
                 t.`SroItemSerialNo`    = COALESCE(fsi.`srO_ITEM_DESC`, t.`SroItemSerialNo`),
-                t.`TotalValues`        = IFNULL(t.`ValueSalesExcludingST`, 0.00) + IFNULL(t.`SalesTaxApplicable`, 0.00),
-                t.Rate                 = IFNULL(t.`ValueSalesExcludingST`, 0.00) / Quantity,
-                t.Amount               = IFNULL(t.`ValueSalesExcludingST`, 0.00),
-                t.TPRate               = IFNULL(t.`FixedNotifiedValueOrRetailPrice`, 0.00) / Quantity
+                t.`Amount`             = IFNULL(t.`ValueSalesExcludingST`, 0.00),
+                t.`Rate`               = IF(t.`Quantity` > 0, (IFNULL(t.`ValueSalesExcludingST`, 0.00) / t.`Quantity`), 0.00),
+                t.`TPRate`             = IF(t.`Quantity` > 0 AND IFNULL(t.`FixedNotifiedValueOrRetailPrice`, 0) > 0, 
+                                            t.`FixedNotifiedValueOrRetailPrice` / t.`Quantity`, 
+                                            COALESCE(p.`TPRate`, 0.00)),
+                t.`FixedNotifiedValueOrRetailPrice` = COALESCE(NULLIF(t.`FixedNotifiedValueOrRetailPrice`, 0), 
+                                                               IFNULL(p.`TPRate`, 0.00) * t.`Quantity`, 0.00),
+                t.`TotalValues`        = IFNULL(t.`ValueSalesExcludingST`, 0.00) + IFNULL(t.`SalesTaxApplicable`, 0.00)
             WHERE t.`RequestID` = ?
         ", [$requestID]);
 
