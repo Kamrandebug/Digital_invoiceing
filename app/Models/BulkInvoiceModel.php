@@ -168,8 +168,7 @@ class BulkInvoiceModel extends Model
                 t.`Amount`             = IFNULL(t.`ValueSalesExcludingST`, 0.00),
                 t.`Rate`               = IF(t.`Quantity` > 0, (IFNULL(t.`ValueSalesExcludingST`, 0.00) / t.`Quantity`), 0.00),
                 t.`TPRate`             = IF(t.`Quantity` > 0 AND IFNULL(t.`FixedNotifiedValueOrRetailPrice`, 0) > 0, 
-                                            t.`FixedNotifiedValueOrRetailPrice` / t.`Quantity`, 
-                                            COALESCE(p.`TPRate`, 0.00)),
+                                        t.`FixedNotifiedValueOrRetailPrice` / t.`Quantity`, COALESCE(p.`TPRate`, 0.00)),
                 t.`FixedNotifiedValueOrRetailPrice` = COALESCE(NULLIF(t.`FixedNotifiedValueOrRetailPrice`, 0), 
                                                                IFNULL(p.`TPRate`, 0.00) * t.`Quantity`, 0.00),
                 t.`TotalValues`        = IFNULL(t.`ValueSalesExcludingST`, 0.00) + IFNULL(t.`SalesTaxApplicable`, 0.00)
@@ -244,7 +243,10 @@ class BulkInvoiceModel extends Model
                         WHEN t.`Quantity` <= 0 THEN 'Quantity must be greater than 0'
                         WHEN t.`ValueSalesExcludingST` < 0 THEN 'Value of Sales cannot be negative'
                         WHEN t.`SalesTaxApplicable` < 0 THEN 'Sales Tax cannot be negative'
-
+                        WHEN p.IsFixedRate = 1 AND (t.`SalesTaxApplicable` != (t.`FixedNotifiedValueOrRetailPrice` * (fsttr.ratE_VALUE / 100))) THEN 
+				                'Please Check FixedNotifiedValueOrRetailPrice and SalesTaxApplicable'
+			            WHEN p.IsFixedRate = 0 AND (t.`SalesTaxApplicable` != (t.`ValueSalesExcludingST` * (fsttr.ratE_VALUE / 100))) THEN 
+				                'Please Check ValueSalesExcludingST and SalesTaxApplicable'
                         ELSE 'Pass'
                     END AS ErrMsg
                 FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
