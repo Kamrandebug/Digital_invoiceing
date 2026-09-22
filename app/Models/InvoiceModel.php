@@ -260,23 +260,13 @@ class InvoiceModel extends Model
                 });
             } elseif ($status === 'posted') {
                 $query->whereNotNull('h.FbrTransactionID')
-                      ->whereRaw("TRIM(h.FbrTransactionID) <> ''")
-                      ->whereRaw("LOWER(TRIM(h.FbrResponseJson)) NOT LIKE '%error%'")
-                      ->whereRaw("LOWER(TRIM(h.FbrResponseJson)) NOT LIKE '%fail%'");
+                      ->whereRaw("TRIM(h.FbrTransactionID) <> ''");
             } elseif ($status === 'error') {
                 $query->where(function ($q) {
-                    $q->where(function ($sub) {
-                        $sub->whereNull('h.FbrTransactionID')
-                            ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
-                    })->whereNotNull('h.FbrResponseJson')
-                      ->whereRaw("TRIM(h.FbrResponseJson) <> ''");
-                })->orWhere(function ($q) {
-                    $q->whereNotNull('h.FbrResponseJson')
-                      ->where(function ($sub) {
-                          $sub->whereRaw("LOWER(TRIM(h.FbrResponseJson)) LIKE '%error%'")
-                              ->orWhereRaw("LOWER(TRIM(h.FbrResponseJson)) LIKE '%fail%'");
-                      });
-                });
+                    $q->whereNull('h.FbrTransactionID')
+                      ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                })->whereNotNull('h.FbrResponseJson')
+                  ->whereRaw("TRIM(h.FbrResponseJson) <> ''");
             }
         }
 
