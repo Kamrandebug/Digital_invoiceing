@@ -95,37 +95,32 @@ class ProductModel extends Model
     ];
 
     public static function getlistingdata($filters = [])
-{
-    $query = "SELECT * FROM tbl_product WHERE Status = 1";
-    $bindings = [];
+    {
+        $query = DB::connection('tenant')->table('tbl_product')
+            ->where('Status', 1)
+            ->where('Status', '!=', 2);
 
-    // Search filter
-    if (!empty($filters['search'])) {
-        $search = '%' . $filters['search'] . '%';
-        $query .= " AND (Name LIKE ? OR Code LIKE ? OR SaleInformation LIKE ?)";
-        $bindings = array_merge($bindings, [$search, $search, $search]);
+        // Search filter
+        if (!empty($filters['search'])) {
+            $search = '%' . $filters['search'] . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('Name', 'LIKE', $search)
+                  ->orWhere('Code', 'LIKE', $search)
+                  ->orWhere('SaleInformation', 'LIKE', $search);
+            });
+        }
+
+        // Date filter
+        if (!empty($filters['start_date'])) {
+            $query->whereDate('CreatedOn', '>=', $filters['start_date']);
+        }
+
+        if (!empty($filters['end_date'])) {
+            $query->whereDate('CreatedOn', '<=', $filters['end_date']);
+        }
+
+        return $query->orderByDesc('CreatedOn');
     }
-
-    // Date filter
-    if (!empty($filters['start_date'])) {
-        $query .= " AND DATE(CreatedOn) >= ?";
-        $bindings[] = $filters['start_date'];
-    }
-
-    if (!empty($filters['end_date'])) {
-        $query .= " AND DATE(CreatedOn) <= ?";
-        $bindings[] = $filters['end_date'];
-    }
-
-    // Exclude archived
-    $query .= " AND Status != 2";
-
-    // Order By
-    $query .= " ORDER BY CreatedOn DESC";
-
-    // Tenant catalog lives on the session-scoped tenant connection (not landlord).
-    return DB::connection('tenant')->select($query, $bindings);
-}
 
     /**
      * @throws \RuntimeException

@@ -44,7 +44,7 @@ class BulkInvoiceController extends Controller
             ')
             ->first();
 
-        $batches = BulkInvoiceModel::getListingData($filters)->paginate(20);
+        $batches = BulkInvoiceModel::getListingData($filters)->paginate(50);
 
         return view('pages.dashboards.Invoice.bulk-invoices-list', compact('batches', 'summary', 'filters'));
     }

@@ -48,7 +48,7 @@ class ProductController extends Controller
         }
 
         // Get filtered data
-        $products = ProductModel::getlistingdata($filters);
+        $products = ProductModel::getlistingdata($filters)->paginate(100);
 
         // Listing: UOM / SaleType / Rate columns use description fields from tbl_product only (no ID fallback).
         foreach ($products as $product) {
@@ -1506,7 +1506,7 @@ class ProductController extends Controller
             'end_date'   => $request->input('end_date'),
         ];
 
-        $products = ProductModel::getlistingdata($filters);
+        $products = ProductModel::getlistingdata($filters)->get();
 
         $callback = function() use ($products) {
             $file = fopen('php://output', 'w');

@@ -261,8 +261,11 @@
         <div class="card-footer border-top-0">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-2">
                 <span class="text-muted fs-12">
-                    Showing {{ count($products) }} product(s)
+                    Showing {{ $products->firstItem() ?? 0 }} to {{ $products->lastItem() ?? 0 }} of {{ $products->total() }} product(s)
                 </span>
+                <nav class="pagination-style-2">
+                    {{ $products->withQueryString()->links('pagination::bootstrap-5') }}
+                </nav>
             </div>
         </div>
     </div>

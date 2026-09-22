@@ -132,7 +132,7 @@ class CustomerController extends Controller
             $request->validate($rules, $messages);
         }
 
-        $customers = Customer::getlistingdata($filters)->paginate(15);
+        $customers = Customer::getlistingdata($filters)->paginate(100);
         $listKey = $this->listVariableName();
 
         return view($this->listView(), [$listKey => $customers]);

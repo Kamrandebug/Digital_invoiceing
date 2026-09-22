@@ -50,7 +50,7 @@ class InvoiceController extends Controller
             'end_date' => $request->input('end_date'),
         ]);
 
-        $invoices = InvoiceModel::getlistingdata($filters)->paginate(20);
+        $invoices = InvoiceModel::getlistingdata($filters)->paginate(50);
 
         return view('pages.dashboards.Invoice.invoice-list', compact('invoices', 'tabCounts', 'fbrStatus'));
     }
