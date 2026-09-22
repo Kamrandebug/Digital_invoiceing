@@ -294,6 +294,7 @@ class BulkInvoiceImport implements ToCollection, WithCalculatedFormulas, WithMul
         $idx = $headerMap[$key];
         $val = $values[$idx] ?? $default;
         if ($val === null) return $default;
+        if (is_numeric($val)) return $val;
         $trimmed = trim((string)$val);
         return $trimmed !== '' ? $trimmed : $default;
     }
@@ -304,12 +305,53 @@ class BulkInvoiceImport implements ToCollection, WithCalculatedFormulas, WithMul
         return (float)$val;
     }
 
-    private function parseDate(?string $val): ?string
+    private function parseDate(mixed $val): ?string
     {
-        if (empty($val)) return null;
-        $t = strtotime($val);
-        if ($t === false) return $val;
-        return date('Y-m-d', $t);
+        if ($val === null) {
+            return null;
+        }
+
+        // 1. If Excel passed an internal numeric serial date (e.g. 46174)
+        if (is_numeric($val) && (float)$val > 1000) {
+            try {
+                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$val)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                // fallback to string parsing below
+            }
+        }
+
+        $str = trim((string)$val);
+        if ($str === '') {
+            return null;
+        }
+
+        // 2. Common regional date formats (Day-first prioritized for Pakistan/UK)
+        $formats = [
+            'Y-m-d', 'Y/m/d', 'Y.m.d',       // 2026-06-01, 2026/06/01, 2026.06.01
+            'd/m/Y', 'd-m-Y', 'd.m.Y',       // 01/06/2026, 01-06-2026, 01.06.2026
+            'j/n/Y', 'j-n-Y', 'j.n.Y',       // 1/6/2026, 1-6-2026, 1.6.2026
+            'd-M-Y', 'd M Y', 'd-M-y',       // 01-Jun-2026, 01 June 2026, 01-Jun-26
+            'j-M-Y', 'j M Y', 'j-M-y',       // 1-Jun-2026, 1 June 2026, 1-Jun-26
+            'm/d/Y', 'm-d-Y',                // US format fallback: 06/01/2026
+        ];
+
+        foreach ($formats as $fmt) {
+            try {
+                $d = \Carbon\Carbon::createFromFormat($fmt, $str);
+                if ($d !== false && $d->year > 1900 && $d->year < 2100) {
+                    return $d->format('Y-m-d');
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        // 3. Fallback via Carbon parse
+        try {
+            return \Carbon\Carbon::parse($str)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return $str;
+        }
     }
 
     private function rowIsEmpty(array $rowValues): bool
