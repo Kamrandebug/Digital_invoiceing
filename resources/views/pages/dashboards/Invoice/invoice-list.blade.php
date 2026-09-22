@@ -312,16 +312,13 @@
                 <i class="ri-add-line fw-medium align-middle me-1"></i> Add Invoice
             </button>
             @endtenantCan
-            @if(session('selected_tenant.permissions.Invoices.Import') == 1 || session('selected_tenant.permissions.Invoices.Print') == 1 || session('selected_tenant.permissions.Invoices.Export') == 1)
+            @if(session('selected_tenant.permissions.Invoices.Print') == 1 || session('selected_tenant.permissions.Invoices.Export') == 1)
             <div class="dropdown ms-2">
                 <button class="btn btn-icon btn-secondary-light btn-sm btn-wave waves-light"
                         type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-dots-vertical"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    @tenantCan('Invoices', 'Import')
-                    <li><a class="dropdown-item" href="{{ route('bulk-invoices.index') }}"><i class="fas fa-layer-group me-1 text-primary"></i> Bulk Invoices / Import</a></li>
-                    @endtenantCan
                     @tenantCan('Invoices', 'Print')
                     <li><a class="dropdown-item" href="#">Bulk Print</a></li>
                     @endtenantCan
