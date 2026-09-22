@@ -17,6 +17,10 @@ class InvoiceModel extends Model
 
     public $timestamps = false;
 
+    public const FBR_STATUS_NOT_POSTED = 5;
+    public const FBR_STATUS_ERROR      = 6;
+    public const FBR_STATUS_POSTED     = 7;
+
     const CREATED_AT = 'CreatedOn';
     const UPDATED_AT = 'UpdatedOn';
 
@@ -209,6 +213,7 @@ class InvoiceModel extends Model
                 'h.InvoiceDate',
                 'h.DueDate',
                 'h.Status',
+                'h.Statusi',
                 'h.CustomerID',
                 'h.Notes',
                 // Grab totals directly from the header table instead of calculating them
@@ -252,21 +257,39 @@ class InvoiceModel extends Model
             $status = $filters['fbr_status'];
             if ($status === 'not_posted') {
                 $query->where(function ($q) {
-                    $q->whereNull('h.FbrTransactionID')
-                      ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
-                })->where(function ($q) {
-                    $q->whereNull('h.FbrResponseJson')
-                      ->orWhereRaw("TRIM(h.FbrResponseJson) = ''");
+                    $q->where('h.Statusi', self::FBR_STATUS_NOT_POSTED)
+                      ->orWhere(function ($sub) {
+                          $sub->whereNull('h.Statusi')
+                              ->where(function ($s2) {
+                                  $s2->whereNull('h.FbrTransactionID')
+                                     ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                              })
+                              ->where(function ($s2) {
+                                  $s2->whereNull('h.FbrResponseJson')
+                                     ->orWhereRaw("TRIM(h.FbrResponseJson) = ''");
+                              });
+                      });
                 });
             } elseif ($status === 'posted') {
-                $query->whereNotNull('h.FbrTransactionID')
-                      ->whereRaw("TRIM(h.FbrTransactionID) <> ''");
+                $query->where(function ($q) {
+                    $q->where('h.Statusi', self::FBR_STATUS_POSTED)
+                      ->orWhere(function ($sub) {
+                          $sub->whereNotNull('h.FbrTransactionID')
+                              ->whereRaw("TRIM(h.FbrTransactionID) <> ''");
+                      });
+                });
             } elseif ($status === 'error') {
                 $query->where(function ($q) {
-                    $q->whereNull('h.FbrTransactionID')
-                      ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
-                })->whereNotNull('h.FbrResponseJson')
-                  ->whereRaw("TRIM(h.FbrResponseJson) <> ''");
+                    $q->where('h.Statusi', self::FBR_STATUS_ERROR)
+                      ->orWhere(function ($sub) {
+                          $sub->where(function ($s2) {
+                              $s2->whereNull('h.FbrTransactionID')
+                                 ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                          })
+                          ->whereNotNull('h.FbrResponseJson')
+                          ->whereRaw("TRIM(h.FbrResponseJson) <> ''");
+                      });
+                });
             }
         }
 
@@ -308,26 +331,42 @@ class InvoiceModel extends Model
 
         $notPostedCount = (clone $baseQuery)
             ->where(function ($q) {
-                $q->whereNull('h.FbrTransactionID')
-                  ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
-            })
-            ->where(function ($q) {
-                $q->whereNull('h.FbrResponseJson')
-                  ->orWhereRaw("TRIM(h.FbrResponseJson) = ''");
+                $q->where('h.Statusi', self::FBR_STATUS_NOT_POSTED)
+                  ->orWhere(function ($sub) {
+                      $sub->whereNull('h.Statusi')
+                          ->where(function ($s2) {
+                              $s2->whereNull('h.FbrTransactionID')
+                                 ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                          })
+                          ->where(function ($s2) {
+                              $s2->whereNull('h.FbrResponseJson')
+                                 ->orWhereRaw("TRIM(h.FbrResponseJson) = ''");
+                          });
+                  });
             })
             ->count();
 
         $postedCount = (clone $baseQuery)
-            ->whereNotNull('h.FbrTransactionID')
-            ->whereRaw("TRIM(h.FbrTransactionID) != ''")
+            ->where(function ($q) {
+                $q->where('h.Statusi', self::FBR_STATUS_POSTED)
+                  ->orWhere(function ($sub) {
+                      $sub->whereNotNull('h.FbrTransactionID')
+                          ->whereRaw("TRIM(h.FbrTransactionID) <> ''");
+                  });
+            })
             ->count();
 
         $errorCount = (clone $baseQuery)
-            ->whereNotNull('h.FbrResponseJson')
-            ->whereRaw("TRIM(h.FbrResponseJson) != ''")
             ->where(function ($q) {
-                $q->whereNull('h.FbrTransactionID')
-                  ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                $q->where('h.Statusi', self::FBR_STATUS_ERROR)
+                  ->orWhere(function ($sub) {
+                      $sub->where(function ($s2) {
+                          $s2->whereNull('h.FbrTransactionID')
+                             ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                      })
+                      ->whereNotNull('h.FbrResponseJson')
+                      ->whereRaw("TRIM(h.FbrResponseJson) <> ''");
+                  });
             })
             ->count();
 
@@ -1018,6 +1057,16 @@ SQL;
                 'type' => $e::class,
             ]);
 
+            $errUpdate = [
+                'FbrResponseJson' => json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE),
+                'Statusi'         => self::FBR_STATUS_ERROR,
+                'UpdatedOn'       => now()->toDateTimeString(),
+            ];
+            if (auth()->check()) {
+                $errUpdate['UpdatedBy'] = auth()->id();
+            }
+            DB::table('tbl_sales_invoice_header')->where('ID', $headerId)->update($errUpdate);
+
             $technical = $e->getMessage();
             $friendly = 'The FBR service did not respond in time or the connection failed. Please try again in a few minutes.';
             if (
@@ -1062,6 +1111,9 @@ SQL;
         }
         if ($invoiceNumber !== null && $invoiceNumber !== '') {
             $update['FbrTransactionID'] = $invoiceNumber;
+            $update['Statusi'] = self::FBR_STATUS_POSTED;
+        } else {
+            $update['Statusi'] = self::FBR_STATUS_ERROR;
         }
 
         DB::table('tbl_sales_invoice_header')->where('ID', $headerId)->update($update);

@@ -505,9 +505,10 @@
                     <tbody>
                         @forelse($invoices as $invoice)
                         @php
+                            $statusi = (int) ($invoice->Statusi ?? 0);
                             $fbrTxId = trim((string) ($invoice->FbrTransactionID ?? ''));
                             $fbrRespRaw = trim((string) ($invoice->FbrResponseJson ?? ''));
-                            $fbrLocked = $fbrTxId !== '';
+                            $fbrLocked = ($statusi === 7) || ($fbrTxId !== '');
                             $totalAmt = (float) ($invoice->TotalAmount ?? 0);
                             $totalGst = (float) ($invoice->TotalGST ?? 0);
                             $subTotal = (float) ($invoice->SubTotal ?? 0);
@@ -551,24 +552,24 @@
                             <td>
                                 @php
                                     $resp = $invoice->FbrResponseJson ?? '';
-                                    $hasTxId = !empty(trim((string)($invoice->FbrTransactionID ?? '')));
+                                    $hasTxId = !empty($fbrTxId);
                                 @endphp
-                                @if(!empty($resp) || $hasTxId)
-                                    @php
-                                        $isValid = $hasTxId;
-                                        $badgeClass = $isValid
-                                            ? 'bg-success-subtle text-success'
-                                            : 'bg-secondary-subtle text-secondary';
-                                        $badgeLabel = $isValid ? 'FBR Valid' : 'View FBR';
-                                    @endphp
-                                    <span class="badge rounded-pill fbr-response-btn {{ $badgeClass }}"
+                                @if($statusi === 7 || $hasTxId)
+                                    <span class="badge rounded-pill fbr-response-btn bg-success-subtle text-success"
                                           style="cursor:pointer; font-size:11px; padding:5px 10px;"
                                           data-response="{{ e($resp) }}"
                                           title="Click to view FBR response">
-                                        <i class="fas fa-receipt me-1"></i>{{ $badgeLabel }}
+                                        <i class="fas fa-check-circle me-1"></i>Posted
+                                    </span>
+                                @elseif($statusi === 6 || (!empty($resp) && !$hasTxId))
+                                    <span class="badge rounded-pill fbr-response-btn bg-danger-subtle text-danger"
+                                          style="cursor:pointer; font-size:11px; padding:5px 10px;"
+                                          data-response="{{ e($resp) }}"
+                                          title="Click to view FBR error response">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>FBR Error
                                     </span>
                                 @else
-                                    <span class="badge rounded-pill bg-light text-muted">No Response</span>
+                                    <span class="badge rounded-pill bg-light text-muted">Not Posted</span>
                                 @endif
                             </td>
 
@@ -812,7 +813,7 @@
 </div>
 
 {{-- Post to FBR confirmation (same pattern as Archive Invoice modal) --}}
-<div class="modal fade" id="postFbrInvoiceModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="postFbrInvoiceModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -1103,6 +1104,18 @@
     }
     document.getElementById('confirmPostFbrBtn').addEventListener('click', function() {
         if (postFbrInvoiceId) {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Posting to FBR, please wait...';
+            
+            const modalEl = document.getElementById('postFbrInvoiceModal');
+            if (modalEl) {
+                const cancelBtn = modalEl.querySelector('button[data-bs-dismiss="modal"]');
+                if (cancelBtn) cancelBtn.disabled = true;
+                const closeBtn = modalEl.querySelector('.btn-close');
+                if (closeBtn) closeBtn.disabled = true;
+            }
+
             document.getElementById('post-fbr-form-' + postFbrInvoiceId).submit();
         }
     });
