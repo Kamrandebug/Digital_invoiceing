@@ -113,21 +113,21 @@ class BulkInvoiceModel extends Model
             LEFT JOIN {$tenantDbQuoted}.`tbl_customer` c 
               ON (
                   LOWER(TRIM(c.`AccountNo`)) = LOWER(TRIM(t.`CustomerCode`))
-                  OR LOWER(TRIM(c.`NTN`)) = LOWER(TRIM(t.`CustomerCode`))
+                  /*  OR LOWER(TRIM(c.`NTN`)) = LOWER(TRIM(t.`CustomerCode`))
                   OR LOWER(TRIM(c.`CNIC`)) = LOWER(TRIM(t.`CustomerCode`))
                   OR LOWER(TRIM(c.`BusinessName`)) = LOWER(TRIM(t.`CustomerCode`))
-                  OR LOWER(TRIM(c.`DisplayName`)) = LOWER(TRIM(t.`CustomerCode`))
+                  OR LOWER(TRIM(c.`DisplayName`)) = LOWER(TRIM(t.`CustomerCode`)) */
               ) AND (c.`Status` = 1)
             LEFT JOIN {$tenantDbQuoted}.`tbl_product` p 
               ON (
                   LOWER(TRIM(p.`Code`)) = LOWER(TRIM(t.`ProductCode`))
-                  OR LOWER(TRIM(p.`Name`)) = LOWER(TRIM(t.`ProductCode`))
+                  /*  OR LOWER(TRIM(p.`Name`)) = LOWER(TRIM(t.`ProductCode`)) */
               ) AND (p.`Status` = 1)
             LEFT JOIN `core_digital_invoicing`.`fbr_hscode_uom` fhu 
               ON (
                   (
                       fhu.`hs_CODE` = TRIM(t.`HsCode`)
-                      OR (TRIM(t.`HsCode`) LIKE '%.%' AND fhu.`hs_CODE` = CONCAT(SUBSTRING_INDEX(TRIM(t.`HsCode`), '.', 1), '.', RPAD(SUBSTRING_INDEX(TRIM(t.`HsCode`), '.', -1), 4, '0')))
+                     --  OR (TRIM(t.`HsCode`) LIKE '%.%' AND fhu.`hs_CODE` = CONCAT(SUBSTRING_INDEX(TRIM(t.`HsCode`), '.', 1), '.', RPAD(SUBSTRING_INDEX(TRIM(t.`HsCode`), '.', -1), 4, '0')))
                   )
                   AND (fhu.`description` = TRIM(t.`Uom_Desc`) OR fhu.`uoM_ID` = t.`UomID`)
               )
@@ -225,7 +225,7 @@ class BulkInvoiceModel extends Model
                               WHERE h.`hs_CODE` = TRIM(t.`HsCode`)
                                  OR (TRIM(t.`HsCode`) LIKE '%.%' AND h.`hs_CODE` = CONCAT(SUBSTRING_INDEX(TRIM(t.`HsCode`), '.', 1), '.', RPAD(SUBSTRING_INDEX(TRIM(t.`HsCode`), '.', -1), 4, '0')))
                           ) THEN CONCAT('Invalid HS Code \'', TRIM(t.HsCode), '\'')
-
+                        WHEN t.HsCode != p.HsCode THEN CONCAT('HS Code \'', TRIM(t.HsCode), ' does not match with Prodcut HsCode: \'', TRIM(p.HsCode), '\'')
                         WHEN COALESCE(TRIM(t.`Uom_Desc`), '') <> '' AND t.`UomID` IS NULL 
                             THEN CONCAT('Invalid UOM \'', TRIM(t.Uom_Desc), '\' for HS Code \'', COALESCE(TRIM(t.HsCode), 'N/A'), '\'')
 
@@ -243,6 +243,7 @@ class BulkInvoiceModel extends Model
                         WHEN t.`Quantity` <= 0 THEN 'Quantity must be greater than 0'
                         WHEN t.`ValueSalesExcludingST` < 0 THEN 'Value of Sales cannot be negative'
                         WHEN t.`SalesTaxApplicable` < 0 THEN 'Sales Tax cannot be negative'
+                        WHEN p.IsFixedRate = 1 AND (t.`FixedNotifiedValueOrRetailPrice`/t.`Quantity` ) != p.`TPRate` THEN 'FixedNotifiedValueOrRetailPrice and SalesTaxApplicable'
                         WHEN p.IsFixedRate = 1 AND (t.`SalesTaxApplicable` != (t.`FixedNotifiedValueOrRetailPrice` * (fsttr.ratE_VALUE / 100))) THEN 
 				                'Please Check FixedNotifiedValueOrRetailPrice and SalesTaxApplicable'
 			            WHEN p.IsFixedRate = 0 AND (t.`SalesTaxApplicable` != (t.`ValueSalesExcludingST` * (fsttr.ratE_VALUE / 100))) THEN 
