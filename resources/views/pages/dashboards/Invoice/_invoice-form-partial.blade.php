@@ -129,7 +129,7 @@
                             data-is-advance-tax="{{ (int) ($cust->IsAdvanceTax ?? 0) === 1 ? 1 : 0 }}"
                             data-advance-tax-rate="{{ (float) ($cust->AdvanceTax ?? 0) }}"
                             {{ old('CustomerID', $invoice->CustomerID ?? '') == $cust->ID ? 'selected' : '' }}>
-                        {{ trim($cust->BusinessName ?? '') ?: trim($cust->DisplayName ?? '') ?: trim(trim(($cust->FirstName ?? '') . ' ' . ($cust->LastName ?? ''))) ?: ('Customer #' . $cust->ID) }}
+                        {{ trim($cust->DisplayName ?? '') ?: trim($cust->BusinessName ?? '') ?: ('Customer #' . $cust->ID) }}
                     </option>
                 @endforeach
             </select>

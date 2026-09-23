@@ -83,7 +83,7 @@ class InvoiceModel extends Model
     public static function Load_Customer()
     {
         // Raw SQL string used to populate the Customer dropdown
-        $query = "SELECT ID, DisplayName, FirstName, LastName, BusinessName, IsFiler, SalesTaxWithheldAtSource, ExtraTax, FurtherTax, FedPayable,
+        $query = "SELECT ID, CONCAT(IFNULL(DisplayName, ''), ' (', IFNULL(NTN, ''), ')') AS DisplayName, FirstName, LastName, BusinessName, NTN, IsFiler, SalesTaxWithheldAtSource, ExtraTax, FurtherTax, FedPayable,
                          IsAdvanceTax, AdvanceTax
                   FROM tbl_customer
                   WHERE Status = 1
