@@ -110,7 +110,12 @@
     <div class="col-md-3">
         <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
         @if($isReadonly)
-            <div class="form-control form-control-sm bg-light">{{ $invoice->CustomerDisplayName ?? '-' }}</div>
+            @php
+                $cName = trim($invoice->CustomerDisplayName ?? '');
+                $cNtn = trim((string)($invoice->CustomerNTN ?? ($invoice->BuyerNTNCNIC ?? '')));
+                $cDisplay = $cName . ($cNtn !== '' ? ' - ' . $cNtn : '');
+            @endphp
+            <div class="form-control form-control-sm bg-light">{{ $cDisplay ?: '-' }}</div>
         @else
             <div class="d-flex gap-1 align-items-center ifp-customer-select-wrap">
             <select name="CustomerID"

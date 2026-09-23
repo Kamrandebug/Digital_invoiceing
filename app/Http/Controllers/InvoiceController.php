@@ -204,6 +204,7 @@ class InvoiceController extends Controller
                 ->select(
                     'h.*',
                     InvoiceModel::sqlCustomerDisplayName(),
+                    DB::raw('COALESCE(NULLIF(TRIM(cust.NTN), ""), NULLIF(TRIM(h.BuyerNTNCNIC), "")) as CustomerNTN'),
                     DB::raw('COALESCE(cust.IsAdvanceTax, 0) as CustomerIsAdvanceTax'),
                     DB::raw('COALESCE(cust.AdvanceTax, 0) as CustomerAdvanceTax'),
                 )
