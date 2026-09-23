@@ -80,6 +80,37 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Cancel an FBR invoice (Update Statusi to 8).
+     */
+    public function cancelFbr(int $id)
+    {
+        $permissions = session('selected_tenant.permissions', []);
+        $canModify = (auth()->check() && (int)(auth()->user()->UserType ?? 0) === 2)
+            || session('selected_tenant.user_type') === 'admin'
+            || (int)($permissions['Invoices']['Modify'] ?? 0) === 1;
+
+        if (! $canModify) {
+            return redirect()
+                ->route('invoices.index', ['fbr_status' => 'posted'])
+                ->with('error', 'You do not have permission to cancel invoices.');
+        }
+
+        try {
+            $result = InvoiceModel::cancel_fbr_invoice($id);
+        } catch (\Throwable $e) {
+            \Log::error('Invoice cancelFbr uncaught', ['id' => $id, 'error' => $e->getMessage()]);
+
+            return redirect()
+                ->route('invoices.index', ['fbr_status' => 'posted'])
+                ->with('error', 'Failed to cancel invoice: ' . $e->getMessage());
+        }
+
+        return redirect()
+            ->route('invoices.index', ['fbr_status' => 'cancelled'])
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    /**
      * Bulk POST multiple invoice payloads to FBR.
      */
     public function bulkPostFbr(Request $request)

@@ -20,6 +20,7 @@ class InvoiceModel extends Model
     public const FBR_STATUS_NOT_POSTED = 5;
     public const FBR_STATUS_ERROR      = 6;
     public const FBR_STATUS_POSTED     = 7;
+    public const FBR_STATUS_CANCEL     = 8;
 
     const CREATED_AT = 'CreatedOn';
     const UPDATED_AT = 'UpdatedOn';
@@ -274,7 +275,8 @@ class InvoiceModel extends Model
                 $query->where(function ($q) {
                     $q->where('h.Statusi', self::FBR_STATUS_POSTED)
                       ->orWhere(function ($sub) {
-                          $sub->whereNotNull('h.FbrTransactionID')
+                          $sub->whereNull('h.Statusi')
+                              ->whereNotNull('h.FbrTransactionID')
                               ->whereRaw("TRIM(h.FbrTransactionID) <> ''");
                       });
                 });
@@ -282,14 +284,17 @@ class InvoiceModel extends Model
                 $query->where(function ($q) {
                     $q->where('h.Statusi', self::FBR_STATUS_ERROR)
                       ->orWhere(function ($sub) {
-                          $sub->where(function ($s2) {
-                              $s2->whereNull('h.FbrTransactionID')
-                                 ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
-                          })
-                          ->whereNotNull('h.FbrResponseJson')
-                          ->whereRaw("TRIM(h.FbrResponseJson) <> ''");
+                          $sub->whereNull('h.Statusi')
+                              ->where(function ($s2) {
+                                  $s2->whereNull('h.FbrTransactionID')
+                                     ->orWhereRaw("TRIM(h.FbrTransactionID) = ''");
+                              })
+                              ->whereNotNull('h.FbrResponseJson')
+                              ->whereRaw("TRIM(h.FbrResponseJson) <> ''");
                       });
                 });
+            } elseif ($status === 'cancelled' || $status === 'cancel' || $status === 'fbr_cancel') {
+                $query->where('h.Statusi', self::FBR_STATUS_CANCEL);
             }
         }
 
@@ -350,7 +355,8 @@ class InvoiceModel extends Model
             ->where(function ($q) {
                 $q->where('h.Statusi', self::FBR_STATUS_POSTED)
                   ->orWhere(function ($sub) {
-                      $sub->whereNotNull('h.FbrTransactionID')
+                      $sub->whereNull('h.Statusi')
+                          ->whereNotNull('h.FbrTransactionID')
                           ->whereRaw("TRIM(h.FbrTransactionID) <> ''");
                   });
             })
@@ -370,11 +376,16 @@ class InvoiceModel extends Model
             })
             ->count();
 
+        $cancelledCount = (clone $baseQuery)
+            ->where('h.Statusi', self::FBR_STATUS_CANCEL)
+            ->count();
+
         return [
             'all' => $allCount,
             'not_posted' => $notPostedCount,
             'posted' => $postedCount,
             'error' => $errorCount,
+            'cancelled' => $cancelledCount,
         ];
     }
 
@@ -1258,5 +1269,48 @@ SQL;
             'failed_count' => $failedCount,
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * Cancel an FBR invoice (Update Statusi from 7 to 8).
+     *
+     * @return array{success: bool, message: string}
+     */
+    public static function cancel_fbr_invoice(int $headerId): array
+    {
+        $header = DB::table('tbl_sales_invoice_header')
+            ->where('ID', $headerId)
+            ->where('Status', '!=', 2)
+            ->first();
+
+        if (! $header) {
+            return ['success' => false, 'message' => 'Invoice not found.'];
+        }
+
+        if ((int) ($header->Statusi ?? 0) !== self::FBR_STATUS_POSTED) {
+            return ['success' => false, 'message' => 'Only successfully posted invoices (Status = Posted) can be cancelled.'];
+        }
+
+        $update = [
+            'Statusi'   => self::FBR_STATUS_CANCEL,
+            'UpdatedOn' => now()->toDateTimeString(),
+        ];
+        if (auth()->check()) {
+            $update['UpdatedBy'] = auth()->id();
+        }
+
+        DB::table('tbl_sales_invoice_header')->where('ID', $headerId)->update($update);
+
+        try {
+            \App\Services\AuditLogService::log('CANCEL_FBR', 'INVOICE', $headerId, [
+                'Statusi' => $header->Statusi,
+            ], [
+                'Statusi' => self::FBR_STATUS_CANCEL,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to log FBR invoice cancellation audit: ' . $e->getMessage());
+        }
+
+        return ['success' => true, 'message' => 'Invoice marked as FBR Cancelled successfully.'];
     }
 }

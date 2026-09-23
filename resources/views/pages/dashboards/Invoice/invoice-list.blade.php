@@ -186,7 +186,23 @@
         color: #ffffff;
     }
 
-    /* Tab 4: All Invoices (Slate Neutral Theme) */
+    /* Tab 4: FBR Cancel Invoices (Orange / Amber Theme) */
+    .invoice-table-tabs .tab-cancel { border-color: #ffedd5; }
+    .invoice-table-tabs .tab-cancel:hover { border-color: #fb923c; }
+    .invoice-table-tabs .tab-cancel .tab-icon { color: #ea580c; }
+    .invoice-table-tabs .tab-cancel .tab-badge { background-color: #ffedd5; color: #c2410c; }
+    .invoice-table-tabs .tab-cancel.active {
+        color: #ea580c;
+        border-top: 3px solid #ea580c !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .invoice-table-tabs .tab-cancel.active .tab-badge {
+        background-color: #ea580c;
+        color: #ffffff;
+    }
+
+    /* Tab 5: All Invoices (Slate Neutral Theme) */
     .invoice-table-tabs .tab-all { border-color: #e2e8f0; }
     .invoice-table-tabs .tab-all:hover { border-color: #94a3b8; }
     .invoice-table-tabs .tab-all .tab-icon { color: #64748b; }
@@ -460,6 +476,16 @@
                     </a>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <a class="nav-link tab-cancel {{ in_array($fbrStatus ?? '', ['cancelled', 'cancel', 'fbr_cancel']) ? 'active' : '' }}"
+                       href="javascript:void(0);"
+                       onclick="filterFbrStatus('cancelled')">
+                        <i class="fas fa-ban tab-icon"></i> FBR Cancel Invoices
+                        <span class="badge tab-badge">
+                            {{ number_format($tabCounts['cancelled'] ?? 0) }}
+                        </span>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
                     <a class="nav-link tab-all {{ ($fbrStatus ?? '') === 'all' ? 'active' : '' }}"
                        href="javascript:void(0);"
                        onclick="filterFbrStatus('all')">
@@ -505,7 +531,7 @@
                             $statusi = (int) ($invoice->Statusi ?? 0);
                             $fbrTxId = trim((string) ($invoice->FbrTransactionID ?? ''));
                             $fbrRespRaw = trim((string) ($invoice->FbrResponseJson ?? ''));
-                            $fbrLocked = ($statusi === 7) || ($fbrTxId !== '');
+                            $fbrLocked = ($statusi === 7) || ($statusi === 8) || ($fbrTxId !== '');
                             $totalAmt = (float) ($invoice->TotalAmount ?? 0);
                             $totalGst = (float) ($invoice->TotalGST ?? 0);
                             $subTotal = (float) ($invoice->SubTotal ?? 0);
@@ -551,7 +577,14 @@
                                     $resp = $invoice->FbrResponseJson ?? '';
                                     $hasTxId = !empty($fbrTxId);
                                 @endphp
-                                @if($statusi === 7 || $hasTxId)
+                                @if($statusi === 8)
+                                    <span class="badge rounded-pill fbr-response-btn bg-warning-subtle text-warning"
+                                          style="cursor:pointer; font-size:11px; padding:5px 10px;"
+                                          data-response="{{ e($resp) }}"
+                                          title="Click to view FBR response">
+                                        <i class="fas fa-ban me-1"></i>FBR Cancelled
+                                    </span>
+                                @elseif($statusi === 7 || $hasTxId)
                                     <span class="badge rounded-pill fbr-response-btn bg-success-subtle text-success"
                                           style="cursor:pointer; font-size:11px; padding:5px 10px;"
                                           data-response="{{ e($resp) }}"
@@ -617,6 +650,22 @@
 											</button>
 											<form id="post-fbr-form-{{ $invoice->HeaderID }}"
 												  action="{{ route('invoices.post-fbr', $invoice->HeaderID) }}"
+												  method="POST" class="d-none">
+												@csrf
+											</form>
+										</li>
+										@endtenantCan
+										@endif
+
+										@if(in_array($fbrStatus ?? '', ['posted', 'valid', 'successfully_posted']) && $statusi === 7)
+										@tenantCan('Invoices', 'Modify')
+										<li>
+											<button type="button" class="dropdown-item text-warning"
+													onclick="confirmCancelFbr({{ $invoice->HeaderID }}, '{{ addslashes($invoice->DocNo ?? '') }}')">
+												<i class="fas fa-ban me-1"></i> FBR Cancel Invoice
+											</button>
+											<form id="cancel-fbr-form-{{ $invoice->HeaderID }}"
+												  action="{{ route('invoices.cancel-fbr', $invoice->HeaderID) }}"
 												  method="POST" class="d-none">
 												@csrf
 											</form>
@@ -836,6 +885,33 @@
     </div>
 </div>
 
+{{-- Cancel FBR Invoice confirmation modal --}}
+<div class="modal fade" id="cancelFbrInvoiceModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold text-warning">
+                    <i class="fas fa-ban me-2"></i> Cancel FBR Invoice
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel FBR invoice <strong id="cancelFbrInvoiceDocNo"></strong>?</p>
+                <p class="text-muted fs-13 mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    This will update the invoice status to <strong>FBR Cancelled</strong> and move it to the FBR Cancel Invoices tab.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-sm btn-warning text-white" id="confirmCancelFbrBtn">
+                    <i class="fas fa-ban me-1"></i> Yes, Cancel Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- FBR Response Modal --}}
 <div class="modal fade" id="fbr_response_modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -1022,6 +1098,7 @@
 <script>
     let deleteInvoiceId = null;
     let postFbrInvoiceId = null;
+    let cancelFbrInvoiceId = null;
 //	document.addEventListener('DOMContentLoaded', function () {
 //    // Toggle dropdown on button click
 //    document.querySelectorAll('.action-toggle').forEach(btn => {
@@ -1114,6 +1191,31 @@
             }
 
             document.getElementById('post-fbr-form-' + postFbrInvoiceId).submit();
+        }
+    });
+
+    function confirmCancelFbr(id, docNo) {
+        cancelFbrInvoiceId = id;
+        document.getElementById('cancelFbrInvoiceDocNo').textContent = docNo || 'this invoice';
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('cancelFbrInvoiceModal'));
+        modal.show();
+        return false;
+    }
+    document.getElementById('confirmCancelFbrBtn').addEventListener('click', function() {
+        if (cancelFbrInvoiceId) {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Cancelling...';
+            
+            const modalEl = document.getElementById('cancelFbrInvoiceModal');
+            if (modalEl) {
+                const closeBtn1 = modalEl.querySelector('button[data-bs-dismiss="modal"]');
+                if (closeBtn1) closeBtn1.disabled = true;
+                const closeBtn2 = modalEl.querySelector('.btn-close');
+                if (closeBtn2) closeBtn2.disabled = true;
+            }
+
+            document.getElementById('cancel-fbr-form-' + cancelFbrInvoiceId).submit();
         }
     });
 

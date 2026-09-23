@@ -191,6 +191,7 @@ Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->gr
     Route::get('/{id}/modal', [InvoiceController::class, 'modal'])->name('modal.id');
     Route::get('/{id}/print-view', [InvoiceController::class, 'printView'])->name('print-view');
     Route::post('/{id}/post-fbr', [InvoiceController::class, 'postToFbr'])->middleware('tenant.role:owner,admin,accountant')->name('post-fbr');
+    Route::post('/{id}/cancel-fbr', [InvoiceController::class, 'cancelFbr'])->middleware('tenant.role:owner,admin,accountant')->name('cancel-fbr');
     Route::get('/{id}', [InvoiceController::class, 'show'])->name('show');
 });
 

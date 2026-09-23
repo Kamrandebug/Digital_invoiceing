@@ -183,11 +183,26 @@
                 padding-right: 4px !important;
                 font-size: 11px !important;
             }
+            .invoice-print-watermark {
+                display: block !important;
+                color: rgba(220, 38, 38, 0.14) !important;
+                border-color: rgba(220, 38, 38, 0.14) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .invoice-cancelled-stamp {
+                display: inline-block !important;
+                color: #dc2626 !important;
+                border: 2px solid #dc2626 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
         * { box-sizing: border-box; }
         html, body { width: 100%; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #222; }
         .invoice-print {
+            position: relative;
             width: calc(100% - 40px);
             max-width: calc(100% - 40px);
             padding-top: 35px;
@@ -201,8 +216,9 @@
         .invoice-print-head {
             display: flex;
             justify-content: flex-end;
-            align-items: flex-start;
+            align-items: center;
             margin-bottom: 10px;
+            position: relative;
         }
         .invoice-doc-title {
             text-align: right;
@@ -530,12 +546,62 @@
         table.items.has-fbr-qty col.col-desc { width: 12% !important; }
         table.items.items--no-fixed.has-fbr-qty col.col-desc { width: 19% !important; }
         table.items.has-fbr-qty col.col-fbr-qty { width: 8% !important; }
+
+        /* Cancelled Invoice Watermark & Stamp */
+        .invoice-print-watermark {
+            position: absolute;
+            top: 42%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-35deg);
+            font-size: 76px;
+            font-weight: 900;
+            color: rgba(220, 38, 38, 0.14) !important;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            pointer-events: none;
+            z-index: 99;
+            border: 6px solid rgba(220, 38, 38, 0.14) !important;
+            padding: 12px 52px;
+            border-radius: 12px;
+            white-space: nowrap;
+            user-select: none;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .invoice-cancelled-stamp {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: inline-block;
+            font-size: 13px;
+            font-weight: 800;
+            color: #dc2626 !important;
+            border: 2px solid #dc2626 !important;
+            padding: 3px 12px;
+            border-radius: 4px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            line-height: 1.2;
+            white-space: nowrap;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
     </style>
 </head>
 <body class="orientation-{{ $orientation }}">
     @if($invoice)
+    @php
+        $isCancelled = (int) ($invoice->Statusi ?? 0) === 8;
+    @endphp
     <div class="invoice-print">
+        @if($isCancelled)
+        <div class="invoice-print-watermark" aria-hidden="true">CANCELLED</div>
+        @endif
         <div class="invoice-print-head">
+            @if($isCancelled)
+            <div class="invoice-cancelled-stamp">CANCELLED INVOICE</div>
+            @endif
             <h1 class="invoice-doc-title">Sales Tax Invoice</h1>
         </div>
 

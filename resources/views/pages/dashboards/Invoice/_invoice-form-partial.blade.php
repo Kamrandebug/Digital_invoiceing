@@ -47,6 +47,25 @@
 <form action="{{ $formAction }}" method="POST" id="{{ $uid }}_form" novalidate>
     @csrf
 @endif
+
+{{-- Status Banner for Cancelled Invoices --}}
+@if($invoice && (int)($invoice->Statusi ?? 0) === 8)
+<div class="alert alert-warning border border-warning-subtle shadow-sm py-2 px-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color: #fffbeb; border-color: #fde68a !important; color: #92400e; border-radius: 6px;">
+    <div class="d-flex align-items-center gap-2">
+        <i class="fas fa-ban fs-16 text-warning"></i>
+        <div>
+            <strong class="fs-13">Invoice Status: FBR Cancelled</strong>
+            <span class="fs-12 text-muted ms-1">— This invoice has been marked as cancelled and is not valid for fiscal transactions.</span>
+        </div>
+    </div>
+    @if(!empty(trim((string)($invoice->FbrTransactionID ?? ''))))
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 fs-11">
+        FBR TxID: {{ $invoice->FbrTransactionID }}
+    </span>
+    @endif
+</div>
+@endif
+
 @if($inModal)
 <div class="ifp-modal-shell">
     <div class="_pfp-tab-panel-shell border rounded overflow-hidden mb-3">
