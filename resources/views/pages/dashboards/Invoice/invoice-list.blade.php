@@ -479,7 +479,7 @@
                     <a class="nav-link tab-cancel {{ in_array($fbrStatus ?? '', ['cancelled', 'cancel', 'fbr_cancel']) ? 'active' : '' }}"
                        href="javascript:void(0);"
                        onclick="filterFbrStatus('cancelled')">
-                        <i class="fas fa-ban tab-icon"></i> FBR Cancel Invoices
+                        <i class="fas fa-ban tab-icon"></i> FBR Cancelled
                         <span class="badge tab-badge">
                             {{ number_format($tabCounts['cancelled'] ?? 0) }}
                         </span>
@@ -662,7 +662,7 @@
 										<li>
 											<button type="button" class="dropdown-item text-warning"
 													onclick="confirmCancelFbr({{ $invoice->HeaderID }}, '{{ addslashes($invoice->DocNo ?? '') }}')">
-												<i class="fas fa-ban me-1"></i> FBR Cancel Invoice
+												<i class="fas fa-ban me-1"></i> Mark as FBR Cancelled
 											</button>
 											<form id="cancel-fbr-form-{{ $invoice->HeaderID }}"
 												  action="{{ route('invoices.cancel-fbr', $invoice->HeaderID) }}"
@@ -891,21 +891,21 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h6 class="modal-title fw-semibold text-warning">
-                    <i class="fas fa-ban me-2"></i> Cancel FBR Invoice
+                    <i class="fas fa-ban me-2"></i> Mark as FBR Cancelled
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to cancel FBR invoice <strong id="cancelFbrInvoiceDocNo"></strong>?</p>
+                <p>Are you sure you want to mark invoice <strong id="cancelFbrInvoiceDocNo"></strong> as FBR Cancelled?</p>
                 <p class="text-muted fs-13 mb-0">
                     <i class="fas fa-info-circle me-1"></i>
-                    This will update the invoice status to <strong>FBR Cancelled</strong> and move it to the FBR Cancel Invoices tab.
+                    This will update the invoice status to <strong>FBR Cancelled</strong> and move it to the FBR Cancelled tab.
                 </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-sm btn-warning text-white" id="confirmCancelFbrBtn">
-                    <i class="fas fa-ban me-1"></i> Yes, Cancel Invoice
+                    <i class="fas fa-ban me-1"></i> Yes, Mark as Cancelled
                 </button>
             </div>
         </div>
@@ -1205,7 +1205,7 @@
         if (cancelFbrInvoiceId) {
             const btn = this;
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Cancelling...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Marking as Cancelled...';
             
             const modalEl = document.getElementById('cancelFbrInvoiceModal');
             if (modalEl) {
