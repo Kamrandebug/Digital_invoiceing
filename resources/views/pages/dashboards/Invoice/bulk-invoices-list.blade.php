@@ -72,25 +72,26 @@
         padding: 0.55rem 1.15rem;
     }
     #batchInvoicesDetailTable {
-        font-size: 12px;
+        font-size: 12.5px;
         margin-bottom: 0;
+        font-family: inherit;
     }
     #batchInvoicesDetailTable thead th {
-        padding: 0.45rem 0.65rem !important;
-        font-size: 11.5px;
+        padding: 0.35rem 0.55rem !important;
+        font-size: 12px;
         font-weight: 600;
-        color: #475569;
+        color: #334155;
         background-color: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
         vertical-align: middle;
+        white-space: nowrap;
     }
     #batchInvoicesDetailTable tbody td {
-        padding: 0.4rem 0.65rem !important;
+        padding: 0.28rem 0.55rem !important;
         vertical-align: middle;
         border-bottom: 1px solid #f1f5f9;
-        line-height: 1.35;
+        line-height: 1.3;
+        font-size: 12px;
     }
     #batchInvoicesDetailTable .batch-invoice-row {
         transition: background-color 0.15s ease;
@@ -99,8 +100,8 @@
         background-color: #f8fafc;
     }
     .toggle-items-btn {
-        width: 24px;
-        height: 24px;
+        width: 22px;
+        height: 22px;
         padding: 0;
         display: inline-flex;
         align-items: center;
@@ -125,28 +126,166 @@
         background-color: #f8fafc;
         border-top: 1px dashed #cbd5e1;
         border-bottom: 1px solid #e2e8f0;
-        padding: 12px 16px;
+        padding: 10px 14px;
     }
     .batch-inner-table {
-        font-size: 11.5px;
+        font-size: 12px;
         background-color: #ffffff;
         margin-bottom: 0;
+        font-family: inherit;
     }
     .batch-inner-table thead th {
-        background-color: #f1f5f9 !important;
-        color: #475569;
-        font-size: 10.5px;
+        background-color: #f8fafc !important;
+        color: #334155;
+        font-size: 12px;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
         padding: 0.35rem 0.55rem !important;
         border-bottom: 1px solid #e2e8f0;
+        vertical-align: middle;
+        white-space: nowrap;
     }
     .batch-inner-table tbody td {
-        padding: 0.35rem 0.55rem !important;
+        padding: 0.28rem 0.55rem !important;
         font-size: 11.5px;
         vertical-align: middle;
         border-color: #f1f5f9;
+        white-space: nowrap;
+    }
+
+    /* ── Modal Tabs Styling (Mirrors Invoice Listing Tabs) ── */
+    .batch-modal-tabs-container {
+        background-color: transparent;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    .modal-invoice-tabs {
+        border-bottom: none;
+        margin-bottom: 0;
+        display: flex;
+        gap: 6px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    .modal-invoice-tabs .nav-link {
+        border: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+        padding: 6px 13px;
+        font-size: 12px;
+        font-weight: 500;
+        color: #475569;
+        background: #ffffff;
+        margin-bottom: -1px;
+        transition: all 0.15s ease-in-out;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .modal-invoice-tabs .nav-link:hover {
+        color: #1e293b;
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    .modal-invoice-tabs .nav-link.active {
+        background: #ffffff;
+        border-color: #cbd5e1 #cbd5e1 #ffffff;
+        border-bottom: 1px solid #ffffff !important;
+        font-weight: 600;
+        position: relative;
+        z-index: 2;
+        box-shadow: 0 -2px 6px rgba(0,0,0,0.04);
+    }
+    .modal-invoice-tabs .nav-link .badge {
+        font-size: 10.5px;
+        padding: 2px 7px;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.15s ease-in-out;
+    }
+    .modal-invoice-tabs .tab-not-posted { border-color: #dbeafe; }
+    .modal-invoice-tabs .tab-not-posted:hover { border-color: #60a5fa; }
+    .modal-invoice-tabs .tab-not-posted .tab-icon { color: #0284c7; }
+    .modal-invoice-tabs .tab-not-posted .tab-badge { background-color: #e0f2fe; color: #0369a1; }
+    .modal-invoice-tabs .tab-not-posted.active {
+        color: #0284c7;
+        border-top: 3px solid #0284c7 !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .modal-invoice-tabs .tab-not-posted.active .tab-badge {
+        background-color: #0284c7;
+        color: #ffffff;
+    }
+
+    .modal-invoice-tabs .tab-posted { border-color: #dcfce7; }
+    .modal-invoice-tabs .tab-posted:hover { border-color: #4ade80; }
+    .modal-invoice-tabs .tab-posted .tab-icon { color: #16a34a; }
+    .modal-invoice-tabs .tab-posted .tab-badge { background-color: #dcfce7; color: #15803d; }
+    .modal-invoice-tabs .tab-posted.active {
+        color: #16a34a;
+        border-top: 3px solid #16a34a !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .modal-invoice-tabs .tab-posted.active .tab-badge {
+        background-color: #16a34a;
+        color: #ffffff;
+    }
+
+    .modal-invoice-tabs .tab-error { border-color: #fee2e2; }
+    .modal-invoice-tabs .tab-error:hover { border-color: #f87171; }
+    .modal-invoice-tabs .tab-error .tab-icon { color: #dc2626; }
+    .modal-invoice-tabs .tab-error .tab-badge { background-color: #fee2e2; color: #b91c1c; }
+    .modal-invoice-tabs .tab-error.active {
+        color: #dc2626;
+        border-top: 3px solid #dc2626 !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .modal-invoice-tabs .tab-error.active .tab-badge {
+        background-color: #dc2626;
+        color: #ffffff;
+    }
+
+    .modal-invoice-tabs .tab-cancel { border-color: #ffedd5; }
+    .modal-invoice-tabs .tab-cancel:hover { border-color: #fb923c; }
+    .modal-invoice-tabs .tab-cancel .tab-icon { color: #ea580c; }
+    .modal-invoice-tabs .tab-cancel .tab-badge { background-color: #ffedd5; color: #c2410c; }
+    .modal-invoice-tabs .tab-cancel.active {
+        color: #ea580c;
+        border-top: 3px solid #ea580c !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .modal-invoice-tabs .tab-cancel.active .tab-badge {
+        background-color: #ea580c;
+        color: #ffffff;
+    }
+
+    .modal-invoice-tabs .tab-all { border-color: #e2e8f0; }
+    .modal-invoice-tabs .tab-all:hover { border-color: #94a3b8; }
+    .modal-invoice-tabs .tab-all .tab-icon { color: #64748b; }
+    .modal-invoice-tabs .tab-all .tab-badge { background-color: #f1f5f9; color: #475569; }
+    .modal-invoice-tabs .tab-all.active {
+        color: #1e293b;
+        border-top: 3px solid #475569 !important;
+        border-left-color: #cbd5e1;
+        border-right-color: #cbd5e1;
+    }
+    .modal-invoice-tabs .tab-all.active .tab-badge {
+        background-color: #475569;
+        color: #ffffff;
     }
 </style>
 @endsection
@@ -226,7 +365,7 @@
             <div class="card-body p-3">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="d-block text-muted fs-12 mb-1">Total Batch Value</span>
+                        <span class="d-block text-muted fs-12 mb-1">Total Batch Value (Net)</span>
                         <h5 class="fw-bold mb-0 text-dark">PKR {{ number_format($summary->total_amount ?? 0, 2) }}</h5>
                     </div>
                     <div class="avatar avatar-md bg-info-transparent rounded-circle">
@@ -241,7 +380,7 @@
             <div class="card-body p-3">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="d-block text-muted fs-12 mb-1">Total Sales Tax</span>
+                        <span class="d-block text-muted fs-12 mb-1">Total GST</span>
                         <h5 class="fw-bold mb-0 text-dark">PKR {{ number_format($summary->total_tax ?? 0, 2) }}</h5>
                     </div>
                     <div class="avatar avatar-md bg-warning-transparent rounded-circle">
@@ -301,8 +440,9 @@
                             <th>Source Type</th>
                             <th class="text-center">Invoices</th>
                             <th class="text-center">Items</th>
-                            <th class="text-end">Total Amount (PKR)</th>
-                            <th class="text-end">Total Tax (PKR)</th>
+                            <th class="text-end">Total Ex-Tax (PKR)</th>
+                            <th class="text-end">Total GST (PKR)</th>
+                            <th class="text-end">Total Net (PKR)</th>
                             <th>Created Date</th>
                             <th class="action-col text-end">Action</th>
                         </tr>
@@ -333,11 +473,14 @@
                             <td class="text-center">
                                 <span class="badge bg-light text-dark fw-medium fs-11">{{ $batch->TotalItems }}</span>
                             </td>
-                            <td class="text-end fw-semibold text-dark">
-                                {{ number_format($batch->TotalAmount, 2) }}
+                            <td class="text-end text-muted font-monospace">
+                                {{ number_format($batch->TotalExTax ?? ($batch->TotalAmount - $batch->TotalTax), 2) }}
                             </td>
-                            <td class="text-end text-muted">
+                            <td class="text-end text-muted font-monospace">
                                 {{ number_format($batch->TotalTax, 2) }}
+                            </td>
+                            <td class="text-end fw-bold text-dark font-monospace">
+                                {{ number_format($batch->TotalAmount, 2) }}
                             </td>
                             <td>
                                 <div class="fs-12 text-dark">{{ date('d M Y', strtotime($batch->CreatedOn)) }}</div>
@@ -371,12 +514,19 @@
                                                     <i class="fas fa-external-link-alt me-2 text-secondary"></i> Open in Invoices Page
                                                 </a>
                                             </li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <button type="button" class="dropdown-item text-danger" onclick="confirmBatchRollback('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}', {{ $batch->TotalInvoices }})">
-                                                    <i class="fas fa-trash-alt me-2 text-danger"></i> Rollback Batch
-                                                </button>
-                                            </li>
+                                            @php
+                                                $liveTotal = (int) ($batch->LiveTotalCount ?? $batch->TotalInvoices);
+                                                $livePosted = (int) ($batch->LivePostedCount ?? $batch->FbrPostedCount ?? 0);
+                                                $canRollback = ($liveTotal === 0 || $livePosted < $liveTotal);
+                                            @endphp
+                                            @if($canRollback)
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item text-danger" onclick="confirmBatchRollback('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}', {{ $liveTotal }}, {{ $livePosted }})">
+                                                        <i class="fas fa-trash-alt me-2 text-danger"></i> Rollback Batch
+                                                    </button>
+                                                </li>
+                                            @endif
                                         </ul>
                                     </div>
                                 </div>
@@ -384,7 +534,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" class="text-center py-5">
+                            <td colspan="11" class="text-center py-5">
                                 <i class="fas fa-folder-open fa-3x text-muted mb-3 d-block"></i>
                                 <p class="text-muted mb-2">No bulk invoicing requests found.</p>
                                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bulkInvoiceImportModal">
@@ -446,6 +596,42 @@
                     </div>
                 </div>
 
+                {{-- Tabs Strip (Under Search, Above Table) --}}
+                <div class="batch-modal-tabs-container">
+                    <ul class="nav modal-invoice-tabs" id="batchModalStatusTabs">
+                        <li class="nav-item">
+                            <button type="button" class="nav-link tab-not-posted" data-tab-status="not_posted" onclick="switchBatchModalTab('not_posted')">
+                                <i class="fas fa-clock tab-icon me-1"></i> Not Posted
+                                <span class="badge tab-badge" id="batchTabCountNotPosted">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="nav-link tab-posted" data-tab-status="posted" onclick="switchBatchModalTab('posted')">
+                                <i class="fas fa-check-circle tab-icon me-1"></i> Successfully Posted
+                                <span class="badge tab-badge" id="batchTabCountPosted">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="nav-link tab-error" data-tab-status="error" onclick="switchBatchModalTab('error')">
+                                <i class="fas fa-exclamation-triangle tab-icon me-1"></i> FBR Error
+                                <span class="badge tab-badge" id="batchTabCountError">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="nav-link tab-cancel" data-tab-status="cancelled" onclick="switchBatchModalTab('cancelled')">
+                                <i class="fas fa-ban tab-icon me-1"></i> FBR Cancelled
+                                <span class="badge tab-badge" id="batchTabCountCancelled">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="nav-link tab-all active" data-tab-status="all" onclick="switchBatchModalTab('all')">
+                                <i class="fas fa-list tab-icon me-1"></i> All Invoices
+                                <span class="badge tab-badge" id="batchTabCountAll">0</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
                 {{-- Loading Spinner --}}
                 <div id="batchModalLoader" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
@@ -456,25 +642,28 @@
 
                 {{-- Invoices Table Container --}}
                 <div id="batchModalTableContainer" class="table-responsive rounded border d-none">
-                    <table class="table table-sm table-hover align-middle mb-0" id="batchInvoicesDetailTable">
+                    <table class="table text-nowrap listing-table table-hover align-middle mb-0" id="batchInvoicesDetailTable">
                         <thead>
                             <tr>
-                                <th style="width: 38px;" class="text-center">#</th>
-                                <th style="width: 95px;">Date</th>
+                                <th style="width: 40px;" class="text-center">#</th>
+                                <th>Invoice Date</th>
                                 <th>Customer</th>
-                                <th style="width: 130px;">DocNo</th>
-                                <th class="text-end" style="width: 105px;">Net (PKR)</th>
-                                <th class="text-end" style="width: 95px;">Tax (PKR)</th>
-                                <th class="text-end" style="width: 115px;">Total (PKR)</th>
-                                <th style="width: 120px;">FBR Trans ID</th>
-                                <th class="text-center" style="width: 105px;">FBR Status</th>
-                                <th class="text-center" style="width: 65px;">Action</th>
+                                <th>Doc No</th>
+                                <th class="text-end">Amount (PKR)</th>
+                                <th class="text-end">GST (PKR)</th>
+                                <th class="text-end">Total (PKR)</th>
+                                <th class="text-center">FBR Response</th>
+                                <th class="text-center" style="width: 60px;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="batchInvoicesTableBody">
                             {{-- Populated via AJAX --}}
                         </tbody>
                     </table>
+                    <div id="batchModalEmptyState" class="text-center py-5 d-none">
+                        <i class="fas fa-search fa-2x text-muted mb-2 d-block"></i>
+                        <span class="text-muted fs-12" id="batchModalEmptyMsg">No invoices match the current filter.</span>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer d-flex justify-content-between align-items-center">
@@ -565,13 +754,13 @@
                 <div class="modal-body p-3 text-center">
                     <p class="fs-13 text-dark mb-2">Are you sure you want to rollback batch:</p>
                     <strong class="d-block text-danger mb-2" id="rollbackBatchTitle"></strong>
-                    <div class="alert alert-warning py-1 px-2 fs-11 text-start mb-0">
+                    <div class="alert alert-warning py-2 px-2 fs-11 text-start mb-0" id="rollbackAlertBox">
                         <i class="fas fa-info-circle me-1"></i> This will delete all <strong id="rollbackInvoiceCount"></strong> invoices associated with this request.
                     </div>
                 </div>
                 <div class="modal-footer py-2 px-3 border-top bg-light">
                     <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-sm btn-danger">Confirm Delete</button>
+                    <button type="submit" class="btn btn-sm btn-danger" id="rollbackSubmitBtn">Confirm Delete</button>
                 </div>
             </form>
         </div>
@@ -582,6 +771,9 @@
 
 @section('scripts')
 <script>
+let currentBatchRequestId = '';
+let currentBatchTab = 'all';
+
 function handleBulkInvoiceImportSubmit(form) {
     const btn = document.getElementById('btnSubmitBulkInvoiceImport');
     const txt = document.getElementById('btnSubmitBulkInvoiceImportText');
@@ -591,10 +783,34 @@ function handleBulkInvoiceImportSubmit(form) {
     }
 }
 
-function confirmBatchRollback(requestId, title, count) {
+function confirmBatchRollback(requestId, title, totalCount, postedCount) {
+    postedCount = parseInt(postedCount) || 0;
+    totalCount = parseInt(totalCount) || 0;
+    const unpostedCount = Math.max(0, totalCount - postedCount);
+
     document.getElementById('rollbackBatchTitle').textContent = title;
-    document.getElementById('rollbackInvoiceCount').textContent = count;
     document.getElementById('rollbackBatchForm').action = '/bulk-invoices/rollback/' + requestId;
+
+    const alertBox = document.getElementById('rollbackAlertBox');
+    const submitBtn = document.getElementById('rollbackSubmitBtn');
+
+    if (totalCount > 0 && unpostedCount === 0) {
+        alertBox.className = 'alert alert-danger py-2 px-2 fs-11 text-start mb-0';
+        alertBox.innerHTML = '<i class="fas fa-ban me-1"></i> All <strong>' + totalCount + '</strong> invoice(s) in this batch have already been submitted to FBR and cannot be deleted.';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Cannot Rollback';
+    } else if (postedCount > 0) {
+        alertBox.className = 'alert alert-warning py-2 px-2 fs-11 text-start mb-0';
+        alertBox.innerHTML = '<i class="fas fa-info-circle me-1"></i> <strong>' + postedCount + '</strong> invoice(s) are posted to FBR and will remain preserved.<br>Only the remaining <strong>' + unpostedCount + '</strong> unposted invoice(s) will be deleted.';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Rollback (' + unpostedCount + ' Unposted)';
+    } else {
+        alertBox.className = 'alert alert-warning py-2 px-2 fs-11 text-start mb-0';
+        alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> This will delete all <strong>' + totalCount + '</strong> invoices and remove this batch request.';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm Delete';
+    }
+
     const modal = new bootstrap.Modal(document.getElementById('rollbackBatchModal'));
     modal.show();
 }
@@ -603,16 +819,28 @@ function confirmBatchRollback(requestId, title, count) {
  * Open Batch Invoices Modal & Load Invoices via AJAX
  */
 function viewBatchInvoices(requestId, title) {
+    currentBatchRequestId = requestId;
+    currentBatchTab = 'all';
+
     document.getElementById('batchModalTitle').textContent = title || 'Batch Invoices';
     document.getElementById('batchModalRequestId').textContent = requestId;
-    document.getElementById('batchModalFullViewBtn').href = '/invoices?search=' + encodeURIComponent(requestId) + '&fbr_status=all';
+    document.getElementById('batchInvoiceFilterInput').value = '';
+
+    // Reset tab active states
+    document.querySelectorAll('#batchModalStatusTabs .nav-link').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab-status') === 'all');
+    });
+
+    updateFullViewLink('all');
 
     const loader = document.getElementById('batchModalLoader');
     const container = document.getElementById('batchModalTableContainer');
     const tbody = document.getElementById('batchInvoicesTableBody');
+    const emptyState = document.getElementById('batchModalEmptyState');
 
     loader.classList.remove('d-none');
     container.classList.add('d-none');
+    if (emptyState) emptyState.classList.add('d-none');
     tbody.innerHTML = '';
 
     const modal = new bootstrap.Modal(document.getElementById('batchInvoicesModal'));
@@ -631,27 +859,53 @@ function viewBatchInvoices(requestId, title) {
 
             const batch = data.batch || {};
             const invoices = data.invoices || [];
+            const counts = data.counts || {
+                all: invoices.length,
+                not_posted: 0,
+                posted: 0,
+                error: 0,
+                cancelled: 0
+            };
 
-            document.getElementById('batchModalInvoicesPill').innerHTML = '<i class="ri-file-text-line me-1"></i> ' + (batch.TotalInvoices || invoices.length) + ' Invoices';
-            document.getElementById('batchModalAmountPill').innerHTML = '<i class="ri-money-dollar-circle-line me-1"></i> PKR ' + Number(batch.TotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            // Update Counts on Badges
+            document.getElementById('batchTabCountNotPosted').textContent = counts.not_posted ?? 0;
+            document.getElementById('batchTabCountPosted').textContent = counts.posted ?? 0;
+            document.getElementById('batchTabCountError').textContent = counts.error ?? 0;
+            document.getElementById('batchTabCountCancelled').textContent = counts.cancelled ?? 0;
+            document.getElementById('batchTabCountAll').textContent = counts.all ?? invoices.length;
+
+            const liveTotalInvoices = (data.summary && data.summary.total_invoices !== undefined) ? data.summary.total_invoices : invoices.length;
+            const liveTotalAmount = (data.summary && data.summary.total_amount !== undefined) ? data.summary.total_amount : invoices.reduce((acc, inv) => acc + (parseFloat(inv.TotalValues) || 0), 0);
+
+            document.getElementById('batchModalInvoicesPill').innerHTML = '<i class="ri-file-text-line me-1"></i> ' + liveTotalInvoices + ' Invoices';
+            document.getElementById('batchModalAmountPill').innerHTML = '<i class="ri-money-dollar-circle-line me-1"></i> PKR ' + Number(liveTotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
             if (invoices.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No invoices found for this batch.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No invoices found for this batch.</td></tr>';
                 return;
             }
 
             let html = '';
             invoices.forEach((inv, idx) => {
+                const statusKey = inv.status_key || 'not_posted';
                 const isPosted = inv.FbrTransactionID && inv.FbrTransactionID.trim() !== '';
-                const fbrStatusBadge = isPosted 
-                    ? '<span class="badge bg-success-transparent text-success"><i class="ri-checkbox-circle-fill me-1"></i> Posted</span>'
-                    : '<span class="badge bg-info-transparent text-info"><i class="ri-time-line me-1"></i> Not Posted</span>';
+                let fbrStatusBadge = '';
+
+                if (statusKey === 'posted') {
+                    fbrStatusBadge = '<span class="badge rounded-pill bg-success-subtle text-success" style="font-size:11px; padding:5px 10px;"><i class="fas fa-check-circle me-1"></i>Posted</span>';
+                } else if (statusKey === 'error') {
+                    fbrStatusBadge = '<span class="badge rounded-pill bg-danger-subtle text-danger" style="font-size:11px; padding:5px 10px;" title="FBR Error"><i class="fas fa-exclamation-triangle me-1"></i>FBR Error</span>';
+                } else if (statusKey === 'cancelled') {
+                    fbrStatusBadge = '<span class="badge rounded-pill bg-warning-subtle text-warning" style="font-size:11px; padding:5px 10px;"><i class="fas fa-ban me-1"></i>FBR Cancelled</span>';
+                } else {
+                    fbrStatusBadge = '<span class="badge rounded-pill bg-light text-muted">Not Posted</span>';
+                }
 
                 const customerDisplay = inv.CustomerName || inv.CustomerNTN || inv.CustomerCode || 'Walk-In';
                 const customerCodeSubtitle = inv.CustomerCode ? '<small class="text-muted font-monospace fs-10 d-block">' + inv.CustomerCode + '</small>' : '';
 
                 html += `
-                <tr class="batch-invoice-row" id="inv-row-${inv.HeaderID}">
+                <tr class="batch-invoice-row" id="inv-row-${inv.HeaderID}" data-status="${statusKey}">
                     <td class="text-center">
                         <button type="button" class="btn btn-xs toggle-items-btn" id="toggle-btn-${inv.HeaderID}" onclick="toggleBatchInvoiceItems(${inv.HeaderID})" title="Toggle Line Items">
                             <i class="ri-arrow-right-s-line fs-14" id="toggle-icon-${inv.HeaderID}"></i>
@@ -665,40 +919,41 @@ function viewBatchInvoices(requestId, title) {
                     <td><span class="badge bg-primary-transparent text-primary font-monospace fw-bold fs-11">${inv.DocNo || ''}</span></td>
                     <td class="text-end font-monospace">${Number(inv.ValueSalesExcludingST || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                     <td class="text-end font-monospace text-muted">${Number(inv.SalesTaxApplicable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    <td class="text-end font-monospace fw-semibold text-dark">${Number(inv.TotalValues || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    <td><span class="font-monospace fs-11 text-secondary">${inv.FbrTransactionID || '-'}</span></td>
-                    <td class="text-center">${fbrStatusBadge}</td>
+                    <td class="text-end font-monospace fw-bold text-dark">${Number(inv.TotalValues || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td class="text-center">
+                        ${fbrStatusBadge}
+                        ${isPosted ? `<small class="d-block text-muted font-monospace fs-10 mt-1">TxID: <strong>${inv.FbrTransactionID}</strong></small>` : ''}
+                    </td>
                     <td class="text-center">
                         <a href="/invoices/${inv.HeaderID}/print-view" target="_blank" class="btn btn-xs btn-icon btn-outline-light text-muted hover-primary" title="Print Invoice">
                             <i class="ri-printer-line fs-13"></i>
                         </a>
                     </td>
                 </tr>
-                <tr class="d-none batch-items-row" id="items-row-${inv.HeaderID}">
-                    <td colspan="10" class="p-0 border-0">
+                <tr class="d-none batch-items-row" id="items-row-${inv.HeaderID}" data-parent-status="${statusKey}">
+                    <td colspan="9" class="p-0 border-0">
                         <div class="batch-items-container">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="badge bg-primary-transparent text-primary fw-semibold fs-11">
-                                    <i class="ri-shopping-bag-3-line me-1"></i> Line Items (${inv.items_count || (inv.items ? inv.items.length : 0)})
+                                    <i class="ri-shopping-bag-3-line me-1"></i> Products & Services (${inv.items_count || (inv.items ? inv.items.length : 0)})
                                 </span>
                                 <span class="badge bg-white text-dark border font-monospace fs-11">
                                     <span class="text-muted fw-normal">Sale of Term:</span> <strong class="text-primary">${inv.SaleOfTerm || 'CASH'}</strong>
                                 </span>
                             </div>
                             <div class="table-responsive rounded border bg-white shadow-none">
-                                <table class="table table-sm table-bordered align-middle mb-0 batch-inner-table">
+                                <table class="table table-sm table-bordered align-middle text-nowrap mb-0 batch-inner-table">
                                     <thead>
                                         <tr>
-                                            <th style="width: 35px;" class="text-center">#</th>
-                                            <th>Product / Code</th>
+                                            <th style="width: 32px;" class="text-center">#</th>
+                                            <th>Product / Services</th>
                                             <th>Description</th>
-                                            <th style="width: 95px;" class="text-center">HS Code</th>
-                                            <th style="width: 65px;" class="text-center">UOM</th>
-                                            <th class="text-end" style="width: 75px;">Qty</th>
-                                            <th class="text-end" style="width: 85px;">Rate</th>
-                                            <th class="text-end" style="width: 95px;">Excl. Tax</th>
-                                            <th class="text-end" style="width: 85px;">Tax</th>
-                                            <th class="text-end" style="width: 100px;">Total</th>
+                                            <th class="text-center">UOM</th>
+                                            <th class="text-end">Qty</th>
+                                            <th class="text-end">Unit Rate</th>
+                                            <th class="text-end">Amount</th>
+                                            <th class="text-end">GST Amount</th>
+                                            <th class="text-end">Net</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -710,13 +965,15 @@ function viewBatchInvoices(requestId, title) {
                                                     ${it.ProductName ? '<span class="text-muted fs-11 ms-1">('+it.ProductName+')</span>' : ''}
                                                 </td>
                                                 <td class="text-dark fs-11">${it.ProductDescription || '-'}</td>
-                                                <td class="text-center"><span class="badge bg-light text-secondary border font-monospace fs-10">${it.HsCode || '-'}</span></td>
-                                                <td class="text-center text-muted font-monospace fs-11">${it.Uom_Desc || '-'}</td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-light text-secondary border font-monospace fs-10">${it.Uom_Desc || '-'}</span>
+                                                    ${it.HsCode ? '<small class="text-muted font-monospace fs-9 d-block mt-0.5">HS: ' + it.HsCode + '</small>' : ''}
+                                                </td>
                                                 <td class="text-end font-monospace">${Number(it.Quantity || 0).toFixed(2)}</td>
                                                 <td class="text-end font-monospace">${Number(it.Rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                                 <td class="text-end font-monospace">${Number(it.Amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                                 <td class="text-end font-monospace text-muted">${Number(it.GSTAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                                <td class="text-end font-monospace fw-semibold text-dark">${Number(it.TotalValues || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td class="text-end font-monospace fw-bold text-dark">${Number(it.TotalValues || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -729,12 +986,98 @@ function viewBatchInvoices(requestId, title) {
             });
 
             tbody.innerHTML = html;
+            applyBatchModalFilter();
         })
         .catch(err => {
             loader.classList.add('d-none');
             container.classList.remove('d-none');
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger">Error loading batch invoices: ' + err.message + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">Error loading batch invoices: ' + err.message + '</td></tr>';
         });
+}
+
+/**
+ * Switch Active Tab in Modal
+ */
+function switchBatchModalTab(tabStatus) {
+    currentBatchTab = tabStatus;
+
+    document.querySelectorAll('#batchModalStatusTabs .nav-link').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab-status') === tabStatus);
+    });
+
+    updateFullViewLink(tabStatus);
+
+    const summaryText = document.getElementById('batchModalSummaryText');
+    const labelMap = {
+        'all': 'all invoices',
+        'not_posted': 'Not Posted invoices',
+        'posted': 'Successfully Posted invoices',
+        'error': 'FBR Error invoices',
+        'cancelled': 'FBR Cancelled invoices'
+    };
+    if (summaryText) {
+        summaryText.innerHTML = `<i class="ri-information-line text-primary fs-13"></i> Showing ${labelMap[tabStatus] || 'invoices'} in this batch. Click <i class="ri-arrow-down-s-line text-primary fw-bold"></i> to view line items.`;
+    }
+
+    applyBatchModalFilter();
+}
+
+/**
+ * Update bottom "Open in Full Invoices List" link
+ */
+function updateFullViewLink(tabStatus) {
+    const fullViewBtn = document.getElementById('batchModalFullViewBtn');
+    if (fullViewBtn && currentBatchRequestId) {
+        fullViewBtn.href = '/invoices?search=' + encodeURIComponent(currentBatchRequestId) + '&fbr_status=' + encodeURIComponent(tabStatus);
+    }
+}
+
+/**
+ * Apply both active Tab filter and Search input
+ */
+function applyBatchModalFilter() {
+    const filter = (document.getElementById('batchInvoiceFilterInput').value || '').toLowerCase();
+    const rows = document.querySelectorAll('.batch-invoice-row');
+    const emptyState = document.getElementById('batchModalEmptyState');
+    const tableEl = document.getElementById('batchInvoicesDetailTable');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const rowStatus = row.getAttribute('data-status');
+        const text = row.textContent.toLowerCase();
+        const headerId = row.id.replace('inv-row-', '');
+        const itemsRow = document.getElementById('items-row-' + headerId);
+
+        const matchesTab = (currentBatchTab === 'all' || rowStatus === currentBatchTab);
+        const matchesSearch = text.includes(filter);
+
+        if (matchesTab && matchesSearch) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+            if (itemsRow) itemsRow.classList.add('d-none');
+        }
+    });
+
+    if (emptyState && tableEl) {
+        if (visibleCount === 0 && rows.length > 0) {
+            emptyState.classList.remove('d-none');
+            const emptyMsg = document.getElementById('batchModalEmptyMsg');
+            if (emptyMsg) {
+                const tabTitles = {
+                    'not_posted': 'Not Posted',
+                    'posted': 'Successfully Posted',
+                    'error': 'FBR Error',
+                    'cancelled': 'FBR Cancelled',
+                    'all': 'All Invoices'
+                };
+                emptyMsg.textContent = `No invoices found in '${tabTitles[currentBatchTab] || currentBatchTab}' status matching your filter.`;
+            }
+        } else {
+            emptyState.classList.add('d-none');
+        }
+    }
 }
 
 /**
@@ -767,21 +1110,7 @@ function toggleBatchInvoiceItems(headerId) {
  * Live search filter within the modal
  */
 function filterBatchInvoicesTable() {
-    const filter = document.getElementById('batchInvoiceFilterInput').value.toLowerCase();
-    const rows = document.querySelectorAll('.batch-invoice-row');
-
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        const headerId = row.id.replace('inv-row-', '');
-        const itemsRow = document.getElementById('items-row-' + headerId);
-
-        if (text.includes(filter)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-            if (itemsRow) itemsRow.classList.add('d-none');
-        }
-    });
+    applyBatchModalFilter();
 }
 
 // Auto-dismiss success alert after 5s (errors stay until closed)

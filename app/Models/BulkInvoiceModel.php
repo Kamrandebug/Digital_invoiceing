@@ -66,10 +66,13 @@ class BulkInvoiceModel extends Model
                 'b.TotalItems',
                 'b.TotalAmount',
                 'b.TotalTax',
+                DB::raw('(b.TotalAmount - b.TotalTax) as TotalExTax'),
                 'b.FbrPostedCount',
                 'b.Status',
                 'b.CreatedBy',
-                'b.CreatedOn'
+                'b.CreatedOn',
+                DB::raw("(SELECT COUNT(*) FROM tbl_sales_invoice_header h WHERE h.RequestID = b.RequestID AND (h.Statusi = 7 OR (h.FbrTransactionID IS NOT NULL AND TRIM(h.FbrTransactionID) <> ''))) as LivePostedCount"),
+                DB::raw("(SELECT COUNT(*) FROM tbl_sales_invoice_header h WHERE h.RequestID = b.RequestID) as LiveTotalCount")
             )
             ->where('b.Status', '!=', 2)
             ->orderBy('b.ID', 'desc');
@@ -243,10 +246,10 @@ class BulkInvoiceModel extends Model
                         WHEN t.`Quantity` <= 0 THEN 'Quantity must be greater than 0'
                         WHEN t.`ValueSalesExcludingST` < 0 THEN 'Value of Sales cannot be negative'
                         WHEN t.`SalesTaxApplicable` < 0 THEN 'Sales Tax cannot be negative'
-                        WHEN p.IsFixedRate = 1 AND (t.`FixedNotifiedValueOrRetailPrice`/t.`Quantity` ) != p.`TPRate` THEN 'FixedNotifiedValueOrRetailPrice and SalesTaxApplicable'
-                        WHEN p.IsFixedRate = 1 AND (t.`SalesTaxApplicable` != (t.`FixedNotifiedValueOrRetailPrice` * (fsttr.ratE_VALUE / 100))) THEN 
+                        WHEN p.IsFixedRate = 1 AND CAST(t.`FixedNotifiedValueOrRetailPrice` AS DECIMAL(20,2))/CAST(t.`Quantity` AS DECIMAL(20,2)) != CAST(p.`TPRate` AS DECIMAL(20,2)) THEN 'Please Check FixedNotifiedValueOrRetailPrice. Rate does not match'
+                        WHEN p.IsFixedRate = 1 AND (CAST(t.`SalesTaxApplicable` AS DECIMAL(20,2)) != CAST((t.`FixedNotifiedValueOrRetailPrice` * (fsttr.ratE_VALUE / 100)) AS DECIMAL(20,2))) THEN 
 				                'Please Check FixedNotifiedValueOrRetailPrice and SalesTaxApplicable'
-			            WHEN p.IsFixedRate = 0 AND (t.`SalesTaxApplicable` != (t.`ValueSalesExcludingST` * (fsttr.ratE_VALUE / 100))) THEN 
+			            WHEN p.IsFixedRate = 0 AND (CAST(t.`SalesTaxApplicable` AS DECIMAL(20,2)) != CAST((t.`ValueSalesExcludingST` * (fsttr.ratE_VALUE / 100)) AS DECIMAL(20,2))) THEN 
 				                'Please Check ValueSalesExcludingST and SalesTaxApplicable'
                         ELSE 'Pass'
                     END AS ErrMsg
@@ -473,19 +476,35 @@ class BulkInvoiceModel extends Model
     public static function rollback_batch(string $requestID, int $userId = 1): array
     {
         $now = now()->toDateTimeString();
-        $action = 'ROLLBACK';
 
-        // 1. Check if any invoice in this batch has already been posted to FBR
-        $postedCount = DB::connection('tenant')->table('tbl_sales_invoice_header')
+        // 1. Fetch live headers for this batch
+        $headers = DB::connection('tenant')->table('tbl_sales_invoice_header')
             ->where('RequestID', $requestID)
-            ->whereNotNull('FbrTransactionID')
-            ->whereRaw("TRIM(FbrTransactionID) <> ''")
-            ->count();
+            ->get();
 
-        if ($postedCount > 0) {
+        $totalCount = $headers->count();
+
+        // Check posted vs unposted
+        $postedHeaders = $headers->filter(function ($h) {
+            $statusi = (int) ($h->Statusi ?? 0);
+            $hasTransId = !empty(trim((string) ($h->FbrTransactionID ?? '')));
+            return ($statusi === 7) || $hasTransId;
+        });
+
+        $unpostedHeaders = $headers->filter(function ($h) {
+            $statusi = (int) ($h->Statusi ?? 0);
+            $hasTransId = !empty(trim((string) ($h->FbrTransactionID ?? '')));
+            return !($statusi === 7 || $hasTransId);
+        });
+
+        $postedCount = $postedHeaders->count();
+        $unpostedCount = $unpostedHeaders->count();
+
+        // Case A: All invoices already posted to FBR — Block delete
+        if ($totalCount > 0 && $unpostedCount === 0) {
             return [
                 'status'  => false,
-                'message' => "Cannot rollback batch: {$postedCount} invoice(s) have already been submitted to FBR.",
+                'message' => "Cannot rollback batch: All {$postedCount} invoice(s) in this batch have already been submitted to FBR and cannot be deleted.",
             ];
         }
 
@@ -494,12 +513,33 @@ class BulkInvoiceModel extends Model
             ->where('RequestID', $requestID)
             ->first();
 
+        // Case B: No invoices found at all, but batch record exists
+        if ($totalCount === 0) {
+            if ($batch) {
+                DB::connection('tenant')->table('tbl_bulk_invoice_request')
+                    ->where('RequestID', $requestID)
+                    ->delete();
+            }
+            return [
+                'status'  => true,
+                'message' => 'Batch removed (no invoices were found).',
+            ];
+        }
+
         $batchTitle = $batch->Title ?? 'Bulk Invoice Batch';
-        $actionNote = "Rollback Batch: " . $batchTitle;
 
         // 2. Execute history archiving and hard deletion atomically
         try {
-            DB::connection('tenant')->transaction(function () use ($requestID, $userId, $now, $action, $actionNote, $batch) {
+            $isPartial = ($postedCount > 0);
+            $action = $isPartial ? 'PARTIAL_ROLLBACK' : 'ROLLBACK';
+            $actionNote = ($isPartial ? 'Partial Rollback: ' : 'Rollback Batch: ') . $batchTitle;
+
+            $unpostedIds = $unpostedHeaders->pluck('ID')->toArray();
+
+            DB::connection('tenant')->transaction(function () use (
+                $requestID, $userId, $now, $action, $actionNote, $batch,
+                $isPartial, $unpostedIds, $postedCount, $unpostedCount
+            ) {
                 // STEP A: Snapshot batch request → tbl_bulk_invoice_request_history
                 DB::connection('tenant')->statement("
                     INSERT INTO tbl_bulk_invoice_request_history (
@@ -517,7 +557,8 @@ class BulkInvoiceModel extends Model
                     WHERE b.RequestID = ?
                 ", [$action, $userId, $now, $actionNote, $userId, $now, $requestID]);
 
-                // STEP B: Snapshot invoice headers → tbl_sales_invoice_header_history
+                // STEP B: Snapshot unposted invoice headers → tbl_sales_invoice_header_history
+                $unpostedPlaceholders = implode(',', array_fill(0, count($unpostedIds), '?'));
                 DB::connection('tenant')->statement("
                     INSERT INTO tbl_sales_invoice_header_history (
                         OriginalID,
@@ -567,10 +608,10 @@ class BulkInvoiceModel extends Model
                         h.RequestID,
                         ?, ?, ?, ?
                     FROM tbl_sales_invoice_header h
-                    WHERE h.RequestID = ?
-                ", [$action, $userId, $now, $actionNote, $requestID]);
+                    WHERE h.ID IN ({$unpostedPlaceholders})
+                ", array_merge([$action, $userId, $now, $actionNote], $unpostedIds));
 
-                // STEP C: Snapshot invoice detail rows → tbl_sales_invoice_detail_history
+                // STEP C: Snapshot unposted invoice detail rows → tbl_sales_invoice_detail_history
                 DB::connection('tenant')->statement("
                     INSERT INTO tbl_sales_invoice_detail_history (
                         OriginalID,
@@ -608,44 +649,71 @@ class BulkInvoiceModel extends Model
                         d.RequestID,
                         ?, ?, ?, ?
                     FROM tbl_sales_invoice_detail d
-                    INNER JOIN tbl_sales_invoice_header h ON d.InvoiceID = h.ID
-                    WHERE h.RequestID = ?
-                ", [$action, $userId, $now, $actionNote, $requestID]);
+                    WHERE d.InvoiceID IN ({$unpostedPlaceholders})
+                ", array_merge([$action, $userId, $now, $actionNote], $unpostedIds));
 
-                // STEP D: Hard delete invoice details
-                DB::connection('tenant')->statement("
-                    DELETE d FROM tbl_sales_invoice_detail d
-                    INNER JOIN tbl_sales_invoice_header h ON d.InvoiceID = h.ID
-                    WHERE h.RequestID = ?
-                ", [$requestID]);
+                // STEP D: Hard delete details of unposted invoices
+                DB::connection('tenant')->table('tbl_sales_invoice_detail')
+                    ->whereIn('InvoiceID', $unpostedIds)
+                    ->delete();
 
-                // STEP E: Hard delete invoice headers
+                // STEP E: Hard delete unposted headers
                 DB::connection('tenant')->table('tbl_sales_invoice_header')
-                    ->where('RequestID', $requestID)
+                    ->whereIn('ID', $unpostedIds)
                     ->delete();
 
-                // STEP F: Hard delete batch request
-                DB::connection('tenant')->table('tbl_bulk_invoice_request')
-                    ->where('RequestID', $requestID)
-                    ->delete();
+                // STEP F: Batch record update or delete
+                if (!$isPartial) {
+                    // Full rollback: delete batch record
+                    DB::connection('tenant')->table('tbl_bulk_invoice_request')
+                        ->where('RequestID', $requestID)
+                        ->delete();
+                } else {
+                    // Partial rollback: recalculate remaining posted totals
+                    $remPosted = DB::connection('tenant')->table('tbl_sales_invoice_header')
+                        ->where('RequestID', $requestID)
+                        ->selectRaw('COUNT(*) as total_invoices, COALESCE(SUM(TotalValues), 0) as total_amount, COALESCE(SUM(SalesTaxApplicable), 0) as total_tax')
+                        ->first();
+
+                    $remItems = (int) DB::connection('tenant')->table('tbl_sales_invoice_detail')
+                        ->where('RequestID', $requestID)
+                        ->count();
+
+                    DB::connection('tenant')->table('tbl_bulk_invoice_request')
+                        ->where('RequestID', $requestID)
+                        ->update([
+                            'TotalInvoices'  => (int) ($remPosted->total_invoices ?? 0),
+                            'TotalItems'     => $remItems,
+                            'TotalAmount'    => (float) ($remPosted->total_amount ?? 0),
+                            'TotalTax'       => (float) ($remPosted->total_tax ?? 0),
+                            'FbrPostedCount' => (int) ($remPosted->total_invoices ?? 0),
+                        ]);
+                }
 
                 // STEP G: Audit log
                 try {
                     \App\Services\AuditLogService::log('DELETE', 'BULK_INVOICES', $batch->ID ?? 0, (array) $batch, [
-                        'RequestID'     => $requestID,
-                        'Action'        => 'Rollback / Hard Deleted Batch',
-                        'TotalInvoices' => $batch->TotalInvoices ?? 0,
-                        'TotalAmount'   => $batch->TotalAmount ?? 0,
+                        'RequestID'       => $requestID,
+                        'Action'          => $action,
+                        'UnpostedDeleted' => $unpostedCount,
+                        'PostedPreserved' => $postedCount,
                     ]);
                 } catch (\Throwable $e) {
                     Log::error('Failed to log bulk invoice rollback: ' . $e->getMessage());
                 }
             });
 
-            return [
-                'status'  => true,
-                'message' => 'Batch and all associated invoices were safely archived to history and permanently removed from active tables.',
-            ];
+            if ($isPartial) {
+                return [
+                    'status'  => true,
+                    'message' => "Partial rollback complete: {$unpostedCount} unposted invoice(s) were deleted. {$postedCount} FBR-posted invoice(s) remain safely preserved.",
+                ];
+            } else {
+                return [
+                    'status'  => true,
+                    'message' => "Successfully rolled back batch. All {$unpostedCount} unposted invoices were archived to history and permanently removed.",
+                ];
+            }
         } catch (\Throwable $e) {
             Log::error('BulkInvoiceModel::rollback_batch exception: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return [

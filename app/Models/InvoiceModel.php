@@ -717,9 +717,30 @@ class InvoiceModel extends Model
                     \App\Services\AuditLogService::log(
                         'DELETE', 'INVOICE', $archived->OriginalID, (array) $archived, null
                     );
+
+                    // Re-sync parent tbl_bulk_invoice_request if deleted invoice belonged to a bulk batch
+                    if (!empty($archived->RequestID)) {
+                        $rem = DB::table('tbl_sales_invoice_header')
+                            ->where('RequestID', $archived->RequestID)
+                            ->selectRaw('COUNT(*) as total_invoices, COALESCE(SUM(TotalValues), 0) as total_amount, COALESCE(SUM(SalesTaxApplicable), 0) as total_tax')
+                            ->first();
+
+                        $remItems = (int) DB::table('tbl_sales_invoice_detail')
+                            ->where('RequestID', $archived->RequestID)
+                            ->count();
+
+                        DB::table('tbl_bulk_invoice_request')
+                            ->where('RequestID', $archived->RequestID)
+                            ->update([
+                                'TotalInvoices' => (int) ($rem->total_invoices ?? 0),
+                                'TotalItems'    => $remItems,
+                                'TotalAmount'   => (float) ($rem->total_amount ?? 0),
+                                'TotalTax'      => (float) ($rem->total_tax ?? 0),
+                            ]);
+                    }
                 }
             } catch (\Throwable $e) {
-                \Log::error('delete_transaction: failed to write audit log: ' . $e->getMessage());
+                \Log::error('delete_transaction: failed to write audit log or sync bulk batch: ' . $e->getMessage());
             }
         });
 

@@ -491,14 +491,65 @@ class BulkInvoiceController extends Controller
             ->get()
             ->groupBy('InvoiceID');
 
+        $counts = [
+            'all' => $invoices->count(),
+            'not_posted' => 0,
+            'posted' => 0,
+            'error' => 0,
+            'cancelled' => 0,
+        ];
+
         foreach ($invoices as $inv) {
             $inv->items = $details->get($inv->HeaderID, collect());
             $inv->items_count = count($inv->items);
+
+            $statusi = (int) ($inv->Statusi ?? 0);
+            $hasTransId = !empty(trim((string) ($inv->FbrTransactionID ?? '')));
+            $hasResponseJson = !empty(trim((string) ($inv->FbrResponseJson ?? '')));
+
+            if ($statusi === 7 || ($statusi === 0 && $hasTransId)) {
+                $statusKey = 'posted';
+            } elseif ($statusi === 8) {
+                $statusKey = 'cancelled';
+            } elseif ($statusi === 6 || ($statusi === 0 && !$hasTransId && $hasResponseJson)) {
+                $statusKey = 'error';
+            } else {
+                $statusKey = 'not_posted';
+            }
+
+            $inv->status_key = $statusKey;
+            if (isset($counts[$statusKey])) {
+                $counts[$statusKey]++;
+            }
+        }
+
+        $liveTotalInvoices = $invoices->count();
+        $liveTotalAmount = (float) $invoices->sum('TotalValues');
+        $liveTotalTax = (float) $invoices->sum('SalesTaxApplicable');
+
+        // Auto-sync tbl_bulk_invoice_request totals if individual invoices were deleted
+        if ($batch->TotalInvoices != $liveTotalInvoices || abs((float)$batch->TotalAmount - $liveTotalAmount) > 0.01) {
+            DB::connection('tenant')->table('tbl_bulk_invoice_request')
+                ->where('RequestID', $requestId)
+                ->update([
+                    'TotalInvoices' => $liveTotalInvoices,
+                    'TotalAmount'   => $liveTotalAmount,
+                    'TotalTax'      => $liveTotalTax,
+                ]);
+            $batch->TotalInvoices = $liveTotalInvoices;
+            $batch->TotalAmount   = $liveTotalAmount;
+            $batch->TotalTax      = $liveTotalTax;
         }
 
         return response()->json([
             'status'   => 'success',
             'batch'    => $batch,
+            'summary'  => [
+                'total_invoices' => $liveTotalInvoices,
+                'total_amount'   => $liveTotalAmount,
+                'total_tax'      => $liveTotalTax,
+            ],
+            'counts'   => $counts,
             'invoices' => $invoices,
         ]);
     }
