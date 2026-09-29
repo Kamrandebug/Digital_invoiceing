@@ -176,27 +176,27 @@
         @if($readonly)
             <span class="small">{{ number_format((float) ($item->ExtraTax ?? 0), 2) }}</span>
         @else
-            <input type="number" step="0.01" name="items[{{ $nameIdx }}][ExtraTax]"
-                   class="form-control form-control-sm ifp-extra-tax"
-                   value="{{ $item->ExtraTax ?? 0 }}" min="0">
+            <input type="text" name="items[{{ $nameIdx }}][ExtraTax]"
+                   class="form-control form-control-sm ifp-extra-tax ifp-numfmt"
+                   value="{{ number_format((float) ($item->ExtraTax ?? 0), 2, '.', ',') }}" readonly>
         @endif
     </td>
     <td class="ifp-col-further-tax">
         @if($readonly)
             <span class="small">{{ number_format((float) ($item->FurtherTax ?? 0), 2) }}</span>
         @else
-            <input type="number" step="0.01" name="items[{{ $nameIdx }}][FurtherTax]"
-                   class="form-control form-control-sm ifp-further-tax"
-                   value="{{ $item->FurtherTax ?? 0 }}" min="0">
+            <input type="text" name="items[{{ $nameIdx }}][FurtherTax]"
+                   class="form-control form-control-sm ifp-further-tax ifp-numfmt"
+                   value="{{ number_format((float) ($item->FurtherTax ?? 0), 2, '.', ',') }}" readonly>
         @endif
     </td>
     <td class="ifp-col-fed-payable">
         @if($readonly)
             <span class="small">{{ number_format((float) ($item->FedPayable ?? 0), 2) }}</span>
         @else
-            <input type="number" step="0.01" name="items[{{ $nameIdx }}][FedPayable]"
-                   class="form-control form-control-sm ifp-fed-payable"
-                   value="{{ $item->FedPayable ?? 0 }}" min="0">
+            <input type="text" name="items[{{ $nameIdx }}][FedPayable]"
+                   class="form-control form-control-sm ifp-fed-payable ifp-numfmt"
+                   value="{{ number_format((float) ($item->FedPayable ?? 0), 2, '.', ',') }}" readonly>
         @endif
     </td>
     @if(!$readonly)

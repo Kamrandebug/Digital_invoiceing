@@ -773,21 +773,21 @@
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->ExtraTax ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][ExtraTax]" class="form-control form-control-sm ifp-extra-tax" value="{{ $item->ExtraTax ?? 0 }}" min="0">
+                            <input type="text" name="items[{{ $idx }}][ExtraTax]" class="form-control form-control-sm ifp-extra-tax ifp-numfmt" value="{{ number_format((float) ($item->ExtraTax ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     <td class="ifp-col-further-tax">
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->FurtherTax ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][FurtherTax]" class="form-control form-control-sm ifp-further-tax" value="{{ $item->FurtherTax ?? 0 }}" min="0">
+                            <input type="text" name="items[{{ $idx }}][FurtherTax]" class="form-control form-control-sm ifp-further-tax ifp-numfmt" value="{{ number_format((float) ($item->FurtherTax ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     <td class="ifp-col-fed-payable">
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->FedPayable ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][FedPayable]" class="form-control form-control-sm ifp-fed-payable" value="{{ $item->FedPayable ?? 0 }}" min="0">
+                            <input type="text" name="items[{{ $idx }}][FedPayable]" class="form-control form-control-sm ifp-fed-payable ifp-numfmt" value="{{ number_format((float) ($item->FedPayable ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     @if(!$isReadonly)
@@ -858,9 +858,9 @@
                     @endif
                     <td class="ifp-col-gst-amt"><input type="text"     name="items[0][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>
                     <td class="ifp-col-net"><input type="text"     name="items[0][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>
-                    <td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[0][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>
-                    <td class="ifp-col-further-tax"><input type="number" step="0.01"     name="items[0][FurtherTax]"         class="form-control form-control-sm ifp-further-tax" value="0" min="0"></td>
-                    <td class="ifp-col-fed-payable"><input type="number" step="0.01"     name="items[0][FedPayable]"         class="form-control form-control-sm ifp-fed-payable" value="0" min="0"></td>
+                    <td class="ifp-col-extra-tax"><input type="text" name="items[0][ExtraTax]" class="form-control form-control-sm ifp-extra-tax ifp-numfmt" value="0.00" readonly></td>
+                    <td class="ifp-col-further-tax"><input type="text" name="items[0][FurtherTax]" class="form-control form-control-sm ifp-further-tax ifp-numfmt" value="0.00" readonly></td>
+                    <td class="ifp-col-fed-payable"><input type="text" name="items[0][FedPayable]" class="form-control form-control-sm ifp-fed-payable ifp-numfmt" value="0.00" readonly></td>
                     <td class="ifp-col-actions"><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del"><i class="ri-delete-bin-5-line"></i></button></td>
                 </tr>
             @else
@@ -2461,9 +2461,9 @@
                 '<td class="ifp-col-disc-amt"><input type="text" name="items[' + idx + '][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-gst-amt"><input type="text"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>' +
                 '<td class="ifp-col-net"><input type="text"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>' +
-                '<td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[' + idx + '][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>' +
-                '<td class="ifp-col-further-tax"><input type="number" step="0.01"     name="items[' + idx + '][FurtherTax]"         class="form-control form-control-sm ifp-further-tax" value="0" min="0"></td>' +
-                '<td class="ifp-col-fed-payable"><input type="number" step="0.01"     name="items[' + idx + '][FedPayable]"         class="form-control form-control-sm ifp-fed-payable" value="0" min="0"></td>' +
+                '<td class="ifp-col-extra-tax"><input type="text" name="items[' + idx + '][ExtraTax]" class="form-control form-control-sm ifp-extra-tax ifp-numfmt" value="0.00" readonly></td>' +
+                '<td class="ifp-col-further-tax"><input type="text" name="items[' + idx + '][FurtherTax]" class="form-control form-control-sm ifp-further-tax ifp-numfmt" value="0.00" readonly></td>' +
+                '<td class="ifp-col-fed-payable"><input type="text" name="items[' + idx + '][FedPayable]" class="form-control form-control-sm ifp-fed-payable ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-actions"><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del"><i class="ri-delete-bin-5-line"></i></button></td>'
             )
             : (
@@ -2476,9 +2476,9 @@
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][GstPercentage]"      class="form-control form-control-sm ifp-gst-pct"  value="0" min="0"></td>' +
                 '<td class="ifp-col-gst-amt"><input type="text"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>' +
                 '<td class="ifp-col-net"><input type="text"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>' +
-                '<td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[' + idx + '][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>' +
-                '<td class="ifp-col-further-tax"><input type="number" step="0.01"     name="items[' + idx + '][FurtherTax]"         class="form-control form-control-sm ifp-further-tax" value="0" min="0"></td>' +
-                '<td class="ifp-col-fed-payable"><input type="number" step="0.01"     name="items[' + idx + '][FedPayable]"         class="form-control form-control-sm ifp-fed-payable" value="0" min="0"></td>' +
+                '<td class="ifp-col-extra-tax"><input type="text" name="items[' + idx + '][ExtraTax]" class="form-control form-control-sm ifp-extra-tax ifp-numfmt" value="0.00" readonly></td>' +
+                '<td class="ifp-col-further-tax"><input type="text" name="items[' + idx + '][FurtherTax]" class="form-control form-control-sm ifp-further-tax ifp-numfmt" value="0.00" readonly></td>' +
+                '<td class="ifp-col-fed-payable"><input type="text" name="items[' + idx + '][FedPayable]" class="form-control form-control-sm ifp-fed-payable ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-actions"><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del"><i class="ri-delete-bin-5-line"></i></button></td>'
             );
         var descCell = '<td class="ifp-col-desc"><input type="hidden" name="items[' + idx + '][HsCode]" class="ifp-hscode" value=""><textarea name="items[' + idx + '][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description"></textarea></td>';
