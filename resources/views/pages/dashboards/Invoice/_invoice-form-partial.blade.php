@@ -680,9 +680,17 @@
                     ])
                     <td class="ifp-col-qty">
                         @if($isReadonly)
-                            <span class="small">{{ $item->Quantity ?? 0 }}</span>
+                            @php
+                                $qtyNum = (float)($item->Quantity ?? 0);
+                                $qtyDec = ($qtyNum - floor($qtyNum) > 0.000001) ? 2 : 0;
+                            @endphp
+                            <span class="small">{{ number_format($qtyNum, $qtyDec, '.', ',') }}</span>
                         @else
-                            <input type="number" name="items[{{ $idx }}][Quantity]" class="form-control form-control-sm ifp-qty" value="{{ $item->Quantity ?? 1 }}" min="0" step="0.000001">
+                            @php
+                                $qtyNum = (float)($item->Quantity ?? 1);
+                                $qtyDec = ($qtyNum - floor($qtyNum) > 0.000001) ? 2 : 0;
+                            @endphp
+                            <input type="text" inputmode="decimal" name="items[{{ $idx }}][Quantity]" class="form-control form-control-sm ifp-qty ifp-numfmt" value="{{ number_format($qtyNum, $qtyDec, '.', ',') }}">
                         @endif
                     </td>
                     <td class="ifp-col-sale-rate">
@@ -733,9 +741,9 @@
                     @endif
                     <td class="ifp-col-disc-amt">
                         @if($isReadonly)
-                            <span class="small">{{ number_format($item->DiscountAmount ?? 0, 2) }}</span>
+                            <span class="small">{{ number_format((float) ($item->DiscountAmount ?? $item->Discount ?? 0), 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt" value="{{ $item->DiscountAmount ?? 0 }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt ifp-numfmt" value="{{ number_format((float) ($item->DiscountAmount ?? $item->Discount ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     @if(!$inModal)
@@ -831,7 +839,7 @@
                         'inModal' => $inModal,
                         'isReadonly' => false,
                     ])
-                    <td class="ifp-col-qty"><input type="number" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>
+                    <td class="ifp-col-qty"><input type="text" inputmode="decimal" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty ifp-numfmt" value="1"></td>
                     <td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[0][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>
                     <td class="ifp-col-fbr-qty">
                         <input type="number" step="0.01" name="items[0][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled>
@@ -844,7 +852,7 @@
                     @if(!$inModal)
                     <td><input type="number" step="0.01"     name="items[0][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>
                     @endif
-                    <td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[0][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>
+                    <td class="ifp-col-disc-amt"><input type="text" name="items[0][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt ifp-numfmt" value="0.00" readonly></td>
                     @if(!$inModal)
                     <td><input type="number" step="0.01"     name="items[0][GstPercentage]"      class="form-control form-control-sm ifp-gst-pct"  value="0" min="0"></td>
                     @endif
@@ -1698,6 +1706,17 @@
                 }
             });
         }
+        const qtyInp = row.querySelector('.ifp-qty');
+        if (qtyInp) {
+            qtyInp.addEventListener('focus', function() {
+                qtyInp.value = ifpSanitizeNumericText(qtyInp.value);
+            });
+            qtyInp.addEventListener('blur', function() {
+                const val = n(qtyInp.value);
+                const decimals = (val % 1 !== 0) ? 2 : 0;
+                qtyInp.value = ifpFormatNumber(val, decimals);
+            });
+        }
         const rateInp = ifpRateInput(row);
         if (rateInp) {
             rateInp.addEventListener('focus', function() {
@@ -2434,12 +2453,12 @@
                 '<td><select name="items[' + idx + '][SroItemID]" class="' + selCls + ' ifp-sro-item" data-selected=""><option value="">Select SRO Schedule first</option></select></td>');
         var rowNumericTail = IFP_TAX_COMPACT
             ? (
-                '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
+                '<td class="ifp-col-qty"><input type="text" inputmode="decimal" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty ifp-numfmt" value="1"></td>' +
                 '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
                 '<td class="ifp-col-fbr-qty"><input type="number" step="0.01" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td class="ifp-col-fixed"><input type="text"     name="items[' + idx + '][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>' +
-                '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
+                '<td class="ifp-col-disc-amt"><input type="text" name="items[' + idx + '][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-gst-amt"><input type="text"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>' +
                 '<td class="ifp-col-net"><input type="text"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>' +
                 '<td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[' + idx + '][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>' +
@@ -2448,12 +2467,12 @@
                 '<td class="ifp-col-actions"><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del"><i class="ri-delete-bin-5-line"></i></button></td>'
             )
             : (
-                '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
+                '<td class="ifp-col-qty"><input type="text" inputmode="decimal" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty ifp-numfmt" value="1"></td>' +
                 '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
                 '<td class="ifp-col-fbr-qty"><input type="number" step="0.01" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>' +
-                '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
+                '<td class="ifp-col-disc-amt"><input type="text" name="items[' + idx + '][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt ifp-numfmt" value="0.00" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][GstPercentage]"      class="form-control form-control-sm ifp-gst-pct"  value="0" min="0"></td>' +
                 '<td class="ifp-col-gst-amt"><input type="text"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>' +
                 '<td class="ifp-col-net"><input type="text"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>' +

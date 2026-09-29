@@ -915,6 +915,17 @@
                 calcSummary();
             });
         });
+        const qtyInp = rowEl(row, '.line-qty') || rowEl(row, '.ifp-qty') || row.querySelector('.line-qty') || row.querySelector('.ifp-qty');
+        if (qtyInp) {
+            qtyInp.addEventListener('focus', function() {
+                qtyInp.value = ifpSanitizeNumericText(qtyInp.value);
+            });
+            qtyInp.addEventListener('blur', function() {
+                const val = n(qtyInp.value);
+                const decimals = (val % 1 !== 0) ? 2 : 0;
+                qtyInp.value = ifpFormatNumber(val, decimals);
+            });
+        }
         const rateInp = rowEl(row, '.ifp-rate') || row.querySelector('.ifp-rate');
         if (rateInp) {
             rateInp.addEventListener('focus', function() {

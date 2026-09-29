@@ -70,15 +70,19 @@
     ])
     <td class="ifp-col-qty">
         @if($readonly)
-            <span class="small">{{ number_format((float) ($item->Quantity ?? 0), 0) }}</span>
+            @php
+                $qtyVal = (float)($item->Quantity ?? 0);
+                $qtyDec = ($qtyVal - floor($qtyVal) > 0.000001) ? 2 : 0;
+            @endphp
+            <span class="small">{{ number_format($qtyVal, $qtyDec, '.', ',') }}</span>
         @else
             @php
-                $qtyVal = old('items.'.$nameIdx.'.Quantity', $item->Quantity ?? 1);
-                $qtyDisplay = is_numeric($qtyVal) ? number_format((float) $qtyVal, 0, '.', '') : $qtyVal;
+                $qtyVal = (float)old('items.'.$nameIdx.'.Quantity', $item->Quantity ?? 1);
+                $qtyDec = ($qtyVal - floor($qtyVal) > 0.000001) ? 2 : 0;
             @endphp
-            <input type="number" name="items[{{ $nameIdx }}][Quantity]"
-                   class="form-control form-control-sm ifp-qty line-qty"
-                   value="{{ $qtyDisplay }}" min="0" step="1">
+            <input type="text" inputmode="decimal" name="items[{{ $nameIdx }}][Quantity]"
+                   class="form-control form-control-sm ifp-qty line-qty ifp-numfmt"
+                   value="{{ number_format($qtyVal, $qtyDec, '.', ',') }}">
         @endif
     </td>
     <td class="ifp-col-sale-rate">

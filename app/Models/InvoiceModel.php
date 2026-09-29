@@ -497,14 +497,28 @@ class InvoiceModel extends Model
                 ", [$requestID]);
 
         DB::connection('landlord')->statement("
-            INSERT INTO {$tenantDbQuoted}.tbl_sales_invoice_header (ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,SaleOfTerm,BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,ScenarioId,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            INSERT INTO {$tenantDbQuoted}.tbl_sales_invoice_header (
+                ID,InvoiceID,InvoiceNumber,InvoiceType,InvoiceDate,DocNo,DocNo2,DocNo3,CustomerID,SaleOfTerm,
+                BuyerNTNCNIC,BuyerBusinessName,BuyerProvince,BuyerAddress,InvoiceRefNo,BuyerRegistrationType,
+                ScenarioId,SubTotal,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,
+                SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,DiscountAmount,
+                Statusi,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
+            )
             SELECT t.TID AS ID,t.InvoiceID,1 AS InvoiceNumber,t.InvoiceType,t.InvoiceDate,t.DocNo,t.DocNo2,t.DocNo3,t.CustomerID,t.SaleOfTerm,
             c.`NTN` AS BuyerNTNCNIC,c.`BusinessName` AS BuyerBusinessName,c.County AS BuyerProvince, c.`Address` AS BuyerAddress,
             ''AS InvoiceRefNo,c.IsFiler AS BuyerRegistrationType,
-            ''AS ScenarioId,SUM(t.TotalValues) AS TotalValues,SUM(t.ValueSalesExcludingST) AS ValueSalesExcludingST,
-            SUM(t.FixedNotifiedValueOrRetailPrice) AS FixedNotifiedValueOrRetailPrice,SUM(t.SalesTaxApplicable) AS SalesTaxApplicable,
+            ''AS ScenarioId,
+            SUM(COALESCE(t.Amount, 0)) AS SubTotal,
+            SUM(t.TotalValues) AS TotalValues,
+            SUM(t.ValueSalesExcludingST) AS ValueSalesExcludingST,
+            SUM(t.FixedNotifiedValueOrRetailPrice) AS FixedNotifiedValueOrRetailPrice,
+            SUM(t.SalesTaxApplicable) AS SalesTaxApplicable,
             t.SalesTaxWithheldAtSource,
-            SUM(t.ExtraTax) AS ExtraTax,SUM(t.FurtherTax) AS FurtherTax,SUM(t.FedPayable) AS FedPayable,SUM(t.Discount) AS Discount,
+            SUM(t.ExtraTax) AS ExtraTax,
+            SUM(t.FurtherTax) AS FurtherTax,
+            SUM(t.FedPayable) AS FedPayable,
+            SUM(COALESCE(t.DiscountAmount, t.Discount, 0)) AS Discount,
+            SUM(COALESCE(t.DiscountAmount, t.Discount, 0)) AS DiscountAmount,
             t.Statusi,t.CreatedBy,t.CreatedOn,t.UpdatedBy,t.UpdatedOn
             FROM {$tenantDbQuoted}.tbl_temp_invoice_detail t
             INNER JOIN {$tenantDbQuoted}.`tbl_customer` c ON (c.ID = t.CustomerID)
@@ -513,7 +527,13 @@ class InvoiceModel extends Model
         ", [$requestID]);
 
         DB::connection('landlord')->statement("
-            INSERT INTO {$tenantDbQuoted}.`tbl_sales_invoice_detail` (InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,FBRQty,Weight,GSTAmount,HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,Discount,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn)
+            INSERT INTO {$tenantDbQuoted}.`tbl_sales_invoice_detail` (
+                InvoiceID,InvoiceDate,CustomerID,ProductID,Quantity,Rate,Amount,Unit,FBRQty,Weight,GSTAmount,
+                HsCode,ProductDescription,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,
+                SroScheduleID,SroScheduleDesc,SroItemID,SroItemSerialNo,TotalValues,ValueSalesExcludingST,
+                FixedNotifiedValueOrRetailPrice,SalesTaxApplicable,SalesTaxWithheldAtSource,ExtraTax,FurtherTax,FedPayable,
+                Discount,DiscountAmount,DiscountPercentage,Status,CreatedBy,CreatedOn,UpdatedBy,UpdatedOn
+            )
             SELECT 	t.InvoiceID, t.InvoiceDate, t.CustomerID, t.ProductID, t.Quantity, t.Rate, t.Amount, t.Unit, t.FBRQty, t.Weight,t.GSTAmount,
                 t.HsCode, t.ProductDescription AS SaleInformation,t.UomID, t.Uom_Desc AS Uom_Desc,
                 t.SaleTypeID, t.SaleTypeDesc AS SaleTypeDesc,
@@ -522,10 +542,12 @@ class InvoiceModel extends Model
                 t.SroItemID, IFNULL(t.SroItemSerialNo,'') AS SroItemSerialNo,
                 IFNULL(t.TotalValues,0.00),
                 IFNULL(t.ValueSalesExcludingST,0.00) AS ValueSalesExcludingST,
-                -- IFNULL(t.TPRate,0.00) * IFNULL(t.Quantity,0.00) AS FixedNotifiedValueOrRetailPrice,
                 IFNULL(t.FixedNotifiedValueOrRetailPrice,0.00) AS FixedNotifiedValueOrRetailPrice,
                 IFNULL(t.SalesTaxApplicable,0.00) AS SalesTaxApplicable,
-	            IFNULL(t.SalesTaxWithheldAtSource,0.00),IFNULL(t.ExtraTax,0.00), IFNULL(t.FurtherTax,0.00), IFNULL(t.FedPayable,0.00), IFNULL(t.Discount,0.00),
+	            IFNULL(t.SalesTaxWithheldAtSource,0.00),IFNULL(t.ExtraTax,0.00), IFNULL(t.FurtherTax,0.00), IFNULL(t.FedPayable,0.00),
+                IFNULL(t.DiscountAmount, IFNULL(t.Discount,0.00)) AS Discount,
+                IFNULL(t.DiscountAmount, IFNULL(t.Discount,0.00)) AS DiscountAmount,
+                IFNULL(t.DiscountPercentage, '0') AS DiscountPercentage,
                 1 AS `Status`,
                 t.CreatedBy, t.CreatedOn, t.UpdatedBy, t.UpdatedOn
             FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
