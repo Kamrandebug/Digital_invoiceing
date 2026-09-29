@@ -416,64 +416,66 @@ class InvoiceController extends Controller
             // 2. Insert each line item into temp with RequestID (Includes Header Info)
             $docNo2 = $request->input('DocNo2');
             $docNo3 = $request->input('DocNo3');
-                    $qty = (float) str_replace(',', '', (string) ($item['Quantity'] ?? 0));
-                    $rate = (float) str_replace(',', '', (string) ($item['Rate'] ?? 0));
-                    $amount = isset($item['Amount']) ? (float) str_replace(',', '', (string) $item['Amount']) : round($qty * $rate, 2);
-                    $discPct = isset($item['DiscountPercentage']) ? (string) $item['DiscountPercentage'] : '0';
-                    $discAmt = isset($item['DiscountAmount']) ? (float) str_replace(',', '', (string) $item['DiscountAmount']) : round($amount * ((float)$discPct) / 100, 2);
-                    $gstPct = isset($item['GstPercentage']) ? (string) $item['GstPercentage'] : '0';
-                    $gstAmt = isset($item['GSTAmount']) ? (float) str_replace(',', '', (string) $item['GSTAmount']) : 0;
-                    $total = isset($item['Total']) ? (float) str_replace(',', '', (string) $item['Total']) : ($amount - $discAmt + $gstAmt);
+            foreach ($request->items as $item) {
+                $qty = (float) str_replace(',', '', (string) ($item['Quantity'] ?? 0));
+                $rate = (float) str_replace(',', '', (string) ($item['Rate'] ?? 0));
+                $amount = isset($item['Amount']) ? (float) str_replace(',', '', (string) $item['Amount']) : round($qty * $rate, 2);
+                $discPct = isset($item['DiscountPercentage']) ? (string) $item['DiscountPercentage'] : '0';
+                $discAmt = isset($item['DiscountAmount']) ? (float) str_replace(',', '', (string) $item['DiscountAmount']) : round($amount * ((float)$discPct) / 100, 2);
+                $gstPct = isset($item['GstPercentage']) ? (string) $item['GstPercentage'] : '0';
+                $gstAmt = isset($item['GSTAmount']) ? (float) str_replace(',', '', (string) $item['GSTAmount']) : 0;
+                $total = isset($item['Total']) ? (float) str_replace(',', '', (string) $item['Total']) : ($amount - $discAmt + $gstAmt);
 
-                    DB::table('tbl_temp_invoice_detail')->insert([
-                        'InvoiceID' => $nextId,
-                        'TID' => $nextId,
-                        'CustomerID' => (int) $request->CustomerID,
-                        'SaleOfTerm' => $request->SaleOfTerm,
-                        'InvoiceDate' => $request->InvoiceDate,
-                        'DueDate' => $request->InvoiceDate,
-                        'TermDays' => 0,
-                        'InvoiceType' => $request->input('InvoiceType'),
-                        'DocNo' => (string) ($docNo ?? ''),
-                        'DocNo2' => $docNo2 !== null ? (string) $docNo2 : '',
-                        'DocNo3' => $docNo3 !== null ? (string) $docNo3 : '',
-                        'ProductID' => $item['ProductID'] ?? 0,
-                        'Details' => $item['Details'] ?? null,
-                        'ProductDescription' => $item['Details'] ?? null,
-                        'HsCode' => $item['HsCode'] ?? null,
-                        'UomID' => $item['UomID'] ?? null,
-                        'SaleTypeID' => $item['SaleTypeID'] ?? null,
-                        'SaleTypeToRateID' => $item['SaleTypeToRateID'] ?? null,
-                        'SroScheduleID' => $item['SroScheduleID'] ?? null,
-                        'SroItemID' => $item['SroItemID'] ?? null,
-                        'TPRate' => $item['TPRate'] ?? 0,
-                        'Quantity' => $qty,
-                        'Rate' => $rate,
-                        'Amount' => $amount,
-                        'FBRQty' => $item['FBRQty'] ?? null,
-                        'Unit' => $item['Unit'] ?? null,
-                        'Discount' => $discAmt,
-                        'DiscountAmount' => $discAmt,
-                        'DiscountPercentage' => $discPct,
-                        'GstPercentage' => $gstPct,
-                        'GSTAmount' => $gstAmt,
-                        'SalesTaxWithheldAtSource' => $item['SalesTaxWithheldAtSource'] ?? ($request->SalesTaxWithheldAtSource ?? 0),
-                        'ExtraTax' => $item['ExtraTax'] ?? ($request->ExtraTax ?? 0),
-                        'FurtherTax' => $item['FurtherTax'] ?? ($request->FurtherTax ?? 0),
-                        'FedPayable' => $item['FedPayable'] ?? ($request->FedPayable ?? 0),
-                        'TotalValues' => $total,
-                        'Total' => $total,
-                        'Notes' => $request->Notes ?? null,
-                        'DiscountAllowed' => $request->DiscountAllowed ?? '0',
-                        'Type' => 'SI',
-                        'Status' => 1,
-                        'CreatedBy' => $userId,
-                        'CreatedOn' => $now,
-                        'UpdatedBy' => $userId,
-                        'UpdatedOn' => $now,
-                        'RequestID' => $requestId,
-                        'ErrMsg' => null,
-                    ]);
+                DB::table('tbl_temp_invoice_detail')->insert([
+                    'InvoiceID' => $nextId,
+                    'TID' => $nextId,
+                    'CustomerID' => (int) $request->CustomerID,
+                    'SaleOfTerm' => $request->SaleOfTerm,
+                    'InvoiceDate' => $request->InvoiceDate,
+                    'DueDate' => $request->InvoiceDate,
+                    'TermDays' => 0,
+                    'InvoiceType' => $request->input('InvoiceType'),
+                    'DocNo' => (string) ($docNo ?? ''),
+                    'DocNo2' => $docNo2 !== null ? (string) $docNo2 : '',
+                    'DocNo3' => $docNo3 !== null ? (string) $docNo3 : '',
+                    'ProductID' => $item['ProductID'] ?? 0,
+                    'Details' => $item['Details'] ?? null,
+                    'ProductDescription' => $item['Details'] ?? null,
+                    'HsCode' => $item['HsCode'] ?? null,
+                    'UomID' => $item['UomID'] ?? null,
+                    'SaleTypeID' => $item['SaleTypeID'] ?? null,
+                    'SaleTypeToRateID' => $item['SaleTypeToRateID'] ?? null,
+                    'SroScheduleID' => $item['SroScheduleID'] ?? null,
+                    'SroItemID' => $item['SroItemID'] ?? null,
+                    'TPRate' => $item['TPRate'] ?? 0,
+                    'Quantity' => $qty,
+                    'Rate' => $rate,
+                    'Amount' => $amount,
+                    'FBRQty' => $item['FBRQty'] ?? null,
+                    'Unit' => $item['Unit'] ?? null,
+                    'Discount' => $discAmt,
+                    'DiscountAmount' => $discAmt,
+                    'DiscountPercentage' => $discPct,
+                    'GstPercentage' => $gstPct,
+                    'GSTAmount' => $gstAmt,
+                    'SalesTaxWithheldAtSource' => $item['SalesTaxWithheldAtSource'] ?? ($request->SalesTaxWithheldAtSource ?? 0),
+                    'ExtraTax' => $item['ExtraTax'] ?? ($request->ExtraTax ?? 0),
+                    'FurtherTax' => $item['FurtherTax'] ?? ($request->FurtherTax ?? 0),
+                    'FedPayable' => $item['FedPayable'] ?? ($request->FedPayable ?? 0),
+                    'TotalValues' => $total,
+                    'Total' => $total,
+                    'Notes' => $request->Notes ?? null,
+                    'DiscountAllowed' => $request->DiscountAllowed ?? '0',
+                    'Type' => 'SI',
+                    'Status' => 1,
+                    'CreatedBy' => $userId,
+                    'CreatedOn' => $now,
+                    'UpdatedBy' => $userId,
+                    'UpdatedOn' => $now,
+                    'RequestID' => $requestId,
+                    'ErrMsg' => null,
+                ]);
+            }
 
             // 3. Execute model transaction (inserts header + detail from temp)
             $saveResult = InvoiceModel::save_transaction($requestId);
