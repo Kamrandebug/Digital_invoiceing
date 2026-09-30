@@ -35,18 +35,6 @@
         }
     }
 
-    $lineNet = static function ($item): float {
-        $stored = (float) ($item->Total ?? 0);
-        if (abs($stored) >= 0.000001) {
-            return $stored;
-        }
-        $amt = (float) ($item->Amount ?? 0);
-        $disc = (float) ($item->DiscountAmount ?? $item->Discount ?? 0);
-        $gst = (float) ($item->GSTAmount ?? $item->SalesTaxApplicable ?? 0);
-
-        return max(0, $amt - $disc) + $gst;
-    };
-
     $lineGst = static function ($item): float {
         return (float) ($item->GSTAmount ?? $item->SalesTaxApplicable ?? 0);
     };
@@ -55,15 +43,48 @@
         return (float) ($item->DiscountAmount ?? $item->Discount ?? 0);
     };
 
+    $lineExtraTax = static function ($item): float {
+        return (float) ($item->ExtraTax ?? 0);
+    };
+
+    $lineFurtherTax = static function ($item): float {
+        return (float) ($item->FurtherTax ?? 0);
+    };
+
+    $lineFedPayable = static function ($item): float {
+        return (float) ($item->FedPayable ?? 0);
+    };
+
+    $lineNet = static function ($item) use ($lineGst, $lineDisc, $lineExtraTax, $lineFurtherTax, $lineFedPayable): float {
+        $stored = (float) ($item->TotalValues ?? $item->Total ?? 0);
+        if (abs($stored) >= 0.000001) {
+            return $stored;
+        }
+        $amt = (float) ($item->Amount ?? 0);
+        $disc = $lineDisc($item);
+        $gst = $lineGst($item);
+        $extra = $lineExtraTax($item);
+        $further = $lineFurtherTax($item);
+        $fed = $lineFedPayable($item);
+
+        return max(0, $amt - $disc) + $gst + $extra + $further + $fed;
+    };
+
     $sumAmount = 0.0;
     $sumDisc = 0.0;
     $sumGst = 0.0;
+    $sumExtraTax = 0.0;
+    $sumFurtherTax = 0.0;
+    $sumFedPayable = 0.0;
     $sumNet = 0.0;
     $showFixedNotifiedColumn = false;
     foreach ($items as $it) {
         $sumAmount += (float) ($it->Amount ?? 0);
         $sumDisc += $lineDisc($it);
         $sumGst += $lineGst($it);
+        $sumExtraTax += $lineExtraTax($it);
+        $sumFurtherTax += $lineFurtherTax($it);
+        $sumFedPayable += $lineFedPayable($it);
         $sumNet += $lineNet($it);
         if ((float) ($it->FixedNotifiedValueOrRetailPrice ?? 0) > 0.000001) {
             $showFixedNotifiedColumn = true;
@@ -80,12 +101,27 @@
         $headerDisc = $sumDisc;
     }
 
-    $headerGst = (float) ($invoice->GSTAmount ?? $invoice->TotalGST ?? 0);
+    $headerGst = (float) ($invoice->GSTAmount ?? $invoice->TotalGST ?? $invoice->SalesTaxApplicable ?? 0);
     if ($headerGst <= 0 && $sumGst > 0) {
         $headerGst = $sumGst;
     }
 
-    $headerTotal = (float) ($invoice->Total ?? $invoice->TotalAmount ?? 0);
+    $headerExtraTax = (float) ($invoice->ExtraTax ?? 0);
+    if ($headerExtraTax <= 0 && $sumExtraTax > 0) {
+        $headerExtraTax = $sumExtraTax;
+    }
+
+    $headerFurtherTax = (float) ($invoice->FurtherTax ?? 0);
+    if ($headerFurtherTax <= 0 && $sumFurtherTax > 0) {
+        $headerFurtherTax = $sumFurtherTax;
+    }
+
+    $headerFedPayable = (float) ($invoice->FedPayable ?? 0);
+    if ($headerFedPayable <= 0 && $sumFedPayable > 0) {
+        $headerFedPayable = $sumFedPayable;
+    }
+
+    $headerTotal = (float) ($invoice->TotalValues ?? $invoice->TotalAmount ?? $invoice->Total ?? 0);
     if ($headerTotal <= 0 && $sumNet > 0) {
         $headerTotal = $sumNet;
     }
@@ -763,7 +799,27 @@
                     <td class="num">{{ number_format((float) ($item->FixedNotifiedValueOrRetailPrice ?? 0), 2) }}</td>
                     @endif
                     <td class="cell-mid">{{ trim((string) ($item->SaleTypeToRateDesc ?? '')) !== '' ? $item->SaleTypeToRateDesc : '—' }}</td>
-                    <td class="num col-tax-amount">{{ number_format((float) $lineGst($item), 2, '.', ',') }}</td>
+                    <td class="num col-tax-amount">
+                        <div>{{ number_format((float) $lineGst($item), 2, '.', ',') }}</div>
+                        @php
+                            $extraVal = $lineExtraTax($item);
+                            $furtherVal = $lineFurtherTax($item);
+                            $fedVal = $lineFedPayable($item);
+                        @endphp
+                        @if($extraVal > 0.000001 || $furtherVal > 0.000001 || $fedVal > 0.000001)
+                        <div class="line-tax-sublabels" style="font-size: 9px; line-height: 1.25; margin-top: 3px; color: #555;">
+                            @if($extraVal > 0.000001)
+                                <div>+ Extra: {{ number_format($extraVal, 2) }}</div>
+                            @endif
+                            @if($furtherVal > 0.000001)
+                                <div>+ Further: {{ number_format($furtherVal, 2) }}</div>
+                            @endif
+                            @if($fedVal > 0.000001)
+                                <div>+ FED: {{ number_format($fedVal, 2) }}</div>
+                            @endif
+                        </div>
+                        @endif
+                    </td>
                     <td class="num col-value-amount">{{ number_format($net, 2) }}</td>
                 </tr>
                 @empty
@@ -797,14 +853,23 @@
                 <div class="totals-inner">
                 <table>
                     <tr><th>Total Amount Excluding ST:</th><td>{{ number_format($headerSub, 2) }} PKR</td></tr>
+                    @if($headerDisc > 0.000001 || $headerDisc < -0.000001)
                     <tr><th>Discount:</th><td>{{ number_format($headerDisc, 2) }} PKR</td></tr>
-                    <tr class="totals-rule-bottom"><th>Total Sales Tax:</th><td>{{ number_format($headerGst, 2) }} PKR</td></tr>
-                    @if($advanceTaxRate > 0.000001)
+                    @endif
+                    <tr><th>Total Sales Tax:</th><td>{{ number_format($headerGst, 2) }} PKR</td></tr>
+                    @if($headerExtraTax > 0.000001)
+                    <tr><th>Extra Tax:</th><td>{{ number_format($headerExtraTax, 2) }} PKR</td></tr>
+                    @endif
+                    @if($headerFurtherTax > 0.000001)
+                    <tr><th>Further Tax:</th><td>{{ number_format($headerFurtherTax, 2) }} PKR</td></tr>
+                    @endif
+                    @if($headerFedPayable > 0.000001)
+                    <tr><th>FED Payable:</th><td>{{ number_format($headerFedPayable, 2) }} PKR</td></tr>
+                    @endif
                     <tr class="totals-inc totals-rule-top totals-rule-bottom"><th>Total Inc. All Taxes:</th><td>{{ number_format($headerTotal, 2) }} PKR</td></tr>
+                    @if($advanceTaxRate > 0.000001)
                     <tr><th>Customer WHT 236G({{ number_format($advanceTaxRate, 2) }}%):</th><td>{{ number_format($customerWht236g, 2) }} PKR</td></tr>
                     <tr class="grand totals-rule-top"><th>Grand Total:</th><td>{{ number_format($grandTotalAllTaxes, 2) }} PKR</td></tr>
-                    @else
-                    <tr class="totals-inc totals-rule-top totals-rule-bottom"><th>Total Inc. All Taxes:</th><td>{{ number_format($headerTotal, 2) }} PKR</td></tr>
                     @endif
                 </table>
                 </div>
