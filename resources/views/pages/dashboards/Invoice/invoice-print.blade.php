@@ -150,7 +150,7 @@
                 box-sizing: border-box !important;
             }
             .no-print { display: none !important; }
-            .print-section-1-logo img { max-height: 80px !important; }
+            .print-section-1-logo img { max-height: 85px !important; max-width: 300px !important; }
             .fbr-brand-logo { max-width: 1in !important; max-height: 1in !important; }
             .fbr-qr-image { width: 1in !important; height: 1in !important; }
             .after-table-summary {
@@ -240,12 +240,12 @@
         }
         .print-section-1-logo {
             flex: 0 0 auto;
-            max-width: 220px;
+            max-width: 320px;
             align-self: flex-start;
         }
         .print-section-1-logo img {
-            max-width: 200px;
-            max-height: 80px;
+            max-width: 300px;
+            max-height: 85px;
             width: auto;
             height: auto;
             display: block;

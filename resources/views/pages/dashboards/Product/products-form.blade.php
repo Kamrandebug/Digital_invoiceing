@@ -470,21 +470,9 @@
                     </div>
                 </div>
 
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="Weight" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Weight (kg)</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ number_format($product->Weight ?? 0, 2) }}</div>
-                        @else
-                            <input type="number" step="0.000001" class="form-control @error('Weight') is-invalid @enderror"
-                                   id="Weight" name="Weight"
-                                   value="{{ old('Weight', $product->Weight ?? '0.00') }}" placeholder="0.00">
-                            @error('Weight')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
+                @if(!$isReadonly)
+                    <input type="hidden" name="Weight" value="{{ old('Weight', $product->Weight ?? '0.00') }}">
+                @endif
             </div>
         </div>
 
@@ -601,37 +589,10 @@
                     </div>
                 </div>
 
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="OpeningQuantity" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Opening Quantity</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ $product->OpeningQuantity ?? 0 }}</div>
-                        @else
-                            <input type="number" step="0.000001" class="form-control @error('OpeningQuantity') is-invalid @enderror"
-                                   id="OpeningQuantity" name="OpeningQuantity"
-                                   value="{{ old('OpeningQuantity', $product->OpeningQuantity ?? '0') }}" placeholder="0">
-                            @error('OpeningQuantity')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="OpeningRate" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Opening Rate (PKR)</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ number_format($product->OpeningRate ?? 0, 2) }}</div>
-                        @else
-                            <input type="number" step="0.000001" class="form-control @error('OpeningRate') is-invalid @enderror"
-                                   id="OpeningRate" name="OpeningRate"
-                                   value="{{ old('OpeningRate', $product->OpeningRate ?? '0.00') }}" placeholder="0.00">
-                            @error('OpeningRate')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
+                @if(!$isReadonly)
+                    <input type="hidden" name="OpeningQuantity" value="{{ old('OpeningQuantity', $product->OpeningQuantity ?? '0') }}">
+                    <input type="hidden" name="OpeningRate" value="{{ old('OpeningRate', $product->OpeningRate ?? '0.00') }}">
+                @endif
             </div>
         </div>
 

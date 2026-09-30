@@ -291,7 +291,7 @@
                                 <option value="Service" {{ old('Type', $product->Type ?? '') == 'Service' ? 'selected' : '' }}>Service</option>
                             </select>@error('Type')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif
                         </div>
-                        <div class="col-md-6">
+                        <div class="{{ $pfpHasLowStockColumn ? 'col-md-6' : 'col-md-6' }}">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Category</label>
                             @if($isReadonly)<div class="_pfp-detail-value">{{ $product->CategoryName ?? $product->Category ?? '-' }}</div>
                             @else
@@ -307,29 +307,8 @@
                             @error('Category')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             @endif
                         </div>
-                        <div class="col-md-3">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">
-                                {{ $isCreate ? 'Opening Qty' : 'Current Qty' }}
-                            </label>
-                            @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ number_format((float) ($product->CurrentQuantity ?? 0), 4) }}</div>
-                            @elseif($isCreate)
-                                <input type="number" step="0.000001" min="0" name="CurrentQuantity"
-                                       class="form-control @error('CurrentQuantity') is-invalid @enderror"
-                                       value="{{ old('CurrentQuantity', $product->CurrentQuantity ?? '0') }}">
-                                <div class="_pfp-inventory-hint">Initial stock on hand (optional).</div>
-                                @error('CurrentQuantity')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            @else
-                                <input type="number" step="0.000001"
-                                       class="form-control _pfp-readonly-qty"
-                                       value="{{ number_format((float) ($product->CurrentQuantity ?? 0), 6, '.', '') }}"
-                                       readonly tabindex="-1" aria-readonly="true">
-                                <input type="hidden" name="CurrentQuantity" value="{{ old('CurrentQuantity', $product->CurrentQuantity ?? '0') }}">
-                                <div class="_pfp-inventory-hint">Updated by purchases.</div>
-                            @endif
-                        </div>
                         @if($pfpHasLowStockColumn)
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Low Stock Level</label>
                             @if($isReadonly)
                                 <div class="_pfp-detail-value">{{ number_format((float) ($product->LowStockLevel ?? 0), 4) }}</div>
@@ -343,6 +322,9 @@
                             @endif
                         </div>
                         @endif
+                        @if(!$isReadonly)
+                            <input type="hidden" name="CurrentQuantity" value="{{ old('CurrentQuantity', $product->CurrentQuantity ?? '0') }}">
+                        @endif
                     </div>
                         </div>
                     </div>
@@ -354,25 +336,19 @@
                     <div class="_pfp-tab-panel-shell border rounded overflow-hidden">
                         <div class="_pfp-tab-panel-body">
                     <div class="row g-2">
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Sale Price (PKR)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->SalePrice ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="SalePrice" class="form-control @error('SalePrice') is-invalid @enderror" value="{{ old('SalePrice', $product->SalePrice ?? '0.00') }}" required>@error('SalePrice')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
-                                                <div class="col-md-4">
-                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Last Purchase Cost (PKR)</label>
+                        <div class="col-md-6">
+                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label _pfp-required' }}">Sale Price (PKR)</label>
                             @if($isReadonly)
-                                <div class="_pfp-detail-value">{{ number_format($product->Cost ?? 0, 2) }}</div>
-                            @elseif($isCreate)
-                                <div class="_pfp-detail-value">0.00</div>
-                                <input type="hidden" name="Cost" value="0">
-                                <div class="_pfp-inventory-hint">Set when you record purchases.</div>
+                                <div class="_pfp-detail-value">{{ number_format($product->SalePrice ?? 0, 2) }}</div>
                             @else
-                                <input type="number" step="0.000001"
-                                       class="form-control _pfp-readonly-qty"
-                                       value="{{ number_format((float) ($product->Cost ?? 0), 6, '.', '') }}"
-                                       readonly tabindex="-1" aria-readonly="true">
-                                <input type="hidden" name="Cost" value="{{ old('Cost', $product->Cost ?? '0') }}">
-                                <div class="_pfp-inventory-hint">Updated by purchases.</div>
+                                <input type="number" step="0.000001" name="SalePrice" class="form-control @error('SalePrice') is-invalid @enderror" value="{{ old('SalePrice', $product->SalePrice ?? '0.00') }}" required>
+                                @error('SalePrice')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             @endif
                         </div>
-                        <div class="col-md-4"><label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Weight (kg)</label>@if($isReadonly)<div class="_pfp-detail-value">{{ number_format($product->Weight ?? 0, 2) }}</div>@else<input type="number" step="0.000001" name="Weight" class="form-control @error('Weight') is-invalid @enderror" value="{{ old('Weight', $product->Weight ?? '0.00') }}">@error('Weight')<div class="invalid-feedback">{{ $message }}</div>@enderror @endif</div>
+                        @if(!$isReadonly)
+                            <input type="hidden" name="Cost" value="{{ old('Cost', $product->Cost ?? '0') }}">
+                            <input type="hidden" name="Weight" value="{{ old('Weight', $product->Weight ?? '0.00') }}">
+                        @endif
                     </div>
                     <div class="row g-2 mt-1">
                         <div class="col-md-3 d-flex align-items-center">
