@@ -214,7 +214,7 @@
                 box-sizing: border-box !important;
             }
             .no-print { display: none !important; }
-            .print-section-1-logo img { max-height: 85px !important; max-width: 300px !important; }
+            .print-section-1-logo img { max-height: 105px !important; max-width: 300px !important; }
             .fbr-brand-logo { max-width: 1in !important; max-height: 1in !important; }
             .fbr-qr-image { width: 1in !important; height: 1in !important; }
             .after-table-summary {
@@ -277,22 +277,7 @@
             margin-right: 20px;
             box-sizing: border-box;
         }
-        .invoice-print-head {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            margin-bottom: 10px;
-            position: relative;
-        }
-        .invoice-doc-title {
-            text-align: right;
-            margin: 0;
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            color: #111;
-        }
-        /* Section 1: business logo (left, aligned with Doc No row) + invoice meta (right) */
+        /* Section 1: 2-column header (Left: Logo aligned to top, Right: Title + Invoice Meta) */
         .print-section-1 {
             display: flex;
             justify-content: space-between;
@@ -309,13 +294,30 @@
         }
         .print-section-1-logo img {
             max-width: 300px;
-            max-height: 85px;
+            max-height: 105px;
             width: auto;
             height: auto;
             display: block;
             object-fit: contain;
         }
-        .print-section-1-meta { text-align: right; flex: 0 0 auto; min-width: 0; margin-left: auto; }
+        .print-section-1-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            flex: 0 0 auto;
+            min-width: 0;
+            margin-left: auto;
+        }
+        .invoice-doc-title {
+            text-align: right;
+            margin: 0 0 6px 0;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            color: #111;
+            line-height: 1.1;
+        }
+        .print-section-1-meta { text-align: right; width: 100%; }
         .print-section-1-meta table { margin-left: auto; border-collapse: collapse; }
         .print-section-1-meta th { text-align: right; padding: 2px 8px 2px 0; color: #555; font-weight: 600; white-space: nowrap; vertical-align: top; }
         .print-section-1-meta td { text-align: right; padding: 2px 0; }
@@ -662,35 +664,35 @@
         @if($isCancelled)
         <div class="invoice-print-watermark" aria-hidden="true">CANCELLED</div>
         @endif
-        <div class="invoice-print-head">
-            @if($isCancelled)
-            <div class="invoice-cancelled-stamp">CANCELLED INVOICE</div>
-            @endif
-            <h1 class="invoice-doc-title">Sales Tax Invoice</h1>
-        </div>
+        @if($isCancelled)
+        <div class="invoice-cancelled-stamp">CANCELLED INVOICE</div>
+        @endif
 
-        {{-- Section 1: logo (left, Doc No row) + invoice numbers / dates (right) --}}
+        {{-- Section 1: 2-column header — Left: Logo (top-aligned) | Right: Title + Meta --}}
         <div class="print-section-1">
-            @if($sellerLogoSrc !== '')
             <div class="print-section-1-logo">
+                @if($sellerLogoSrc !== '')
                 <img src="{{ $sellerLogoSrc }}" alt="{{ trim((string) ($seller->BusinessName ?? '')) ?: 'Business logo' }}">
+                @endif
             </div>
-            @endif
-            <div class="print-section-1-meta">
-                <table>
-                    <tr><th>Invoice / Doc No:</th><td>{{ $invoice->DocNo ?? 'N/A' }}</td></tr>
-                    @if(trim((string) ($invoice->DocNo2 ?? '')) !== '')
-                    <tr><th>Doc2 No:</th><td>{{ $invoice->DocNo2 }}</td></tr>
-                    @endif
-                    @if(trim((string) ($invoice->DocNo3 ?? '')) !== '')
-                    <tr><th>Doc3 No:</th><td>{{ $invoice->DocNo3 }}</td></tr>
-                    @endif
-                    <tr><th>Invoice Date:</th><td>{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : '-' }}</td></tr>
-                    @if(!empty(trim((string) ($invoice->SaleOfTerm ?? ''))))
-                    <tr><th>Sale of Term:</th><td>{{ $invoice->SaleOfTerm }}</td></tr>
-                    @endif
-                    <tr><th>FBR Invoice:</th><td>@if(trim((string) ($invoice->FbrTransactionID ?? '')) !== '')<strong>{{ $invoice->FbrTransactionID }}</strong>@else - @endif</td></tr>
-                </table>
+            <div class="print-section-1-right">
+                <h1 class="invoice-doc-title">Sales Tax Invoice</h1>
+                <div class="print-section-1-meta">
+                    <table>
+                        <tr><th>Invoice / Doc No:</th><td>{{ $invoice->DocNo ?? 'N/A' }}</td></tr>
+                        @if(trim((string) ($invoice->DocNo2 ?? '')) !== '')
+                        <tr><th>Doc2 No:</th><td>{{ $invoice->DocNo2 }}</td></tr>
+                        @endif
+                        @if(trim((string) ($invoice->DocNo3 ?? '')) !== '')
+                        <tr><th>Doc3 No:</th><td>{{ $invoice->DocNo3 }}</td></tr>
+                        @endif
+                        <tr><th>Invoice Date:</th><td>{{ $invoice->InvoiceDate ? \Carbon\Carbon::parse($invoice->InvoiceDate)->format('d M Y') : '-' }}</td></tr>
+                        @if(!empty(trim((string) ($invoice->SaleOfTerm ?? ''))))
+                        <tr><th>Sale of Term:</th><td>{{ $invoice->SaleOfTerm }}</td></tr>
+                        @endif
+                        <tr><th>FBR Invoice:</th><td>@if(trim((string) ($invoice->FbrTransactionID ?? '')) !== '')<strong>{{ $invoice->FbrTransactionID }}</strong>@else - @endif</td></tr>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -799,14 +801,25 @@
                 <tr>
                     <td>{{ $idx + 1 }}</td>
                     <td class="td-desc-goods">
-                        @if(trim((string) ($item->HsCode ?? '')) !== '')
-                        <div class="desc-goods-hs"><strong>HS Code: {{ $item->HsCode }}</strong></div>
+                        @php
+                            $prodName = trim((string) ($item->ProductName ?? ''));
+                            $hsCode = trim((string) ($item->HsCode ?? ''));
+                            $descGoods = trim((string) ($item->ProductDescription ?? $item->Details ?? ''));
+                        @endphp
+                        @if($prodName !== '' || $hsCode !== '')
+                        <div class="desc-goods-hs">
+                            @if($prodName !== '')
+                                <strong>{{ $prodName }}</strong>
+                            @endif
+                            @if($hsCode !== '')
+                                <span class="desc-goods-hscode" style="font-weight: normal; color: #444;">(HS Code: {{ $hsCode }})</span>
+                            @endif
+                        </div>
                         @endif
-                        @php $descGoods = trim((string) ($item->ProductDescription ?? $item->Details ?? '')); @endphp
-                        @if($descGoods !== '')
+                        @if($descGoods !== '' && strcasecmp($descGoods, $prodName) !== 0)
                         <div class="desc-goods-detail">{{ $descGoods }}</div>
                         @endif
-                        @if(trim((string) ($item->HsCode ?? '')) === '' && $descGoods === '')
+                        @if($prodName === '' && $hsCode === '' && $descGoods === '')
                         —
                         @endif
                     </td>
