@@ -433,6 +433,7 @@
         table.items td.td-desc-goods { vertical-align: top; }
         .desc-goods-hs { font-size: 12px; color: #111; margin: 0 0 6px 0; line-height: 1.35; }
         .desc-goods-hs strong { font-weight: 700; }
+        .desc-goods-hscode { font-size: 10.5px; font-weight: normal; color: #555; }
         .desc-goods-detail { font-size: 12px; color: #333; margin: 0; line-height: 1.4; word-break: break-word; }
         /* FBR + QR (left) and totals (right) — fixed columns so row borders stay in the totals column only */
         .after-table-summary {
@@ -800,7 +801,7 @@
                                 <strong>{{ $prodName }}</strong>
                             @endif
                             @if($hsCode !== '')
-                                <span class="desc-goods-hscode" style="font-weight: normal; color: #444;">(HS Code: {{ $hsCode }})</span>
+                                <span class="desc-goods-hscode">(HS Code: {{ $hsCode }})</span>
                             @endif
                         </div>
                         @endif
