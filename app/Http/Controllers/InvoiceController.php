@@ -396,6 +396,7 @@ class InvoiceController extends Controller
             'items' => 'required|array|min:1',
             'items.*.Quantity' => 'required|numeric|min:0',
             'items.*.Rate' => 'required|numeric|min:0',
+            'items.*.TPRate' => 'nullable|numeric|min:0',
         ], [
             'CustomerID.required' => 'Please select a customer.',
             'InvoiceDate.required' => 'Invoice date is required.',
@@ -419,6 +420,7 @@ class InvoiceController extends Controller
             foreach ($request->items as $item) {
                 $qty = (float) str_replace(',', '', (string) ($item['Quantity'] ?? 0));
                 $rate = (float) str_replace(',', '', (string) ($item['Rate'] ?? 0));
+                $tpRate = (float) str_replace(',', '', (string) ($item['TPRate'] ?? 0));
                 $amount = isset($item['Amount']) ? (float) str_replace(',', '', (string) $item['Amount']) : round($qty * $rate, 2);
                 $discPct = isset($item['DiscountPercentage']) ? (string) $item['DiscountPercentage'] : '0';
                 $discAmt = isset($item['DiscountAmount']) ? (float) str_replace(',', '', (string) $item['DiscountAmount']) : round($amount * ((float)$discPct) / 100, 2);
@@ -447,7 +449,7 @@ class InvoiceController extends Controller
                     'SaleTypeToRateID' => $item['SaleTypeToRateID'] ?? null,
                     'SroScheduleID' => $item['SroScheduleID'] ?? null,
                     'SroItemID' => $item['SroItemID'] ?? null,
-                    'TPRate' => $item['TPRate'] ?? 0,
+                    'TPRate' => $tpRate,
                     'Quantity' => $qty,
                     'Rate' => $rate,
                     'Amount' => $amount,
@@ -536,6 +538,7 @@ class InvoiceController extends Controller
             'items' => 'required|array|min:1',
             'items.*.Quantity' => 'required|numeric|min:0',
             'items.*.Rate' => 'required|numeric|min:0',
+            'items.*.TPRate' => 'nullable|numeric|min:0',
         ]);
 
         try {
@@ -550,6 +553,7 @@ class InvoiceController extends Controller
             foreach ($request->items as $item) {
                 $qty = (float) str_replace(',', '', (string) ($item['Quantity'] ?? 0));
                 $rate = (float) str_replace(',', '', (string) ($item['Rate'] ?? 0));
+                $tpRate = (float) str_replace(',', '', (string) ($item['TPRate'] ?? 0));
                 $amount = isset($item['Amount']) ? (float) str_replace(',', '', (string) $item['Amount']) : round($qty * $rate, 2);
                 $discPct = isset($item['DiscountPercentage']) ? (string) $item['DiscountPercentage'] : '0';
                 $discAmt = isset($item['DiscountAmount']) ? (float) str_replace(',', '', (string) $item['DiscountAmount']) : round($amount * ((float)$discPct) / 100, 2);
@@ -578,7 +582,7 @@ class InvoiceController extends Controller
                     'SaleTypeToRateID' => $item['SaleTypeToRateID'] ?? null,
                     'SroScheduleID' => $item['SroScheduleID'] ?? null,
                     'SroItemID' => $item['SroItemID'] ?? null,
-                    'TPRate' => $item['TPRate'] ?? 0,
+                    'TPRate' => $tpRate,
                     'Quantity' => $qty,
                     'Rate' => $rate,
                     'Amount' => $amount,

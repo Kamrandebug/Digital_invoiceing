@@ -702,9 +702,9 @@
                     </td>
                     <td class="ifp-col-fbr-qty">
                         @if($isReadonly)
-                            <span class="small">{{ ($item->Unit ?? 0) > 1 ? (isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2) : '—') : number_format((float)($item->Quantity ?? 0), 2) }}</span>
+                            <span class="small">{{ ($item->Unit ?? 0) > 1 ? (isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2) : '—') : '—' }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="{{ ($item->Unit ?? 0) > 1 ? (isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2, '.', '') : '') : number_format((float)($item->Quantity ?? 0), 2, '.', '') }}" {{ ($item->Unit ?? 0) <= 1 ? 'disabled' : '' }}>
+                            <input type="number" step="0.01" name="items[{{ $idx }}][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="{{ ($item->Unit ?? 0) > 1 && isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2, '.', '') : '' }}" {{ ($item->Unit ?? 0) <= 1 ? 'disabled' : '' }}>
                             <input type="hidden" name="items[{{ $idx }}][Unit]" class="ifp-product-unit" value="{{ $item->Unit ?? 0 }}">
                         @endif
                     </td>
@@ -872,10 +872,15 @@
         </div>{{-- .ifp-inv-line-items-scroll --}}
 
         @if(!$isReadonly)
-        <div class="my-3">
+        <div class="my-3 d-flex gap-2 align-items-center">
             <button type="button" class="btn btn-sm btn-primary" id="{{ $uid }}_addRow">
                 <i class="bi bi-plus-lg"></i> Add Product
             </button>
+            @if($isEdit)
+            <button type="button" class="btn btn-sm btn-light border text-dark shadow-sm" id="{{ $uid }}_recalcUnits" title="Sync Units from product master without changing Quantity or Rate">
+                <i class="ri-refresh-line me-1 text-primary"></i> Sync Units
+            </button>
+            @endif
         </div>
         @endif
 
@@ -1596,7 +1601,7 @@
             if (unit > 1) {
                 fbrQtyEl.removeAttribute('disabled');
             } else {
-                fbrQtyEl.value = qty.toFixed(2);
+                fbrQtyEl.value = '';
                 fbrQtyEl.setAttribute('disabled', 'true');
             }
         }
@@ -1691,12 +1696,47 @@
     // ── Bind row events ──
     function bindRow(row) {
         // Recalculate summary on input change for any relevant field
-        row.querySelectorAll('.ifp-qty, .ifp-rate, .ifp-disc-pct, .ifp-gst-pct, .ifp-extra-tax, .ifp-further-tax, .ifp-fed-payable').forEach(function(inp) {
+        row.querySelectorAll('.ifp-qty, .ifp-rate, .ifp-disc-pct, .ifp-gst-pct, .ifp-extra-tax, .ifp-further-tax, .ifp-fed-payable, .ifp-fixed-rate').forEach(function(inp) {
             inp.addEventListener('input', function() {
                 calcRow(row);
                 calcSummary();
             });
         });
+        const isFixedCb = rowEl(row, '.ifp-is-fixed-rate-cb');
+        const isFixedHidden = rowEl(row, '.ifp-is-fixed-rate');
+        const fixedRateInp = rowEl(row, '.ifp-fixed-rate');
+
+        function syncFixedRateState() {
+            const isFixed = isFixedCb ? isFixedCb.checked : ((parseInt(isFixedHidden ? isFixedHidden.value : '0', 10) || 0) === 1);
+            if (isFixedHidden) isFixedHidden.value = isFixed ? '1' : '0';
+            if (fixedRateInp) {
+                if (isFixed) {
+                    fixedRateInp.removeAttribute('readonly');
+                } else {
+                    fixedRateInp.setAttribute('readonly', 'true');
+                    fixedRateInp.value = '0.00';
+                }
+            }
+        }
+
+        if (isFixedCb) {
+            isFixedCb.addEventListener('change', function() {
+                syncFixedRateState();
+                calcRow(row);
+                calcSummary();
+            });
+        }
+
+        if (fixedRateInp) {
+            fixedRateInp.addEventListener('blur', function() {
+                if (!fixedRateInp.readOnly) {
+                    fixedRateInp.value = ifpFormatNumber(n(fixedRateInp.value), 2);
+                    calcRow(row);
+                    calcSummary();
+                }
+            });
+        }
+        syncFixedRateState();
         const fbrInp = row.querySelector('.ifp-fbr-qty');
         if (fbrInp) {
             fbrInp.addEventListener('blur', function() {
@@ -1802,9 +1842,17 @@
                 if (saleTypeToRateSel && (forceDetailsFill || !saleTypeToRateSel.getAttribute('data-selected'))) saleTypeToRateSel.setAttribute('data-selected', saleTypeToRateId);
                 if (sroScheduleSel && (forceDetailsFill || !sroScheduleSel.getAttribute('data-selected'))) sroScheduleSel.setAttribute('data-selected', sroScheduleId);
                 if (sroItemSel && (forceDetailsFill || !sroItemSel.getAttribute('data-selected'))) sroItemSel.setAttribute('data-selected', sroItemId);
-                if (fixedRateEl) fixedRateEl.value = n(tpRate).toFixed(2);
                 if (isFixedHidden) isFixedHidden.value = String(isFixedVal);
                 if (isFixedCb) isFixedCb.checked = !!isFixedVal;
+                if (fixedRateEl) {
+                    if (isFixedVal) {
+                        fixedRateEl.value = n(tpRate).toFixed(2);
+                        fixedRateEl.removeAttribute('readonly');
+                    } else {
+                        fixedRateEl.value = '0.00';
+                        fixedRateEl.setAttribute('readonly', 'true');
+                    }
+                }
 
                 const unitEl = rowEl(row, '.ifp-product-unit');
                 if (unitEl) {
@@ -1819,7 +1867,7 @@
                             fbrQtyEl.value = '';
                         }
                     } else {
-                        fbrQtyEl.value = qty.toFixed(2);
+                        fbrQtyEl.value = '';
                         fbrQtyEl.setAttribute('disabled', 'true');
                     }
                 }
@@ -2435,7 +2483,7 @@
                                 <div class="row g-2 px-2 pb-2 ifp-tax-sro-fields-lower">
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifiler_${idx}">Is Filer</label><input type="hidden" name="items[${idx}][IsFiler]" class="ifp-is-filer" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifiler_${idx}" class="form-check-input ifp-is-filer-cb m-0" disabled></div></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_gst_${idx}">GST Rate %</label><input type="number" step="0.01" id="${uid}_gst_${idx}" name="items[${idx}][GstPercentage]" class="form-control ifp-gst-pct" value="0" min="0"></div></div>
-                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifr_${idx}">Is Fixed</label><input type="hidden" name="items[${idx}][IsFixedRate]" class="ifp-is-fixed-rate" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifr_${idx}" class="form-check-input ifp-is-fixed-rate-cb m-0" disabled></div></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifr_${idx}">Is Fixed</label><input type="hidden" name="items[${idx}][IsFixedRate]" class="ifp-is-fixed-rate" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifr_${idx}" class="form-check-input ifp-is-fixed-rate-cb m-0"></div></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_fr_${idx}">Fixed Rate</label><input type="number" step="0.01" id="${uid}_fr_${idx}" name="items[${idx}][TPRate]" class="form-control ifp-fixed-rate" value="0" readonly></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_dp_${idx}">Discount %</label><input type="number" step="0.01" id="${uid}_dp_${idx}" name="items[${idx}][DiscountPercentage]" class="form-control ifp-disc-pct" value="0" min="0" max="100"></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_etp_${idx}">Extra Tax %</label><input type="number" step="0.01" id="${uid}_etp_${idx}" class="form-control ifp-extra-tax-pct" value="0" readonly></div></div>
@@ -2494,6 +2542,73 @@
         bindRowTaxDropdowns(tr);
         loadSaleTypesForRow(tr);
     });
+
+    // ── Recalculate Units from Product Master ──
+    const recalcUnitsBtn = document.getElementById(uid + '_recalcUnits');
+    if (recalcUnitsBtn) {
+        recalcUnitsBtn.addEventListener('click', function() {
+            let updatedCount = 0;
+            const rows = body.querySelectorAll('.ifp-row');
+
+            rows.forEach(function(row) {
+                const prodSel = rowEl(row, '.ifp-product');
+                if (!prodSel || !prodSel.value) return;
+
+                const opt = prodSel.options[prodSel.selectedIndex];
+                if (!opt) return;
+
+                const unit = parseInt(opt.getAttribute('data-unit') || '0', 10);
+                const unitEl = rowEl(row, '.ifp-product-unit');
+                const fbrQtyEl = rowEl(row, '.ifp-fbr-qty');
+
+                const prevUnit = parseInt(unitEl ? unitEl.value : '0', 10);
+
+                if (unitEl) {
+                    unitEl.value = String(unit);
+                }
+
+                if (fbrQtyEl) {
+                    if (unit > 1) {
+                        fbrQtyEl.removeAttribute('disabled');
+                    } else {
+                        fbrQtyEl.value = '';
+                        fbrQtyEl.setAttribute('disabled', 'true');
+                    }
+                }
+
+                if (prevUnit !== unit) {
+                    updatedCount++;
+                    row.style.transition = 'background-color 0.4s ease';
+                    row.style.backgroundColor = 'rgba(25, 135, 84, 0.12)';
+                    setTimeout(function() {
+                        row.style.backgroundColor = '';
+                    }, 1400);
+                }
+            });
+
+            toggleFbrQtyColumn();
+
+            const msg = updatedCount > 0
+                ? (updatedCount + ' line item(s) synchronized with product master. Quantity, Rate, and other details were preserved.')
+                : 'All line item units already match the latest product master.';
+
+            if (typeof showToast === 'function') {
+                showToast(updatedCount > 0 ? 'success' : 'info', msg);
+            } else if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: updatedCount > 0 ? 'success' : 'info',
+                    title: updatedCount > 0 ? 'Units Synchronized' : 'Already Synchronized',
+                    text: msg,
+                    timer: 2500,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            } else {
+                alert(msg);
+            }
+        });
+    }
 
     // ── Modal: intercept form submit → trigger save btn ──
     @if($inModal)

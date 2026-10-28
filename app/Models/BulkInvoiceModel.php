@@ -55,7 +55,7 @@ class BulkInvoiceModel extends Model
      */
     public static function getListingData(array $filters = [])
     {
-        $query = DB::table('tbl_bulk_invoice_request as b')
+        $query = DB::connection('tenant')->table('tbl_bulk_invoice_request as b')
             ->select(
                 'b.ID',
                 'b.RequestID',
@@ -473,32 +473,33 @@ class BulkInvoiceModel extends Model
      *   7. Hard DELETE batch from tbl_bulk_invoice_request
      *   8. Write audit log
      */
+    /**
+     * Pre-flight validation query to count total, posted, and unposted invoices in a batch.
+     */
+    public static function validate_batch_rollback(string $requestID): object
+    {
+        return DB::connection('tenant')->selectOne("
+            SELECT
+                COUNT(*) AS total_count,
+                COALESCE(SUM(CASE WHEN (h.Statusi = 7 OR (h.FbrTransactionID IS NOT NULL AND TRIM(h.FbrTransactionID) <> '')) THEN 1 ELSE 0 END), 0) AS posted_count,
+                COALESCE(SUM(CASE WHEN NOT (h.Statusi = 7 OR (h.FbrTransactionID IS NOT NULL AND TRIM(h.FbrTransactionID) <> '')) THEN 1 ELSE 0 END), 0) AS unposted_count
+            FROM tbl_sales_invoice_header h
+            WHERE h.RequestID = ?
+        ", [$requestID]);
+    }
+
+    /**
+     * Rollback / Hard-Delete a bulk invoice batch using set-based SQL history & delete pipeline.
+     */
     public static function rollback_batch(string $requestID, int $userId = 1): array
     {
         $now = now()->toDateTimeString();
 
-        // 1. Fetch live headers for this batch
-        $headers = DB::connection('tenant')->table('tbl_sales_invoice_header')
-            ->where('RequestID', $requestID)
-            ->get();
-
-        $totalCount = $headers->count();
-
-        // Check posted vs unposted
-        $postedHeaders = $headers->filter(function ($h) {
-            $statusi = (int) ($h->Statusi ?? 0);
-            $hasTransId = !empty(trim((string) ($h->FbrTransactionID ?? '')));
-            return ($statusi === 7) || $hasTransId;
-        });
-
-        $unpostedHeaders = $headers->filter(function ($h) {
-            $statusi = (int) ($h->Statusi ?? 0);
-            $hasTransId = !empty(trim((string) ($h->FbrTransactionID ?? '')));
-            return !($statusi === 7 || $hasTransId);
-        });
-
-        $postedCount = $postedHeaders->count();
-        $unpostedCount = $unpostedHeaders->count();
+        // 1. Run Pre-flight Validation Query
+        $stats = self::validate_batch_rollback($requestID);
+        $totalCount    = (int) ($stats->total_count ?? 0);
+        $postedCount   = (int) ($stats->posted_count ?? 0);
+        $unpostedCount = (int) ($stats->unposted_count ?? 0);
 
         // Case A: All invoices already posted to FBR — Block delete
         if ($totalCount > 0 && $unpostedCount === 0) {
@@ -534,133 +535,144 @@ class BulkInvoiceModel extends Model
             $action = $isPartial ? 'PARTIAL_ROLLBACK' : 'ROLLBACK';
             $actionNote = ($isPartial ? 'Partial Rollback: ' : 'Rollback Batch: ') . $batchTitle;
 
-            $unpostedIds = $unpostedHeaders->pluck('ID')->toArray();
-
             DB::connection('tenant')->transaction(function () use (
                 $requestID, $userId, $now, $action, $actionNote, $batch,
-                $isPartial, $unpostedIds, $postedCount, $unpostedCount
+                $isPartial, $postedCount, $unpostedCount
             ) {
                 // STEP A: Snapshot batch request → tbl_bulk_invoice_request_history
-                DB::connection('tenant')->statement("
-                    INSERT INTO tbl_bulk_invoice_request_history (
-                        OriginalID, RequestID, Action, ActionBy, ActionOn, ActionNote,
-                        Title, SourceType, SourceReference, TotalInvoices, TotalItems,
-                        TotalAmount, TotalTax, FbrPostedCount, Status, CreatedBy, CreatedOn,
-                        UpdatedBy, UpdatedOn
-                    )
-                    SELECT
-                        b.ID, b.RequestID, ?, ?, ?, ?,
-                        b.Title, b.SourceType, b.SourceReference, b.TotalInvoices, b.TotalItems,
-                        b.TotalAmount, b.TotalTax, b.FbrPostedCount, b.Status, b.CreatedBy, b.CreatedOn,
-                        ?, ?
-                    FROM tbl_bulk_invoice_request b
-                    WHERE b.RequestID = ?
-                ", [$action, $userId, $now, $actionNote, $userId, $now, $requestID]);
+                if (\Illuminate\Support\Facades\Schema::connection('tenant')->hasTable('tbl_bulk_invoice_request_history')) {
+                    DB::connection('tenant')->statement("
+                        INSERT INTO tbl_bulk_invoice_request_history (
+                            OriginalID, RequestID, Action, ActionBy, ActionOn, ActionNote,
+                            Title, SourceType, SourceReference, TotalInvoices, TotalItems,
+                            TotalAmount, TotalTax, FbrPostedCount, Status, CreatedBy, CreatedOn,
+                            UpdatedBy, UpdatedOn
+                        )
+                        SELECT
+                            b.ID, b.RequestID, ?, ?, ?, ?,
+                            b.Title, b.SourceType, b.SourceReference, b.TotalInvoices, b.TotalItems,
+                            b.TotalAmount, b.TotalTax, b.FbrPostedCount, b.Status, b.CreatedBy, b.CreatedOn,
+                            ?, ?
+                        FROM tbl_bulk_invoice_request b
+                        WHERE b.RequestID = ?
+                    ", [$action, $userId, $now, $actionNote, $userId, $now, $requestID]);
+                }
 
                 // STEP B: Snapshot unposted invoice headers → tbl_sales_invoice_header_history
-                $unpostedPlaceholders = implode(',', array_fill(0, count($unpostedIds), '?'));
-                DB::connection('tenant')->statement("
-                    INSERT INTO tbl_sales_invoice_header_history (
-                        OriginalID,
-                        InvoiceID, InvoiceNumber, InvoiceType, InvoiceDate,
-                        DocNo, DocNo2, DocNo3,
-                        CustomerID, SaleOfTerm,
-                        BuyerNTNCNIC, BuyerBusinessName, BuyerProvince, BuyerAddress,
-                        InvoiceRefNo, BuyerRegistrationType, ScenarioId,
-                        TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,
-                        SalesTaxApplicable, SalesTaxWithheldAtSource,
-                        ExtraTax, FurtherTax, FedPayable, Discount,
-                        NetAmount, FbrTransactionID, FbrResponseJson,
-                        Statusi, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn,
-                        Status, Typei, BuyerAddress1, DueDate, BillNumber, Notes, TermDays,
-                        SubTotal, SubTotalBeforeDiscount, InvoiceTaxType,
-                        GSTId, GSTAmount, GSTBalance,
-                        DiscountAllowed, DiscountAmount, Total, Balance,
-                        Filter1, Filter2, Filter3, Filter4,
-                        Field1, Field2, Field3, Field4,
-                        BulkBatchID, Arrears, IsShippingBelowGST,
-                        Template, ToLocationID, Tax_ScheduleID,
-                        RetailMargin, TOSale, VehicleRegNo,
-                        RequestID,
-                        Action, ActionBy, ActionOn, ActionNote
-                    )
-                    SELECT
-                        h.ID,
-                        h.InvoiceID, h.InvoiceNumber, h.InvoiceType, h.InvoiceDate,
-                        h.DocNo, h.DocNo2, h.DocNo3,
-                        h.CustomerID, h.SaleOfTerm,
-                        h.BuyerNTNCNIC, h.BuyerBusinessName, h.BuyerProvince, h.BuyerAddress,
-                        h.InvoiceRefNo, h.BuyerRegistrationType, h.ScenarioId,
-                        h.TotalValues, h.ValueSalesExcludingST, h.FixedNotifiedValueOrRetailPrice,
-                        h.SalesTaxApplicable, h.SalesTaxWithheldAtSource,
-                        h.ExtraTax, h.FurtherTax, h.FedPayable, h.Discount,
-                        h.NetAmount, h.FbrTransactionID, h.FbrResponseJson,
-                        h.Statusi, h.CreatedBy, h.CreatedOn, h.UpdatedBy, h.UpdatedOn,
-                        h.Status, h.Typei, h.BuyerAddress1, h.DueDate, h.BillNumber, h.Notes, h.TermDays,
-                        h.SubTotal, h.SubTotalBeforeDiscount, h.InvoiceTaxType,
-                        h.GSTId, h.GSTAmount, h.GSTBalance,
-                        h.DiscountAllowed, h.DiscountAmount, h.Total, h.Balance,
-                        h.Filter1, h.Filter2, h.Filter3, h.Filter4,
-                        h.Field1, h.Field2, h.Field3, h.Field4,
-                        h.BulkBatchID, h.Arrears, h.IsShippingBelowGST,
-                        h.Template, h.ToLocationID, h.Tax_ScheduleID,
-                        h.RetailMargin, h.TOSale, h.VehicleRegNo,
-                        h.RequestID,
-                        ?, ?, ?, ?
-                    FROM tbl_sales_invoice_header h
-                    WHERE h.ID IN ({$unpostedPlaceholders})
-                ", array_merge([$action, $userId, $now, $actionNote], $unpostedIds));
+                if (\Illuminate\Support\Facades\Schema::connection('tenant')->hasTable('tbl_sales_invoice_header_history')) {
+                    DB::connection('tenant')->statement("
+                        INSERT INTO tbl_sales_invoice_header_history (
+                            OriginalID,
+                            InvoiceID, InvoiceNumber, InvoiceType, InvoiceDate,
+                            DocNo, DocNo2, DocNo3,
+                            CustomerID, SaleOfTerm,
+                            BuyerNTNCNIC, BuyerBusinessName, BuyerProvince, BuyerAddress,
+                            InvoiceRefNo, BuyerRegistrationType, ScenarioId,
+                            TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,
+                            SalesTaxApplicable, SalesTaxWithheldAtSource,
+                            ExtraTax, FurtherTax, FedPayable, Discount,
+                            NetAmount, FbrTransactionID, FbrResponseJson,
+                            Statusi, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn,
+                            Status, Typei, BuyerAddress1, DueDate, BillNumber, Notes, TermDays,
+                            SubTotal, SubTotalBeforeDiscount, InvoiceTaxType,
+                            GSTId, GSTAmount, GSTBalance,
+                            DiscountAllowed, DiscountAmount, Total, Balance,
+                            Filter1, Filter2, Filter3, Filter4,
+                            Field1, Field2, Field3, Field4,
+                            BulkBatchID, Arrears, IsShippingBelowGST,
+                            Template, ToLocationID, Tax_ScheduleID,
+                            RetailMargin, TOSale, VehicleRegNo,
+                            RequestID,
+                            Action, ActionBy, ActionOn, ActionNote
+                        )
+                        SELECT
+                            h.ID,
+                            h.InvoiceID, h.InvoiceNumber, h.InvoiceType, h.InvoiceDate,
+                            h.DocNo, h.DocNo2, h.DocNo3,
+                            h.CustomerID, h.SaleOfTerm,
+                            h.BuyerNTNCNIC, h.BuyerBusinessName, h.BuyerProvince, h.BuyerAddress,
+                            h.InvoiceRefNo, h.BuyerRegistrationType, h.ScenarioId,
+                            h.TotalValues, h.ValueSalesExcludingST, h.FixedNotifiedValueOrRetailPrice,
+                            h.SalesTaxApplicable, h.SalesTaxWithheldAtSource,
+                            h.ExtraTax, h.FurtherTax, h.FedPayable, h.Discount,
+                            h.NetAmount, h.FbrTransactionID, h.FbrResponseJson,
+                            h.Statusi, h.CreatedBy, h.CreatedOn, h.UpdatedBy, h.UpdatedOn,
+                            h.Status, h.Typei, h.BuyerAddress1, h.DueDate, h.BillNumber, h.Notes, h.TermDays,
+                            h.SubTotal, h.SubTotalBeforeDiscount, h.InvoiceTaxType,
+                            h.GSTId, h.GSTAmount, h.GSTBalance,
+                            h.DiscountAllowed, h.DiscountAmount, h.Total, h.Balance,
+                            h.Filter1, h.Filter2, h.Filter3, h.Filter4,
+                            h.Field1, h.Field2, h.Field3, h.Field4,
+                            h.BulkBatchID, h.Arrears, h.IsShippingBelowGST,
+                            h.Template, h.ToLocationID, h.Tax_ScheduleID,
+                            h.RetailMargin, h.TOSale, h.VehicleRegNo,
+                            h.RequestID,
+                            ?, ?, ?, ?
+                        FROM tbl_sales_invoice_header h
+                        WHERE h.RequestID = ?
+                          AND NOT (h.Statusi = 7 OR (h.FbrTransactionID IS NOT NULL AND TRIM(h.FbrTransactionID) <> ''))
+                    ", [$action, $userId, $now, $actionNote, $requestID]);
+                }
 
                 // STEP C: Snapshot unposted invoice detail rows → tbl_sales_invoice_detail_history
+                if (\Illuminate\Support\Facades\Schema::connection('tenant')->hasTable('tbl_sales_invoice_detail_history')) {
+                    DB::connection('tenant')->statement("
+                        INSERT INTO tbl_sales_invoice_detail_history (
+                            OriginalID,
+                            InvoiceID, InvoiceDate, CustomerID, ProductID,
+                            Quantity, Rate, Amount, FBRQty, Unit, Weight,
+                            HsCode, ProductDescription,
+                            UomID, Uom_Desc,
+                            SaleTypeID, SaleTypeDesc,
+                            SaleTypeToRateID, SaleTypeToRateDesc,
+                            SroScheduleID, SroScheduleDesc,
+                            SroItemID, SroItemSerialNo,
+                            TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,
+                            SalesTaxApplicable, SalesTaxWithheldAtSource,
+                            ExtraTax, FurtherTax, FedPayable, Discount,
+                            CreatedBy, CreatedOn, UpdatedBy, UpdatedOn,
+                            GSTAmount, Status,
+                            RequestID,
+                            Action, ActionBy, ActionOn, ActionNote
+                        )
+                        SELECT
+                            d.ID,
+                            d.InvoiceID, d.InvoiceDate, d.CustomerID, d.ProductID,
+                            d.Quantity, d.Rate, d.Amount, d.FBRQty, d.Unit, IFNULL(d.Weight, 0.00),
+                            d.HsCode, d.ProductDescription,
+                            d.UomID, d.Uom_Desc,
+                            d.SaleTypeID, d.SaleTypeDesc,
+                            d.SaleTypeToRateID, d.SaleTypeToRateDesc,
+                            d.SroScheduleID, d.SroScheduleDesc,
+                            d.SroItemID, d.SroItemSerialNo,
+                            d.TotalValues, d.ValueSalesExcludingST, d.FixedNotifiedValueOrRetailPrice,
+                            d.SalesTaxApplicable, d.SalesTaxWithheldAtSource,
+                            d.ExtraTax, d.FurtherTax, d.FedPayable, d.Discount,
+                            d.CreatedBy, d.CreatedOn, d.UpdatedBy, d.UpdatedOn,
+                            d.GSTAmount, d.Status,
+                            d.RequestID,
+                            ?, ?, ?, ?
+                        FROM tbl_sales_invoice_detail d
+                        INNER JOIN tbl_sales_invoice_header h ON d.InvoiceID = h.ID
+                        WHERE h.RequestID = ?
+                          AND NOT (h.Statusi = 7 OR (h.FbrTransactionID IS NOT NULL AND TRIM(h.FbrTransactionID) <> ''))
+                    ", [$action, $userId, $now, $actionNote, $requestID]);
+                }
+
+                // STEP D: Hard delete details of unposted invoices (set-based SQL)
                 DB::connection('tenant')->statement("
-                    INSERT INTO tbl_sales_invoice_detail_history (
-                        OriginalID,
-                        InvoiceID, InvoiceDate, CustomerID, ProductID,
-                        Quantity, Rate, Amount, FBRQty, Unit, Weight,
-                        HsCode, ProductDescription,
-                        UomID, Uom_Desc,
-                        SaleTypeID, SaleTypeDesc,
-                        SaleTypeToRateID, SaleTypeToRateDesc,
-                        SroScheduleID, SroScheduleDesc,
-                        SroItemID, SroItemSerialNo,
-                        TotalValues, ValueSalesExcludingST, FixedNotifiedValueOrRetailPrice,
-                        SalesTaxApplicable, SalesTaxWithheldAtSource,
-                        ExtraTax, FurtherTax, FedPayable, Discount,
-                        CreatedBy, CreatedOn, UpdatedBy, UpdatedOn,
-                        GSTAmount, Status,
-                        RequestID,
-                        Action, ActionBy, ActionOn, ActionNote
-                    )
-                    SELECT
-                        d.ID,
-                        d.InvoiceID, d.InvoiceDate, d.CustomerID, d.ProductID,
-                        d.Quantity, d.Rate, d.Amount, d.FBRQty, d.Unit, IFNULL(d.Weight, 0.00),
-                        d.HsCode, d.ProductDescription,
-                        d.UomID, d.Uom_Desc,
-                        d.SaleTypeID, d.SaleTypeDesc,
-                        d.SaleTypeToRateID, d.SaleTypeToRateDesc,
-                        d.SroScheduleID, d.SroScheduleDesc,
-                        d.SroItemID, d.SroItemSerialNo,
-                        d.TotalValues, d.ValueSalesExcludingST, d.FixedNotifiedValueOrRetailPrice,
-                        d.SalesTaxApplicable, d.SalesTaxWithheldAtSource,
-                        d.ExtraTax, d.FurtherTax, d.FedPayable, d.Discount,
-                        d.CreatedBy, d.CreatedOn, d.UpdatedBy, d.UpdatedOn,
-                        d.GSTAmount, d.Status,
-                        d.RequestID,
-                        ?, ?, ?, ?
-                    FROM tbl_sales_invoice_detail d
-                    WHERE d.InvoiceID IN ({$unpostedPlaceholders})
-                ", array_merge([$action, $userId, $now, $actionNote], $unpostedIds));
+                    DELETE d FROM tbl_sales_invoice_detail d
+                    INNER JOIN tbl_sales_invoice_header h ON d.InvoiceID = h.ID
+                    WHERE h.RequestID = ?
+                      AND NOT (h.Statusi = 7 OR (h.FbrTransactionID IS NOT NULL AND TRIM(h.FbrTransactionID) <> ''))
+                ", [$requestID]);
 
-                // STEP D: Hard delete details of unposted invoices
-                DB::connection('tenant')->table('tbl_sales_invoice_detail')
-                    ->whereIn('InvoiceID', $unpostedIds)
-                    ->delete();
-
-                // STEP E: Hard delete unposted headers
-                DB::connection('tenant')->table('tbl_sales_invoice_header')
-                    ->whereIn('ID', $unpostedIds)
-                    ->delete();
+                // STEP E: Hard delete unposted headers (set-based SQL)
+                DB::connection('tenant')->statement("
+                    DELETE h FROM tbl_sales_invoice_header h
+                    WHERE h.RequestID = ?
+                      AND NOT (h.Statusi = 7 OR (h.FbrTransactionID IS NOT NULL AND TRIM(h.FbrTransactionID) <> ''))
+                ", [$requestID]);
 
                 // STEP F: Batch record update or delete
                 if (!$isPartial) {
@@ -675,8 +687,9 @@ class BulkInvoiceModel extends Model
                         ->selectRaw('COUNT(*) as total_invoices, COALESCE(SUM(TotalValues), 0) as total_amount, COALESCE(SUM(SalesTaxApplicable), 0) as total_tax')
                         ->first();
 
-                    $remItems = (int) DB::connection('tenant')->table('tbl_sales_invoice_detail')
-                        ->where('RequestID', $requestID)
+                    $remItems = (int) DB::connection('tenant')->table('tbl_sales_invoice_detail as d')
+                        ->join('tbl_sales_invoice_header as h', 'd.InvoiceID', '=', 'h.ID')
+                        ->where('h.RequestID', $requestID)
                         ->count();
 
                     DB::connection('tenant')->table('tbl_bulk_invoice_request')
@@ -687,6 +700,8 @@ class BulkInvoiceModel extends Model
                             'TotalAmount'    => (float) ($remPosted->total_amount ?? 0),
                             'TotalTax'       => (float) ($remPosted->total_tax ?? 0),
                             'FbrPostedCount' => (int) ($remPosted->total_invoices ?? 0),
+                            'UpdatedBy'      => $userId,
+                            'UpdatedOn'      => $now,
                         ]);
                 }
 

@@ -37,7 +37,9 @@
 		<span class="ribbon-3 top-right ribbon-warning">
 			<span><i class="fe fe-lock"></i></span>
 		</span>
-		<div style="text-align: center; margin: 0px 0px 20px 0px;"><img src="{{asset('build/assets/images/se_logo.png')}}" /></div>
+		<div style="text-align: center; margin: 0px 0px 20px 0px;">
+            <a href="{{ url('/') }}" aria-label="Go to Home"><img src="{{asset('build/assets/images/se_logo.png')}}" alt="Go Digital Logo" style="max-height: 48px;" /></a>
+        </div>
         <div class="text-center">
             <h2 class="auth-title">Sign in to your account</h2>
             <p class="auth-subtitle">Enter your credentials to continue</p>
@@ -60,13 +62,13 @@
 				<x-input-error :messages="$errors->get('password')" class="mt-2" />
             </div>
 			
-            <div class="d-flex justify-content-between mb-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div class="form-check fs-md">
                     <input class="form-check-input" type="checkbox" id="remember_me" name="remember">
-                    <label class="form-check-label fs-md padding-label">Remember me</label>
+                    <label class="form-check-label fs-md padding-label" for="remember_me">Remember me</label>
                 </div>
 				@if (Route::has('password.request'))
-                <a class="small color-red pt-1 fs-md" href="{{ route('password.request') }}">
+                <a class="small text-primary fw-medium pt-1 fs-md" href="{{ route('password.request') }}">
                     {{ __('Forgot your password?') }}
                 </a>
             @endif
@@ -77,12 +79,12 @@
 		</form>
 
         <div class="divider mt-3 mb-1">
-            <span>OR</span>
+            <span style="color: #4b5563; font-weight: 600;">OR</span>
         </div>
 
         <div class="text-center mt-4">
             <small class="fs-md color-black">Don't have an account? 
-                <a href="{{ route('register') }}" class="text-primary fw-semibold">Create one</a>
+                <a href="{{ route('register') }}" class="text-primary fw-bold">Create one</a>
             </small>
         </div>
 

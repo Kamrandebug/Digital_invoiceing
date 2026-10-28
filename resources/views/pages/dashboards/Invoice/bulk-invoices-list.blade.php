@@ -287,6 +287,136 @@
         background-color: #475569;
         color: #ffffff;
     }
+
+    /* ── Rollback Confirmation Modal Premium UI ── */
+    #rollbackBatchModal .modal-content {
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+    }
+    #rollbackBatchModal .modal-header {
+        background: #ffffff;
+        border-bottom: 1px solid #f1f5f9;
+        padding: 16px 20px;
+    }
+    #rollbackBatchModal .rollback-icon-circle {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+    }
+    #rollbackBatchModal .rollback-icon-circle.danger {
+        background-color: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+    #rollbackBatchModal .rollback-icon-circle.warning {
+        background-color: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fde68a;
+    }
+    #rollbackBatchModal .rollback-icon-circle.info {
+        background-color: #e0f2fe;
+        color: #0284c7;
+        border: 1px solid #bae6fd;
+    }
+    #rollbackBatchModal .rollback-icon-circle.secondary {
+        background-color: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+    }
+
+    #rollbackBatchModal .batch-preview-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 14px;
+    }
+    #rollbackBatchModal .batch-stat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 11.5px;
+        font-weight: 500;
+        color: #334155;
+    }
+
+    #rollbackBatchModal .rollback-notice-card {
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 12.5px;
+        line-height: 1.5;
+    }
+    #rollbackBatchModal .rollback-notice-card.danger {
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-left: 4px solid #ef4444;
+        color: #1e293b;
+    }
+    #rollbackBatchModal .rollback-notice-card.warning {
+        background-color: #fffbeb;
+        border: 1px solid #fde68a;
+        border-left: 4px solid #f59e0b;
+        color: #1e293b;
+    }
+    #rollbackBatchModal .rollback-notice-card.info {
+        background-color: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-left: 4px solid #22c55e;
+        color: #1e293b;
+    }
+    #rollbackBatchModal .rollback-notice-title {
+        font-weight: 700;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+    }
+    #rollbackBatchModal .rollback-notice-body {
+        font-size: 12px;
+        color: #334155;
+    }
+
+    #rollbackBatchModal .modal-footer {
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        padding: 12px 20px;
+    }
+    #rollbackBatchModal .btn-cancel {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    #rollbackBatchModal .btn-cancel:hover {
+        background-color: #f1f5f9;
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
+    #rollbackBatchModal .btn-rollback {
+        background-color: #dc2626 !important;
+        border-color: #dc2626 !important;
+        color: #ffffff !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease;
+    }
+    #rollbackBatchModal .btn-rollback:hover {
+        background-color: #b91c1c !important;
+        border-color: #b91c1c !important;
+        box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.2);
+    }
 </style>
 @endsection
 
@@ -468,7 +598,12 @@
                                 @endif
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-success-transparent text-success fw-semibold fs-11">{{ $batch->TotalInvoices }}</span>
+                                <span class="badge bg-success-transparent text-success fw-semibold fs-11" title="Live Invoices">{{ $batch->LiveTotalCount ?? $batch->TotalInvoices }}</span>
+                                @if(($batch->LivePostedCount ?? 0) > 0)
+                                    <small class="d-block text-success fs-10 mt-1" title="Posted to FBR">
+                                        <i class="fas fa-check-circle"></i> {{ $batch->LivePostedCount }} posted
+                                    </small>
+                                @endif
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-light text-dark fw-medium fs-11">{{ $batch->TotalItems }}</span>
@@ -517,9 +652,15 @@
                                             @php
                                                 $liveTotal = (int) ($batch->LiveTotalCount ?? $batch->TotalInvoices);
                                                 $livePosted = (int) ($batch->LivePostedCount ?? $batch->FbrPostedCount ?? 0);
-                                                $canRollback = ($liveTotal === 0 || $livePosted < $liveTotal);
                                             @endphp
-                                            @if($canRollback)
+                                            @if($liveTotal > 0 && $livePosted >= $liveTotal)
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <span class="dropdown-item text-muted disabled" style="cursor: not-allowed;" title="All invoices in this batch have already been submitted to FBR and cannot be deleted">
+                                                        <i class="fas fa-lock me-2 text-muted"></i> Rollback Blocked (FBR Posted)
+                                                    </span>
+                                                </li>
+                                            @else
                                                 <li><hr class="dropdown-divider"></li>
                                                 <li>
                                                     <button type="button" class="dropdown-item text-danger" onclick="confirmBatchRollback('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}', {{ $liveTotal }}, {{ $livePosted }})">
@@ -739,28 +880,72 @@
     </div>
 </div>
 
-{{-- Rollback Confirmation Modal --}}
-<div class="modal fade" id="rollbackBatchModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow">
+{{-- Rollback Confirmation Modal (Enhanced UI/UX) --}}
+<div class="modal fade" id="rollbackBatchModal" tabindex="-1" aria-labelledby="rollbackBatchModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+        <div class="modal-content shadow-lg border-0">
             <form id="rollbackBatchForm" method="POST" action="">
                 @csrf
-                <div class="modal-header border-bottom py-2 px-3 bg-danger-transparent">
-                    <h6 class="modal-title fw-semibold text-danger mb-0 fs-14">
-                        <i class="fas fa-exclamation-triangle me-1"></i> Rollback Batch
-                    </h6>
+                <div class="modal-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rollback-icon-circle danger" id="rollbackHeaderIconBadge">
+                            <i class="fas fa-trash-alt" id="rollbackHeaderIcon"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0 fs-15" id="rollbackModalHeaderTitle">
+                                Rollback Batch
+                            </h5>
+                            <small class="text-muted fs-11" id="rollbackModalHeaderSubtitle">
+                                Confirm invoice removal & history archiving
+                            </small>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-3 text-center">
-                    <p class="fs-13 text-dark mb-2">Are you sure you want to rollback batch:</p>
-                    <strong class="d-block text-danger mb-2" id="rollbackBatchTitle"></strong>
-                    <div class="alert alert-warning py-2 px-2 fs-11 text-start mb-0" id="rollbackAlertBox">
-                        <i class="fas fa-info-circle me-1"></i> This will delete all <strong id="rollbackInvoiceCount"></strong> invoices associated with this request.
+                <div class="modal-body p-3">
+                    {{-- Target Batch Preview Card --}}
+                    <div class="batch-preview-card mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="fs-11 fw-bold text-uppercase text-secondary" style="letter-spacing: 0.5px;">
+                                <i class="fas fa-layer-group me-1 text-primary"></i> Target Batch
+                            </span>
+                            <span class="badge bg-white text-muted border font-monospace fs-10" id="rollbackBatchReqBadge"></span>
+                        </div>
+                        <div class="fw-bold text-dark fs-13 mb-2" id="rollbackBatchTitle"></div>
+                        <div class="d-flex flex-wrap gap-2 pt-2 border-top border-slate-200">
+                            <div class="batch-stat-pill">
+                                <span class="text-muted">Total Invoices:</span>
+                                <strong class="text-dark" id="rollbackStatTotal">0</strong>
+                            </div>
+                            <div class="batch-stat-pill">
+                                <span class="text-success"><i class="fas fa-check-circle me-1"></i>FBR Posted:</span>
+                                <strong class="text-success" id="rollbackStatPosted">0</strong>
+                            </div>
+                            <div class="batch-stat-pill">
+                                <span class="text-danger"><i class="fas fa-trash-alt me-1"></i>To Delete:</span>
+                                <strong class="text-danger" id="rollbackStatUnposted">0</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- High-Contrast Notice / Alert Card --}}
+                    <div class="rollback-notice-card danger" id="rollbackAlertBox">
+                        <div class="rollback-notice-title" id="rollbackNoticeTitle">
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                            <span>Confirm Deletion</span>
+                        </div>
+                        <div class="rollback-notice-body" id="rollbackNoticeBody">
+                            <!-- Populated dynamically via JS -->
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer py-2 px-3 border-top bg-light">
-                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-sm btn-danger" id="rollbackSubmitBtn">Confirm Delete</button>
+                <div class="modal-footer d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-sm btn-cancel px-3 py-1-5 fs-12 fw-semibold" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-sm btn-rollback px-3 py-1-5 fs-12 fw-semibold shadow-sm d-inline-flex align-items-center gap-1" id="rollbackSubmitBtn">
+                        <i class="fas fa-trash-alt me-1"></i> <span id="rollbackSubmitBtnText">Confirm Rollback</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -788,27 +973,80 @@ function confirmBatchRollback(requestId, title, totalCount, postedCount) {
     totalCount = parseInt(totalCount) || 0;
     const unpostedCount = Math.max(0, totalCount - postedCount);
 
-    document.getElementById('rollbackBatchTitle').textContent = title;
+    document.getElementById('rollbackBatchTitle').textContent = title || 'Untitled Batch';
+    document.getElementById('rollbackBatchReqBadge').textContent = requestId ? (requestId.substring(0, 8) + '...' + requestId.substring(requestId.length - 4)) : '';
+    document.getElementById('rollbackStatTotal').textContent = totalCount;
+    document.getElementById('rollbackStatPosted').textContent = postedCount;
+    document.getElementById('rollbackStatUnposted').textContent = unpostedCount;
+
     document.getElementById('rollbackBatchForm').action = '/bulk-invoices/rollback/' + requestId;
 
+    const iconBadge = document.getElementById('rollbackHeaderIconBadge');
+    const headerIcon = document.getElementById('rollbackHeaderIcon');
+    const headerTitle = document.getElementById('rollbackModalHeaderTitle');
+    const headerSubtitle = document.getElementById('rollbackModalHeaderSubtitle');
+
     const alertBox = document.getElementById('rollbackAlertBox');
+    const noticeTitle = document.getElementById('rollbackNoticeTitle');
+    const noticeBody = document.getElementById('rollbackNoticeBody');
     const submitBtn = document.getElementById('rollbackSubmitBtn');
 
     if (totalCount > 0 && unpostedCount === 0) {
-        alertBox.className = 'alert alert-danger py-2 px-2 fs-11 text-start mb-0';
-        alertBox.innerHTML = '<i class="fas fa-ban me-1"></i> All <strong>' + totalCount + '</strong> invoice(s) in this batch have already been submitted to FBR and cannot be deleted.';
+        // CASE 1: All invoices already posted to FBR — BLOCK
+        iconBadge.className = 'rollback-icon-circle secondary';
+        headerIcon.className = 'fas fa-lock';
+        headerTitle.textContent = 'Rollback Blocked';
+        headerSubtitle.textContent = 'FBR submitted invoices cannot be rolled back';
+
+        alertBox.className = 'rollback-notice-card danger';
+        noticeTitle.innerHTML = '<i class="fas fa-ban text-danger"></i> <span style="color: #991b1b;">Rollback Prohibited</span>';
+        noticeBody.innerHTML = 'All <strong>' + totalCount + '</strong> invoice(s) in this batch have already been submitted to FBR and cannot be deleted via batch rollback.<br><small class="text-muted mt-1 d-block"><i class="fas fa-info-circle me-1"></i> If you need to void an FBR-submitted invoice, use the Credit Note / Cancel feature in the Invoices screen.</small>';
+
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Cannot Rollback';
+        submitBtn.className = 'btn btn-sm btn-secondary px-3 py-1-5 fs-12 fw-semibold';
+        submitBtn.innerHTML = '<i class="fas fa-lock me-1"></i> Cannot Rollback';
     } else if (postedCount > 0) {
-        alertBox.className = 'alert alert-warning py-2 px-2 fs-11 text-start mb-0';
-        alertBox.innerHTML = '<i class="fas fa-info-circle me-1"></i> <strong>' + postedCount + '</strong> invoice(s) are posted to FBR and will remain preserved.<br>Only the remaining <strong>' + unpostedCount + '</strong> unposted invoice(s) will be deleted.';
+        // CASE 2: Partial Rollback (Option B) — Preserves posted, deletes unposted
+        iconBadge.className = 'rollback-icon-circle warning';
+        headerIcon.className = 'fas fa-shield-alt';
+        headerTitle.textContent = 'Partial Batch Rollback';
+        headerSubtitle.textContent = 'Preserves FBR invoices and deletes unposted';
+
+        alertBox.className = 'rollback-notice-card warning';
+        noticeTitle.innerHTML = '<i class="fas fa-shield-alt text-warning"></i> <span style="color: #92400e;">FBR Invoices Protected (' + postedCount + ' Posted)</span>';
+        noticeBody.innerHTML = '<strong>' + postedCount + ' out of ' + totalCount + '</strong> invoices have already been submitted to FBR and will remain <span class="badge bg-success text-white fw-semibold">Safely Preserved</span>.<br><br>Do you want to proceed with rolling back the remaining <strong class="text-danger">' + unpostedCount + '</strong> unposted invoice(s)?';
+
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Rollback (' + unpostedCount + ' Unposted)';
+        submitBtn.className = 'btn btn-sm btn-rollback px-3 py-1-5 fs-12 fw-semibold shadow-sm d-inline-flex align-items-center gap-1';
+        submitBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Rollback (' + unpostedCount + ' Unposted Invoices)';
+    } else if (totalCount === 0) {
+        // CASE 3: Empty Batch — Remove orphaned record
+        iconBadge.className = 'rollback-icon-circle info';
+        headerIcon.className = 'fas fa-info-circle';
+        headerTitle.textContent = 'Remove Empty Batch';
+        headerSubtitle.textContent = 'Clean up orphaned batch metadata';
+
+        alertBox.className = 'rollback-notice-card info';
+        noticeTitle.innerHTML = '<i class="fas fa-info-circle text-success"></i> <span style="color: #166534;">Clean Up Empty Batch</span>';
+        noticeBody.innerHTML = 'No live invoices remain under this batch. This action will cleanly remove the empty batch request record from the database.';
+
+        submitBtn.disabled = false;
+        submitBtn.className = 'btn btn-sm btn-rollback px-3 py-1-5 fs-12 fw-semibold shadow-sm d-inline-flex align-items-center gap-1';
+        submitBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Remove Empty Batch';
     } else {
-        alertBox.className = 'alert alert-warning py-2 px-2 fs-11 text-start mb-0';
-        alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> This will delete all <strong>' + totalCount + '</strong> invoices and remove this batch request.';
+        // CASE 4: Full Rollback (0 posted, all unposted)
+        iconBadge.className = 'rollback-icon-circle danger';
+        headerIcon.className = 'fas fa-trash-alt';
+        headerTitle.textContent = 'Rollback Batch Invoices';
+        headerSubtitle.textContent = 'Archived to history and permanently removed';
+
+        alertBox.className = 'rollback-notice-card danger';
+        noticeTitle.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> <span style="color: #991b1b;">Confirm Batch Removal</span>';
+        noticeBody.innerHTML = 'Are you sure? This will delete all <strong>' + totalCount + '</strong> unposted invoice(s) in this batch and remove the batch request.<br><small class="text-muted mt-1 d-block"><i class="fas fa-history me-1"></i> All deleted invoices and line items are safely recorded in the audit history table.</small>';
+
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Confirm Delete';
+        submitBtn.className = 'btn btn-sm btn-rollback px-3 py-1-5 fs-12 fw-semibold shadow-sm d-inline-flex align-items-center gap-1';
+        submitBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Rollback All (' + totalCount + ' Invoices)';
     }
 
     const modal = new bootstrap.Modal(document.getElementById('rollbackBatchModal'));

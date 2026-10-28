@@ -148,14 +148,14 @@
                                 <label class="ifp-tax-sro-lbl" for="{{ $uid }}_ifr_{{ $idx }}">Is Fixed</label>
                                 <input type="hidden" name="items[{{ $idx }}][IsFixedRate]" class="ifp-is-fixed-rate" value="{{ $isFixedRateVal }}">
                                 <div class="form-check ps-0 pt-1">
-                                    <input type="checkbox" id="{{ $uid }}_ifr_{{ $idx }}" class="form-check-input ifp-is-fixed-rate-cb m-0" disabled {{ $isFixedRateVal ? 'checked' : '' }}>
+                                    <input type="checkbox" id="{{ $uid }}_ifr_{{ $idx }}" class="form-check-input ifp-is-fixed-rate-cb m-0" {{ ($isReadonly ?? false) ? 'disabled' : '' }} {{ $isFixedRateVal ? 'checked' : '' }}>
                                 </div>
                             </div>
                         </div>
                         <div class="col-12 col-md-4">
                             <div class="ifp-tax-sro-field mb-0">
                                 <label class="ifp-tax-sro-lbl" for="{{ $uid }}_fr_{{ $idx }}">Fixed Rate</label>
-                                <input type="number" step="0.01" id="{{ $uid }}_fr_{{ $idx }}" name="items[{{ $idx }}][TPRate]" class="form-control ifp-fixed-rate" value="{{ $itemFixedRate }}" readonly>
+                                <input type="number" step="0.01" id="{{ $uid }}_fr_{{ $idx }}" name="items[{{ $idx }}][TPRate]" class="form-control ifp-fixed-rate" value="{{ $itemFixedRate }}" {{ (($isReadonly ?? false) || !$isFixedRateVal) ? 'readonly' : '' }}>
                             </div>
                         </div>
                         <div class="col-12 col-md-4">

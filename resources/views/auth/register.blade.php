@@ -12,8 +12,9 @@
 	@vite(['resources/sass/app.scss'])
 <style>
 	.main-bg{
-		background: url("{{asset('build/assets/images/wave.svg')}}") no-repeat !important;
+		background: url("{{asset('build/assets/images/hero-bg.svg')}}") no-repeat !important;
 		background-size: cover !important;
+		background-position: center !important;
 	}
 	
 	body{
@@ -36,7 +37,9 @@
 		<span class="ribbon-3 top-right ribbon-warning">
 			<span><i class="fe fe-umbrella"></i></span>
 		</span>
-		<div style="text-align: center; margin: 0px 0px 20px 0px;"><img src="{{asset('build/assets/images/se_logo.png')}}" /></div>
+		<div style="text-align: center; margin: 0px 0px 20px 0px;">
+            <a href="{{ url('/') }}" aria-label="Go to Home"><img src="{{asset('build/assets/images/se_logo.png')}}" alt="Go Digital Logo" style="max-height: 48px;" /></a>
+        </div>
         <div class="text-center">
             <h2 class="auth-title">Create your account</h2>
             <p class="auth-subtitle color-black">Enter your details to register</p>
@@ -58,7 +61,7 @@
             @csrf
 			
 			<div class="row g-3">
-				<div class="col-md-4">
+				<div class="col-12 col-md-4">
 					<div class="form-floating">
 						<input class="form-control @error('name') is-invalid @enderror" id="name" type="text" name="name" value="{{ old('name') }}" placeholder="" required autocomplete="organization" />
 						<label for="name">Business Name <span>*</span></label>
@@ -68,7 +71,7 @@
 					</div>
 				</div>
 				
-				<div class="col-md-4">
+				<div class="col-12 col-md-4">
 					<div class="form-floating">
 						<input class="form-control @error('first_name') is-invalid @enderror" id="first_name" type="text" name="first_name" value="{{ old('first_name') }}" placeholder="" required autocomplete="given-name" />
 						<label for="first_name">First Name</label>
@@ -77,7 +80,7 @@
 						@enderror
 					</div>
 				</div>
-				<div class="col-md-4">
+				<div class="col-12 col-md-4">
 					<div class="form-floating">
 						<input class="form-control @error('last_name') is-invalid @enderror" id="last_name" type="text" name="last_name" value="{{ old('last_name') }}" placeholder="" required autocomplete="family-name" />
 						<label for="last_name">Last Name</label>
@@ -86,7 +89,7 @@
 						@enderror
 					</div>
 				</div>
-				<div class="col-md-4">
+				<div class="col-12 col-md-4">
 					<div class="form-floating">
 						<input class="form-control @error('email') is-invalid @enderror" id="email" type="email" name="email" value="{{ old('email') }}" placeholder="" required autocomplete="username" />
 						<label for="email">Email Address</label>
@@ -95,7 +98,7 @@
 						@enderror
 					</div>
 				</div>
-				<div class="col-md-4">
+				<div class="col-12 col-md-4">
 					<div class="form-floating">
 						<input class="form-control @error('city') is-invalid @enderror" id="city" type="text" name="city" value="{{ old('city') }}" placeholder="" autocomplete="address-level2" />
 						<label for="city">City</label>
@@ -104,7 +107,7 @@
 						@enderror
 					</div>
 				</div>
-				<div class="col-md-4">
+				<div class="col-12 col-md-4">
 					<div class="form-floating">
 						<input class="form-control @error('mobile_no') is-invalid @enderror" id="mobile_no" type="text" name="mobile_no" value="{{ old('mobile_no') }}" placeholder="" required autocomplete="tel" maxlength="15" inputmode="tel" />
 						<label for="mobile_no">Mobile No <span>*</span></label>
@@ -114,20 +117,20 @@
 					</div>
 				</div>
 				<div class="col-12 mt-4 text-center">
-					<button type="submit" class="btn-regiser w-25" id="registerSubmitBtn">
+					<button type="submit" class="btn-regiser" id="registerSubmitBtn" style="min-width: 200px;">
 						{{ __('Register') }}
 					</button>
 				</div>
 			</div>
 		</form>
 
-        <div class="divider">
-            <span class="color-white">OR</span>
+        <div class="divider mt-4 mb-2">
+            <span style="color: #4b5563; font-weight: 600;">OR</span>
         </div>
 
-        <div class="text-center mt-4">
+        <div class="text-center mt-3">
             <small class="fs-md color-black">Already have an account? 
-                <a href="{{ route('login') }}" class="color-red fw-semibold">Sign In</a>
+                <a href="{{ route('login') }}" class="text-primary fw-bold">Sign In</a>
             </small>
         </div>
 

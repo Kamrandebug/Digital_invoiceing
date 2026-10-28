@@ -72,6 +72,7 @@ class ProductController extends Controller
             'units'              => $this->lookupUnits(),
             'defaultCategoryId'  => $this->defaultCategoryId(),
             'defaultUnitId'      => $this->defaultUnitId(),
+            'isCustomUnit'       => $this->isCustomUnitEnabled(),
         ]);
     }
 
@@ -85,12 +86,15 @@ class ProductController extends Controller
         $nextId = $maxId ? $maxId + 1 : 1;
         $autoProductCode = 'PROD-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
 
+        $isCustomUnit = $this->isCustomUnitEnabled();
+        $unitVal = $isCustomUnit ? ($request->input('Unit') === '' || $request->input('Unit') === null ? 1 : (int) $request->input('Unit')) : 1;
+
         // Format inputs (normalize empty Category/Unit for modal)
         $request->merge([
             'Name'     => trim($request->Name ?? ''),
             'Code'     => $autoProductCode,
             'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
-            'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
+            'Unit'     => $unitVal,
             'IsFixedValue' => $request->boolean('IsFixedValue') ? 1 : 0,
         ]);
 
@@ -176,7 +180,7 @@ class ProductController extends Controller
                 'CategoryID'      => $request->Category ?? null,
                 'CategoryName'    => null,
                 'CurrentQuantity' => $request->CurrentQuantity ?? 0,
-                'Unit'            => $request->Unit ?? 0,
+                'Unit'            => $unitVal,
                 'UnitName'        => null,
                 'SalePrice'       => $request->SalePrice ?? 0,
                 'Cost'            => $request->Cost ?? 0,
@@ -340,6 +344,7 @@ class ProductController extends Controller
                 'units'              => $this->lookupUnits(),
                 'defaultCategoryId'  => $this->defaultCategoryId(),
                 'defaultUnitId'      => $this->defaultUnitId(),
+                'isCustomUnit'       => $this->isCustomUnitEnabled(),
             ])
             ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
             ->header('Pragma', 'no-cache')
@@ -372,6 +377,7 @@ class ProductController extends Controller
             'units'              => $this->lookupUnits(),
             'defaultCategoryId'  => $this->defaultCategoryId(),
             'defaultUnitId'      => $this->defaultUnitId(),
+            'isCustomUnit'       => $this->isCustomUnitEnabled(),
         ]);
     }
 
@@ -392,6 +398,8 @@ class ProductController extends Controller
         $productModel->setRawAttributes((array)$product, true);
         $productModel->exists = true;
 
+        $this->hydrateCategoryUnitDisplayNames($productModel);
+
         return view('pages.dashboards.Product.products-form', [
             'mode'               => 'edit',
             'product'            => $productModel,
@@ -399,6 +407,7 @@ class ProductController extends Controller
             'units'              => $this->lookupUnits(),
             'defaultCategoryId'  => $this->defaultCategoryId(),
             'defaultUnitId'      => $this->defaultUnitId(),
+            'isCustomUnit'       => $this->isCustomUnitEnabled(),
         ]);
     }
 
@@ -423,11 +432,20 @@ class ProductController extends Controller
             $codeInput = strtoupper(trim((string) ($product->Code ?? '')));
         }
 
+        $isCustomUnit = $this->isCustomUnitEnabled();
+        if ($isCustomUnit) {
+            $unitVal = ($request->input('Unit') === '' || $request->input('Unit') === null) ? 1 : (int) $request->input('Unit');
+        } else {
+            // When custom units are disabled, preserve existing product's unit if already set, otherwise default to 1.
+            $existingUnit = (int) ($product->Unit ?? 0);
+            $unitVal = ($existingUnit > 0) ? $existingUnit : 1;
+        }
+
         $request->merge([
             'Name'     => trim($request->Name ?? ''),
             'Code'     => $codeInput,
             'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
-            'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
+            'Unit'     => $unitVal,
             'IsFixedValue' => $request->boolean('IsFixedValue') ? 1 : 0,
         ]);
 
@@ -511,7 +529,7 @@ class ProductController extends Controller
                 'CategoryID'      => $request->Category ?? null,
                 'CategoryName'    => null,
                 'CurrentQuantity' => $product->CurrentQuantity ?? 0,
-                'Unit'            => $request->Unit ?? 0,
+                'Unit'            => $unitVal,
                 'UnitName'        => null,
                 'SalePrice'       => $request->SalePrice ?? 0,
                 'Cost'            => $product->Cost ?? 0,
@@ -1760,9 +1778,13 @@ class ProductController extends Controller
 
     private function defaultUnitId(): ?int
     {
+        if (! $this->isCustomUnitEnabled()) {
+            return 1;
+        }
+
         $table = $this->unitLookupTable();
         if ($table === null || ! $this->tableHasColumn($table, 'IsDefault')) {
-            return null;
+            return 1;
         }
 
         try {
@@ -1774,10 +1796,26 @@ class ProductController extends Controller
                 ->orderBy('id')
                 ->first(['id']);
 
-            return ($row && isset($row->id)) ? (int) $row->id : null;
+            return ($row && isset($row->id)) ? (int) $row->id : 1;
         } catch (\Throwable $e) {
-            return null;
+            return 1;
         }
+    }
+
+    private function isCustomUnitEnabled(): bool
+    {
+        try {
+            if (Schema::hasTable('tbl_cnf_setting')) {
+                $row = DB::table('tbl_cnf_setting')->where('ID', 1)->first();
+                if ($row && isset($row->IsCustomUnit)) {
+                    return (int) $row->IsCustomUnit === 1;
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Error checking tbl_cnf_setting: ' . $e->getMessage());
+        }
+
+        return false;
     }
 
     private function tableHasColumn(string $table, string $column): bool

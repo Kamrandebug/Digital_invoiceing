@@ -437,9 +437,14 @@ class InvoiceModel extends Model
                               AND IFNULL(h.Status, 0) <> 2
                               AND h.ID <> t.TID
                         ) THEN 'Document No already exist'
+                        WHEN (IFNULL(p.Unit, 0) <= 1 AND (IFNULL(t.FBRQty, 0) > 0 OR IFNULL(t.Unit, 0) > 1))
+                            THEN CONCAT('Product \'', p.Name, '\': HsCode Qty is not valid, Sync Units for Product')
+                        WHEN (IFNULL(p.Unit, 0) > 1 AND IFNULL(t.FBRQty, 0) <= 0)
+                            THEN CONCAT('Product \'', p.Name, '\': HsCode Qty is required')
                         ELSE 'Pass'
                     END AS ErrMsg
                 FROM {$tenantDbQuoted}.`tbl_temp_invoice_detail` t
+                LEFT JOIN {$tenantDbQuoted}.`tbl_product` p On (p.id = t.productid and p.status = 1)
                 WHERE t.RequestID = ?
             ) u ON u.ID = uu.ID
             SET uu.ErrMsg = u.ErrMsg
@@ -701,11 +706,31 @@ class InvoiceModel extends Model
         // ── STEPS 2-6 inside a transaction — all-or-nothing ──────────────────
         DB::transaction(function () use ($requestID, $userId, $now) {
 
+            // Pre-capture affected headers & parent batch RequestIDs from live table BEFORE deletion
+            $targetHeaders = DB::table('tbl_sales_invoice_header as h')
+                ->join(
+                    DB::raw('(SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = ? GROUP BY TID) t'),
+                    'h.ID', '=', 't.TID'
+                )
+                ->addBinding($requestID, 'join')
+                ->select('h.ID', 'h.RequestID', 'h.DocNo', 'h.TotalValues')
+                ->get();
+
+            $affectedBatchRequestIds = $targetHeaders
+                ->pluck('RequestID')
+                ->filter(fn($val) => !empty(trim((string) $val)))
+                ->unique()
+                ->toArray();
+
             // STEP 2: Snapshot header(s) → tbl_sales_invoice_header_history
-            self::move_history_header($requestID, $userId, $now, 'DELETE');
+            if (\Illuminate\Support\Facades\Schema::hasTable('tbl_sales_invoice_header_history')) {
+                self::move_history_header($requestID, $userId, $now, 'DELETE');
+            }
 
             // STEP 3: Snapshot detail rows → tbl_sales_invoice_detail_history
-            self::move_history_detail($requestID, $userId, $now, 'DELETE');
+            if (\Illuminate\Support\Facades\Schema::hasTable('tbl_sales_invoice_detail_history')) {
+                self::move_history_detail($requestID, $userId, $now, 'DELETE');
+            }
 
             // STEP 4: Hard delete all detail rows linked to these headers
             // GROUP BY TID — deduplicates staging rows; bulk-ready with zero code change.
@@ -724,40 +749,71 @@ class InvoiceModel extends Model
                 ) t ON h.ID = t.TID
             ", [$requestID]);
 
-            // STEP 6: Audit log — read from history (row already archived, not in live table)
+            // STEP 6: Audit log & Re-sync parent bulk invoice batch
             try {
-                $archivedHeaders = DB::table('tbl_sales_invoice_header_history as hh')
-                    ->join(
-                        DB::raw('(SELECT TID FROM tbl_temp_invoice_detail WHERE RequestID = ? GROUP BY TID) t'),
-                        'hh.OriginalID', '=', 't.TID'
-                    )
-                    ->where('hh.ActionOn', $now)
-                    ->addBinding($requestID, 'join')
-                    ->get();
-
-                foreach ($archivedHeaders as $archived) {
+                foreach ($targetHeaders as $th) {
                     \App\Services\AuditLogService::log(
-                        'DELETE', 'INVOICE', $archived->OriginalID, (array) $archived, null
+                        'DELETE', 'INVOICE', $th->ID, (array) $th, null
                     );
+                }
 
-                    // Re-sync parent tbl_bulk_invoice_request if deleted invoice belonged to a bulk batch
-                    if (!empty($archived->RequestID)) {
-                        $rem = DB::table('tbl_sales_invoice_header')
-                            ->where('RequestID', $archived->RequestID)
-                            ->selectRaw('COUNT(*) as total_invoices, COALESCE(SUM(TotalValues), 0) as total_amount, COALESCE(SUM(SalesTaxApplicable), 0) as total_tax')
-                            ->first();
+                // Re-sync parent tbl_bulk_invoice_request if deleted invoice belonged to a bulk batch
+                foreach ($affectedBatchRequestIds as $batchReqId) {
+                    $batch = DB::table('tbl_bulk_invoice_request')
+                        ->where('RequestID', $batchReqId)
+                        ->first();
 
-                        $remItems = (int) DB::table('tbl_sales_invoice_detail')
-                            ->where('RequestID', $archived->RequestID)
+                    if (! $batch) {
+                        continue;
+                    }
+
+                    $liveStats = DB::table('tbl_sales_invoice_header')
+                        ->where('RequestID', $batchReqId)
+                        ->selectRaw('COUNT(*) as total_invoices, COALESCE(SUM(TotalValues), 0) as total_amount, COALESCE(SUM(SalesTaxApplicable), 0) as total_tax')
+                        ->first();
+
+                    $remainingInvoices = (int) ($liveStats->total_invoices ?? 0);
+
+                    if ($remainingInvoices === 0) {
+                        // All invoices in this batch were deleted -> auto-remove empty batch
+                        DB::table('tbl_bulk_invoice_request')
+                            ->where('RequestID', $batchReqId)
+                            ->delete();
+
+                        \App\Services\AuditLogService::log(
+                            'DELETE', 'BULK_INVOICES', $batch->ID, (array) $batch, [
+                                'RequestID' => $batchReqId,
+                                'ActionNote' => "Batch '{$batch->Title}' automatically removed because all associated invoices were deleted.",
+                            ]
+                        );
+                    } else {
+                        // Re-calculate live detail items count
+                        $remItems = (int) DB::table('tbl_sales_invoice_detail as d')
+                            ->join('tbl_sales_invoice_header as h', 'd.InvoiceID', '=', 'h.ID')
+                            ->where('h.RequestID', $batchReqId)
                             ->count();
 
+                        // Re-calculate live posted count
+                        $livePosted = (int) DB::table('tbl_sales_invoice_header')
+                            ->where('RequestID', $batchReqId)
+                            ->where(function ($q) {
+                                $q->where('Statusi', 7)
+                                  ->orWhere(function ($q2) {
+                                      $q2->whereNotNull('FbrTransactionID')
+                                         ->whereRaw("TRIM(FbrTransactionID) <> ''");
+                                  });
+                            })->count();
+
                         DB::table('tbl_bulk_invoice_request')
-                            ->where('RequestID', $archived->RequestID)
+                            ->where('RequestID', $batchReqId)
                             ->update([
-                                'TotalInvoices' => (int) ($rem->total_invoices ?? 0),
-                                'TotalItems'    => $remItems,
-                                'TotalAmount'   => (float) ($rem->total_amount ?? 0),
-                                'TotalTax'      => (float) ($rem->total_tax ?? 0),
+                                'TotalInvoices'  => $remainingInvoices,
+                                'TotalItems'     => $remItems,
+                                'TotalAmount'    => (float) ($liveStats->total_amount ?? 0),
+                                'TotalTax'       => (float) ($liveStats->total_tax ?? 0),
+                                'FbrPostedCount' => $livePosted,
+                                'UpdatedBy'      => $userId,
+                                'UpdatedOn'      => $now,
                             ]);
                     }
                 }
@@ -967,6 +1023,39 @@ class InvoiceModel extends Model
 
         if (trim((string) ($header->FbrTransactionID ?? '')) !== '') {
             return ['success' => false, 'message' => 'This invoice was already posted to FBR.'];
+        }
+
+        $detailInvId = $header->InvoiceID ?? $header->ID;
+        $validation = DB::selectOne("
+            SELECT
+                GROUP_CONCAT(DISTINCT err.ErrMsg ORDER BY err.ErrMsg SEPARATOR '; ') AS ErrorSummary
+            FROM (
+                SELECT
+                    CASE
+                        WHEN (d.Quantity IS NULL OR d.Quantity <= 0)
+                            THEN CONCAT('Product \'', IFNULL(p.Name, IFNULL(d.ProductDescription, CONCAT('Line #', d.ID))), '\': Quantity must be greater than 0')
+
+                        WHEN (IFNULL(p.Unit, 0) > 1 AND IFNULL(d.FBRQty, 0) <= 0)
+                            THEN CONCAT('Product \'', IFNULL(p.Name, IFNULL(d.ProductDescription, CONCAT('Line #', d.ID))), '\': HsCode Qty is required')
+
+                        WHEN (IFNULL(p.Unit, 0) <= 1 AND (IFNULL(d.FBRQty, 0) > 0 OR IFNULL(d.Unit, 0) > 1))
+                            THEN CONCAT('Product \'', IFNULL(p.Name, IFNULL(d.ProductDescription, CONCAT('Line #', d.ID))), '\': HsCode Qty is not valid, Sync Units for Product')
+
+                        ELSE 'Pass'
+                    END AS ErrMsg
+                FROM tbl_sales_invoice_detail d
+                LEFT JOIN tbl_product p ON (p.id = d.productid AND p.status = 1)
+                WHERE (d.InvoiceID = ? OR d.InvoiceID = ?)
+                  AND IFNULL(d.Status, 0) != 2
+            ) err
+            WHERE err.ErrMsg <> 'Pass'
+        ", [$header->ID, $detailInvId]);
+
+        if (! empty($validation->ErrorSummary)) {
+            return [
+                'success' => false,
+                'message' => 'Cannot Post to FBR: ' . $validation->ErrorSummary,
+            ];
         }
 
         DB::statement('SET SESSION group_concat_max_len = 1048576');
