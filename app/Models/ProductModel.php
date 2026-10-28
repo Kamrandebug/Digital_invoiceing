@@ -209,7 +209,7 @@ class ProductModel extends Model
                         -- FBR Lookup Validations (Reports exact invalid text if provided but unresolved)
                         WHEN COALESCE(TRIM(t.`HsCode`), '') <> '' 
                           AND NOT EXISTS (
-                              SELECT 1 FROM `core_digital_invoicing`.`fbr_hscode_uom` h 
+                              SELECT 1 FROM `core_digital_invoicing`.`fbr_item_desc_code` h 
                               WHERE TRIM(h.`hs_CODE`) = TRIM(t.`HsCode`)
                           ) THEN CONCAT('Invalid HS Code \'', TRIM(t.HsCode), '\'')
 
