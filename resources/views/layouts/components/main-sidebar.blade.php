@@ -80,8 +80,7 @@
                     } catch (\Throwable $e) { /* fallback false */ }
 
                     // ── Load menu groups from DB ──────────────────────────────────────────────
-                    // Exclude Reports (ID=4) from dynamic loop — it is rendered as a fixed block
-                    // Exclude Management (ID=5) from dynamic loop — rendered separately after Reports
+                    // Exclude Reports (ID=4) from dynamic loop — it is rendered as a direct link to /reports
                     $menuGroups = collect();
                     try {
                         $allMainModules = \Illuminate\Support\Facades\DB::connection('tenant')
@@ -94,6 +93,9 @@
                         $allModules = \Illuminate\Support\Facades\DB::connection('tenant')
                             ->table('tbl_module')
                             ->where('Status', 1)
+                            ->where(function ($q) {
+                                $q->whereNull('IsReport')->orWhere('IsReport', 0);
+                            })
                             ->orderBy('DisplayOrder')
                             ->get()
                             ->groupBy('MainModuleID');
@@ -170,7 +172,7 @@
                 </li>
 
                 {{-- ═══════════════════════════════════════════════════════════
-                     2. DYNAMIC MODULES — From tbl_main_module + tbl_module
+                     2. DYNAMIC MODULES — From tbl_main_module + tbl_module (IsReport = 0)
                         - Single child (e.g. Products) → direct <li> link
                         - Multiple children (Sales, Purchases) → collapsible has-sub
                 ═══════════════════════════════════════════════════════════ --}}
@@ -241,23 +243,15 @@
                 @endforeach
 
                 {{-- ═══════════════════════════════════════════════════════════
-                     3. REPORTS — Fixed, always before Management
+                     3. REPORTS — Option A: Direct link to Reports Center (/reports)
+                        where all permitted reports (`tbl_module.IsReport = 1`) are displayed
                 ═══════════════════════════════════════════════════════════ --}}
                 <li class="slide__category"><span class="category-name">Reports</span></li>
-                <li class="slide has-sub {{ request()->routeIs('reports.*') ? 'open active' : '' }}">
-                    <a href="javascript:void(0);" class="side-menu__item">
+                <li class="slide {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+                    <a href="{{ route('reports.index') }}" class="side-menu__item">
                         <i class="ri-bar-chart-2-line menu-icon"></i>
                         <span class="side-menu__label">Reports</span>
-                        <i class="ri-arrow-right-s-line side-menu__angle"></i>
                     </a>
-                    <ul class="slide-menu child1" style="{{ request()->routeIs('reports.*') ? 'display:block;' : '' }}">
-                        <li class="slide side-menu__label1">
-                            <a href="javascript:void(0)">Reports</a>
-                        </li>
-                        <li class="slide {{ request()->routeIs('reports.sale') ? 'active' : '' }}">
-                            <a href="{{ route('reports.sale') }}" class="side-menu__item">Sale Report</a>
-                        </li>
-                    </ul>
                 </li>
 
                 {{-- ═══════════════════════════════════════════════════════════

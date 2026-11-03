@@ -774,41 +774,25 @@
     </div>
 </div>
 
-{{-- Print Invoice Modal — PDF/print preview with orientation --}}
+{{-- Print Invoice Modal — Dynamic Multi-Template PDF/print preview --}}
 <div class="modal fade" id="invoice_print_modal" tabindex="-1" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header py-2">
                 <h6 class="modal-title fw-semibold">
                     <i class="fas fa-print me-2"></i> Print Invoice — <span id="invoice_print_docno"></span>
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-3">
-                <div class="d-flex flex-wrap align-items-center gap-2 mb-3 no-print">
-                    <label class="mb-0 fw-medium">Orientation:</label>
-                    <select id="invoice_print_orientation" class="form-select form-select-sm" style="width: auto;">
-                        <option value="portrait">Portrait</option>
-                        <option value="landscape">Landscape</option>
-                    </select>
-                    <button type="button" class="btn btn-sm btn-primary" id="invoice_print_apply_orientation">
-                        <i class="fas fa-sync-alt me-1"></i> Apply
-                    </button>
-                    <button type="button" class="btn btn-sm btn-success ms-2" id="invoice_print_do_print">
-                        <i class="fas fa-print me-1"></i> Print / Save as PDF
-                    </button>
-                    <small class="text-muted d-block w-100 mt-1" style="font-size: 11px;">
-                        In the print dialog, turn off <strong>Headers and footers</strong> to hide the date, title, and page URL.
-                    </small>
-                </div>
-                <div class="border rounded bg-light" style="min-height: 400px;">
+            <div class="modal-body p-0">
+                <div class="bg-light" style="min-height: 450px;">
                     <iframe id="invoice_print_frame" name="invoice_print_frame"
-                            style="width:100%; height:75vh; border:0; display:block;"
+                            style="width:100%; height:82vh; border:0; display:block;"
                             title="Invoice print preview"></iframe>
                 </div>
             </div>
-            <div class="modal-footer no-print">
+            <div class="modal-footer py-2 no-print">
                 <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i> Close
                 </button>
@@ -1607,8 +1591,7 @@ saveBtn.onclick = function () {
     function openPrintModal(invoiceId, docNo) {
         _printModalInvoiceId = invoiceId;
         document.getElementById('invoice_print_docno').textContent = docNo || ('#' + invoiceId);
-        document.getElementById('invoice_print_orientation').value = 'portrait';
-        setPrintFrameSrc('portrait');
+        setPrintFrameSrc();
         var modalEl = document.getElementById('invoice_print_modal');
         var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
@@ -1617,75 +1600,13 @@ saveBtn.onclick = function () {
     function setPrintFrameSrc(orientation) {
         if (!_printModalInvoiceId) return;
         var baseUrl = '{{ url("invoices") }}/' + _printModalInvoiceId + '/print-view';
-        var url = baseUrl + '?orientation=' + encodeURIComponent(orientation) + '&_=' + Date.now();
+        var url = baseUrl + '?_=' + Date.now();
+        if (orientation) {
+            url += '&orientation=' + encodeURIComponent(orientation);
+        }
         var frame = document.getElementById('invoice_print_frame');
         frame.src = url;
     }
-
-    document.getElementById('invoice_print_apply_orientation').addEventListener('click', function () {
-        var orient = document.getElementById('invoice_print_orientation').value;
-        setPrintFrameSrc(orient);
-    });
-
-    document.getElementById('invoice_print_orientation').addEventListener('change', function () {
-        var orient = this.value;
-        setPrintFrameSrc(orient);
-    });
-
-    /** Save/print PDF filename: GD-DI-YYYYMMDD-{invoiceId} (e.g. GD-DI-20260514-19) */
-    function buildGDPrintSaveTitle(invoiceId) {
-        var d = new Date();
-        var y = d.getFullYear();
-        var m = String(d.getMonth() + 1).padStart(2, '0');
-        var day = String(d.getDate()).padStart(2, '0');
-        return 'GD-DI-' + y + m + day + '-' + String(invoiceId);
-    }
-
-    document.getElementById('invoice_print_do_print').addEventListener('click', function () {
-        var frame = document.getElementById('invoice_print_frame');
-        if (!frame || !frame.contentWindow) return;
-        var iw = frame.contentWindow;
-        var parentTitle = document.title;
-        var iframeSavedTitle = '';
-        try {
-            if (!iw.document) {
-                showToast('error', 'Invoice preview is still loading. Please wait and try again.');
-                return;
-            }
-            iframeSavedTitle = iw.document.title || '';
-            var saveTitle = (_printModalInvoiceId && iw.document)
-                ? buildGDPrintSaveTitle(_printModalInvoiceId)
-                : iframeSavedTitle;
-            if (iw.document && saveTitle) {
-                iw.document.title = saveTitle;
-            }
-            document.title = saveTitle;
-            var restored = false;
-            function restoreTabTitle() {
-                if (restored) return;
-                restored = true;
-                document.title = parentTitle;
-                try {
-                    if (iw.document) {
-                        iw.document.title = iframeSavedTitle;
-                    }
-                    iw.removeEventListener('afterprint', restoreTabTitle);
-                } catch (e2) {}
-            }
-            iw.addEventListener('afterprint', restoreTabTitle);
-            setTimeout(restoreTabTitle, 180000);
-            iw.focus();
-            iw.print();
-        } catch (e) {
-            document.title = parentTitle;
-            try {
-                if (iw.document) {
-                    iw.document.title = iframeSavedTitle;
-                }
-            } catch (e2) {}
-            showToast('error', 'Could not open print dialog. Try printing from the browser (Ctrl+P).');
-        }
-    });
 
     // ── FBR Response popup ────────────────────────────────────
     function openFbrResponseModal(resp) {

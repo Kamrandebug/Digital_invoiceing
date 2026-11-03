@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardsController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleReportController;
 use App\Http\Controllers\TenantListController;
 use App\Http\Controllers\RoleController;
@@ -184,6 +185,10 @@ Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->gr
     Route::get('/export/csv', [InvoiceController::class, 'exportCSV'])->name('export-csv');
     Route::get('/modal', [InvoiceController::class, 'modal'])->name('modal');
     Route::post('/bulk-post-fbr', [InvoiceController::class, 'bulkPostFbr'])->name('bulk-post-fbr');
+    Route::post('/print-template/save', [InvoiceController::class, 'savePrintTemplate'])->name('print-template.save');
+    Route::post('/print-template/save-as-new', [InvoiceController::class, 'saveAsNewPrintTemplate'])->name('print-template.save-as-new');
+    Route::post('/print-template/{templateId}/reset', [InvoiceController::class, 'resetPrintTemplate'])->whereNumber('templateId')->name('print-template.reset');
+    Route::post('/print-template/{templateId}/delete', [InvoiceController::class, 'deletePrintTemplate'])->whereNumber('templateId')->name('print-template.delete');
 
     Route::get('/{id}/edit', [InvoiceController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
     Route::post('/{id}/update', [InvoiceController::class, 'edit_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('edit_transaction');
@@ -208,9 +213,17 @@ Route::middleware(['auth', 'tenant'])->prefix('bulk-invoices')->name('bulk-invoi
 
 // ── Reports ───────────────────────────────────────────────────
 Route::middleware(['auth', 'tenant'])->prefix('reports')->name('reports.')->group(function () {
-    Route::get('/sale', [SaleReportController::class, 'index'])->name('sale');
+    Route::get('/', [ReportController::class, 'index'])->name('index');
+    Route::get('/sale', [ReportController::class, 'saleReportRedirect'])->name('sale');
     Route::get('/sale/export', [SaleReportController::class, 'exportCsv'])->name('sale.export');
     Route::get('/sale/print', [SaleReportController::class, 'printView'])->name('sale.print');
+
+    Route::get('/{reportId}', [ReportController::class, 'show'])->whereNumber('reportId')->name('show');
+    Route::post('/{reportId}/settings', [ReportController::class, 'saveSettings'])->whereNumber('reportId')->name('settings.save');
+    Route::post('/{reportId}/reset', [ReportController::class, 'resetSettings'])->whereNumber('reportId')->name('settings.reset');
+    Route::get('/{reportId}/export', [ReportController::class, 'exportCsv'])->whereNumber('reportId')->name('export');
+    Route::get('/{id}/print', [ReportController::class, 'printView'])->whereNumber('id')->name('print.legacy');
+    Route::get('/{reportId}/print', [ReportController::class, 'printView'])->whereNumber('reportId')->name('print');
 });
 
 // ── Roles & Permissions ───────────────────────────────────────

@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvoiceModel;
-// Added
-// Added
+use App\Models\PrintTemplateModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -246,52 +245,159 @@ class InvoiceController extends Controller
 
     public function printView(Request $request, $id)
     {
-        $invoice = DB::table('tbl_sales_invoice_header as h')
-            ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
-            ->select(
-                'h.*',
-                InvoiceModel::sqlCustomerDisplayName()
-            )
-            ->where('h.ID', $id)
-            ->where('h.Status', '!=', 2)
-            ->first();
+        $requestedTemplateId = $request->filled('template_id') ? (int) $request->query('template_id') : null;
+        $printData = PrintTemplateModel::getInvoicePrintData((int) $id, 4, $requestedTemplateId);
 
-        if (! $invoice) {
+        if (! $printData || empty($printData['invoice'])) {
             abort(404, 'Invoice not found.');
         }
 
-        $detailInvoiceId = $invoice->InvoiceID ?? $invoice->ID;
-        $items = DB::table('tbl_sales_invoice_detail as d')
-            ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
-            ->select('d.*', 'p.Name as ProductName', 'p.IsFixedRate as ProductIsFixedRate')
-            ->where('d.InvoiceID', $detailInvoiceId)
-            ->where('d.Status', '!=', 2)
-            ->get();
-
-        $orientation = $request->query('orientation', 'portrait');
+        $template = $printData['template'];
+        $defaultOrientation = strtolower(trim((string) ($template->PrintOrientation ?? 'portrait')));
+        $orientation = $request->filled('orientation')
+            ? strtolower(trim((string) $request->query('orientation')))
+            : $defaultOrientation;
         if (! in_array($orientation, ['portrait', 'landscape'], true)) {
             $orientation = 'portrait';
         }
 
-        $seller = DB::table('tbl_business_info')
-            ->where('IsArchive', 0)
-            ->orderBy('ID')
-            ->first();
+        return view('pages.dashboards.Invoice.invoice-print', [
+            'invoice'         => $printData['invoice'],
+            'items'           => $printData['items'],
+            'orientation'     => $orientation,
+            'seller'          => $printData['seller'],
+            'buyer'           => $printData['buyer'],
+            'template'        => $template,
+            'allTemplates'    => $printData['allTemplates'],
+            'templateFields'  => $printData['templateFields'],
+            'templateColumns' => $printData['templateColumns'],
+        ]);
+    }
 
-        $buyer = null;
-        if (! empty($invoice->CustomerID)) {
-            $buyer = DB::table('tbl_customer')
-                ->where('ID', $invoice->CustomerID)
-                ->first();
+    /**
+     * Stage print template fields and columns into `tbl_temp_print_template_fields`
+     * and `tbl_temp_print_template_columns` for set-based RequestID validation.
+     */
+    private function stagePrintTemplateTempData(Request $request, int $templateId, string $requestID): void
+    {
+        $fieldsInput  = (array) $request->input('fields', []);
+        $columnsInput = (array) $request->input('columns', []);
+
+        $tempFields = [];
+        foreach ($fieldsInput as $fieldId => $fData) {
+            $tempFields[] = [
+                'RequestID'          => $requestID,
+                'FieldID'            => (int) $fieldId,
+                'TemplateID'         => $templateId,
+                'CustomLabel'        => trim((string) ($fData['label'] ?? '')),
+                'CustomIsOn'         => in_array((int) ($fData['is_on'] ?? 1), [0, 1, 2], true) ? (int) $fData['is_on'] : 1,
+                'CustomDisplayOrder' => max(1, (int) ($fData['order'] ?? 1)),
+                'CustomFontSize'     => max(8, min(28, (int) ($fData['font_size'] ?? 12))),
+                'IsBold'             => ! empty($fData['is_bold']) ? 1 : 0,
+                'ErrorMessage'       => null,
+                'CreatedOn'          => now(),
+            ];
+        }
+        if (! empty($tempFields)) {
+            DB::connection('tenant')->table('tbl_temp_print_template_fields')->insert($tempFields);
         }
 
-        return view('pages.dashboards.Invoice.invoice-print', [
-            'invoice' => $invoice,
-            'items' => $items,
-            'orientation' => $orientation,
-            'seller' => $seller,
-            'buyer' => $buyer,
-        ]);
+        $tempCols = [];
+        foreach ($columnsInput as $colId => $cData) {
+            $minW = max(25, (int) preg_replace('/[^0-9]/', '', (string) ($cData['width_min'] ?? '50')));
+            $maxW = max($minW, (int) preg_replace('/[^0-9]/', '', (string) ($cData['width_max'] ?? '100')));
+            $align = strtolower(trim((string) ($cData['alignment'] ?? 'left')));
+            if (! in_array($align, ['left', 'center', 'right'], true)) {
+                $align = 'left';
+            }
+
+            $tempCols[] = [
+                'RequestID'          => $requestID,
+                'ColumnID'           => (int) $colId,
+                'TemplateID'         => $templateId,
+                'CustomLabel'        => trim((string) ($cData['label'] ?? '')),
+                'CustomIsOn'         => in_array((int) ($cData['is_on'] ?? 1), [0, 1, 2], true) ? (int) $cData['is_on'] : 1,
+                'CustomDisplayOrder' => max(1, (int) ($cData['order'] ?? 1)),
+                'CustomWidthMin'     => $minW . 'px',
+                'CustomWidthMax'     => $maxW . 'px',
+                'CustomAlignment'    => $align,
+                'IsTotal'            => ! empty($cData['is_total']) ? 1 : 0,
+                'ErrorMessage'       => null,
+                'CreatedOn'          => now(),
+            ];
+        }
+        if (! empty($tempCols)) {
+            DB::connection('tenant')->table('tbl_temp_print_template_columns')->insert($tempCols);
+        }
+    }
+
+    /**
+     * Save changes to the selected Print Template (`edit_transaction`).
+     */
+    public function savePrintTemplate(Request $request)
+    {
+        $templateId = (int) $request->input('template_id', 1);
+        $requestID  = 'PRT_' . Str::uuid()->toString();
+        $userId     = (int) (auth()->id() ?? 1);
+
+        $this->stagePrintTemplateTempData($request, $templateId, $requestID);
+        $result = PrintTemplateModel::edit_transaction($requestID, $templateId, $request->all(), $userId);
+
+        return response()->json($result, $result['status'] ? 200 : 422);
+    }
+
+    /**
+     * Save current settings as a brand-new Print Template (`save_as_new_template`).
+     */
+    public function saveAsNewPrintTemplate(Request $request)
+    {
+        $sourceTemplateId = (int) $request->input('template_id', 1);
+        $requestID        = 'PRT_NEW_' . Str::uuid()->toString();
+        $userId           = (int) (auth()->id() ?? 1);
+
+        $this->stagePrintTemplateTempData($request, $sourceTemplateId, $requestID);
+        $result = PrintTemplateModel::save_as_new_template($requestID, $sourceTemplateId, $request->all(), $userId);
+
+        return response()->json($result, $result['status'] ? 200 : 422);
+    }
+
+    /**
+     * Reset the selected Print Template back to Master `core_digital_invoicing` defaults.
+     */
+    public function resetPrintTemplate(Request $request, $templateId)
+    {
+        try {
+            $userId = (int) (auth()->id() ?? 1);
+            $result = PrintTemplateModel::reset_transaction((int) $templateId, $userId);
+
+            return response()->json($result, ($result['status'] ?? false) ? 200 : 422);
+        } catch (\Throwable $e) {
+            \Log::error('resetPrintTemplate error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Reset failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a user-created custom Print Template (`IsSystemDefault = 0`).
+     */
+    public function deletePrintTemplate(Request $request, $templateId)
+    {
+        try {
+            $result = PrintTemplateModel::delete_template((int) $templateId);
+
+            return response()->json($result, ($result['status'] ?? false) ? 200 : 422);
+        } catch (\Throwable $e) {
+            \Log::error('deletePrintTemplate error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Delete failed: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ══════════════════════════════════════════════════════════
