@@ -27,48 +27,58 @@
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Customer Management</h1>
         <div class="d-flex float-end">
+			@tenantCan('Customers', 'Add')
 			<button type="button"
         class="btn btn-sm btn-primary btn-wave waves-light"
         onclick="openCustomerModal('create')">
     <i class="ri-add-line fw-medium align-middle me-1"></i> Add Customer
-</button>
-<!--				<button type="button" class="btn btn-sm btn-primary btn-wave waves-light" onclick="window.location.href='{{ route('customers.create') }}'"><i class="ri-add-line fw-medium align-middle me-1"></i> Add Customer</button>-->
+			</button>
+			@endtenantCan
+
+			@if(session('selected_tenant.permissions.Customers.Import') == 1 || session('selected_tenant.permissions.Customers.Print') == 1 || session('selected_tenant.permissions.Customers.Export') == 1)
 			<div class="dropdown ms-2">
 				<button class="btn btn-icon btn-secondary-light btn-sm btn-wave waves-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 					<i class="ti ti-dots-vertical"></i>
 				</button>
 				<ul class="dropdown-menu">
-					<li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+					@tenantCan('Customers', 'Import')
+					<li><a class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#customerImportModal"><i class="fas fa-file-import me-1 text-primary"></i> Import</a></li>
+					@endtenantCan
+					@tenantCan('Customers', 'Print')
 					<li><a class="dropdown-item" href="#">Bulk Print</a></li>
+					@endtenantCan
+					@tenantCan('Customers', 'Export')
 					<li><a class="dropdown-item" href="{{ route('customers.export-csv') }}">Export CSV</a></li>
+					@endtenantCan
 				</ul>
 			</div>
+			@endif
 		</div>
     </div>
 </div>
 {{-- Messages --}}
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
-	<i class="fas fa-check-circle"></i> {{ session('success') }}
-	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	<i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 @if(session('error'))
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-	<i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	<i class="fas fa-exclamation-circle me-1"></i> {!! session('error') !!}
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 {{-- Errors --}}
 @if($errors->any())
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
-	<i class="fas fa-exclamation-triangle"></i> 
+	<i class="fas fa-exclamation-triangle me-1"></i> 
 	@foreach ($errors->all() as $error)
-		{{ $error }}
+		{{ $error }}<br>
 	@endforeach
-	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 <div class="row">
@@ -159,6 +169,7 @@
 					<thead>
 						<tr>
 							<th><input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+							<th>Code</th>
 							<th>Name <i class="fas fa-sort"></i></th>
 							<th>NTN</th>
 							<th>Province</th>
@@ -172,6 +183,7 @@
 						@forelse($customers as $customer)
 						<tr>
 							<td><input type="checkbox" class="customer-checkbox form-check-input" value="{{ $customer->ID }}"></td>
+							<td><span class="badge bg-light text-dark fw-semibold border">{{ $customer->AccountNo ?? '-' }}</span></td>
 							<td>
 								<strong>{{ $customer->BusinessName ?? ($customer->DisplayName ?? ($customer->FirstName . ' ' . $customer->LastName)) }}</strong>
 								@if($customer->DisplayName)
@@ -198,9 +210,13 @@
 							<td>
 								
 								<div class="btn-group btn-listing">
+									  @tenantCan('Customers', 'ViewOnly')
 									  <button class="btn btn-outline-primary btn-list-left" onclick="openCustomerModal('show', {{ $customer->ID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
+									  @endtenantCan
+
+									  @if(session('selected_tenant.permissions.Customers.Modify') == 1 || session('selected_tenant.permissions.Customers.Delete') == 1)
 									  <button type="button"
                                               class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2"
                                               data-bs-toggle="dropdown"
@@ -210,11 +226,15 @@
 										<span class="sr-only">Toggle Dropdown</span>
 									  </button>
 									  <ul class="dropdown-menu dropdown-menu-end">
+										@tenantCan('Customers', 'Modify')
 										<li>
 										    <button type="button" class="dropdown-item" onclick="openCustomerModal('edit', {{ $customer->ID }})">
 											    <i class="fas fa-edit"></i> Edit
 										    </button>
 										</li>
+										@endtenantCan
+
+										@tenantCan('Customers', 'Delete')
 										<li>
                                             <button type="button"
                                                     class="dropdown-item text-danger"
@@ -228,7 +248,15 @@
                                                 @method('DELETE')
                                             </form>
                                         </li>
+										@endtenantCan
+
+                                        <li>
+                                            <button type="button" class="dropdown-item" onclick="showAuditHistory('CUSTOMER', {{ $customer->ID }})">
+                                                <i class="ri-history-line me-2"></i> Audit Log
+                                            </button>
+                                        </li>
 									  </ul>
+									  @endif
 									</div>
 								
 								
@@ -236,14 +264,16 @@
 						</tr>
 						@empty
 						<tr>
-							<td colspan="8" class="text-center py-5">
+							<td colspan="9" class="text-center py-5">
 								<i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
 								<p class="text-muted mb-2">No customers found.</p>
 								{{-- Add button --}}
 								@if(!request('search') && !request('start_date') && !request('end_date'))
+								@tenantCan('Customers', 'Add')
 								<button class="btn btn-primary" onclick="openCustomerModal('create')">
 								<i class="fas fa-plus"></i> Add Your First Customer
 						</button>
+								@endtenantCan
 								@else
 								<p class="text-muted small">Try adjusting your search or filters.</p>
 								@endif
@@ -335,10 +365,10 @@
 <script>
     let deleteCustomerId = null;
 
-    // Auto-hide alerts
+    // Auto-hide only success alerts after 5 seconds; keep error alerts visible until dismissed manually
     setTimeout(function() {
-        const alerts = document.querySelectorAll('.alert');
-        alerts.forEach(alert => {
+        const successAlerts = document.querySelectorAll('.alert-success');
+        successAlerts.forEach(alert => {
             alert.classList.remove('show');
             setTimeout(() => alert.remove(), 150);
         });
@@ -418,14 +448,16 @@ function openCustomerModal(mode, customerId = null) {
 
     bsModal.show();
 
+    const timestamp = Date.now();
     let url = mode === 'create'
-        ? '{{ route("customers.modal") }}?mode=create'
-        : `/customers/${customerId}/modal?mode=${mode}`;
+        ? '{{ route("customers.modal") }}?mode=create&_t=' + timestamp
+        : `/customers/${customerId}/modal?mode=${mode}&_t=` + timestamp;
 
     fetch(url, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            'Cache-Control': 'no-cache'
         }
     })
     .then(res => { if (!res.ok) throw new Error('Server error: ' + res.status); return res.text(); })
@@ -474,6 +506,13 @@ function openCustomerModal(mode, customerId = null) {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
+                    // Purge draft keys from localStorage
+                    if (typeof window.clearCustomerModalDrafts === 'function') {
+                        window.clearCustomerModalDrafts();
+                    }
+                    Object.keys(localStorage).forEach(k => {
+                        if (k.startsWith('cfp_') || k.startsWith('customer_')) localStorage.removeItem(k);
+                    });
                     bsModal.hide();
                     // Show success toast on list page
                     showToast('success', data.message);
@@ -552,5 +591,63 @@ function showToast(type, message) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
 }
+
+function handleCustomerImportSubmit(form) {
+    const btn = document.getElementById('btnSubmitCustomerImport');
+    const txt = document.getElementById('btnSubmitImportText');
+    if (btn) {
+        btn.disabled = true;
+        if (txt) txt.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Importing...';
+    }
+}
 </script>
+
+{{-- Customer Import Modal --}}
+<div class="modal fade" id="customerImportModal" tabindex="-1" aria-labelledby="customerImportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('customers.import') }}" method="POST" enctype="multipart/form-data" id="customerImportForm" onsubmit="handleCustomerImportSubmit(this)">
+                @csrf
+                <div class="modal-header border-bottom py-2 px-3 bg-light">
+                    <h6 class="modal-title fw-semibold text-primary mb-0" id="customerImportModalLabel" style="font-size: 15px;">
+                        <i class="fas fa-file-import me-2"></i> Import Customers
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    {{-- Download Sample Template Strip --}}
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-light border rounded">
+                        <div>
+                            <div class="fw-semibold text-dark fs-13"><i class="fas fa-file-excel text-success me-1"></i> Sample Template</div>
+                            <small class="text-muted">Download pre-formatted Excel/CSV template</small>
+                        </div>
+                        <a href="{{ route('customers.import-template') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download me-1"></i> Download Template
+                        </a>
+                    </div>
+
+                    {{-- File Input --}}
+                    <div class="mb-0">
+                        <label for="import_file" class="form-label fw-semibold fs-13 text-dark">
+                            Select File <span class="text-danger">*</span>
+                        </label>
+                        <input type="file" 
+                               name="import_file" 
+                               id="import_file" 
+                               class="form-control form-control-sm" 
+                               accept=".xlsx, .xls, .csv, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+                               required>
+                        <small class="text-muted d-block mt-1">Supported formats: <strong>.xlsx, .xls, .csv</strong> (Max: 10MB)</small>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3 border-top bg-light">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-primary" id="btnSubmitCustomerImport">
+                        <i class="fas fa-upload me-1"></i> <span id="btnSubmitImportText">Upload & Import</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection

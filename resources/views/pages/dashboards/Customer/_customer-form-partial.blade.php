@@ -161,25 +161,38 @@
         </div>
         @if($isView)
         <div class="col text-end">
+            @tenantCan('Customers', 'Modify')
             <a href="{{ route('customers.edit', $customer->ID) }}"
                class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
                 <i class="fas fa-edit"></i> Edit Customer
             </a>
+            @endtenantCan
         </div>
         @endif
     </div>
 </div>
     @elseif($isView)
     <div class="d-flex justify-content-end mb-2">
+        @tenantCan('Customers', 'Modify')
         <button type="button"
                 class="btn btn-light btn-sm fw-bold text-primary shadow-sm"
                 onclick="openCustomerModal('edit', {{ $customer->ID }})">
             <i class="fas fa-edit"></i> Edit Customer
         </button>
+        @endtenantCan
     </div>
     @endif
 @endif
 
+@if(!$isCreate)
+    <div class="d-flex justify-content-end mb-2">
+        @tenantCan('Customers', 'ViewOnly')
+        <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center" onclick="showAuditHistory('CUSTOMER', {{ $customer->ID }})">
+            <i class="ri-history-line me-1"></i> Audit History
+        </button>
+        @endtenantCan
+    </div>
+@endif
 
 {{-- ── Form open tag (skipped in view/readonly mode) ──────────── --}}
 @if(!$isReadonly)
@@ -252,6 +265,28 @@
 					@error('BusinessName')<div class="invalid-feedback">{{ $message }}</div>@enderror
 				@endif
 			</div>
+
+			{{-- Customer Code (AccountNo) --}}
+			<div class="col-md-3">
+				<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">
+					Customer Code
+					@if(!$isReadonly)
+						<small class="text-muted fw-normal">(Optional — auto-generated)</small>
+					@endif
+				</label>
+				@if($isReadonly)
+					<div class="_cfp-detail-value">{{ $customer->AccountNo ?? '-' }}</div>
+				@else
+					<input type="text" name="AccountNo" id="{{ $uid }}_AccountNo"
+						   class="form-control form-control-sm @error('AccountNo') is-invalid @enderror"
+						   value="{{ old('AccountNo', $customer->AccountNo ?? '') }}"
+						   placeholder="e.g. CUST-000001 (leave blank to auto-generate)"
+						   maxlength="50"
+						   style="text-transform: uppercase;">
+					@error('AccountNo')<div class="invalid-feedback">{{ $message }}</div>@enderror
+				@endif
+			</div>
+
 
 			{{-- Display Name --}}
 			<div class="col-md-3">
@@ -944,11 +979,14 @@
         if (err) { err.scrollIntoView({ behavior: 'smooth', block: 'center' }); err.focus(); }
     });
 
-    /* Auto-save draft */
+    /* Auto-save draft handling */
     const form   = document.getElementById(uid + '_form');
-    const prefix = 'cfp_{{ $mode }}_{{ $customer->ID ?? "new" }}_';
+    const tenantId = '{{ session("selected_tenant.id") ?? "default" }}';
+    const userId   = '{{ auth()->id() ?? "0" }}';
+    const prefix = `cfp_t${tenantId}_u${userId}_{{ $mode }}_{{ $customer->ID ?? "new" }}_`;
+    
     if (form) {
-        // ── NEW: Intercept Enter key submission in Modal ──
+        // ── Intercept Enter key submission in Modal ──
         @if($inModal)
         form.addEventListener('submit', function(e) {
             e.preventDefault(); // Stop default browser POST
@@ -958,39 +996,19 @@
         @endif
 
         const inputs = form.querySelectorAll('input:not([type=hidden]):not([type=password]), textarea, select');
-        
-        // ONLY restore from localStorage if NOT in 'create' mode (to ensure empty form on new add)
-        // OR if you really want drafts for create, you must ensure they are cleared on success.
-        // Given the user report, disabling restore for create is the safest fix.
-        @if(!$isCreate)
-        if (!document.querySelector('.is-invalid')) {
-            inputs.forEach(inp => {
-                /* WHT fields must match DB on edit — do not overwrite with stale draft */
-                if (inp.name === 'AdvanceTaxRate' || inp.name === 'IsAdvancedTax') return;
-                const val = localStorage.getItem(prefix + inp.name);
-                if (val === null) return;
-                if (inp.type === 'checkbox' || inp.type === 'radio') {
-                    inp.checked = val === 'true';
-                    inp.dispatchEvent(new Event('change'));
-                } else { inp.value = val; }
-            });
-        }
-        @else
-        // In create mode, proactively CLEAR any stale draft data
-        inputs.forEach(inp => localStorage.removeItem(prefix + inp.name));
-        @endif
 
+        // Clean up any stale draft items for this customer / mode
         inputs.forEach(inp => {
-            const save = function () {
-                localStorage.setItem(prefix + this.name,
-                    (this.type === 'checkbox' || this.type === 'radio') ? this.checked : this.value);
-            };
-            inp.addEventListener('input', save);
-            inp.addEventListener('change', save);
+            localStorage.removeItem(prefix + inp.name);
+            localStorage.removeItem('cfp_{{ $mode }}_{{ $customer->ID ?? "new" }}_' + inp.name);
         });
-        form.addEventListener('submit', () =>
-            inputs.forEach(inp => localStorage.removeItem(prefix + inp.name))
-        );
+
+        // Clear all customer drafts helper
+        window.clearCustomerModalDrafts = function() {
+            Object.keys(localStorage).forEach(k => {
+                if (k.startsWith('cfp_')) localStorage.removeItem(k);
+            });
+        };
     }
 })();
 </script>

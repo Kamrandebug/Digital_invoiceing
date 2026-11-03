@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvoiceModel;
-// Added
-// Added
+use App\Models\PrintTemplateModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,10 +16,13 @@ class InvoiceController extends Controller
 
     public function index(Request $request)
     {
+        $fbrStatus = $request->input('fbr_status', 'not_posted');
+
         $filters = [
             'search' => $request->input('search'),
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),
+            'fbr_status' => $fbrStatus,
         ];
 
         $rules = [];
@@ -41,9 +43,15 @@ class InvoiceController extends Controller
             $request->validate($rules, $messages);
         }
 
-        $invoices = InvoiceModel::getlistingdata($filters)->paginate(15);
+        $tabCounts = InvoiceModel::getFbrStatusCounts([
+            'search' => $request->input('search'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+        ]);
 
-        return view('pages.dashboards.Invoice.invoice-list', compact('invoices'));
+        $invoices = InvoiceModel::getlistingdata($filters)->paginate(50);
+
+        return view('pages.dashboards.Invoice.invoice-list', compact('invoices', 'tabCounts', 'fbrStatus'));
     }
 
     /**
@@ -70,6 +78,76 @@ class InvoiceController extends Controller
             ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
+    /**
+     * Cancel an FBR invoice (Update Statusi to 8).
+     */
+    public function cancelFbr(int $id)
+    {
+        $permissions = session('selected_tenant.permissions', []);
+        $canModify = (auth()->check() && (int)(auth()->user()->UserType ?? 0) === 2)
+            || session('selected_tenant.user_type') === 'admin'
+            || (int)($permissions['Invoices']['Modify'] ?? 0) === 1;
+
+        if (! $canModify) {
+            return redirect()
+                ->route('invoices.index', ['fbr_status' => 'posted'])
+                ->with('error', 'You do not have permission to cancel invoices.');
+        }
+
+        try {
+            $result = InvoiceModel::cancel_fbr_invoice($id);
+        } catch (\Throwable $e) {
+            \Log::error('Invoice cancelFbr uncaught', ['id' => $id, 'error' => $e->getMessage()]);
+
+            return redirect()
+                ->route('invoices.index', ['fbr_status' => 'posted'])
+                ->with('error', 'Failed to cancel invoice: ' . $e->getMessage());
+        }
+
+        return redirect()
+            ->route('invoices.index', ['fbr_status' => 'cancelled'])
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    /**
+     * Bulk POST multiple invoice payloads to FBR.
+     */
+    public function bulkPostFbr(Request $request)
+    {
+        $canPost = (auth()->check() && (int)(auth()->user()->UserType ?? 0) === 2)
+            || session('selected_tenant.user_type') === 'admin'
+            || (int)(session('selected_tenant.permissions.Invoices.Import') ?? 0) === 1;
+
+        if (! $canPost) {
+            return redirect()
+                ->route('invoices.index')
+                ->with('error', 'You do not have permission to post invoices to FBR.');
+        }
+
+        $ids = $request->input('invoice_ids', []);
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+        $ids = array_filter(array_map('intval', (array) $ids));
+
+        if (empty($ids)) {
+            return redirect()
+                ->route('invoices.index')
+                ->with('error', 'No invoices selected to post to FBR.');
+        }
+
+        $result = InvoiceModel::bulk_post_to_fbr($ids);
+
+        $msg = "FBR Bulk Post: {$result['posted_count']} of {$result['total']} invoices posted successfully.";
+        if ($result['failed_count'] > 0) {
+            $msg .= " ({$result['failed_count']} failed/rejected)";
+        }
+
+        return redirect()
+            ->route('invoices.index', ['fbr_status' => $request->input('fbr_status', 'not_posted')])
+            ->with($result['posted_count'] > 0 ? 'success' : 'error', $msg);
+    }
+
     // ══════════════════════════════════════════════════════════
     //  CREATE — Load form with dropdowns
     // ══════════════════════════════════════════════════════════
@@ -87,6 +165,7 @@ class InvoiceController extends Controller
             'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
             'customers' => DB::select($customerSql),
             'products' => DB::select($productSql),
+            'saleOfTerms' => InvoiceModel::Load_SaleOfTerms(),
             'inModal' => false,
         ]);
     }
@@ -98,6 +177,22 @@ class InvoiceController extends Controller
     public function modal(Request $request, $id = null)
     {
         $mode = $request->query('mode', 'create');
+        $permissions = session('selected_tenant.permissions', []);
+
+        if ($mode === 'edit' && (int)($permissions['Invoices']['Modify'] ?? 0) !== 1) {
+            if ($id && (int)($permissions['Invoices']['ViewOnly'] ?? 0) === 1) {
+                $mode = 'show';
+            } else {
+                return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to edit invoices.</div>', 403);
+            }
+        }
+        if ($mode === 'create' && (int)($permissions['Invoices']['Add'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to add invoices.</div>', 403);
+        }
+        if ($mode === 'show' && (int)($permissions['Invoices']['ViewOnly'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to view invoices.</div>', 403);
+        }
+
         $invoice = null;
         $items = collect();
 
@@ -108,6 +203,7 @@ class InvoiceController extends Controller
                 ->select(
                     'h.*',
                     InvoiceModel::sqlCustomerDisplayName(),
+                    DB::raw('COALESCE(NULLIF(TRIM(cust.NTN), ""), NULLIF(TRIM(h.BuyerNTNCNIC), "")) as CustomerNTN'),
                     DB::raw('COALESCE(cust.IsAdvanceTax, 0) as CustomerIsAdvanceTax'),
                     DB::raw('COALESCE(cust.AdvanceTax, 0) as CustomerAdvanceTax'),
                 )
@@ -138,6 +234,7 @@ class InvoiceController extends Controller
             'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
             'customers' => DB::select($customerSql),
             'products' => DB::select($productSql),
+            'saleOfTerms' => InvoiceModel::Load_SaleOfTerms(),
             'inModal' => true,
         ]);
     }
@@ -148,52 +245,159 @@ class InvoiceController extends Controller
 
     public function printView(Request $request, $id)
     {
-        $invoice = DB::table('tbl_sales_invoice_header as h')
-            ->leftJoin('tbl_customer as cust', 'h.CustomerID', '=', 'cust.ID')
-            ->select(
-                'h.*',
-                InvoiceModel::sqlCustomerDisplayName()
-            )
-            ->where('h.ID', $id)
-            ->where('h.Status', '!=', 2)
-            ->first();
+        $requestedTemplateId = $request->filled('template_id') ? (int) $request->query('template_id') : null;
+        $printData = PrintTemplateModel::getInvoicePrintData((int) $id, 4, $requestedTemplateId);
 
-        if (! $invoice) {
+        if (! $printData || empty($printData['invoice'])) {
             abort(404, 'Invoice not found.');
         }
 
-        $detailInvoiceId = $invoice->InvoiceID ?? $invoice->ID;
-        $items = DB::table('tbl_sales_invoice_detail as d')
-            ->leftJoin('tbl_product as p', 'd.ProductID', '=', 'p.ID')
-            ->select('d.*', 'p.Name as ProductName', 'p.IsFixedRate as ProductIsFixedRate')
-            ->where('d.InvoiceID', $detailInvoiceId)
-            ->where('d.Status', '!=', 2)
-            ->get();
-
-        $orientation = $request->query('orientation', 'portrait');
+        $template = $printData['template'];
+        $defaultOrientation = strtolower(trim((string) ($template->PrintOrientation ?? 'portrait')));
+        $orientation = $request->filled('orientation')
+            ? strtolower(trim((string) $request->query('orientation')))
+            : $defaultOrientation;
         if (! in_array($orientation, ['portrait', 'landscape'], true)) {
             $orientation = 'portrait';
         }
 
-        $seller = DB::table('tbl_business_info')
-            ->where('IsArchive', 0)
-            ->orderBy('ID')
-            ->first();
+        return view('pages.dashboards.Invoice.invoice-print', [
+            'invoice'         => $printData['invoice'],
+            'items'           => $printData['items'],
+            'orientation'     => $orientation,
+            'seller'          => $printData['seller'],
+            'buyer'           => $printData['buyer'],
+            'template'        => $template,
+            'allTemplates'    => $printData['allTemplates'],
+            'templateFields'  => $printData['templateFields'],
+            'templateColumns' => $printData['templateColumns'],
+        ]);
+    }
 
-        $buyer = null;
-        if (! empty($invoice->CustomerID)) {
-            $buyer = DB::table('tbl_customer')
-                ->where('ID', $invoice->CustomerID)
-                ->first();
+    /**
+     * Stage print template fields and columns into `tbl_temp_print_template_fields`
+     * and `tbl_temp_print_template_columns` for set-based RequestID validation.
+     */
+    private function stagePrintTemplateTempData(Request $request, int $templateId, string $requestID): void
+    {
+        $fieldsInput  = (array) $request->input('fields', []);
+        $columnsInput = (array) $request->input('columns', []);
+
+        $tempFields = [];
+        foreach ($fieldsInput as $fieldId => $fData) {
+            $tempFields[] = [
+                'RequestID'          => $requestID,
+                'FieldID'            => (int) $fieldId,
+                'TemplateID'         => $templateId,
+                'CustomLabel'        => trim((string) ($fData['label'] ?? '')),
+                'CustomIsOn'         => in_array((int) ($fData['is_on'] ?? 1), [0, 1, 2], true) ? (int) $fData['is_on'] : 1,
+                'CustomDisplayOrder' => max(1, (int) ($fData['order'] ?? 1)),
+                'CustomFontSize'     => max(8, min(28, (int) ($fData['font_size'] ?? 12))),
+                'IsBold'             => ! empty($fData['is_bold']) ? 1 : 0,
+                'ErrorMessage'       => null,
+                'CreatedOn'          => now(),
+            ];
+        }
+        if (! empty($tempFields)) {
+            DB::connection('tenant')->table('tbl_temp_print_template_fields')->insert($tempFields);
         }
 
-        return view('pages.dashboards.Invoice.invoice-print', [
-            'invoice' => $invoice,
-            'items' => $items,
-            'orientation' => $orientation,
-            'seller' => $seller,
-            'buyer' => $buyer,
-        ]);
+        $tempCols = [];
+        foreach ($columnsInput as $colId => $cData) {
+            $minW = max(25, (int) preg_replace('/[^0-9]/', '', (string) ($cData['width_min'] ?? '50')));
+            $maxW = max($minW, (int) preg_replace('/[^0-9]/', '', (string) ($cData['width_max'] ?? '100')));
+            $align = strtolower(trim((string) ($cData['alignment'] ?? 'left')));
+            if (! in_array($align, ['left', 'center', 'right'], true)) {
+                $align = 'left';
+            }
+
+            $tempCols[] = [
+                'RequestID'          => $requestID,
+                'ColumnID'           => (int) $colId,
+                'TemplateID'         => $templateId,
+                'CustomLabel'        => trim((string) ($cData['label'] ?? '')),
+                'CustomIsOn'         => in_array((int) ($cData['is_on'] ?? 1), [0, 1, 2], true) ? (int) $cData['is_on'] : 1,
+                'CustomDisplayOrder' => max(1, (int) ($cData['order'] ?? 1)),
+                'CustomWidthMin'     => $minW . 'px',
+                'CustomWidthMax'     => $maxW . 'px',
+                'CustomAlignment'    => $align,
+                'IsTotal'            => ! empty($cData['is_total']) ? 1 : 0,
+                'ErrorMessage'       => null,
+                'CreatedOn'          => now(),
+            ];
+        }
+        if (! empty($tempCols)) {
+            DB::connection('tenant')->table('tbl_temp_print_template_columns')->insert($tempCols);
+        }
+    }
+
+    /**
+     * Save changes to the selected Print Template (`edit_transaction`).
+     */
+    public function savePrintTemplate(Request $request)
+    {
+        $templateId = (int) $request->input('template_id', 1);
+        $requestID  = 'PRT_' . Str::uuid()->toString();
+        $userId     = (int) (auth()->id() ?? 1);
+
+        $this->stagePrintTemplateTempData($request, $templateId, $requestID);
+        $result = PrintTemplateModel::edit_transaction($requestID, $templateId, $request->all(), $userId);
+
+        return response()->json($result, $result['status'] ? 200 : 422);
+    }
+
+    /**
+     * Save current settings as a brand-new Print Template (`save_as_new_template`).
+     */
+    public function saveAsNewPrintTemplate(Request $request)
+    {
+        $sourceTemplateId = (int) $request->input('template_id', 1);
+        $requestID        = 'PRT_NEW_' . Str::uuid()->toString();
+        $userId           = (int) (auth()->id() ?? 1);
+
+        $this->stagePrintTemplateTempData($request, $sourceTemplateId, $requestID);
+        $result = PrintTemplateModel::save_as_new_template($requestID, $sourceTemplateId, $request->all(), $userId);
+
+        return response()->json($result, $result['status'] ? 200 : 422);
+    }
+
+    /**
+     * Reset the selected Print Template back to Master `core_digital_invoicing` defaults.
+     */
+    public function resetPrintTemplate(Request $request, $templateId)
+    {
+        try {
+            $userId = (int) (auth()->id() ?? 1);
+            $result = PrintTemplateModel::reset_transaction((int) $templateId, $userId);
+
+            return response()->json($result, ($result['status'] ?? false) ? 200 : 422);
+        } catch (\Throwable $e) {
+            \Log::error('resetPrintTemplate error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Reset failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a user-created custom Print Template (`IsSystemDefault = 0`).
+     */
+    public function deletePrintTemplate(Request $request, $templateId)
+    {
+        try {
+            $result = PrintTemplateModel::delete_template((int) $templateId);
+
+            return response()->json($result, ($result['status'] ?? false) ? 200 : 422);
+        } catch (\Throwable $e) {
+            \Log::error('deletePrintTemplate error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Delete failed: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -235,6 +439,7 @@ class InvoiceController extends Controller
             'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
             'customers' => DB::select($customerSql),
             'products' => DB::select($productSql),
+            'saleOfTerms' => InvoiceModel::Load_SaleOfTerms(),
             'inModal' => false,
         ]);
     }
@@ -278,6 +483,7 @@ class InvoiceController extends Controller
             'invoiceTypes' => InvoiceModel::Load_InvoiceTypes(),
             'customers' => DB::select($customerSql),
             'products' => DB::select($productSql),
+            'saleOfTerms' => InvoiceModel::Load_SaleOfTerms(),
             'inModal' => false,
         ]);
     }
@@ -292,9 +498,11 @@ class InvoiceController extends Controller
         $request->validate([
             'CustomerID' => 'required|integer',
             'InvoiceDate' => 'required|date',
+            'SaleOfTerm' => 'nullable|string|max:50',
             'items' => 'required|array|min:1',
             'items.*.Quantity' => 'required|numeric|min:0',
             'items.*.Rate' => 'required|numeric|min:0',
+            'items.*.TPRate' => 'nullable|numeric|min:0',
         ], [
             'CustomerID.required' => 'Please select a customer.',
             'InvoiceDate.required' => 'Invoice date is required.',
@@ -316,10 +524,21 @@ class InvoiceController extends Controller
             $docNo2 = $request->input('DocNo2');
             $docNo3 = $request->input('DocNo3');
             foreach ($request->items as $item) {
+                $qty = (float) str_replace(',', '', (string) ($item['Quantity'] ?? 0));
+                $rate = (float) str_replace(',', '', (string) ($item['Rate'] ?? 0));
+                $tpRate = (float) str_replace(',', '', (string) ($item['TPRate'] ?? 0));
+                $amount = isset($item['Amount']) ? (float) str_replace(',', '', (string) $item['Amount']) : round($qty * $rate, 2);
+                $discPct = isset($item['DiscountPercentage']) ? (string) $item['DiscountPercentage'] : '0';
+                $discAmt = isset($item['DiscountAmount']) ? (float) str_replace(',', '', (string) $item['DiscountAmount']) : round($amount * ((float)$discPct) / 100, 2);
+                $gstPct = isset($item['GstPercentage']) ? (string) $item['GstPercentage'] : '0';
+                $gstAmt = isset($item['GSTAmount']) ? (float) str_replace(',', '', (string) $item['GSTAmount']) : 0;
+                $total = isset($item['Total']) ? (float) str_replace(',', '', (string) $item['Total']) : ($amount - $discAmt + $gstAmt);
+
                 DB::table('tbl_temp_invoice_detail')->insert([
                     'InvoiceID' => $nextId,
                     'TID' => $nextId,
                     'CustomerID' => (int) $request->CustomerID,
+                    'SaleOfTerm' => $request->SaleOfTerm,
                     'InvoiceDate' => $request->InvoiceDate,
                     'DueDate' => $request->InvoiceDate,
                     'TermDays' => 0,
@@ -336,20 +555,23 @@ class InvoiceController extends Controller
                     'SaleTypeToRateID' => $item['SaleTypeToRateID'] ?? null,
                     'SroScheduleID' => $item['SroScheduleID'] ?? null,
                     'SroItemID' => $item['SroItemID'] ?? null,
-                    'TPRate' => $item['TPRate'] ?? 0,
-                    'Quantity' => $item['Quantity'],
-                    'Rate' => $item['Rate'],
-                    'Amount' => $item['Amount'] ?? 0,
-                    'DiscountPercentage' => $item['DiscountPercentage'] ?? '0',
-                    'DiscountAmount' => $item['DiscountAmount'] ?? 0,
-                    'GstPercentage' => $item['GstPercentage'] ?? '0',
-                    'GSTAmount' => $item['GSTAmount'] ?? 0,
+                    'TPRate' => $tpRate,
+                    'Quantity' => $qty,
+                    'Rate' => $rate,
+                    'Amount' => $amount,
+                    'FBRQty' => $item['FBRQty'] ?? null,
+                    'Unit' => $item['Unit'] ?? null,
+                    'Discount' => $discAmt,
+                    'DiscountAmount' => $discAmt,
+                    'DiscountPercentage' => $discPct,
+                    'GstPercentage' => $gstPct,
+                    'GSTAmount' => $gstAmt,
                     'SalesTaxWithheldAtSource' => $item['SalesTaxWithheldAtSource'] ?? ($request->SalesTaxWithheldAtSource ?? 0),
                     'ExtraTax' => $item['ExtraTax'] ?? ($request->ExtraTax ?? 0),
                     'FurtherTax' => $item['FurtherTax'] ?? ($request->FurtherTax ?? 0),
                     'FedPayable' => $item['FedPayable'] ?? ($request->FedPayable ?? 0),
-                    'TotalValues' => $item['Total'] ?? 0,
-                    // 'SubTotal'           => $request->SubTotal         ?? 0,
+                    'TotalValues' => $total,
+                    'Total' => $total,
                     'Notes' => $request->Notes ?? null,
                     'DiscountAllowed' => $request->DiscountAllowed ?? '0',
                     'Type' => 'SI',
@@ -417,10 +639,12 @@ class InvoiceController extends Controller
         $request->validate([
             'CustomerID' => 'required|integer',
             'InvoiceDate' => 'required|date',
+            'SaleOfTerm' => 'nullable|string|max:50',
             'Status' => 'required|in:1,2',
             'items' => 'required|array|min:1',
             'items.*.Quantity' => 'required|numeric|min:0',
             'items.*.Rate' => 'required|numeric|min:0',
+            'items.*.TPRate' => 'nullable|numeric|min:0',
         ]);
 
         try {
@@ -433,10 +657,21 @@ class InvoiceController extends Controller
             $docNo2 = $request->input('DocNo2');
             $docNo3 = $request->input('DocNo3');
             foreach ($request->items as $item) {
+                $qty = (float) str_replace(',', '', (string) ($item['Quantity'] ?? 0));
+                $rate = (float) str_replace(',', '', (string) ($item['Rate'] ?? 0));
+                $tpRate = (float) str_replace(',', '', (string) ($item['TPRate'] ?? 0));
+                $amount = isset($item['Amount']) ? (float) str_replace(',', '', (string) $item['Amount']) : round($qty * $rate, 2);
+                $discPct = isset($item['DiscountPercentage']) ? (string) $item['DiscountPercentage'] : '0';
+                $discAmt = isset($item['DiscountAmount']) ? (float) str_replace(',', '', (string) $item['DiscountAmount']) : round($amount * ((float)$discPct) / 100, 2);
+                $gstPct = isset($item['GstPercentage']) ? (string) $item['GstPercentage'] : '0';
+                $gstAmt = isset($item['GSTAmount']) ? (float) str_replace(',', '', (string) $item['GSTAmount']) : 0;
+                $total = isset($item['Total']) ? (float) str_replace(',', '', (string) $item['Total']) : ($amount - $discAmt + $gstAmt);
+
                 DB::table('tbl_temp_invoice_detail')->insert([
                     'InvoiceID' => $id,
                     'TID' => $id, // CRITICAL for Model Join
                     'CustomerID' => (int) $request->CustomerID,
+                    'SaleOfTerm' => $request->SaleOfTerm,
                     'InvoiceDate' => $request->InvoiceDate,
                     'DueDate' => $request->InvoiceDate,
                     'TermDays' => 0,
@@ -453,20 +688,23 @@ class InvoiceController extends Controller
                     'SaleTypeToRateID' => $item['SaleTypeToRateID'] ?? null,
                     'SroScheduleID' => $item['SroScheduleID'] ?? null,
                     'SroItemID' => $item['SroItemID'] ?? null,
-                    'TPRate' => $item['TPRate'] ?? 0,
-                    'Quantity' => $item['Quantity'],
-                    'Rate' => $item['Rate'],
-                    'Amount' => $item['Amount'] ?? 0,
-                    'DiscountPercentage' => $item['DiscountPercentage'] ?? '0',
-                    'DiscountAmount' => $item['DiscountAmount'] ?? 0,
-                    'GstPercentage' => $item['GstPercentage'] ?? '0',
-                    'GSTAmount' => $item['GSTAmount'] ?? 0,
+                    'TPRate' => $tpRate,
+                    'Quantity' => $qty,
+                    'Rate' => $rate,
+                    'Amount' => $amount,
+                    'FBRQty' => $item['FBRQty'] ?? null,
+                    'Unit' => $item['Unit'] ?? null,
+                    'Discount' => $discAmt,
+                    'DiscountAmount' => $discAmt,
+                    'DiscountPercentage' => $discPct,
+                    'GstPercentage' => $gstPct,
+                    'GSTAmount' => $gstAmt,
                     'SalesTaxWithheldAtSource' => $item['SalesTaxWithheldAtSource'] ?? ($request->SalesTaxWithheldAtSource ?? 0),
                     'ExtraTax' => $item['ExtraTax'] ?? ($request->ExtraTax ?? 0),
                     'FurtherTax' => $item['FurtherTax'] ?? ($request->FurtherTax ?? 0),
                     'FedPayable' => $item['FedPayable'] ?? ($request->FedPayable ?? 0),
-                    'TotalValues' => $item['Total'] ?? 0,
-                    // 'SubTotal'           => $request->SubTotal         ?? 0,
+                    'TotalValues' => $total,
+                    'Total' => $total,
                     'Notes' => $request->Notes ?? null,
                     'DiscountAllowed' => $request->DiscountAllowed ?? '0',
                     'Type' => 'SI',
@@ -542,12 +780,17 @@ class InvoiceController extends Controller
                 'RequestID' => $requestId,
             ]);
 
-            InvoiceModel::delete_transaction($requestId);
+            $result = InvoiceModel::delete_transaction($requestId);
 
-            return redirect()->route('invoices.index')->with('success', 'Invoice archived successfully.');
+            // FBR guard blocked the delete — show reason to user
+            if (! ($result['status'] ?? true)) {
+                return redirect()->back()->with('error', $result['message']);
+            }
+
+            return redirect()->route('invoices.index')->with('success', 'Invoice deleted successfully.');
 
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error archiving invoice: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Error deleting invoice: '.$e->getMessage());
         }
     }
 
@@ -571,6 +814,7 @@ class InvoiceController extends Controller
             'search' => $request->input('search'),
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),
+            'fbr_status' => $request->input('fbr_status', 'not_posted'),
         ])->get();
 
         $callback = function () use ($invoices) {

@@ -48,7 +48,7 @@ class ProductController extends Controller
         }
 
         // Get filtered data
-        $products = ProductModel::getlistingdata($filters);
+        $products = ProductModel::getlistingdata($filters)->paginate(100);
 
         // Listing: UOM / SaleType / Rate columns use description fields from tbl_product only (no ID fallback).
         foreach ($products as $product) {
@@ -72,6 +72,7 @@ class ProductController extends Controller
             'units'              => $this->lookupUnits(),
             'defaultCategoryId'  => $this->defaultCategoryId(),
             'defaultUnitId'      => $this->defaultUnitId(),
+            'isCustomUnit'       => $this->isCustomUnitEnabled(),
         ]);
     }
 
@@ -85,12 +86,15 @@ class ProductController extends Controller
         $nextId = $maxId ? $maxId + 1 : 1;
         $autoProductCode = 'PROD-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
 
+        $isCustomUnit = $this->isCustomUnitEnabled();
+        $unitVal = $isCustomUnit ? ($request->input('Unit') === '' || $request->input('Unit') === null ? 1 : (int) $request->input('Unit')) : 1;
+
         // Format inputs (normalize empty Category/Unit for modal)
         $request->merge([
             'Name'     => trim($request->Name ?? ''),
             'Code'     => $autoProductCode,
             'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
-            'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
+            'Unit'     => $unitVal,
             'IsFixedValue' => $request->boolean('IsFixedValue') ? 1 : 0,
         ]);
 
@@ -176,7 +180,7 @@ class ProductController extends Controller
                 'CategoryID'      => $request->Category ?? null,
                 'CategoryName'    => null,
                 'CurrentQuantity' => $request->CurrentQuantity ?? 0,
-                'Unit'            => $request->Unit ?? 0,
+                'Unit'            => $unitVal,
                 'UnitName'        => null,
                 'SalePrice'       => $request->SalePrice ?? 0,
                 'Cost'            => $request->Cost ?? 0,
@@ -287,6 +291,22 @@ class ProductController extends Controller
     public function modal(Request $request, $id = null)
     {
         $mode    = $request->query('mode', 'create');
+        $permissions = session('selected_tenant.permissions', []);
+
+        if ($mode === 'edit' && (int)($permissions['Products']['Modify'] ?? 0) !== 1) {
+            if ($id && (int)($permissions['Products']['ViewOnly'] ?? 0) === 1) {
+                $mode = 'show';
+            } else {
+                return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to edit products.</div>', 403);
+            }
+        }
+        if ($mode === 'create' && (int)($permissions['Products']['Add'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to add products.</div>', 403);
+        }
+        if ($mode === 'show' && (int)($permissions['Products']['ViewOnly'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to view products.</div>', 403);
+        }
+
         $product = null;
 
         $taxDisplayLabels = null;
@@ -314,16 +334,21 @@ class ProductController extends Controller
             }
         }
 
-        return view('pages.dashboards.Product._product-form-partial', [
-            'mode'               => $mode,
-            'product'            => $product ?? new ProductModel(),
-            'inModal'            => true,
-            'taxDisplayLabels'   => $taxDisplayLabels,
-            'categories'         => $this->lookupCategories(),
-            'units'              => $this->lookupUnits(),
-            'defaultCategoryId'  => $this->defaultCategoryId(),
-            'defaultUnitId'      => $this->defaultUnitId(),
-        ]);
+        return response()
+            ->view('pages.dashboards.Product._product-form-partial', [
+                'mode'               => $mode,
+                'product'            => $product ?? new ProductModel(),
+                'inModal'            => true,
+                'taxDisplayLabels'   => $taxDisplayLabels,
+                'categories'         => $this->lookupCategories(),
+                'units'              => $this->lookupUnits(),
+                'defaultCategoryId'  => $this->defaultCategoryId(),
+                'defaultUnitId'      => $this->defaultUnitId(),
+                'isCustomUnit'       => $this->isCustomUnitEnabled(),
+            ])
+            ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /**
@@ -352,6 +377,7 @@ class ProductController extends Controller
             'units'              => $this->lookupUnits(),
             'defaultCategoryId'  => $this->defaultCategoryId(),
             'defaultUnitId'      => $this->defaultUnitId(),
+            'isCustomUnit'       => $this->isCustomUnitEnabled(),
         ]);
     }
 
@@ -372,6 +398,8 @@ class ProductController extends Controller
         $productModel->setRawAttributes((array)$product, true);
         $productModel->exists = true;
 
+        $this->hydrateCategoryUnitDisplayNames($productModel);
+
         return view('pages.dashboards.Product.products-form', [
             'mode'               => 'edit',
             'product'            => $productModel,
@@ -379,6 +407,7 @@ class ProductController extends Controller
             'units'              => $this->lookupUnits(),
             'defaultCategoryId'  => $this->defaultCategoryId(),
             'defaultUnitId'      => $this->defaultUnitId(),
+            'isCustomUnit'       => $this->isCustomUnitEnabled(),
         ]);
     }
 
@@ -403,11 +432,20 @@ class ProductController extends Controller
             $codeInput = strtoupper(trim((string) ($product->Code ?? '')));
         }
 
+        $isCustomUnit = $this->isCustomUnitEnabled();
+        if ($isCustomUnit) {
+            $unitVal = ($request->input('Unit') === '' || $request->input('Unit') === null) ? 1 : (int) $request->input('Unit');
+        } else {
+            // When custom units are disabled, preserve existing product's unit if already set, otherwise default to 1.
+            $existingUnit = (int) ($product->Unit ?? 0);
+            $unitVal = ($existingUnit > 0) ? $existingUnit : 1;
+        }
+
         $request->merge([
             'Name'     => trim($request->Name ?? ''),
             'Code'     => $codeInput,
             'Category' => $request->input('Category') === '' || $request->input('Category') === null ? null : $request->input('Category'),
-            'Unit'     => $request->input('Unit') === '' ? 0 : $request->input('Unit'),
+            'Unit'     => $unitVal,
             'IsFixedValue' => $request->boolean('IsFixedValue') ? 1 : 0,
         ]);
 
@@ -491,7 +529,7 @@ class ProductController extends Controller
                 'CategoryID'      => $request->Category ?? null,
                 'CategoryName'    => null,
                 'CurrentQuantity' => $product->CurrentQuantity ?? 0,
-                'Unit'            => $request->Unit ?? 0,
+                'Unit'            => $unitVal,
                 'UnitName'        => null,
                 'SalePrice'       => $request->SalePrice ?? 0,
                 'Cost'            => $product->Cost ?? 0,
@@ -1486,7 +1524,7 @@ class ProductController extends Controller
             'end_date'   => $request->input('end_date'),
         ];
 
-        $products = ProductModel::getlistingdata($filters);
+        $products = ProductModel::getlistingdata($filters)->get();
 
         $callback = function() use ($products) {
             $file = fopen('php://output', 'w');
@@ -1740,9 +1778,13 @@ class ProductController extends Controller
 
     private function defaultUnitId(): ?int
     {
+        if (! $this->isCustomUnitEnabled()) {
+            return 1;
+        }
+
         $table = $this->unitLookupTable();
         if ($table === null || ! $this->tableHasColumn($table, 'IsDefault')) {
-            return null;
+            return 1;
         }
 
         try {
@@ -1754,10 +1796,26 @@ class ProductController extends Controller
                 ->orderBy('id')
                 ->first(['id']);
 
-            return ($row && isset($row->id)) ? (int) $row->id : null;
+            return ($row && isset($row->id)) ? (int) $row->id : 1;
         } catch (\Throwable $e) {
-            return null;
+            return 1;
         }
+    }
+
+    private function isCustomUnitEnabled(): bool
+    {
+        try {
+            if (Schema::hasTable('tbl_cnf_setting')) {
+                $row = DB::table('tbl_cnf_setting')->where('ID', 1)->first();
+                if ($row && isset($row->IsCustomUnit)) {
+                    return (int) $row->IsCustomUnit === 1;
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Error checking tbl_cnf_setting: ' . $e->getMessage());
+        }
+
+        return false;
     }
 
     private function tableHasColumn(string $table, string $column): bool
@@ -1887,6 +1945,362 @@ class ProductController extends Controller
 
         if (Schema::hasColumn('tbl_product', 'StockStatus')) {
             app(StockService::class)->refreshStockStatus($productId);
+        }
+    }
+
+    /**
+     * Download Excel import sample template for Products.
+     */
+    public function downloadImportTemplate()
+    {
+        // Fetch Distinct Lookup Lists from Master/FBR Database
+        $uomList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_uom')
+            ->distinct()
+            ->whereNotNull('description')
+            ->whereRaw("TRIM(description) <> ''")
+            ->orderBy('description')
+            ->pluck('description')
+            ->toArray();
+
+        $transList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_trans_type_code')
+            ->distinct()
+            ->whereNotNull('transactioN_DESC')
+            ->whereRaw("TRIM(transactioN_DESC) <> ''")
+            ->orderBy('transactioN_DESC')
+            ->pluck('transactioN_DESC')
+            ->toArray();
+
+        $ratesList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_sale_type_to_rate')
+            ->distinct()
+            ->whereNotNull('ratE_DESC')
+            ->whereRaw("TRIM(ratE_DESC) <> ''")
+            ->orderBy('ratE_DESC')
+            ->pluck('ratE_DESC')
+            ->toArray();
+
+        $sroList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_sro_schedule')
+            ->distinct()
+            ->whereNotNull('srO_DESC')
+            ->whereRaw("TRIM(srO_DESC) <> ''")
+            ->orderBy('srO_DESC')
+            ->pluck('srO_DESC')
+            ->toArray();
+
+        $sroItemList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_sro_item')
+            ->distinct()
+            ->whereNotNull('srO_ITEM_DESC')
+            ->whereRaw("TRIM(srO_ITEM_DESC) <> ''")
+            ->orderBy('srO_ITEM_DESC')
+            ->pluck('srO_ITEM_DESC')
+            ->toArray();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Products Import');
+
+        // Create Hidden Lookup Sheet
+        $lookupSheet = $spreadsheet->createSheet();
+        $lookupSheet->setTitle('Lookup_Data');
+        $lookupSheet->setSheetState(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet::SHEETSTATE_VERYHIDDEN);
+
+        $lookupSheet->setCellValue('A1', 'UOM');
+        foreach ($uomList as $i => $v) { $lookupSheet->setCellValue('A' . ($i + 2), $v); }
+        if (!empty($uomList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_UOM_PRD', $lookupSheet, '$A$2:$A$' . (count($uomList) + 1)));
+        }
+
+        $lookupSheet->setCellValue('B1', 'SaleType');
+        foreach ($transList as $i => $v) { $lookupSheet->setCellValue('B' . ($i + 2), $v); }
+        if (!empty($transList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_SALETYPE_PRD', $lookupSheet, '$B$2:$B$' . (count($transList) + 1)));
+        }
+
+        $lookupSheet->setCellValue('C1', 'Rate');
+        foreach ($ratesList as $i => $v) { $lookupSheet->setCellValue('C' . ($i + 2), $v); }
+        if (!empty($ratesList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_RATES_PRD', $lookupSheet, '$C$2:$C$' . (count($ratesList) + 1)));
+        }
+
+        $lookupSheet->setCellValue('D1', 'SroSchedule');
+        foreach ($sroList as $i => $v) { $lookupSheet->setCellValue('D' . ($i + 2), $v); }
+        if (!empty($sroList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_SRO_PRD', $lookupSheet, '$D$2:$D$' . (count($sroList) + 1)));
+        }
+
+        $lookupSheet->setCellValue('E1', 'SroItem');
+        foreach ($sroItemList as $i => $v) { $lookupSheet->setCellValue('E' . ($i + 2), $v); }
+        if (!empty($sroItemList)) {
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_SROITEM_PRD', $lookupSheet, '$E$2:$E$' . (count($sroItemList) + 1)));
+        }
+
+        // Headers
+        $headers = [
+            'Product Code *',
+            'Product Name *',
+            'Product Type',
+            'Sale Price *',
+            'Fixed Notified Value',
+            'HS Code',
+            'UOM',
+            'Sale Type',
+            'Sale Type Rate',
+            'SRO Schedule',
+            'SRO Item Serial No',
+            'Product Description'
+        ];
+
+        $sheet->fromArray([$headers], NULL, 'A1');
+
+        // Base header styling (Dark Teal background)
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '136056']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']]]
+        ];
+        $sheet->getStyle('A1:L1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(28);
+
+        // Highlight Required Fields
+        $requiredStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => '713F12'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF08A']],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM, 'color' => ['rgb' => 'EAB308']]]
+        ];
+        $sheet->getStyle('A1')->applyFromArray($requiredStyle); // Product Code *
+        $sheet->getStyle('B1')->applyFromArray($requiredStyle); // Product Name *
+        $sheet->getStyle('D1')->applyFromArray($requiredStyle); // Sale Price *
+
+        // Format text/code columns and numeric columns for rows 2 to 500
+        $sheet->getStyle('A2:C500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('F2:L500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('D2:D500')->getNumberFormat()->setFormatCode('0.00'); // SalePrice
+        $sheet->getStyle('E2:E500')->getNumberFormat()->setFormatCode('0.0000'); // TPRate (Fixed Notified Value)
+
+        // Sample Data Rows
+        $sampleData = [
+            [
+                'PRD-000001', 'Paracetamol 500mg Tablets', 'Product', 150.00, 0.00, 
+                '3004.9099', 'Numbers, pieces, units', 'Goods at standard rate (default)', '18%', 
+                '', '', 'Pain relief paracetamol tablets 500mg blister pack'
+            ],
+            [
+                'PRD-000002', 'Consultation & Technical Services', 'Services', 2500.00, 0.00, 
+                '9815.9000', 'Numbers, pieces, units', 'Services at Standard Rate', '16%', 
+                '', '', 'Professional consultation service hourly rate'
+            ],
+            [
+                'PRD-000003', 'Industrial Raw Sugar (Bag 50kg)', 'Product', 6500.00, 120.00, 
+                '1701.9910', 'KG', 'Goods at Reduced Rate', '1%', 
+                'EIGHTH SCHEDULE Table 1', '70', 'Refined industrial white sugar 50kg bag'
+            ]
+        ];
+
+        foreach ($sampleData as $rowIndex => $rowValues) {
+            $r = $rowIndex + 2;
+            foreach ($rowValues as $colIndex => $val) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+                if (in_array($colLetter, ['D', 'E']) && is_numeric($val) && $val !== '') {
+                    $sheet->setCellValue("{$colLetter}{$r}", (float)$val);
+                } else {
+                    $sheet->setCellValueExplicit("{$colLetter}{$r}", (string)$val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                }
+            }
+        }
+
+        // Data Validation Dropdowns (Rows 2 to 500)
+        for ($row = 2; $row <= 500; $row++) {
+            // Col C: Product Type
+            $valType = $sheet->getCell("C{$row}")->getDataValidation();
+            $valType->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+            $valType->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+            $valType->setAllowBlank(true);
+            $valType->setShowDropDown(true);
+            $valType->setFormula1('"Product,Services"');
+
+            // Col G: UOM
+            if (!empty($uomList)) {
+                $valUom = $sheet->getCell("G{$row}")->getDataValidation();
+                $valUom->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valUom->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valUom->setAllowBlank(true);
+                $valUom->setShowDropDown(true);
+                $valUom->setFormula1('LST_UOM_PRD');
+            }
+
+            // Col H: Sale Type
+            if (!empty($transList)) {
+                $valSaleType = $sheet->getCell("H{$row}")->getDataValidation();
+                $valSaleType->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valSaleType->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valSaleType->setAllowBlank(true);
+                $valSaleType->setShowDropDown(true);
+                $valSaleType->setFormula1('LST_SALETYPE_PRD');
+            }
+
+            // Col I: Sale Type Rate
+            if (!empty($ratesList)) {
+                $valRate = $sheet->getCell("I{$row}")->getDataValidation();
+                $valRate->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valRate->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valRate->setAllowBlank(true);
+                $valRate->setShowDropDown(true);
+                $valRate->setFormula1('LST_RATES_PRD');
+            }
+
+            // Col J: SRO Schedule
+            if (!empty($sroList)) {
+                $valSro = $sheet->getCell("J{$row}")->getDataValidation();
+                $valSro->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valSro->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valSro->setAllowBlank(true);
+                $valSro->setShowDropDown(true);
+                $valSro->setFormula1('LST_SRO_PRD');
+            }
+
+            // Col K: SRO Item Serial No
+            if (!empty($sroItemList)) {
+                $valSroItem = $sheet->getCell("K{$row}")->getDataValidation();
+                $valSroItem->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valSroItem->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valSroItem->setAllowBlank(true);
+                $valSroItem->setShowDropDown(true);
+                $valSroItem->setFormula1('LST_SROITEM_PRD');
+            }
+        }
+
+        // Auto size columns
+        foreach (range('A', 'L') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'Product_Import_Template.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /**
+     * Import products from Excel or CSV
+     */
+    public function importProducts(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:xlsx,xls,csv,txt|max:10240',
+        ], [
+            'import_file.required' => 'Please select an Excel or CSV file to import.',
+            'import_file.mimes'    => 'Import file must be an Excel workbook (.xlsx, .xls) or CSV file (.csv).',
+            'import_file.max'      => 'Import file must not exceed 10 MB.',
+        ]);
+
+        try {
+            $requestId = (string) Str::uuid();
+            $userId = auth()->id() ?? 1;
+            $now = now()->toDateTimeString();
+
+            $import = new \App\Imports\ProductImport();
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('import_file'));
+            $rows = $import->mappedRows();
+
+            if (empty($rows)) {
+                $msg = 'No data rows found in the import file.';
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => 'error', 'message' => $msg], 422);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+
+            // Fetch current maximum ID in temp_product and tbl_product to assign sequential IDs
+            $maxId = (int) (DB::table('temp_product')->max('ID') ?? 0);
+            $maxProdId = (int) (DB::table('tbl_product')->max('ID') ?? 0);
+            $currentId = max($maxId, $maxProdId);
+
+            $insertRows = [];
+            foreach ($rows as $index => $row) {
+                $currentId++;
+                $code = trim((string)($row['Code'] ?? ''));
+                if ($code === '') {
+                    $code = 'PRD-' . str_pad((string)$currentId, 6, '0', STR_PAD_LEFT);
+                }
+
+                $tpRate = (float)($row['TPRate'] ?? 0);
+                $isFixedRate = ($tpRate > 0) ? 1 : 0;
+
+                $insertRows[] = [
+                    'ID'                 => $currentId,
+                    'TID'                => $currentId,
+                    'ExcelRow'           => $row['RowNo'] ?? ($index + 2),
+                    'VoucherID'          => 0,
+                    'Name'               => $row['Name'] ?? null,
+                    'Code'               => $code,
+                    'Type'               => $row['Type'] ?? 'Product',
+                    'CategoryID'         => 1,
+                    'CurrentQuantity'    => 0.0,
+                    'Unit'               => 1,
+                    'SalePrice'          => (float)($row['SalePrice'] ?? 0),
+                    'Cost'               => (float)($row['Cost'] ?? 0),
+                    'TPRate'             => $tpRate,
+                    'IsFixedRate'        => $isFixedRate,
+                    'Weight'             => (float)($row['Weight'] ?? 0),
+                    'Image'              => null,
+                    'HsCode'             => $row['HsCode'] ?? null,
+                    'UOM'                => $row['UOM'] ?? null,
+                    'Uom_Desc'           => $row['Uom_Desc'] ?? null,
+                    'SaleType'           => $row['SaleType'] ?? null,
+                    'SaleTypeDesc'       => $row['SaleTypeDesc'] ?? null,
+                    'SaleTypeToRate'     => $row['SaleTypeToRate'] ?? null,
+                    'SaleTypeToRateDesc' => $row['SaleTypeToRateDesc'] ?? null,
+                    'SroSchedule'        => $row['SroSchedule'] ?? null,
+                    'SroScheduleDesc'    => $row['SroScheduleDesc'] ?? null,
+                    'SroItem'            => $row['SroItem'] ?? null,
+                    'SroItemSerialNo'    => $row['SroItemSerialNo'] ?? null,
+                    'SaleInformation'    => $row['SaleInformation'] ?? ($row['Name'] ?? $code),
+                    'Status'             => 1,
+                    'CreatedBy'          => (int)$userId,
+                    'CreatedOn'          => $now,
+                    'UpdatedBy'          => (int)$userId,
+                    'UpdatedOn'          => $now,
+                    'ErrMsg'             => null,
+                    'Flag'               => 0,
+                    'RequestID'          => $requestId,
+                ];
+            }
+
+            foreach (array_chunk($insertRows, 200) as $chunk) {
+                DB::table('temp_product')->insert($chunk);
+            }
+
+            $saveResult = ProductModel::save_transaction(['RequestID' => $requestId]);
+            if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+                $errorMsg = $saveResult['message'] ?? 'Unable to import products.';
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => 'error', 
+                        'message' => $errorMsg, 
+                        'errors' => $saveResult['errors'] ?? [$errorMsg]
+                    ], 422);
+                }
+                return redirect()->back()->with('error', $errorMsg);
+            }
+
+            $successMsg = count($insertRows).' Product(s) imported successfully!';
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'success', 'message' => $successMsg]);
+            }
+
+            return redirect()->route('products.index')->with('success', $successMsg);
+        } catch (\Throwable $e) {
+            \Log::error('Product import failed', ['error' => $e->getMessage()]);
+            $err = 'Import failed: '.$e->getMessage();
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'error', 'message' => $err], 500);
+            }
+            return redirect()->back()->with('error', $err);
         }
     }
 }

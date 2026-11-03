@@ -51,6 +51,22 @@ class PurchaseController extends Controller
     public function modal(Request $request, $id = null)
     {
         $mode = $request->query('mode', 'create');
+        $permissions = session('selected_tenant.permissions', []);
+
+        if ($mode === 'edit' && (int)($permissions['Purchases']['Modify'] ?? 0) !== 1) {
+            if ($id && (int)($permissions['Purchases']['ViewOnly'] ?? 0) === 1) {
+                $mode = 'show';
+            } else {
+                return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to edit purchases.</div>', 403);
+            }
+        }
+        if ($mode === 'create' && (int)($permissions['Purchases']['Add'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to add purchases.</div>', 403);
+        }
+        if ($mode === 'show' && (int)($permissions['Purchases']['ViewOnly'] ?? 0) !== 1) {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to view purchases.</div>', 403);
+        }
+
         $data = $this->formData($mode, $id);
 
         if ($id && in_array($mode, ['edit', 'show']) && ! $data['purchase']) {

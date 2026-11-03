@@ -132,7 +132,7 @@ class CustomerController extends Controller
             $request->validate($rules, $messages);
         }
 
-        $customers = Customer::getlistingdata($filters)->paginate(15);
+        $customers = Customer::getlistingdata($filters)->paginate(100);
         $listKey = $this->listVariableName();
 
         return view($this->listView(), [$listKey => $customers]);
@@ -201,6 +201,7 @@ try {
         'FirstName'         => ['nullable', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
         'LastName'          => ['nullable', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
         'BusinessName'      => ['nullable', 'string', 'max:200', 'regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
+        'AccountNo'         => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]+$/i'],
         'DisplayName'       => 'nullable|string|max:200',
         'Email'             => ['nullable', 'email', 'max:500', Rule::unique('tbl_customer', 'Email')],
         'Mobile'            => ['nullable', 'string', 'regex:/^(\+92|0)?[0-9]{10}$/', Rule::unique('tbl_customer', 'Mobile')],
@@ -301,7 +302,10 @@ try {
                 'TID'               => $nextId,
                 'IsArchive'         => 0,
                 'VoucherID'         => 0,
-                'AccountNo'         => $this->accountNoPrefix().'-'.str_pad((string) $nextId, 6, '0', STR_PAD_LEFT),
+                // Use typed code if provided, otherwise auto-generate (CUST-000001 format)
+                'AccountNo'         => (trim($request->input('AccountNo', '')) !== '')
+                                        ? strtoupper(trim($request->AccountNo))
+                                        : $this->accountNoPrefix().'-'.str_pad((string) $nextId, 6, '0', STR_PAD_LEFT),
                 'PartyType'         => $this->partyTypeForCreate(),
                 'Title'             => $request->Title,
                 'FirstName'         => $request->FirstName,
@@ -447,7 +451,24 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
  */
 public function modal(Request $request, $id = null)
 {
-    $mode     = $request->query('mode', 'create');
+    $mode        = $request->query('mode', 'create');
+    $module      = $this->routePrefix() === 'suppliers' ? 'Suppliers' : 'Customers';
+    $permissions = session('selected_tenant.permissions', []);
+
+    if ($mode === 'edit' && (int)($permissions[$module]['Modify'] ?? 0) !== 1) {
+        if ($id && (int)($permissions[$module]['ViewOnly'] ?? 0) === 1) {
+            $mode = 'show';
+        } else {
+            return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to edit '.$this->entitySingular().'.</div>', 403);
+        }
+    }
+    if ($mode === 'create' && (int)($permissions[$module]['Add'] ?? 0) !== 1) {
+        return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to add '.$this->entitySingular().'.</div>', 403);
+    }
+    if ($mode === 'show' && (int)($permissions[$module]['ViewOnly'] ?? 0) !== 1) {
+        return response('<div class="alert alert-danger m-3">Access Denied: You do not have permission to view '.$this->entitySingular().'.</div>', 403);
+    }
+
     $customer = null;
 
     if ($id && in_array($mode, ['edit', 'show'])) {
@@ -463,12 +484,16 @@ public function modal(Request $request, $id = null)
         $customer = $customerModel;
     }
 
-    return view($this->partialView(), [
-        'mode'     => $mode,
-        'customer' => $customer ?? new Customer(),
-        'inModal'  => true,
-        'provinces'=> $this->provinceOptions(),
-    ]);
+    return response()
+        ->view($this->partialView(), [
+            'mode'     => $mode,
+            'customer' => $customer ?? new Customer(),
+            'inModal'  => true,
+            'provinces'=> $this->provinceOptions(),
+        ])
+        ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
 }
 
     /**
@@ -622,6 +647,7 @@ try {
         'FirstName'         => ['nullable', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
         'LastName'          => ['nullable', 'string', 'min:2', 'max:100', 'regex:/^[a-zA-Z\s\'-]+$/'],
         'BusinessName'      => ['nullable', 'string', 'max:200', 'regex:/^[a-zA-Z0-9\s&.,\'()-]+$/'],
+        'AccountNo'         => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]+$/i'],
         'DisplayName'       => 'nullable|string|max:200',
         'Email'             => ['nullable', 'email', 'max:500', Rule::unique('tbl_customer', 'Email')->ignore($id, 'ID')],
         'Mobile'            => ['nullable', 'string', 'regex:/^(\+92|0)?[0-9]{10}$/', Rule::unique('tbl_customer', 'Mobile')->ignore($id, 'ID')],
@@ -728,7 +754,10 @@ try {
                 'TID'               => $id,
                 'IsArchive'         => 0,
                 'VoucherID'         => $customer->VoucherID ?? 0,
-                'AccountNo'         => $customer->AccountNo ?? '0',
+                // Use typed code if changed; if cleared keep original (avoids breaking existing invoice refs)
+                'AccountNo'         => (trim($request->input('AccountNo', '')) !== '')
+                                        ? strtoupper(trim($request->AccountNo))
+                                        : ($customer->AccountNo ?? '0'),
                 'PartyType'         => $customer->PartyType ?? $this->partyTypeForCreate(),
                 'Title'             => $request->Title,
                 'FirstName'         => $request->FirstName,
@@ -812,7 +841,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
     }
     
     /**
-     * Archive customer
+     * Delete customer — moves row to tbl_customer_history, then hard-deletes from tbl_customer.
      */
     public function delete_transaction($id)
     {
@@ -822,40 +851,46 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
             if (! $customer) {
                 return redirect()->back()->with('error', $this->entitySingular().' not found.');
             }
-            
-            $requestId = (string) Str::uuid();
-            $userId = auth()->id() ?? 1;
-            $now = now()->toDateTimeString();
 
-            // Insert a row into temp_customer so model's delete_transaction can read it (no row with ID=$id exists in temp)
+            $requestId = (string) Str::uuid();
+            $userId    = auth()->id() ?? 1;
+            $now       = now()->toDateTimeString();
+
+            // Insert a minimal temp row so the model can resolve TID via RequestID
             $nextTempId = DB::table('temp_customer')->max('ID');
             $nextTempId = $nextTempId ? (int)$nextTempId + 1 : 1;
+
             DB::table('temp_customer')->insert([
-                'ID' => $nextTempId,
-                'TID' => $id,
+                'ID'        => $nextTempId,
+                'TID'       => $id,
                 'RequestID' => $requestId,
                 'AccountNo' => $customer->AccountNo ?? '0',
                 'PartyType' => $customer->PartyType ?? $this->partyTypeForCreate(),
-                'Title' => $customer->Title ?? 'Mr',
-                'FirstName' => $customer->FirstName ?? '',
-                'Status' => 2,
+                'Title'     => $customer->Title     ?? 'Mr',
+                'FirstName' => $customer->FirstName  ?? '',
+                'Status'    => $customer->Status     ?? 1,
                 'CreatedBy' => (int)($customer->CreatedBy ?? $userId),
-                'CreatedOn' => $customer->CreatedOn ?? $now,
+                'CreatedOn' => $customer->CreatedOn  ?? $now,
                 'UpdatedBy' => (int)$userId,
                 'UpdatedOn' => $now,
             ]);
 
-            // Execute model transaction (runs query inside model)
-            Customer::delete_transaction(['RequestID' => $requestId]);
-            
+            // Run delete pipeline: validate → move to history → hard delete → audit log
+            $result = Customer::delete_transaction(['RequestID' => $requestId]);
+
+            // FK validation blocked the delete — show reason to user
+            if (! ($result['status'] ?? true)) {
+                return redirect()->back()->with('error', $result['message']);
+            }
+
             return redirect()
                 ->to($this->partyRoute('index'))
-                ->with('success', $this->entitySingular().' archived successfully!');
-                
+                ->with('success', $this->entitySingular().' deleted successfully!');
+
         } catch (\Exception $e) {
             return redirect()
                 ->back()
-                ->with('error', 'Error deleting customer: ' . $e->getMessage());
+                ->with('error', 'Error deleting '.$this->entitySingular().': ' . $e->getMessage());
         }
     }
 
@@ -922,5 +957,293 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Download customer import template
+     */
+    public function downloadImportTemplate()
+    {
+        // 1. Load FBR Provinces from core_digital_invoicing.fbr_province
+        $provinceList = [];
+        try {
+            $provinceList = \Illuminate\Support\Facades\DB::connection('landlord')->table('core_digital_invoicing.fbr_province')
+                ->distinct()
+                ->whereNotNull('stateProvinceDesc')
+                ->whereRaw("TRIM(stateProvinceDesc) <> ''")
+                ->orderBy('stateProvinceDesc')
+                ->pluck('stateProvinceDesc')
+                ->toArray();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to load FBR provinces for template: ' . $e->getMessage());
+        }
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle($this->entitySingular().'s');
+
+        // Create Hidden Lookup Sheet for Provinces
+        if (!empty($provinceList)) {
+            $lookupSheet = $spreadsheet->createSheet();
+            $lookupSheet->setTitle('Lookup_Data');
+            $lookupSheet->setSheetState(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet::SHEETSTATE_VERYHIDDEN);
+
+            $lookupSheet->setCellValue('A1', 'Province');
+            foreach ($provinceList as $i => $v) {
+                $lookupSheet->setCellValue('A' . ($i + 2), $v);
+            }
+            $spreadsheet->addNamedRange(new \PhpOffice\PhpSpreadsheet\NamedRange('LST_PROVINCES', $lookupSheet, '$A$2:$A$' . (count($provinceList) + 1)));
+        }
+
+        // Headers (without SameAsBilling/Billing columns, FilerStatus, FilerStatusDate, IsAdvanceTax; AdvanceTax renamed to CustomerAdvWHT)
+        $headers = [
+            $this->entitySingular().' Code *', 'Title', 'FirstName', 'LastName', 'BusinessName *', 'DisplayName', 
+            'Email', 'Mobile', 'Phone', 'Website', 'Address', 'City', 'Province *', 'PostalCode', 'Country', 
+            'NTN', 'SalesTaxNumber', 'CNIC', 'CustomerAdvWHT', 
+            'RegisterType', 'Notes', 'Status',
+            'SalesTaxWithheldAtSource', 'ExtraTax %', 'FurtherTax %', 'FedTax %'
+        ];
+
+        $sheet->fromArray([$headers], NULL, 'A1');
+
+        // Base header styling (Dark Teal background)
+        $sheet->getStyle('A1:Z1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '136056']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']]]
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(28);
+
+        // Required columns yellow highlighting: A1 (Code *), E1 (BusinessName *), M1 (Province *)
+        $requiredStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => '713F12'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF08A']], // Distinct yellow
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM, 'color' => ['rgb' => 'EAB308']]]
+        ];
+        $sheet->getStyle('A1')->applyFromArray($requiredStyle); // Code *
+        $sheet->getStyle('E1')->applyFromArray($requiredStyle); // BusinessName *
+        $sheet->getStyle('M1')->applyFromArray($requiredStyle); // Province *
+
+        // Sample Data Rows
+        $prefix = $this->accountNoPrefix();
+        $sampleData = [
+            [
+                $prefix.'-000001', 'Mr', 'Salman', 'Khalid', 'MK SUPER MARKET', 'MK SUPER MARKET', 
+                'salman@example.com', '03001234567', '04231234567', 'https://example.com', 'Main Boulevard, Gulberg', 'Lahore', 'PUNJAB', '54000', 'Pakistan', 
+                '7020599', '44444', '35202-1234567-1', 0.00, 
+                'Registered', 'Sample Active Filer', 'Active',
+                0.00, 0.00, 0.00, 0.00
+            ],
+            [
+                $prefix.'-000002', 'Engr', 'Khurram', 'Jafar', 'Jaffery Soft', 'Jaffery Soft', 
+                'khurram@example.com', '03211234567', '', '', 'Blue Area', 'Islamabad', 'CAPITAL TERRITORY', '44000', 'Pakistan', 
+                '', '', '', 0.00, 
+                'Un-Registered', 'Sample Non-Filer', 'InActive',
+                0.00, 0.00, 0.00, 0.00
+            ],
+            [
+                $prefix.'-000003', 'Mr', 'Bilal', 'Tariq', 'Bilal Enterprises', 'Bilal Enterprises', 
+                'bilal@example.com', '03331234567', '', '', 'Korangi Industrial Area', 'Karachi', 'SINDH', '74900', 'Pakistan', 
+                '8988888', '999999', '42101-1234567-1', 1.50, 
+                'Registered', 'Sample with Advance Tax', 'Active',
+                50.00, 2.00, 1.00, 1.00
+            ]
+        ];
+
+        // Format text/code columns and numeric columns for rows 2 to 500
+        $sheet->getStyle('A2:R500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('T2:V500')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('S2:S500')->getNumberFormat()->setFormatCode('0.00'); // CustomerAdvWHT
+        $sheet->getStyle('W2:Z500')->getNumberFormat()->setFormatCode('0.00'); // SalesTaxWithheld, ExtraTax, FurtherTax, FedTax
+
+        foreach ($sampleData as $rowIndex => $rowValues) {
+            $r = $rowIndex + 2;
+            foreach ($rowValues as $colIndex => $val) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+                if (in_array($colLetter, ['S', 'W', 'X', 'Y', 'Z']) && is_numeric($val) && $val !== '') {
+                    $sheet->setCellValue("{$colLetter}{$r}", (float)$val);
+                } else {
+                    $sheet->setCellValueExplicit("{$colLetter}{$r}", (string)$val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                }
+            }
+        }
+
+        // Data Validation Dropdowns (Rows 2 to 500)
+        for ($row = 2; $row <= 500; $row++) {
+            // Col M: Province *
+            if (!empty($provinceList)) {
+                $valProv = $sheet->getCell("M{$row}")->getDataValidation();
+                $valProv->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $valProv->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $valProv->setAllowBlank(true);
+                $valProv->setShowDropDown(true);
+                $valProv->setFormula1('LST_PROVINCES');
+            }
+
+            // Col T: RegisterType (Registered, Un-Registered)
+            $valRegType = $sheet->getCell("T{$row}")->getDataValidation();
+            $valRegType->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+            $valRegType->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+            $valRegType->setAllowBlank(true);
+            $valRegType->setShowDropDown(true);
+            $valRegType->setFormula1('"Registered,Un-Registered"');
+
+            // Col V: Status (Active, InActive)
+            $valStatus = $sheet->getCell("V{$row}")->getDataValidation();
+            $valStatus->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+            $valStatus->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+            $valStatus->setAllowBlank(true);
+            $valStatus->setShowDropDown(true);
+            $valStatus->setFormula1('"Active,InActive"');
+        }
+
+        // Auto size columns
+        foreach (range('A', 'Z') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = $this->entitySingular().'_Import_Template.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /**
+     * Import customers from Excel or CSV
+     */
+    public function importCustomers(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:xlsx,xls,csv,txt|max:10240',
+        ], [
+            'import_file.required' => 'Please select an Excel or CSV file to import.',
+            'import_file.mimes' => 'Import file must be an Excel workbook (.xlsx, .xls) or CSV file (.csv).',
+            'import_file.max' => 'Import file must not exceed 10 MB.',
+        ]);
+
+        try {
+            $requestId = (string) Str::uuid();
+            $userId = auth()->id() ?? 1;
+            $now = now()->toDateTimeString();
+
+            $import = new \App\Imports\CustomerImport($this->partyTypeForCreate());
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('import_file'));
+            $rows = $import->mappedRows();
+
+            if (empty($rows)) {
+                $msg = 'No data rows found in the import file.';
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => 'error', 'message' => $msg], 422);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+
+            // Fetch current maximum ID in temp_customer and tbl_customer to assign sequential IDs
+            $maxId = (int) (DB::table('temp_customer')->max('ID') ?? 0);
+            $maxCustId = (int) (DB::table('tbl_customer')->max('ID') ?? 0);
+            $currentId = max($maxId, $maxCustId);
+
+            $insertRows = [];
+            foreach ($rows as $index => $row) {
+                $currentId++;
+                $accountNo = trim((string)($row['AccountNo'] ?? ''));
+                if ($accountNo === '') {
+                    $accountNo = $this->accountNoPrefix().'-'.str_pad((string)$currentId, 6, '0', STR_PAD_LEFT);
+                }
+
+                $regType = strtolower(trim((string)($row['RegisterType'] ?? '')));
+                $isFiler = in_array($regType, ['registered', '1', 'yes', 'true', 'filer']) ? 1 : 0;
+
+                $insertRows[] = [
+                    'ID'                       => $currentId,
+                    'TID'                      => $currentId,
+                    'ExcelRow'                 => $row['RowNo'] ?? ($index + 2),
+                    'IsArchive'                => 0,
+                    'VoucherID'                => 0,
+                    'AccountNo'                => $accountNo,
+                    'PartyType'                => $row['PartyType'] ?? $this->partyTypeForCreate(),
+                    'Title'                    => $row['Title'] ?? null,
+                    'FirstName'                => $row['FirstName'] ?? null,
+                    'LastName'                 => $row['LastName'] ?? null,
+                    'BusinessName'             => $row['BusinessName'] ?? null,
+                    'DisplayName'              => $row['DisplayName'] ?? $row['BusinessName'],
+                    'Email'                    => $row['Email'] ?? null,
+                    'Mobile'                   => $row['Mobile'] ?? null,
+                    'Phone'                    => $row['Phone'] ?? '',
+                    'Website'                  => $row['Website'] ?? '',
+                    'Address'                  => $row['Address'] ?? null,
+                    'PartyBalance'             => 0.00,
+                    'City'                     => $row['City'] ?? null,
+                    'County'                   => $row['County'] ?? null,
+                    'PostalCode'               => $row['PostalCode'] ?? null,
+                    'Country'                  => $row['Country'] ?? 'Pakistan',
+                    'SameAsBilling'            => $row['SameAsBilling'] ?? 1,
+                    'BillingAddress'           => $row['BillingAddress'] ?? null,
+                    'BillingCity'              => $row['BillingCity'] ?? null,
+                    'BillingCounty'            => $row['BillingCounty'] ?? null,
+                    'BillingCountry'           => $row['BillingCountry'] ?? 'Pakistan',
+                    'BillingPostalCode'        => $row['BillingPostalCode'] ?? null,
+                    'FullBillingAddress'       => $row['FullBillingAddress'] ?? null,
+                    'NTN'                      => $row['NTN'] ?? null,
+                    'SalesTaxNumber'           => $row['SalesTaxNumber'] ?? '',
+                    'CNIC'                     => $row['CNIC'] ?? null,
+                    'IsFiler'                  => $isFiler,
+                    'RegisterType'             => $row['RegisterType'] ?? null,
+                    'FilerStatus'              => $row['FilerStatus'] ?? null,
+                    'FilerStatusDate'          => $row['FilerStatusDate'] ?? null,
+                    'IsAdvanceTax'             => $row['IsAdvanceTax'] ?? 0,
+                    'AdvanceTax'               => $row['AdvanceTax'] ?? 0.00,
+                    'Notes'                    => $row['Notes'] ?? null,
+                    'SalesTaxWithheldAtSource' => $row['SalesTaxWithheldAtSource'] ?? null,
+                    'ExtraTax'                 => (float)($row['ExtraTax'] ?? 0),
+                    'FurtherTax'               => (float)($row['FurtherTax'] ?? 0),
+                    'FedPayable'               => (float)($row['FedPayable'] ?? 0),
+                    'Status'                   => 1,
+                    'CreatedBy'                => (int)$userId,
+                    'CreatedOn'                => $now,
+                    'UpdatedBy'                => (int)$userId,
+                    'UpdatedOn'                => $now,
+                    'IsDashboard'              => 0,
+                    'RequestID'                => $requestId,
+                ];
+            }
+
+            foreach (array_chunk($insertRows, 200) as $chunk) {
+                DB::table('temp_customer')->insert($chunk);
+            }
+
+            $saveResult = Customer::save_transaction(['RequestID' => $requestId]);
+            if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+                $errorMsg = $saveResult['message'] ?? 'Unable to import '.$this->entitySingular().'.';
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => 'error', 
+                        'message' => $errorMsg, 
+                        'errors' => $saveResult['errors'] ?? [$errorMsg]
+                    ], 422);
+                }
+                return redirect()->back()->with('error', $errorMsg);
+            }
+
+            $successMsg = count($insertRows).' '.$this->entitySingular().'(s) imported successfully!';
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'success', 'message' => $successMsg]);
+            }
+
+            return redirect()->route($this->routePrefix().'.index')->with('success', $successMsg);
+        } catch (\Throwable $e) {
+            \Log::error('Customer import failed', ['error' => $e->getMessage()]);
+            $err = 'Import failed: '.$e->getMessage();
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'error', 'message' => $err], 500);
+            }
+            return redirect()->back()->with('error', $err);
+        }
     }
 }

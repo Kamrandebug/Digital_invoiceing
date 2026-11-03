@@ -585,6 +585,6 @@
 
     </p>
 
+    <div id="breakupPreviewMetadata" data-job-id="{{ $jobId }}" class="d-none"></div>
+
 </div>
-
-

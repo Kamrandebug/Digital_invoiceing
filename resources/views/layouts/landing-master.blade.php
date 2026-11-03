@@ -17,6 +17,65 @@
 <link rel="stylesheet" href="{{ asset('build/assets/web-assets/css/odometer.css') }}">
 <link rel="stylesheet" href="{{ asset('build/assets/web-assets/css/slick.min.css') }}">
 <link rel="stylesheet" href="{{ asset('build/assets/web-assets/css/style.css') }}">
+<style>
+  @media (max-width: 991px) {
+    .cs_hero_thumbnail .cs_volume_report,
+    .cs_hero_thumbnail .cs_sells_report,
+    .cs_hero_thumbnail .cs_hero_shape_vector {
+      display: none !important;
+    }
+    .cs_hero_thumbnail {
+      margin-top: 25px;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+    .cs_hero_thumbnail img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+    }
+    .cs_hero_title {
+      font-size: 30px !important;
+      line-height: 1.3 !important;
+    }
+    .cs_hero_subtitle {
+      font-size: 15px !important;
+      line-height: 1.6 !important;
+      margin-bottom: 25px !important;
+    }
+    .cs_hero.cs_style_1 {
+      padding-top: 85px !important;
+      padding-bottom: 45px !important;
+    }
+    .cs_site_header.cs_style_1 .cs_nav .cs_nav_list.cs_active {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 15px !important;
+      padding: 50px 24px !important;
+      background: #ffffff !important;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+    }
+    .cs_site_header.cs_style_1 .cs_nav .cs_nav_list li {
+      width: 100% !important;
+      max-width: 280px !important;
+      text-align: center !important;
+    }
+    .cs_site_header.cs_style_1 .cs_nav .cs_nav_list li a {
+      display: block !important;
+      width: 100% !important;
+      padding: 12px 20px !important;
+      border-radius: 30px !important;
+      text-align: center !important;
+    }
+    .cs_site_header.cs_style_1 .cs_nav .cs_nav_list .btn-login,
+    .cs_site_header.cs_style_1 .cs_nav .cs_nav_list .btn-register {
+      display: block !important;
+      width: 100% !important;
+    }
+  }
+</style>
 </head>
 <body>
 <!-- Start Preloader -->
@@ -29,18 +88,12 @@
   <div class="cs_main_header cs_fs_18 cs_heading_color">
     <div class="container">
       <div class="cs_main_header_in">
-        <div class="cs_main_header_left"> <a class="cs_site_branding" href="index.html" aria-label="Home page link"> <img src="{{ asset('build/assets/web-assets/img/se_logo.png') }}" alt="Logo"> </a> </div>
+        <div class="cs_main_header_left"> <a class="cs_site_branding" href="{{ url('/') }}" aria-label="Home page link"> <img src="{{ asset('build/assets/web-assets/img/se_logo.png') }}" alt="Logo"> </a> </div>
         <div class="cs_main_header_center">
           <div class="cs_nav">
             <ul class="cs_nav_list">
-<!--
-              <li><a href="#" aria-label="Menu link">Home</a></li>
-              <li><a href="about.html" aria-label="Menu link">About</a></li>
-              <li><a href="services.html" aria-label="Menu link">Services</a></li>
-              <li><a href="contact.html" aria-label="Menu link">Contact</a></li>
--->
-              <li class="btn-gap login-btn"><a href="{{ route('login') }}" aria-label="Menu link"><span class="btn-login">Login</span></a></li>
-              <li class="reg-btn"><a href="{{ route('register') }}" aria-label="Menu link"><span class="btn-register">Register</span></a></li>
+              <li class="btn-gap login-btn"><a href="{{ route('login') }}" aria-label="Login link"><span class="btn-login">Login</span></a></li>
+              <li class="reg-btn"><a href="{{ route('register') }}" aria-label="Register link"><span class="btn-register">Register</span></a></li>
             </ul>
           </div>
         </div>
@@ -54,19 +107,19 @@
   <div class="container">
     <div class="cs_hero_content position-relative">
       <div class="row align-items-center cs_gap_y_40">
-        <div class="col-lg-5 order-lg-2">
+        <div class="col-lg-7">
+          <div class="cs_hero_text position-relative z-2">
+            <h1 class="cs_hero_title wow fadeInDown">Streamline Your Business Invoicing with godigital.pk <span class="position-relative"> Platform <img src="{{ asset('build/assets/web-assets/img/vector.svg') }}" alt="Vector line" class="cs_line_1 position-absolute"> <img src="{{ asset('build/assets/web-assets/img/vector-2.svg') }}" alt="Vector line" class="cs_line_2 position-absolute"> </span> </h1>
+            <p class="cs_hero_subtitle">Improve your invoicing workflows and simplify your billing processes with our powerful and intuitive invoicing solution</p>
+            <div class="cs_btn_group position-relative"> <a href="{{ route('login') }}" aria-label="Login button" class="cs_btn cs_style_1 cs_purple_bg cs_white_color cs_video_open wow fadeInLeft"><span>Login to Portal</span></a> <a href="{{ route('register') }}" aria-label="Register free button" class="cs_btn cs_style_1 cs_outline cs_semibold cs_heading_color wow fadeInRight"> <span class="cs_player_text">Get Started Free</span> </a> </div>
+          </div>
+        </div>
+        <div class="col-lg-5">
           <div class="cs_hero_thumbnail cs_radius_15 position-relative wow fadeInRight">
             <div class="slider_img01"><img src="{{ asset('build/assets/web-assets/img/main_img2.jpg') }}" alt="Hero Image"></div>
             <div class="cs_hero_shape_vector position-absolute"> <img src="{{ asset('build/assets/web-assets/img/quarter-circle.svg') }}" alt="Vector Shape"> </div>
             <div class="cs_volume_report cs_white_bg cs_radius_15 position-absolute"> <img src="{{ asset('build/assets/web-assets/img/volume.jpg') }}" alt="Volume report chart"> </div>
             <div class="cs_sells_report cs_white cs_radius_20 position-absolute"> <img src="{{ asset('build/assets/web-assets/img/sells-report.jpg') }}" alt="Sells report chart"> </div>
-          </div>
-        </div>
-        <div class="col-lg-7 order-lg-1">
-          <div class="cs_hero_text position-relative z-2">
-            <h1 class="cs_hero_title wow fadeInDown">Streamline Your Business Invoicing with godigital.pk <span class="position-relative"> Platform <img src="{{ asset('build/assets/web-assets/img/vector.svg') }}" alt="Vector line" class="cs_line_1 position-absolute"> <img src="{{ asset('build/assets/web-assets/img/vector-2.svg') }}" alt="Vector line" class="cs_line_2 position-absolute"> </span> </h1>
-            <p class="cs_hero_subtitle">Improve your invoicing workflows and simplify your billing processes with our powerful and intuitive invoicing solution</p>
-            <div class="cs_btn_group position-relative"> <a href="{{ route('register') }}" aria-label="Video open button" class="cs_btn cs_style_1 cs_purple_bg cs_white_color cs_video_open wow fadeInLeft"><span>Get a Demo</span></a> <a href="{{ route('register') }}" aria-label="Register free button" class="cs_btn cs_style_1 cs_outline cs_semibold cs_heading_color wow fadeInRight"> <span class="cs_player_text">Get Started Free</span> </a> </div>
           </div>
         </div>
       </div>

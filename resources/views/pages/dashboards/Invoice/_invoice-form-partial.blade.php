@@ -18,6 +18,14 @@
     $uid = 'ifp_' . $mode . '_' . ($invoiceId ?: 'new');
     $selClass = $inModal ? 'form-select' : 'form-select form-select-sm';
     $ifpEmptyColspan = $inModal ? ($isReadonly ? 14 : 15) : ($isReadonly ? 17 : 18);
+
+    $hasFbrQty = false;
+    foreach ($items as $item) {
+        if (($item->Unit ?? 0) > 1 || ($item->FBRQty ?? 0) > 0) {
+            $hasFbrQty = true;
+            break;
+        }
+    }
 @endphp
 
 {{-- ── Info Badge (edit / show) — full page only; hidden in AJAX View/Edit modal --}}
@@ -39,6 +47,25 @@
 <form action="{{ $formAction }}" method="POST" id="{{ $uid }}_form" novalidate>
     @csrf
 @endif
+
+{{-- Status Banner for Cancelled Invoices --}}
+@if($invoice && (int)($invoice->Statusi ?? 0) === 8)
+<div class="alert alert-warning border border-warning-subtle shadow-sm py-2 px-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color: #fffbeb; border-color: #fde68a !important; color: #92400e; border-radius: 6px;">
+    <div class="d-flex align-items-center gap-2">
+        <i class="fas fa-ban fs-16 text-warning"></i>
+        <div>
+            <strong class="fs-13">Invoice Status: FBR Cancelled</strong>
+            <span class="fs-12 text-muted ms-1">— This invoice has been marked as cancelled and is not valid for fiscal transactions.</span>
+        </div>
+    </div>
+    @if(!empty(trim((string)($invoice->FbrTransactionID ?? ''))))
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 fs-11">
+        FBR TxID: {{ $invoice->FbrTransactionID }}
+    </span>
+    @endif
+</div>
+@endif
+
 @if($inModal)
 <div class="ifp-modal-shell">
     <div class="_pfp-tab-panel-shell border rounded overflow-hidden mb-3">
@@ -83,7 +110,12 @@
     <div class="col-md-3">
         <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
         @if($isReadonly)
-            <div class="form-control form-control-sm bg-light">{{ $invoice->CustomerDisplayName ?? '-' }}</div>
+            @php
+                $cName = trim($invoice->CustomerDisplayName ?? '');
+                $cNtn = trim((string)($invoice->CustomerNTN ?? ($invoice->BuyerNTNCNIC ?? '')));
+                $cDisplay = $cName . ($cNtn !== '' ? ' - ' . $cNtn : '');
+            @endphp
+            <div class="form-control form-control-sm bg-light">{{ $cDisplay ?: '-' }}</div>
         @else
             <div class="d-flex gap-1 align-items-center ifp-customer-select-wrap">
             <select name="CustomerID"
@@ -102,7 +134,7 @@
                             data-is-advance-tax="{{ (int) ($cust->IsAdvanceTax ?? 0) === 1 ? 1 : 0 }}"
                             data-advance-tax-rate="{{ (float) ($cust->AdvanceTax ?? 0) }}"
                             {{ old('CustomerID', $invoice->CustomerID ?? '') == $cust->ID ? 'selected' : '' }}>
-                        {{ trim($cust->BusinessName ?? '') ?: trim($cust->DisplayName ?? '') ?: trim(trim(($cust->FirstName ?? '') . ' ' . ($cust->LastName ?? ''))) ?: ('Customer #' . $cust->ID) }}
+                        {{ trim($cust->DisplayName ?? '') ?: trim($cust->BusinessName ?? '') ?: ('Customer #' . $cust->ID) }}
                     </option>
                 @endforeach
             </select>
@@ -126,21 +158,32 @@
         @endif
     </div>
     <div class="col-md-3">
-        @if($isEdit)
-        <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
-        <select name="Status" class="{{ $selClass }} @error('Status') is-invalid @enderror" required>
-            <option value="1" {{ old('Status', $invoice->Status ?? 1) == 1 ? 'selected' : '' }}>Active</option>
-            <option value="2" {{ old('Status', $invoice->Status ?? 1) == 2 ? 'selected' : '' }}>Archive</option>
-        </select>
-        @error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        @elseif($isCreate)
-        <input type="hidden" name="Status" value="1">
+        <label class="form-label fw-semibold">Sale of Term</label>
+        @if($isReadonly)
+            @php
+                $selectedTerm = collect($saleOfTerms ?? [])->first(function($term) use ($invoice) {
+                    return (string)$term->RetrunValue === (string)($invoice->SaleOfTerm ?? '');
+                });
+            @endphp
+            <div class="form-control form-control-sm bg-light">{{ $selectedTerm ? $selectedTerm->TermName : ($invoice->SaleOfTerm ?? '-') }}</div>
+        @else
+            <select name="SaleOfTerm"
+                    id="{{ $uid }}_SaleOfTerm"
+                    class="{{ $selClass }} @error('SaleOfTerm') is-invalid @enderror">
+                <option value="">— Select Term —</option>
+                @foreach($saleOfTerms ?? [] as $term)
+                    <option value="{{ $term->RetrunValue }}" {{ old('SaleOfTerm', $invoice->SaleOfTerm ?? '') === $term->RetrunValue ? 'selected' : '' }}>
+                        {{ $term->TermName }}
+                    </option>
+                @endforeach
+            </select>
+            @error('SaleOfTerm')<div class="invalid-feedback">{{ $message }}</div>@enderror
         @endif
     </div>
 </div>
 
 <div class="row g-2 mt-1">
-    {{-- Row 2: 4 columns — Doc No, Doc No2, Doc No3, (empty) --}}
+    {{-- Row 2: 4 columns — Doc No, Doc No2, Doc No3, Status --}}
     <div class="col-md-3">
         <label class="form-label fw-semibold">Doc No.</label>
         @if($isReadonly)
@@ -181,7 +224,16 @@
         @endif
     </div>
     <div class="col-md-3">
-        {{-- Fourth column (empty) for 4-column layout --}}
+        @if($isEdit)
+        <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+        <select name="Status" class="{{ $selClass }} @error('Status') is-invalid @enderror" required>
+            <option value="1" {{ old('Status', $invoice->Status ?? 1) == 1 ? 'selected' : '' }}>Active</option>
+            <option value="2" {{ old('Status', $invoice->Status ?? 1) == 2 ? 'selected' : '' }}>Archive</option>
+        </select>
+        @error('Status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        @elseif($isCreate)
+        <input type="hidden" name="Status" value="1">
+        @endif
     </div>
 </div>
 
@@ -243,6 +295,16 @@
         .table-inv td.ifp-col-qty { min-width: 64px; width: 4%; }
         .table-inv th.ifp-col-sale-rate,
         .table-inv td.ifp-col-sale-rate { min-width: 88px; width: 5%; }
+        .table-inv th.ifp-col-fbr-qty,
+        .table-inv td.ifp-col-fbr-qty {
+            min-width: 88px;
+            width: 5%;
+            display: none !important;
+        }
+        .table-inv.show-fbr-qty th.ifp-col-fbr-qty,
+        .table-inv.show-fbr-qty td.ifp-col-fbr-qty {
+            display: table-cell !important;
+        }
         .table-inv th.ifp-col-amount,
         .table-inv td.ifp-col-amount { min-width: 108px; width: 6%; }
         .table-inv th.ifp-col-fixed,
@@ -514,7 +576,7 @@
     </style>
     <div class="col-xl-12">
         <div class="ifp-inv-line-items-scroll">
-        <table class="table table-inv listing-table invoices-table mt-3 {{ $isReadonly ? '' : 'text-nowrap' }}">
+        <table class="table table-inv listing-table invoices-table mt-3 {{ $isReadonly ? '' : 'text-nowrap' }} {{ $hasFbrQty ? 'show-fbr-qty' : '' }}">
             <thead>
                 <tr>
                     <th class="ifp-col-product">Product / Services</th>
@@ -535,6 +597,7 @@
                     @endif
                     <th class="ifp-col-qty">Qty</th>
                     <th class="ifp-col-sale-rate">Unit Rate</th>
+                    <th class="ifp-col-fbr-qty">HSCode Qty</th>
                     <th class="ifp-col-amount">Amount</th>
                     @if($inModal)
                     <th class="ifp-col-fixed text-nowrap">Fixed notified value</th>
@@ -573,7 +636,8 @@
                                             data-hscode="{{ $prod->HsCode ?? '' }}"
                                             data-sale-information="{{ $prod->SaleInformation ?? '' }}"
                                             data-uom-id="{{ $prod->UomID ?? '' }}"
-                                            data-uom-label="{{ trim((string) ($prod->UomName ?? '')) }}"
+                                            data-uom-label="{{ trim((string) ($prod->UnitName ?? '')) }}"
+                                            data-unit="{{ $prod->Unit ?? 0 }}"
                                             data-sale-type-id="{{ $prod->SaleTypeID ?? '' }}"
                                             data-sale-type-to-rate-id="{{ $prod->SaleTypeToRateID ?? '' }}"
                                             data-sro-schedule-id="{{ $prod->SroScheduleID ?? '' }}"
@@ -594,7 +658,7 @@
                             <span class="small ifp-readonly-desc">{{ $item->Details ?? $item->ProductDescription ?? '-' }}</span>
                         @else
                             <input type="hidden" name="items[{{ $idx }}][HsCode]" class="ifp-hscode" value="{{ $item->HsCode ?? '' }}">
-                            <textarea name="items[{{ $idx }}][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description">{{ $item->Details ?? '' }}</textarea>
+                            <textarea name="items[{{ $idx }}][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description">{{ $item->Details ?? $item->ProductDescription ?? '' }}</textarea>
                         @endif
                     </td>
                     <td class="ifp-col-uom">
@@ -616,9 +680,17 @@
                     ])
                     <td class="ifp-col-qty">
                         @if($isReadonly)
-                            <span class="small">{{ $item->Quantity ?? 0 }}</span>
+                            @php
+                                $qtyNum = (float)($item->Quantity ?? 0);
+                                $qtyDec = ($qtyNum - floor($qtyNum) > 0.000001) ? 2 : 0;
+                            @endphp
+                            <span class="small">{{ number_format($qtyNum, $qtyDec, '.', ',') }}</span>
                         @else
-                            <input type="number" name="items[{{ $idx }}][Quantity]" class="form-control form-control-sm ifp-qty" value="{{ $item->Quantity ?? 1 }}" min="0" step="0.000001">
+                            @php
+                                $qtyNum = (float)($item->Quantity ?? 1);
+                                $qtyDec = ($qtyNum - floor($qtyNum) > 0.000001) ? 2 : 0;
+                            @endphp
+                            <input type="text" inputmode="decimal" name="items[{{ $idx }}][Quantity]" class="form-control form-control-sm ifp-qty ifp-numfmt" value="{{ number_format($qtyNum, $qtyDec, '.', ',') }}">
                         @endif
                     </td>
                     <td class="ifp-col-sale-rate">
@@ -626,6 +698,14 @@
                             <span class="small">{{ number_format($item->Rate ?? 0, 2) }}</span>
                         @else
                             <input type="text" inputmode="decimal" name="items[{{ $idx }}][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="{{ number_format((float) ($item->Rate ?? 0), 2, '.', ',') }}">
+                        @endif
+                    </td>
+                    <td class="ifp-col-fbr-qty">
+                        @if($isReadonly)
+                            <span class="small">{{ ($item->Unit ?? 0) > 1 ? (isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2) : '—') : '—' }}</span>
+                        @else
+                            <input type="number" step="0.01" name="items[{{ $idx }}][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="{{ ($item->Unit ?? 0) > 1 && isset($item->FBRQty) ? number_format((float)$item->FBRQty, 2, '.', '') : '' }}" {{ ($item->Unit ?? 0) <= 1 ? 'disabled' : '' }}>
+                            <input type="hidden" name="items[{{ $idx }}][Unit]" class="ifp-product-unit" value="{{ $item->Unit ?? 0 }}">
                         @endif
                     </td>
                     <td class="ifp-col-amount">
@@ -637,10 +717,16 @@
                     </td>
                     @if($inModal)
                     <td class="ifp-col-fixed">
+                        @php
+                            $fixedNotifiedVal = (float)($item->FixedNotifiedValueOrRetailPrice ?? 0);
+                            if ($fixedNotifiedVal <= 0 && (float)($item->TPRate ?? 0) > 0) {
+                                $fixedNotifiedVal = (float)$item->TPRate * (float)($item->Quantity ?? 1);
+                            }
+                        @endphp
                         @if($isReadonly)
-                            <span class="small">{{ number_format((float) ($item->TPRate ?? 0) * (float) ($item->Quantity ?? 0), 2) }}</span>
+                            <span class="small">{{ number_format($fixedNotifiedVal, 2) }}</span>
                         @else
-                            <input type="text" name="items[{{ $idx }}][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="{{ number_format((float) ($item->TPRate ?? 0) * (float) ($item->Quantity ?? 0), 2, '.', ',') }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="{{ number_format($fixedNotifiedVal, 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     @endif
@@ -655,9 +741,9 @@
                     @endif
                     <td class="ifp-col-disc-amt">
                         @if($isReadonly)
-                            <span class="small">{{ number_format($item->DiscountAmount ?? 0, 2) }}</span>
+                            <span class="small">{{ number_format((float) ($item->DiscountAmount ?? $item->Discount ?? 0), 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt" value="{{ $item->DiscountAmount ?? 0 }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt ifp-numfmt" value="{{ number_format((float) ($item->DiscountAmount ?? $item->Discount ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     @if(!$inModal)
@@ -678,30 +764,30 @@
                     </td>
                     <td class="ifp-col-net">
                         @if($isReadonly)
-                            <span class="small fw-bold">{{ number_format($item->Total ?? 0, 2) }}</span>
+                            <span class="small fw-bold">{{ number_format($item->TotalValues ?? 0, 2) }}</span>
                         @else
-                            <input type="text" name="items[{{ $idx }}][Total]" class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="{{ number_format((float) ($item->Total ?? 0), 2, '.', ',') }}" readonly>
+                            <input type="text" name="items[{{ $idx }}][Total]" class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="{{ number_format((float) ($item->TotalValues ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     <td class="ifp-col-extra-tax">
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->ExtraTax ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][ExtraTax]" class="form-control form-control-sm ifp-extra-tax" value="{{ $item->ExtraTax ?? 0 }}" min="0">
+                            <input type="text" name="items[{{ $idx }}][ExtraTax]" class="form-control form-control-sm ifp-extra-tax ifp-numfmt" value="{{ number_format((float) ($item->ExtraTax ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     <td class="ifp-col-further-tax">
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->FurtherTax ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][FurtherTax]" class="form-control form-control-sm ifp-further-tax" value="{{ $item->FurtherTax ?? 0 }}" min="0">
+                            <input type="text" name="items[{{ $idx }}][FurtherTax]" class="form-control form-control-sm ifp-further-tax ifp-numfmt" value="{{ number_format((float) ($item->FurtherTax ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     <td class="ifp-col-fed-payable">
                         @if($isReadonly)
                             <span class="small">{{ number_format($item->FedPayable ?? 0, 2) }}</span>
                         @else
-                            <input type="number" step="0.01" name="items[{{ $idx }}][FedPayable]" class="form-control form-control-sm ifp-fed-payable" value="{{ $item->FedPayable ?? 0 }}" min="0">
+                            <input type="text" name="items[{{ $idx }}][FedPayable]" class="form-control form-control-sm ifp-fed-payable ifp-numfmt" value="{{ number_format((float) ($item->FedPayable ?? 0), 2, '.', ',') }}" readonly>
                         @endif
                     </td>
                     @if(!$isReadonly)
@@ -726,7 +812,8 @@
                                         data-hscode="{{ $prod->HsCode ?? '' }}"
                                         data-sale-information="{{ $prod->SaleInformation ?? '' }}"
                                         data-uom-id="{{ $prod->UomID ?? '' }}"
-                                        data-uom-label="{{ trim((string) ($prod->UomName ?? '')) }}"
+                                        data-uom-label="{{ trim((string) ($prod->UnitName ?? '')) }}"
+                                        data-unit="{{ $prod->Unit ?? 0 }}"
                                         data-sale-type-id="{{ $prod->SaleTypeID ?? '' }}"
                                         data-sale-type-to-rate-id="{{ $prod->SaleTypeToRateID ?? '' }}"
                                         data-sro-schedule-id="{{ $prod->SroScheduleID ?? '' }}"
@@ -752,8 +839,12 @@
                         'inModal' => $inModal,
                         'isReadonly' => false,
                     ])
-                    <td class="ifp-col-qty"><input type="number" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>
+                    <td class="ifp-col-qty"><input type="text" inputmode="decimal" name="items[0][Quantity]" class="form-control form-control-sm ifp-qty ifp-numfmt" value="1"></td>
                     <td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[0][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>
+                    <td class="ifp-col-fbr-qty">
+                        <input type="number" step="0.01" name="items[0][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled>
+                        <input type="hidden" name="items[0][Unit]" class="ifp-product-unit" value="0">
+                    </td>
                     <td class="ifp-col-amount"><input type="text"     name="items[0][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>
                     @if($inModal)
                     <td class="ifp-col-fixed"><input type="text"     name="items[0][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>
@@ -761,15 +852,15 @@
                     @if(!$inModal)
                     <td><input type="number" step="0.01"     name="items[0][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>
                     @endif
-                    <td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[0][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>
+                    <td class="ifp-col-disc-amt"><input type="text" name="items[0][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt ifp-numfmt" value="0.00" readonly></td>
                     @if(!$inModal)
                     <td><input type="number" step="0.01"     name="items[0][GstPercentage]"      class="form-control form-control-sm ifp-gst-pct"  value="0" min="0"></td>
                     @endif
                     <td class="ifp-col-gst-amt"><input type="text"     name="items[0][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>
                     <td class="ifp-col-net"><input type="text"     name="items[0][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>
-                    <td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[0][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>
-                    <td class="ifp-col-further-tax"><input type="number" step="0.01"     name="items[0][FurtherTax]"         class="form-control form-control-sm ifp-further-tax" value="0" min="0"></td>
-                    <td class="ifp-col-fed-payable"><input type="number" step="0.01"     name="items[0][FedPayable]"         class="form-control form-control-sm ifp-fed-payable" value="0" min="0"></td>
+                    <td class="ifp-col-extra-tax"><input type="text" name="items[0][ExtraTax]" class="form-control form-control-sm ifp-extra-tax ifp-numfmt" value="0.00" readonly></td>
+                    <td class="ifp-col-further-tax"><input type="text" name="items[0][FurtherTax]" class="form-control form-control-sm ifp-further-tax ifp-numfmt" value="0.00" readonly></td>
+                    <td class="ifp-col-fed-payable"><input type="text" name="items[0][FedPayable]" class="form-control form-control-sm ifp-fed-payable ifp-numfmt" value="0.00" readonly></td>
                     <td class="ifp-col-actions"><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del"><i class="ri-delete-bin-5-line"></i></button></td>
                 </tr>
             @else
@@ -781,10 +872,15 @@
         </div>{{-- .ifp-inv-line-items-scroll --}}
 
         @if(!$isReadonly)
-        <div class="my-3">
+        <div class="my-3 d-flex gap-2 align-items-center">
             <button type="button" class="btn btn-sm btn-primary" id="{{ $uid }}_addRow">
                 <i class="bi bi-plus-lg"></i> Add Product
             </button>
+            @if($isEdit)
+            <button type="button" class="btn btn-sm btn-light border text-dark shadow-sm" id="{{ $uid }}_recalcUnits" title="Sync Units from product master without changing Quantity or Rate">
+                <i class="ri-refresh-line me-1 text-primary"></i> Sync Units
+            </button>
+            @endif
         </div>
         @endif
 
@@ -1497,7 +1593,40 @@
         set('ifp-total',    total);
         if (fixedNotifiedEl) fixedNotifiedEl.value = ifpFormatNumber(fixedNotified, 2);
 
+        // FBR Qty Input Enablement & Fallback:
+        const unitEl = rowEl(row, '.ifp-product-unit');
+        const unit = n(unitEl ? unitEl.value : '0');
+        const fbrQtyEl = rowEl(row, '.ifp-fbr-qty');
+        if (fbrQtyEl) {
+            if (unit > 1) {
+                fbrQtyEl.removeAttribute('disabled');
+            } else {
+                fbrQtyEl.value = '';
+                fbrQtyEl.setAttribute('disabled', 'true');
+            }
+        }
+
         return { amount, discAmt, gstAmt, total };
+    }
+
+    function toggleFbrQtyColumn() {
+        if (@json($isReadonly)) return;
+        let hasFbrQty = false;
+        body.querySelectorAll('.ifp-row').forEach(function(row) {
+            const unitEl = row.querySelector('.ifp-product-unit');
+            const unit = parseInt(unitEl ? unitEl.value : '0', 10) || 0;
+            if (unit > 1) {
+                hasFbrQty = true;
+            }
+        });
+        const table = body.closest('.table-inv');
+        if (table) {
+            if (hasFbrQty) {
+                table.classList.add('show-fbr-qty');
+            } else {
+                table.classList.remove('show-fbr-qty');
+            }
+        }
     }
 
     function ifpCustomerAdvanceMeta() {
@@ -1567,12 +1696,67 @@
     // ── Bind row events ──
     function bindRow(row) {
         // Recalculate summary on input change for any relevant field
-        row.querySelectorAll('.ifp-qty, .ifp-rate, .ifp-disc-pct, .ifp-gst-pct, .ifp-extra-tax, .ifp-further-tax, .ifp-fed-payable').forEach(function(inp) {
+        row.querySelectorAll('.ifp-qty, .ifp-rate, .ifp-disc-pct, .ifp-gst-pct, .ifp-extra-tax, .ifp-further-tax, .ifp-fed-payable, .ifp-fixed-rate').forEach(function(inp) {
             inp.addEventListener('input', function() {
                 calcRow(row);
                 calcSummary();
             });
         });
+        const isFixedCb = rowEl(row, '.ifp-is-fixed-rate-cb');
+        const isFixedHidden = rowEl(row, '.ifp-is-fixed-rate');
+        const fixedRateInp = rowEl(row, '.ifp-fixed-rate');
+
+        function syncFixedRateState() {
+            const isFixed = isFixedCb ? isFixedCb.checked : ((parseInt(isFixedHidden ? isFixedHidden.value : '0', 10) || 0) === 1);
+            if (isFixedHidden) isFixedHidden.value = isFixed ? '1' : '0';
+            if (fixedRateInp) {
+                if (isFixed) {
+                    fixedRateInp.removeAttribute('readonly');
+                } else {
+                    fixedRateInp.setAttribute('readonly', 'true');
+                    fixedRateInp.value = '0.00';
+                }
+            }
+        }
+
+        if (isFixedCb) {
+            isFixedCb.addEventListener('change', function() {
+                syncFixedRateState();
+                calcRow(row);
+                calcSummary();
+            });
+        }
+
+        if (fixedRateInp) {
+            fixedRateInp.addEventListener('blur', function() {
+                if (!fixedRateInp.readOnly) {
+                    fixedRateInp.value = ifpFormatNumber(n(fixedRateInp.value), 2);
+                    calcRow(row);
+                    calcSummary();
+                }
+            });
+        }
+        syncFixedRateState();
+        const fbrInp = row.querySelector('.ifp-fbr-qty');
+        if (fbrInp) {
+            fbrInp.addEventListener('blur', function() {
+                if (fbrInp.value !== '') {
+                    const parsed = parseFloat(fbrInp.value);
+                    fbrInp.value = isNaN(parsed) ? '' : parsed.toFixed(2);
+                }
+            });
+        }
+        const qtyInp = row.querySelector('.ifp-qty');
+        if (qtyInp) {
+            qtyInp.addEventListener('focus', function() {
+                qtyInp.value = ifpSanitizeNumericText(qtyInp.value);
+            });
+            qtyInp.addEventListener('blur', function() {
+                const val = n(qtyInp.value);
+                const decimals = (val % 1 !== 0) ? 2 : 0;
+                qtyInp.value = ifpFormatNumber(val, decimals);
+            });
+        }
         const rateInp = ifpRateInput(row);
         if (rateInp) {
             rateInp.addEventListener('focus', function() {
@@ -1607,6 +1791,7 @@
                 const rateEl = ifpRateInput(row);
                 const gstEl  = rowEl(row, '.ifp-gst-pct');
                 const ds = opt.dataset || {};
+                const qty = n(rowEl(row, '.ifp-qty')?.value || '1');
                 if (forceDetailsFill) {
                     if (rateEl) rateEl.value = ifpFormatNumber(ds.rate || opt.getAttribute('data-rate') || 0, 2);
                     if (gstEl)  gstEl.value  = ds.gst  || opt.getAttribute('data-gst')  || 0;
@@ -1615,6 +1800,7 @@
                 const hsCode = ds.hscode || opt.getAttribute('data-hscode') || '';
                 const saleInfo = ds.saleInformation || opt.getAttribute('data-sale-information') || '';
                 const uomId = ds.uomId || opt.getAttribute('data-uom-id') || '';
+                const unit = parseInt(ds.unit || opt.getAttribute('data-unit') || '0', 10) || 0;
                 const saleTypeId = ds.saleTypeId || opt.getAttribute('data-sale-type-id') || '';
                 const saleTypeToRateId = ds.saleTypeToRateId || opt.getAttribute('data-sale-type-to-rate-id') || '';
                 const sroScheduleId = ds.sroScheduleId || opt.getAttribute('data-sro-schedule-id') || '';
@@ -1656,25 +1842,48 @@
                 if (saleTypeToRateSel && (forceDetailsFill || !saleTypeToRateSel.getAttribute('data-selected'))) saleTypeToRateSel.setAttribute('data-selected', saleTypeToRateId);
                 if (sroScheduleSel && (forceDetailsFill || !sroScheduleSel.getAttribute('data-selected'))) sroScheduleSel.setAttribute('data-selected', sroScheduleId);
                 if (sroItemSel && (forceDetailsFill || !sroItemSel.getAttribute('data-selected'))) sroItemSel.setAttribute('data-selected', sroItemId);
-                if (fixedRateEl) fixedRateEl.value = n(tpRate).toFixed(2);
                 if (isFixedHidden) isFixedHidden.value = String(isFixedVal);
                 if (isFixedCb) isFixedCb.checked = !!isFixedVal;
+                if (fixedRateEl) {
+                    if (isFixedVal) {
+                        fixedRateEl.value = n(tpRate).toFixed(2);
+                        fixedRateEl.removeAttribute('readonly');
+                    } else {
+                        fixedRateEl.value = '0.00';
+                        fixedRateEl.setAttribute('readonly', 'true');
+                    }
+                }
+
+                const unitEl = rowEl(row, '.ifp-product-unit');
+                if (unitEl) {
+                    unitEl.value = String(unit);
+                }
+                const fbrQtyEl = rowEl(row, '.ifp-fbr-qty');
+                if (fbrQtyEl) {
+                    if (unit > 1) {
+                        fbrQtyEl.removeAttribute('disabled');
+                        // Empty by default for manual entry on selection
+                        if (forceDetailsFill) {
+                            fbrQtyEl.value = '';
+                        }
+                    } else {
+                        fbrQtyEl.value = '';
+                        fbrQtyEl.setAttribute('disabled', 'true');
+                    }
+                }
+
                 if (forceDetailsFill) {
                     loadSaleTypesForRow(row);
                 }
 
                 calcRow(row);
+                toggleFbrQtyColumn();
                 calcSummary();
             };
 
             prodSel.addEventListener('change', function() {
                 applySelectedProductToRow(true);
             });
-
-            // On Edit modal open, pre-fill row using current selected product (without overriding typed description).
-            if (prodSel.value) {
-                applySelectedProductToRow(false);
-            }
         }
 
         applyCustomerMetaToRow(row);
@@ -1689,6 +1898,7 @@
                 }
                 row.remove();
                 // reIndex(); // Optional if you handle indices on server-side differently, but good practice
+                toggleFbrQtyColumn();
                 calcSummary();
             });
         }
@@ -2273,7 +2483,7 @@
                                 <div class="row g-2 px-2 pb-2 ifp-tax-sro-fields-lower">
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifiler_${idx}">Is Filer</label><input type="hidden" name="items[${idx}][IsFiler]" class="ifp-is-filer" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifiler_${idx}" class="form-check-input ifp-is-filer-cb m-0" disabled></div></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_gst_${idx}">GST Rate %</label><input type="number" step="0.01" id="${uid}_gst_${idx}" name="items[${idx}][GstPercentage]" class="form-control ifp-gst-pct" value="0" min="0"></div></div>
-                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifr_${idx}">Is Fixed</label><input type="hidden" name="items[${idx}][IsFixedRate]" class="ifp-is-fixed-rate" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifr_${idx}" class="form-check-input ifp-is-fixed-rate-cb m-0" disabled></div></div></div>
+                                    <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_ifr_${idx}">Is Fixed</label><input type="hidden" name="items[${idx}][IsFixedRate]" class="ifp-is-fixed-rate" value="0"><div class="form-check ps-0 pt-1"><input type="checkbox" id="${uid}_ifr_${idx}" class="form-check-input ifp-is-fixed-rate-cb m-0"></div></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_fr_${idx}">Fixed Rate</label><input type="number" step="0.01" id="${uid}_fr_${idx}" name="items[${idx}][TPRate]" class="form-control ifp-fixed-rate" value="0" readonly></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_dp_${idx}">Discount %</label><input type="number" step="0.01" id="${uid}_dp_${idx}" name="items[${idx}][DiscountPercentage]" class="form-control ifp-disc-pct" value="0" min="0" max="100"></div></div>
                                     <div class="col-12 col-md-4"><div class="ifp-tax-sro-field mb-0"><label class="ifp-tax-sro-lbl" for="${uid}_etp_${idx}">Extra Tax %</label><input type="number" step="0.01" id="${uid}_etp_${idx}" class="form-control ifp-extra-tax-pct" value="0" readonly></div></div>
@@ -2291,30 +2501,32 @@
                 '<td><select name="items[' + idx + '][SroItemID]" class="' + selCls + ' ifp-sro-item" data-selected=""><option value="">Select SRO Schedule first</option></select></td>');
         var rowNumericTail = IFP_TAX_COMPACT
             ? (
-                '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
+                '<td class="ifp-col-qty"><input type="text" inputmode="decimal" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty ifp-numfmt" value="1"></td>' +
                 '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
+                '<td class="ifp-col-fbr-qty"><input type="number" step="0.01" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td class="ifp-col-fixed"><input type="text"     name="items[' + idx + '][FixedNotifiedValueOrRetailPrice]" class="form-control form-control-sm ifp-fixed-notified-value ifp-numfmt" value="0.00" readonly></td>' +
-                '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
+                '<td class="ifp-col-disc-amt"><input type="text" name="items[' + idx + '][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-gst-amt"><input type="text"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>' +
                 '<td class="ifp-col-net"><input type="text"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>' +
-                '<td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[' + idx + '][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>' +
-                '<td class="ifp-col-further-tax"><input type="number" step="0.01"     name="items[' + idx + '][FurtherTax]"         class="form-control form-control-sm ifp-further-tax" value="0" min="0"></td>' +
-                '<td class="ifp-col-fed-payable"><input type="number" step="0.01"     name="items[' + idx + '][FedPayable]"         class="form-control form-control-sm ifp-fed-payable" value="0" min="0"></td>' +
+                '<td class="ifp-col-extra-tax"><input type="text" name="items[' + idx + '][ExtraTax]" class="form-control form-control-sm ifp-extra-tax ifp-numfmt" value="0.00" readonly></td>' +
+                '<td class="ifp-col-further-tax"><input type="text" name="items[' + idx + '][FurtherTax]" class="form-control form-control-sm ifp-further-tax ifp-numfmt" value="0.00" readonly></td>' +
+                '<td class="ifp-col-fed-payable"><input type="text" name="items[' + idx + '][FedPayable]" class="form-control form-control-sm ifp-fed-payable ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-actions"><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del"><i class="ri-delete-bin-5-line"></i></button></td>'
             )
             : (
-                '<td class="ifp-col-qty"><input type="number" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty" value="1" min="0" step="0.000001"></td>' +
+                '<td class="ifp-col-qty"><input type="text" inputmode="decimal" name="items[' + idx + '][Quantity]" class="form-control form-control-sm ifp-qty ifp-numfmt" value="1"></td>' +
                 '<td class="ifp-col-sale-rate"><input type="text" inputmode="decimal" name="items[' + idx + '][Rate]" class="form-control form-control-sm ifp-rate ifp-numfmt" value="0.00"></td>' +
+                '<td class="ifp-col-fbr-qty"><input type="number" step="0.01" name="items[' + idx + '][FBRQty]" class="form-control form-control-sm ifp-fbr-qty" value="" disabled><input type="hidden" name="items[' + idx + '][Unit]" class="ifp-product-unit" value="0"></td>' +
                 '<td class="ifp-col-amount"><input type="text"     name="items[' + idx + '][Amount]"             class="form-control form-control-sm ifp-amount ifp-numfmt"   value="0.00" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][DiscountPercentage]" class="form-control form-control-sm ifp-disc-pct" value="0" min="0" max="100"></td>' +
-                '<td class="ifp-col-disc-amt"><input type="number" step="0.01"     name="items[' + idx + '][DiscountAmount]"     class="form-control form-control-sm ifp-disc-amt" value="0" readonly></td>' +
+                '<td class="ifp-col-disc-amt"><input type="text" name="items[' + idx + '][DiscountAmount]" class="form-control form-control-sm ifp-disc-amt ifp-numfmt" value="0.00" readonly></td>' +
                 '<td><input type="number" step="0.01"     name="items[' + idx + '][GstPercentage]"      class="form-control form-control-sm ifp-gst-pct"  value="0" min="0"></td>' +
                 '<td class="ifp-col-gst-amt"><input type="text"     name="items[' + idx + '][GSTAmount]"          class="form-control form-control-sm ifp-gst-amt ifp-numfmt"  value="0.00" readonly></td>' +
                 '<td class="ifp-col-net"><input type="text"     name="items[' + idx + '][Total]"              class="form-control form-control-sm ifp-total ifp-numfmt fw-bold" value="0.00" readonly></td>' +
-                '<td class="ifp-col-extra-tax"><input type="number" step="0.01"     name="items[' + idx + '][ExtraTax]"           class="form-control form-control-sm ifp-extra-tax" value="0" min="0"></td>' +
-                '<td class="ifp-col-further-tax"><input type="number" step="0.01"     name="items[' + idx + '][FurtherTax]"         class="form-control form-control-sm ifp-further-tax" value="0" min="0"></td>' +
-                '<td class="ifp-col-fed-payable"><input type="number" step="0.01"     name="items[' + idx + '][FedPayable]"         class="form-control form-control-sm ifp-fed-payable" value="0" min="0"></td>' +
+                '<td class="ifp-col-extra-tax"><input type="text" name="items[' + idx + '][ExtraTax]" class="form-control form-control-sm ifp-extra-tax ifp-numfmt" value="0.00" readonly></td>' +
+                '<td class="ifp-col-further-tax"><input type="text" name="items[' + idx + '][FurtherTax]" class="form-control form-control-sm ifp-further-tax ifp-numfmt" value="0.00" readonly></td>' +
+                '<td class="ifp-col-fed-payable"><input type="text" name="items[' + idx + '][FedPayable]" class="form-control form-control-sm ifp-fed-payable ifp-numfmt" value="0.00" readonly></td>' +
                 '<td class="ifp-col-actions"><button type="button" class="btn btn-sm btn-icon btn-danger-light ifp-del"><i class="ri-delete-bin-5-line"></i></button></td>'
             );
         var descCell = '<td class="ifp-col-desc"><input type="hidden" name="items[' + idx + '][HsCode]" class="ifp-hscode" value=""><textarea name="items[' + idx + '][Details]" rows="1" class="form-control form-control-sm ifp-details" placeholder="Enter Description"></textarea></td>';
@@ -2330,6 +2542,73 @@
         bindRowTaxDropdowns(tr);
         loadSaleTypesForRow(tr);
     });
+
+    // ── Recalculate Units from Product Master ──
+    const recalcUnitsBtn = document.getElementById(uid + '_recalcUnits');
+    if (recalcUnitsBtn) {
+        recalcUnitsBtn.addEventListener('click', function() {
+            let updatedCount = 0;
+            const rows = body.querySelectorAll('.ifp-row');
+
+            rows.forEach(function(row) {
+                const prodSel = rowEl(row, '.ifp-product');
+                if (!prodSel || !prodSel.value) return;
+
+                const opt = prodSel.options[prodSel.selectedIndex];
+                if (!opt) return;
+
+                const unit = parseInt(opt.getAttribute('data-unit') || '0', 10);
+                const unitEl = rowEl(row, '.ifp-product-unit');
+                const fbrQtyEl = rowEl(row, '.ifp-fbr-qty');
+
+                const prevUnit = parseInt(unitEl ? unitEl.value : '0', 10);
+
+                if (unitEl) {
+                    unitEl.value = String(unit);
+                }
+
+                if (fbrQtyEl) {
+                    if (unit > 1) {
+                        fbrQtyEl.removeAttribute('disabled');
+                    } else {
+                        fbrQtyEl.value = '';
+                        fbrQtyEl.setAttribute('disabled', 'true');
+                    }
+                }
+
+                if (prevUnit !== unit) {
+                    updatedCount++;
+                    row.style.transition = 'background-color 0.4s ease';
+                    row.style.backgroundColor = 'rgba(25, 135, 84, 0.12)';
+                    setTimeout(function() {
+                        row.style.backgroundColor = '';
+                    }, 1400);
+                }
+            });
+
+            toggleFbrQtyColumn();
+
+            const msg = updatedCount > 0
+                ? (updatedCount + ' line item(s) synchronized with product master. Quantity, Rate, and other details were preserved.')
+                : 'All line item units already match the latest product master.';
+
+            if (typeof showToast === 'function') {
+                showToast(updatedCount > 0 ? 'success' : 'info', msg);
+            } else if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: updatedCount > 0 ? 'success' : 'info',
+                    title: updatedCount > 0 ? 'Units Synchronized' : 'Already Synchronized',
+                    text: msg,
+                    timer: 2500,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            } else {
+                alert(msg);
+            }
+        });
+    }
 
     // ── Modal: intercept form submit → trigger save btn ──
     @if($inModal)
@@ -2479,11 +2758,12 @@
         if (saveLabelEl) saveLabelEl.textContent = 'Save Customer';
         modalBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted mb-0">Loading…</p></div>';
         bsModal.show();
-        var url = @json(route('customers.modal')) + '?mode=create';
+        var url = @json(route('customers.modal')) + '?mode=create&_t=' + Date.now();
         fetch(url, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': ifpCsrfToken()
+                'X-CSRF-TOKEN': ifpCsrfToken(),
+                'Cache-Control': 'no-cache'
             },
             credentials: 'same-origin'
         })
@@ -2525,6 +2805,12 @@
                 })
                 .then(function(pair) {
                     if (pair.data && pair.data.status === 'success') {
+                        if (typeof window.clearCustomerModalDrafts === 'function') {
+                            window.clearCustomerModalDrafts();
+                        }
+                        Object.keys(localStorage).forEach(function(k) {
+                            if (k.startsWith('cfp_') || k.startsWith('customer_')) localStorage.removeItem(k);
+                        });
                         bsModal.hide();
                         if (pair.data.customer) {
                             var mainCust = document.getElementById(uid + '_CustomerID');
@@ -2739,6 +3025,7 @@
         bindRowTaxDropdowns(row);
         loadSaleTypesForRow(row);
     });
+    toggleFbrQtyColumn();
     calcSummary();
     if (!window.ifpNormalizeFormattedInputs) {
         window.ifpNormalizeFormattedInputs = ifpNormalizeFormattedInputs;

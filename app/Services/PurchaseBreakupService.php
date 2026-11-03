@@ -275,6 +275,8 @@ class PurchaseBreakupService
             'allow_decimal_qty' => $allowDecimal,
             'min_qty' => $minQty,
             'max_qty' => $maxQty,
+            'doc2' => trim((string) ($settings['doc2'] ?? '')),
+            'doc3' => trim((string) ($settings['doc3'] ?? '')),
         ];
 
         $jobId = DB::connection('tenant')->table('purchase_breakup_jobs')->insertGetId([
@@ -373,6 +375,8 @@ class PurchaseBreakupService
         $minQty = $allowDecimal ? (float) ($settings['min_qty'] ?? 1) : (int) ($settings['min_qty'] ?? 1);
         $maxQty = $allowDecimal ? (float) ($settings['max_qty'] ?? 1) : (int) ($settings['max_qty'] ?? 1);
         $prefix = trim((string) ($settings['invoice_prefix'] ?? 'INV'));
+        $doc2 = trim((string) ($settings['doc2'] ?? ''));
+        $doc3 = trim((string) ($settings['doc3'] ?? ''));
         $partyName = $this->resolveBreakupCustomerName($settings);
         $productName = (string) ($line->ProductName ?? '');
         $fromDate = (string) ($settings['from_date'] ?? '');
@@ -423,6 +427,8 @@ class PurchaseBreakupService
 
             $rows[] = [
                 'invoice_no' => $invoiceNo,
+                'DocNo2' => $doc2,
+                'DocNo3' => $doc3,
                 'invoice_date' => $this->randomInvoiceDate($fromDate, $endDate, $purchaseDate),
                 'supplier_name' => $partyName,
                 'product_name' => $productName,
@@ -469,6 +475,8 @@ class PurchaseBreakupService
                     'purchase_id' => $purchaseId,
                     'job_id' => $jobId,
                     'invoice_no' => $row['invoice_no'],
+                    'DocNo2' => $row['DocNo2'] ?? null,
+                    'DocNo3' => $row['DocNo3'] ?? null,
                     'invoice_date' => $row['invoice_date'],
                     'supplier_name' => $row['supplier_name'],
                     'product_name' => $row['product_name'],
@@ -727,5 +735,236 @@ class PurchaseBreakupService
             self::STATUS_EXPIRED => 'bg-secondary-subtle text-secondary-emphasis',
             default => 'bg-light text-muted',
         };
+    }
+
+    /**
+     * Post breakup invoices to FBR
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function postBreakupToFbr(int $purchaseId, int $jobId, int $userId): array
+    {
+        $job = DB::connection('tenant')
+            ->table('purchase_breakup_jobs')
+            ->where('id', $jobId)
+            ->first();
+
+        if (! $job || (int) $job->breakup_status !== self::STATUS_GENERATED) {
+            return ['success' => false, 'message' => 'No generated breakup found for the specified job.'];
+        }
+
+        // Get total rows to ensure there are records to post
+        $rowCount = DB::connection('tenant')
+            ->table('purchase_breakup_invoice_data')
+            ->where('purchase_id', $purchaseId)
+            ->where('job_id', $jobId)
+            ->count();
+
+        if ($rowCount === 0) {
+            return ['success' => false, 'message' => 'No breakup invoice data rows found.'];
+        }
+
+        $settings = json_decode((string) ($job->settings_json ?? '{}'), true) ?: [];
+        $customerId = (int) ($settings['customer_id'] ?? 0);
+        if ($customerId <= 0) {
+            return ['success' => false, 'message' => 'Invalid customer ID in breakup settings.'];
+        }
+
+        // Check if any invoice from this breakup was already posted/created to prevent double posting.
+        $breakupInvoiceNos = DB::connection('tenant')
+            ->table('purchase_breakup_invoice_data')
+            ->where('purchase_id', $purchaseId)
+            ->where('job_id', $jobId)
+            ->pluck('invoice_no')
+            ->filter()
+            ->all();
+
+        if (! empty($breakupInvoiceNos)) {
+            $existingInvoicesCount = DB::connection('tenant')
+                ->table('tbl_sales_invoice_header')
+                ->whereIn('DocNo', $breakupInvoiceNos)
+                ->where('Status', '!=', 2)
+                ->count();
+
+            if ($existingInvoicesCount > 0) {
+                return [
+                    'success' => false,
+                    'message' => 'Some invoices from this breakup have already been posted. Please check the Invoices list.',
+                ];
+            }
+        }
+
+        // Resolve InvoiceType for "Sale Invoice"
+        $invTypes = \App\Models\InvoiceModel::Load_InvoiceTypes();
+        $saleInvType = $invTypes->first(function ($x) {
+            return strcasecmp(trim($x->docDescription ?? ''), 'Sale Invoice') === 0;
+        });
+        $invoiceType = $saleInvType ? (int) $saleInvType->docTypeId : 4;
+
+        // Generate a single RequestID for all these staging records
+        $requestId = (string) \Illuminate\Support\Str::uuid();
+        $now = now()->toDateTimeString();
+
+        // Calculate the starting sequential InvoiceID/TID.
+        $maxId = DB::connection('tenant')->table('tbl_sales_invoice_header')->max('ID');
+        $startId = $maxId ? (int) $maxId + 1 : 1;
+
+        try {
+            // Set row numbering session variable
+            DB::connection('tenant')->statement("SET @row_num := ?", [$startId - 1]);
+
+            // Execute the bulk INSERT ... SELECT statement
+            $sql = "
+                INSERT INTO tbl_temp_invoice_detail (
+                    InvoiceID,
+                    TID,
+                    CustomerID,
+                    SaleOfTerm,
+                    InvoiceDate,
+                    DueDate,
+                    TermDays,
+                    InvoiceType,
+                    DocNo,
+                    DocNo2,
+                    DocNo3,
+                    ProductID,
+                    Details,
+                    ProductDescription,
+                    HsCode,
+                    UomID,
+                    SaleTypeID,
+                    SaleTypeToRateID,
+                    SroScheduleID,
+                    SroItemID,
+                    TPRate,
+                    Quantity,
+                    Rate,
+                    Amount,
+                    DiscountPercentage,
+                    DiscountAmount,
+                    Discount,
+                    GstPercentage,
+                    GSTAmount,
+                    SalesTaxWithheldAtSource,
+                    ExtraTax,
+                    FurtherTax,
+                    FedPayable,
+                    TotalValues,
+                    Type,
+                    Statusi,
+                    CreatedBy,
+                    CreatedOn,
+                    UpdatedBy,
+                    UpdatedOn,
+                    RequestID
+                )
+                SELECT
+                    (@row_num := @row_num + 1) AS InvoiceID,
+                    @row_num AS TID,
+                    :customer_id AS CustomerID,
+                    NULL AS SaleOfTerm,
+                    b.invoice_date AS InvoiceDate,
+                    b.invoice_date AS DueDate,
+                    0 AS TermDays,
+                    :invoice_type AS InvoiceType,
+                    b.invoice_no AS DocNo,
+                    b.DocNo2 AS DocNo2,
+                    b.DocNo3 AS DocNo3,
+                    d.ProductID,
+                    d.ProductDescription AS Details,
+                    d.ProductDescription AS ProductDescription,
+                    d.HsCode,
+                    d.UomID,
+                    d.SaleTypeID,
+                    d.SaleTypeToRateID,
+                    d.SroScheduleID,
+                    d.SroItemID,
+                    d.TPRate,
+                    b.qty AS Quantity,
+                    d.Rate AS Rate,
+                    b.amount AS Amount,
+                    d.DiscountPercentage,
+                    ROUND(d.DiscountAmount * (b.qty / COALESCE(NULLIF(d.Quantity, 0), 1)), 2) AS DiscountAmount,
+                    ROUND(d.DiscountAmount * (b.qty / COALESCE(NULLIF(d.Quantity, 0), 1)), 2) AS Discount,
+                    d.GstPercentage,
+                    ROUND(d.GSTAmount * (b.qty / COALESCE(NULLIF(d.Quantity, 0), 1)), 2) AS GSTAmount,
+                    ROUND(d.SalesTaxWithheldAtSource * (b.qty / COALESCE(NULLIF(d.Quantity, 0), 1)), 2) AS SalesTaxWithheldAtSource,
+                    ROUND(d.ExtraTax * (b.qty / COALESCE(NULLIF(d.Quantity, 0), 1)), 2) AS ExtraTax,
+                    ROUND(d.FurtherTax * (b.qty / COALESCE(NULLIF(d.Quantity, 0), 1)), 2) AS FurtherTax,
+                    ROUND(d.FedPayable * (b.qty / COALESCE(NULLIF(d.Quantity, 0), 1)), 2) AS FedPayable,
+                    ROUND(d.TotalValues * (b.qty / COALESCE(NULLIF(d.Quantity, 0), 1)), 2) AS TotalValues,
+                    'SI' AS Type,
+                    1 AS Statusi,
+                    :user_id AS CreatedBy,
+                    :now_created AS CreatedOn,
+                    :user_id_updated AS UpdatedBy,
+                    :now_updated AS UpdatedOn,
+                    :request_id AS RequestID
+                FROM purchase_breakup_invoice_data b
+                JOIN tbl_purchase_detail d ON d.PurchaseID = b.purchase_id
+                WHERE b.purchase_id = :purchase_id
+                  AND b.job_id = :job_id
+                  AND d.Status != 2
+                ORDER BY b.id
+            ";
+
+            DB::connection('tenant')->statement($sql, [
+                'customer_id' => $customerId,
+                'invoice_type' => $invoiceType,
+                'user_id' => $userId,
+                'now_created' => $now,
+                'user_id_updated' => $userId,
+                'now_updated' => $now,
+                'request_id' => $requestId,
+                'purchase_id' => $purchaseId,
+                'job_id' => $jobId,
+            ]);
+
+            $saveResult = \App\Models\InvoiceModel::save_transaction($requestId);
+            if (is_array($saveResult) && ($saveResult['status'] ?? false) === false) {
+                throw new \RuntimeException('Save transaction failed: ' . ($saveResult['message'] ?? 'Unknown error'));
+            }
+
+        } catch (\Throwable $e) {
+            DB::connection('tenant')->table('tbl_temp_invoice_detail')->where('RequestID', $requestId)->delete();
+            return ['success' => false, 'message' => 'Database error while creating invoices: ' . $e->getMessage()];
+        }
+
+        // Fetch the generated invoice header IDs
+        $invoiceIds = DB::connection('tenant')
+            ->table('tbl_sales_invoice_header')
+            ->whereIn('DocNo', $breakupInvoiceNos)
+            ->where('Status', '!=', 2)
+            ->pluck('ID')
+            ->all();
+
+        // Loop to post each sales invoice to FBR.
+        $postedCount = 0;
+        $failedInvoices = [];
+
+        foreach ($invoiceIds as $invoiceId) {
+            try {
+                $fbrResult = \App\Models\InvoiceModel::post_to_fbr($invoiceId);
+                $fbrResult['success'] = true;
+                if ($fbrResult['success']) {
+                    $postedCount++;
+                } else {
+                    $failedInvoices[] = "ID {$invoiceId}: " . ($fbrResult['message'] ?? 'Post failed');
+                }
+            } catch (\Throwable $ex) {
+                $failedInvoices[] = "ID {$invoiceId}: " . $ex->getMessage();
+            }
+        }
+
+        $successCount = count($invoiceIds);
+        $message = "Successfully created {$successCount} sale invoices. {$postedCount} of them posted to FBR successfully.";
+        if (count($failedInvoices) > 0) {
+            $message .= " (" . count($failedInvoices) . " FBR postings failed. You can retry posting them from the Invoices list.)";
+        }
+
+        return [
+            'success' => true,
+            'message' => $message,
+        ];
     }
 }

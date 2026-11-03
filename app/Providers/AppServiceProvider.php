@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,5 +22,14 @@ class AppServiceProvider extends ServiceProvider
     {
         // Landlord database migrations
         $this->loadMigrationsFrom(database_path('migrations/landlord'));
+
+        // Register custom tenant permissions helper
+        Blade::if('tenantCan', function (string $module, string $action) {
+            if (session('selected_tenant.user_type') === 'admin') {
+                return true;
+            }
+            $permissions = session('selected_tenant.permissions', []);
+            return (int)($permissions[$module][$action] ?? 0) === 1;
+        });
     }
 }

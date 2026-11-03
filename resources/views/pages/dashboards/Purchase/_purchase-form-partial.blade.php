@@ -166,9 +166,60 @@
         text-align: right;
         font-variant-numeric: tabular-nums;
     }
+    .table-inv th.ifp-col-product,
+    .table-inv td.ifp-col-product { min-width: 170px; width: 13%; }
+    .table-inv th.ifp-col-desc,
+    .table-inv td.ifp-col-desc { min-width: 140px; width: 12%; }
+    .table-inv th.ifp-col-uom,
+    .table-inv td.ifp-col-uom { min-width: 130px; width: 10%; }
+    .table-inv th.ifp-col-tax-sro,
+    .table-inv td.ifp-col-tax-sro { min-width: 220px; width: 14%; max-width: none; }
+    .table-inv th.ifp-col-qty,
+    .table-inv td.ifp-col-qty { min-width: 64px; width: 4%; }
+    .table-inv th.ifp-col-sale-rate,
+    .table-inv td.ifp-col-sale-rate { min-width: 88px; width: 5%; }
+    .table-inv th.ifp-col-amount,
+    .table-inv td.ifp-col-amount { min-width: 108px; width: 6%; }
+    .table-inv th.ifp-col-fixed,
+    .table-inv td.ifp-col-fixed { min-width: 132px; width: 7%; }
+    .table-inv th.ifp-col-disc-amt,
+    .table-inv td.ifp-col-disc-amt { min-width: 108px; width: 6%; }
+    .table-inv th.ifp-col-extra-tax,
+    .table-inv td.ifp-col-extra-tax { min-width: 96px; width: 5%; }
+    .table-inv th.ifp-col-further-tax,
+    .table-inv td.ifp-col-further-tax { min-width: 96px; width: 5%; }
+    .table-inv th.ifp-col-fed-payable,
+    .table-inv td.ifp-col-fed-payable { min-width: 96px; width: 5%; }
+    .table-inv th.ifp-col-gst-amt,
+    .table-inv td.ifp-col-gst-amt { min-width: 108px; width: 6%; }
+    .table-inv th.ifp-col-net,
+    .table-inv td.ifp-col-net { min-width: 122px; width: 7%; }
+    .table-inv th.ifp-col-actions,
+    .table-inv td.ifp-col-actions { min-width: 48px; width: 3%; }
+    .table-inv input[type="number"]::-webkit-outer-spin-button,
+    .table-inv input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .table-inv input[type="number"] { -moz-appearance: textfield; }
+    .table-inv .ifp-numfmt {
+        min-width: 0;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
     .ifp-inv-line-items-scroll { overflow-x: auto; width: 100%; max-width: 100%; min-width: 0; }
     .ifp-purchase-totals-summary.table {
         margin-left: auto; width: 100%; max-width: 22rem; font-size: 12px;
+    }
+    .ifp-purchase-totals-summary .form-control,
+    .ifp-purchase-totals-summary .invoice-amount-input {
+        font-size: 12px !important;
+        line-height: 1.2 !important;
+        text-align: right !important;
+        font-variant-numeric: tabular-nums;
+        min-height: 24.2px !important;
+        height: 24.2px !important;
+        padding: 0.2rem 0.35rem !important;
+        box-sizing: border-box !important;
     }
     .ifp-purchase-totals-summary tr.ifp-totals-inc th,
     .ifp-purchase-totals-summary tr.ifp-totals-inc td,
@@ -286,33 +337,33 @@
                 <tr>
                     <th scope="row"><div class="fw-medium">Total Amount Excluding ST:</div></th>
                     <td>
-                        <input type="number" step="0.01" name="SubTotal" id="{{ $uid }}_SubTotal"
-                               class="form-control invoice-amount-input w-100"
-                               value="{{ $isReadonly ? number_format((float) $viewSubTotal, 2) : '0.00' }}" readonly>
+                        <input type="text" name="SubTotal" id="{{ $uid }}_SubTotal"
+                               class="form-control invoice-amount-input w-100 ifp-numfmt"
+                               value="{{ number_format((float) $viewSubTotal, 2, '.', ',') }}" readonly>
                     </td>
                 </tr>
                 <tr>
                     <th scope="row"><div class="fw-medium">Discount:</div></th>
                     <td>
-                        <input type="number" step="0.01" name="TotalDiscount" id="{{ $uid }}_TotalDiscount"
-                               class="form-control invoice-amount-input w-100"
-                               value="{{ $isReadonly ? number_format((float) $viewDiscount, 2) : '0.00' }}" readonly>
+                        <input type="text" name="TotalDiscount" id="{{ $uid }}_TotalDiscount"
+                               class="form-control invoice-amount-input w-100 ifp-numfmt"
+                               value="{{ number_format((float) $viewDiscount, 2, '.', ',') }}" readonly>
                     </td>
                 </tr>
                 <tr>
                     <th scope="row"><div class="fw-medium">Total Sales Tax:</div></th>
                     <td>
-                        <input type="number" step="0.01" name="TotalGST" id="{{ $uid }}_TotalGST"
-                               class="form-control invoice-amount-input w-100"
-                               value="{{ $isReadonly ? number_format((float) $viewGst, 2) : '0.00' }}" readonly>
+                        <input type="text" name="TotalGST" id="{{ $uid }}_TotalGST"
+                               class="form-control invoice-amount-input w-100 ifp-numfmt"
+                               value="{{ number_format((float) $viewGst, 2, '.', ',') }}" readonly>
                     </td>
                 </tr>
                 <tr class="ifp-totals-inc">
                     <th scope="row"><div class="fw-medium">Total Inc. All Taxes:</div></th>
                     <td>
-                        <input type="number" step="0.01" name="GrandTotal" id="{{ $uid }}_GrandTotal"
-                               class="form-control invoice-amount-input w-100 fw-bold"
-                               value="{{ $isReadonly ? number_format((float) $viewGrand, 2) : '0.00' }}" readonly>
+                        <input type="text" name="GrandTotal" id="{{ $uid }}_GrandTotal"
+                               class="form-control invoice-amount-input w-100 ifp-numfmt fw-bold"
+                               value="{{ number_format((float) $viewGrand, 2, '.', ',') }}" readonly>
                     </td>
                 </tr>
                 @if($isReadonly)
@@ -320,17 +371,17 @@
                         <tr>
                             <th scope="row"><div class="fw-medium">Supplier WHT 236G ({{ number_format($supplierAdvanceRate, 2) }}%):</div></th>
                             <td>
-                                <input type="number" step="0.01" id="{{ $uid }}_SupplierWht236g"
-                                       class="form-control invoice-amount-input w-100"
-                                       value="{{ number_format($supplierWht236g, 2) }}" readonly>
+                                <input type="text" id="{{ $uid }}_SupplierWht236g"
+                                       class="form-control invoice-amount-input w-100 ifp-numfmt"
+                                       value="{{ number_format($supplierWht236g, 2, '.', ',') }}" readonly>
                             </td>
                         </tr>
                         <tr class="ifp-totals-grand">
                             <th scope="row"><div class="fw-medium">Grand Total:</div></th>
                             <td>
-                                <input type="number" step="0.01" id="{{ $uid }}_GrandTotalWithWht"
-                                       class="form-control invoice-amount-input w-100 fw-bold"
-                                       value="{{ number_format($grandTotalAllTaxes, 2) }}" readonly>
+                                <input type="text" id="{{ $uid }}_GrandTotalWithWht"
+                                       class="form-control invoice-amount-input w-100 ifp-numfmt fw-bold"
+                                       value="{{ number_format($grandTotalAllTaxes, 2, '.', ',') }}" readonly>
                             </td>
                         </tr>
                     @endif
@@ -340,17 +391,17 @@
                             <div class="fw-medium">Supplier WHT 236G (<span id="{{ $uid }}_wht_label_pct">{{ number_format($supplierAdvanceRate, 2) }}</span>%):</div>
                         </th>
                         <td>
-                            <input type="number" step="0.01" id="{{ $uid }}_SupplierWht236g"
-                                   class="form-control invoice-amount-input w-100"
-                                   value="{{ $showWhtBlock ? number_format($supplierWht236g, 2) : '0.00' }}" readonly>
+                            <input type="text" id="{{ $uid }}_SupplierWht236g"
+                                   class="form-control invoice-amount-input w-100 ifp-numfmt"
+                                   value="{{ number_format($supplierWht236g, 2, '.', ',') }}" readonly>
                         </td>
                     </tr>
                     <tr id="{{ $uid }}_tr_grand_with_wht" class="ifp-totals-grand @if(!$showWhtBlock) d-none @endif">
                         <th scope="row"><div class="fw-medium">Grand Total:</div></th>
                         <td>
-                            <input type="number" step="0.01" id="{{ $uid }}_GrandTotalWithWht"
-                                   class="form-control invoice-amount-input w-100 fw-bold"
-                                   value="{{ $showWhtBlock ? number_format($grandTotalAllTaxes, 2) : '0.00' }}" readonly>
+                            <input type="text" id="{{ $uid }}_GrandTotalWithWht"
+                                   class="form-control invoice-amount-input w-100 ifp-numfmt fw-bold"
+                                   value="{{ number_format($grandTotalAllTaxes, 2, '.', ',') }}" readonly>
                         </td>
                     </tr>
                 @endif
@@ -849,6 +900,28 @@ window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
         });
     }
 
+    function ifpSanitizeNumericText(v) {
+        return String(v == null ? '' : v).replace(/,/g, '').trim();
+    }
+    function ifpFormatNumber(v, decimals) {
+        const d = typeof decimals === 'number' ? decimals : 2;
+        const num = Number(v);
+        const safe = Number.isFinite(num) ? num : 0;
+        return safe.toLocaleString('en-US', {
+            minimumFractionDigits: d,
+            maximumFractionDigits: d
+        });
+    }
+    function ifpNormalizeFormattedInputs(scope) {
+        const root = scope || document;
+        root.querySelectorAll('.ifp-numfmt').forEach(function(el) {
+            el.value = ifpSanitizeNumericText(el.value);
+        });
+    }
+    window.ifpSanitizeNumericText = ifpSanitizeNumericText;
+    window.ifpFormatNumber = ifpFormatNumber;
+    window.ifpNormalizeFormattedInputs = ifpNormalizeFormattedInputs;
+
     const submitHandler = function(e) {
         if (e) e.preventDefault();
         const rows = body.querySelectorAll('tr.ifp-row');
@@ -858,6 +931,10 @@ window.initPurchaseForm = function(mode, externalSaveBtn, bsModal) {
             if (!row.querySelector('.line-product')?.value || (parseFloat(row.querySelector('.line-qty')?.value) || 0) <= 0) valid = false;
         });
         if (!valid) { alert('Each line needs a product and quantity greater than zero.'); return; }
+
+        if (typeof window.ifpNormalizeFormattedInputs === 'function') {
+            window.ifpNormalizeFormattedInputs(form);
+        }
 
         const fd = new FormData(form);
         fetch(form.action, {

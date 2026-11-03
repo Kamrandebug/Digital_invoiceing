@@ -6,8 +6,7 @@
 @extends('layouts.master')
 
 @section('styles')
-<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">
-
+<!--<link rel="stylesheet" href="{{ asset('css/customer-management.css') }}">-->
 @endsection
 
 @section('content')
@@ -16,44 +15,54 @@
     <div class="d-flex align-center justify-content-between flex-wrap">
         <h1 class="page-title fw-medium fs-14 mt-2 pt-1 mb-0">Product Management</h1>
         <div class="d-flex float-end">
+            @tenantCan('Products', 'Add')
             <button type="button" class="btn btn-sm btn-primary btn-wave waves-light" onclick="openProductModal('create')">
                 <i class="ri-add-line fw-medium align-middle me-1"></i> Add Product
             </button>
+            @endtenantCan
+            @if(session('selected_tenant.permissions.Products.Import') == 1 || session('selected_tenant.permissions.Products.Print') == 1 || session('selected_tenant.permissions.Products.Export') == 1)
             <div class="dropdown ms-2">
                 <button class="btn btn-icon btn-secondary-light btn-sm btn-wave waves-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-dots-vertical"></i>
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="javascript:void(0);">Import</a></li>
+                    @tenantCan('Products', 'Import')
+                    <li><a class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#productImportModal"><i class="fas fa-file-import me-1 text-primary"></i> Import</a></li>
+                    @endtenantCan
+                    @tenantCan('Products', 'Print')
                     <li><a class="dropdown-item" href="#">Bulk Print</a></li>
+                    @endtenantCan
+                    @tenantCan('Products', 'Export')
                     <li><a class="dropdown-item" href="{{ route('products.exportCSV', request()->query()) }}">Export CSV</a></li>
+                    @endtenantCan
                 </ul>
             </div>
+            @endif
         </div>
     </div>
 </div>
 
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
-    <i class="fas fa-check-circle"></i> {{ session('success') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 @if(session('error'))
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <i class="fas fa-exclamation-circle me-1"></i> {!! session('error') !!}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
 @if($errors->any())
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-triangle"></i>
+    <i class="fas fa-exclamation-triangle me-1"></i>
     @foreach ($errors->all() as $error)
-        {{ $error }}
+        {{ $error }}<br>
     @endforeach
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><i class="bi bi-x"></i></button>
 </div>
 @endif
 
@@ -123,7 +132,7 @@
                             <th>Name</th>
                             <th>Type</th>
                             <th>HsCode</th>
-                            <th>UOM</th>
+                            <th>HsCode UOM</th>
                             <th>SaleType</th>
                             <th>Rate</th>
                             <th>Status</th>
@@ -159,32 +168,50 @@
                             </td>
                             <td>
 								<div class="btn-group btn-listing">
+									  @tenantCan('Products', 'ViewOnly')
 									  <button class="btn btn-outline-primary btn-list-left" onclick="openProductModal('show', {{ $product->ID }})">
 										<i class="fas fa-eye"></i> View
 									  </button>
-									  <button type="button" class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									  @endtenantCan
+									  @if(session('selected_tenant.permissions.Products.Modify') == 1 || session('selected_tenant.permissions.Products.Delete') == 1)
+									  <button type="button"
+                                              class="btn btn-primary btn-list-right dropdown-toggle dropdown-toggle-split me-2"
+                                              data-bs-toggle="dropdown"
+                                              data-bs-auto-close="true"
+                                              data-bs-popper-config='{"strategy":"fixed"}'
+                                              aria-expanded="false">
 										<span class="sr-only">Toggle Dropdown</span>
 									  </button>
-									  <ul class="dropdown-menu">
-										
-										<button class="dropdown-item"
-												onclick="openProductModal('edit', {{ $product->ID }})">
-											<i class="fas fa-edit"></i> Edit
-										</button>
-										  
-										<button class="dropdown-item text-danger" title="Archive"
-											onclick="confirmDelete({{ $product->ID }}, '{{ addslashes($product->Name ?? '') }}')">
-											<i class="fas fa-trash"></i> Delete
-										</button>
-
-										<form id="delete-form-{{ $product->ID }}"
-											  action="{{ route('products.delete_transaction', $product->ID) }}"
-											  method="POST" style="display:none;">
-											@csrf
-											@method('DELETE')
-										</form>
-										  
+									  <ul class="dropdown-menu dropdown-menu-end">
+										@tenantCan('Products', 'Modify')
+										<li>
+											<button class="dropdown-item"
+													onclick="openProductModal('edit', {{ $product->ID }})">
+												<i class="fas fa-edit"></i> Edit
+											</button>
+										</li>
+										@endtenantCan
+										@tenantCan('Products', 'Delete')
+										<li>
+											<button class="dropdown-item text-danger" title="Archive"
+												onclick="confirmDelete({{ $product->ID }}, '{{ addslashes($product->Name ?? '') }}')">
+												<i class="fas fa-trash"></i> Delete
+											</button>
+											<form id="delete-form-{{ $product->ID }}"
+												  action="{{ route('products.delete_transaction', $product->ID) }}"
+												  method="POST" style="display:none;">
+												@csrf
+												@method('DELETE')
+											</form>
+										</li>
+										@endtenantCan
+										<li>
+											<button type="button" class="dropdown-item" onclick="showAuditHistory('PRODUCT', {{ $product->ID }})">
+												<i class="ri-history-line me-2"></i> Audit Log
+											</button>
+										</li>
 									  </ul>
+									  @endif
 									</div>
 								
 								
@@ -218,9 +245,11 @@
                                 @if(request('search') || request('start_date') || request('end_date'))
                                     <p class="text-muted small">Try adjusting your search or filters.</p>
                                 @else
+                                    @tenantCan('Products', 'Add')
                                     <button type="button" class="btn btn-primary" onclick="openProductModal('create')">
                                         <i class="fas fa-plus"></i> Add Your First Product
                                     </button>
+                                    @endtenantCan
                                 @endif
                             </td>
                         </tr>
@@ -232,8 +261,11 @@
         <div class="card-footer border-top-0">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-2">
                 <span class="text-muted fs-12">
-                    Showing {{ count($products) }} product(s)
+                    Showing {{ $products->firstItem() ?? 0 }} to {{ $products->lastItem() ?? 0 }} of {{ $products->total() }} product(s)
                 </span>
+                <nav class="pagination-style-2">
+                    {{ $products->withQueryString()->links('pagination::bootstrap-5') }}
+                </nav>
             </div>
         </div>
     </div>
@@ -292,10 +324,67 @@
     </div>
 </div>
 
+<!-- Product Import Modal -->
+<div class="modal fade" id="productImportModal" tabindex="-1" aria-labelledby="productImportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form action="{{ route('products.import') }}" method="POST" enctype="multipart/form-data" id="productImportForm" onsubmit="handleProductImportSubmit(this)">
+                @csrf
+                <div class="modal-header border-bottom py-2 px-3 bg-light">
+                    <h6 class="modal-title fw-semibold text-primary mb-0" id="productImportModalLabel" style="font-size: 15px;">
+                        <i class="fas fa-file-import me-2"></i> Import Products
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    {{-- Download Sample Template Strip --}}
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-light border rounded">
+                        <div>
+                            <div class="fw-semibold text-dark fs-13"><i class="fas fa-file-excel text-success me-1"></i> Sample Template</div>
+                            <small class="text-muted">Download pre-formatted Excel/CSV template</small>
+                        </div>
+                        <a href="{{ route('products.import-template') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download me-1"></i> Download Template
+                        </a>
+                    </div>
+
+                    {{-- File Input --}}
+                    <div class="mb-0">
+                        <label for="product_import_file" class="form-label fw-semibold fs-13 text-dark">
+                            Select File <span class="text-danger">*</span>
+                        </label>
+                        <input type="file" 
+                               name="import_file" 
+                               id="product_import_file" 
+                               class="form-control form-control-sm" 
+                               accept=".xlsx, .xls, .csv, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+                               required>
+                        <small class="text-muted d-block mt-1">Supported formats: <strong>.xlsx, .xls, .csv</strong> (Max: 10MB)</small>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3 border-top bg-light">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-primary" id="btnSubmitProductImport">
+                        <i class="fas fa-upload me-1"></i> <span id="btnSubmitProductImportText">Upload & Import</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
 <script>
+function handleProductImportSubmit(form) {
+    const btn = document.getElementById('btnSubmitProductImport');
+    const txt = document.getElementById('btnSubmitProductImportText');
+    if (btn) {
+        btn.disabled = true;
+        if (txt) txt.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Importing...';
+    }
+}
     let deleteProductId = null;
 
     function confirmDelete(id, name) {

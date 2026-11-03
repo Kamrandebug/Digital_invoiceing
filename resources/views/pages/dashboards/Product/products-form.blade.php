@@ -19,10 +19,12 @@
         ? $catFromProduct
         : ($defaultCategoryId ?? '');
     $pfpSelectedCategory = old('Category', $catFallback);
+    $isCustomUnit = $isCustomUnit ?? true;
     $unitFromProduct = $product->Unit ?? null;
-    $unitFallback = ($unitFromProduct !== null && $unitFromProduct !== '' && (int) $unitFromProduct !== 0)
+    $hasExistingUnit = ($unitFromProduct !== null && $unitFromProduct !== '' && (int) $unitFromProduct !== 0);
+    $unitFallback = $hasExistingUnit
         ? $unitFromProduct
-        : ($defaultUnitId ?? '');
+        : ((!$isCustomUnit) ? 1 : ($defaultUnitId ?? ''));
     $pfpSelectedUnit = old('Unit', $unitFallback);
 @endphp
 
@@ -117,9 +119,11 @@
         </div>
         @if($isReadonly)
         <div class="col-md-2 text-end">
+            @tenantCan('Products', 'Modify')
             <a href="{{ route('products.edit', $product->ID ?? 0) }}" class="btn btn-light btn-sm fw-bold text-primary shadow-sm">
                 <i class="fas fa-edit"></i> Edit Product
             </a>
+            @endtenantCan
         </div>
         @endif
     </div>
@@ -238,20 +242,49 @@
                     <div class="mb-3">
                         <label for="Unit" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Unit of Measure</label>
                         @if($isReadonly)
-                            <div class="detail-value">{{ $product->UnitName ?? $product->Unit ?? '-' }}</div>
+                            <div class="detail-value">{{ $product->UnitName ?? $product->Unit ?? 'No Unit' }}</div>
                         @else
                             <div class="d-flex gap-1 align-items-center">
-                                <select name="Unit" id="Unit" class="form-select @error('Unit') is-invalid @enderror flex-grow-1" style="min-width:0;">
-                                    <option value="">Select Unit</option>
-                                    @foreach($units as $un)
-                                        <option value="{{ $un->id }}" {{ (string) $pfpSelectedUnit === (string) $un->id ? 'selected' : '' }}>{{ $un->UnitName }}</option>
-                                    @endforeach
-                                </select>
-                                <button type="button" class="btn btn-sm btn-primary pfp-line-add-entity-btn flex-shrink-0" id="productForm_newUnitBtn" title="New unit" aria-label="New unit"><i class="fas fa-plus"></i></button>
+                                @if(!$isCustomUnit)
+                                    @php
+                                        $selectedUnitId = (string) ($pfpSelectedUnit ?: '1');
+                                        $selectedUnitName = 'No Unit';
+                                        foreach ($units as $un) {
+                                            if ((string) $un->id === $selectedUnitId) {
+                                                $selectedUnitName = $un->UnitName;
+                                                break;
+                                            }
+                                        }
+                                        if ($selectedUnitName === 'No Unit' && $product && !empty($product->UnitName)) {
+                                            $selectedUnitName = $product->UnitName;
+                                        }
+                                    @endphp
+                                    <input type="hidden" name="Unit" id="Unit" value="{{ $selectedUnitId }}">
+                                    <select class="form-select flex-grow-1" style="min-width:0; background-color: var(--bs-secondary-bg, #e9ecef); cursor: not-allowed;" disabled readonly>
+                                        <option value="{{ $selectedUnitId }}" selected>{{ $selectedUnitName }}</option>
+                                    </select>
+                                @else
+                                    <select name="Unit" id="Unit" class="form-select @error('Unit') is-invalid @enderror flex-grow-1" style="min-width:0;">
+                                        <option value="">Select Unit</option>
+                                        @foreach($units as $un)
+                                            <option value="{{ $un->id }}" {{ (string) $pfpSelectedUnit === (string) $un->id ? 'selected' : '' }}>{{ $un->UnitName }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-primary pfp-line-add-entity-btn flex-shrink-0" id="productForm_newUnitBtn" title="New unit" aria-label="New unit"><i class="fas fa-plus"></i></button>
+                                @endif
                             </div>
-                            @error('Unit')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
+                            @if(!$isCustomUnit)
+                                <div class="text-muted small mt-1">
+                                    <i class="fas fa-lock"></i> Custom units are locked for this account. Contact administrator to enable.
+                                </div>
+                            @else
+                                @error('Unit')
+                                    <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
+                                @enderror
+                                <div class="text-muted small mt-1">
+                                    <i class="fas fa-info-circle"></i> Unit selection affects the HS Code Qty (FBR Qty) column on invoices.
+                                </div>
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -463,21 +496,9 @@
                     </div>
                 </div>
 
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="Weight" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Weight (kg)</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ number_format($product->Weight ?? 0, 2) }}</div>
-                        @else
-                            <input type="number" step="0.000001" class="form-control @error('Weight') is-invalid @enderror"
-                                   id="Weight" name="Weight"
-                                   value="{{ old('Weight', $product->Weight ?? '0.00') }}" placeholder="0.00">
-                            @error('Weight')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
+                @if(!$isReadonly)
+                    <input type="hidden" name="Weight" value="{{ old('Weight', $product->Weight ?? '0.00') }}">
+                @endif
             </div>
         </div>
 
@@ -594,37 +615,10 @@
                     </div>
                 </div>
 
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="OpeningQuantity" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Opening Quantity</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ $product->OpeningQuantity ?? 0 }}</div>
-                        @else
-                            <input type="number" step="0.000001" class="form-control @error('OpeningQuantity') is-invalid @enderror"
-                                   id="OpeningQuantity" name="OpeningQuantity"
-                                   value="{{ old('OpeningQuantity', $product->OpeningQuantity ?? '0') }}" placeholder="0">
-                            @error('OpeningQuantity')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label for="OpeningRate" class="{{ $isReadonly ? 'detail-label' : 'form-label' }}">Opening Rate (PKR)</label>
-                        @if($isReadonly)
-                            <div class="detail-value">{{ number_format($product->OpeningRate ?? 0, 2) }}</div>
-                        @else
-                            <input type="number" step="0.000001" class="form-control @error('OpeningRate') is-invalid @enderror"
-                                   id="OpeningRate" name="OpeningRate"
-                                   value="{{ old('OpeningRate', $product->OpeningRate ?? '0.00') }}" placeholder="0.00">
-                            @error('OpeningRate')
-                                <div class="invalid-feedback"><i class="fas fa-exclamation-circle error-icon"></i>{{ $message }}</div>
-                            @enderror
-                        @endif
-                    </div>
-                </div>
+                @if(!$isReadonly)
+                    <input type="hidden" name="OpeningQuantity" value="{{ old('OpeningQuantity', $product->OpeningQuantity ?? '0') }}">
+                    <input type="hidden" name="OpeningRate" value="{{ old('OpeningRate', $product->OpeningRate ?? '0.00') }}">
+                @endif
             </div>
         </div>
 
@@ -936,57 +930,10 @@
         const form   = document.getElementById(formId);
         const inputs = form.querySelectorAll('input, textarea, select');
 
-        // Restore
-        if (!document.querySelector('.alert-danger')) {
-            inputs.forEach(input => {
-                if (input.type === 'hidden' || input.type === 'password') return;
-
-                const key         = storagePrefix + input.name;
-                const storedValue = localStorage.getItem(key);
-
-                if (storedValue !== null) {
-                    if (input.type === 'checkbox' || input.type === 'radio') {
-                        const shouldBeChecked = (storedValue === 'true');
-                        if (input.checked !== shouldBeChecked) {
-                            input.checked = shouldBeChecked;
-                            input.dispatchEvent(new Event('change'));
-                        }
-                    } else {
-                        if (input.value !== storedValue) {
-                            input.value = storedValue;
-                            input.dispatchEvent(new Event('input'));
-                        }
-                    }
-                }
-            });
-        }
-
-        // Save
+        // Always purge stale draft items for product form
         inputs.forEach(input => {
-            const saveHandler = function() {
-                if (this.type === 'hidden' || this.type === 'password') return;
-
-                const key = storagePrefix + this.name;
-                let value;
-
-                if (this.type === 'checkbox' || this.type === 'radio') {
-                    value = this.checked;
-                } else {
-                    value = this.value;
-                }
-
-                localStorage.setItem(key, value);
-            };
-
-            input.addEventListener('input', saveHandler);
-            input.addEventListener('change', saveHandler);
-        });
-
-        // Clear on submit
-        form.addEventListener('submit', function() {
-            inputs.forEach(input => {
-                localStorage.removeItem(storagePrefix + input.name);
-            });
+            localStorage.removeItem(storagePrefix + input.name);
+            localStorage.removeItem('product_form_draft');
         });
     }
 

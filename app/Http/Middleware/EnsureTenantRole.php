@@ -5,63 +5,75 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureTenantRole
 {
     /**
-     * Ensure user has one of the allowed roles for selected tenant.
+     * Handle dynamic route authorization using the granular matrix.
      */
     public function handle(Request $request, Closure $next, string ...$allowedRoles): Response
     {
-        $allowedRoles = array_values(array_filter(array_map(
-            static fn ($r) => strtolower(trim((string) $r)),
-            $allowedRoles
-        )));
+        if (!Auth::check()) {
+            return $this->deny($request, 'Please sign in first.');
+        }
 
-        if ($allowedRoles === []) {
+        $segment = strtolower($request->segment(1) ?? '');
+        $moduleMap = [
+            'products' => 'Products',
+            'customers' => 'Customers',
+            'suppliers' => 'Suppliers',
+            'invoices' => 'Invoices',
+            'purchases' => 'Purchases',
+            'users' => 'Users',
+            'roles' => 'Roles',
+        ];
+
+        if (!isset($moduleMap[$segment])) {
+            // Non-catalog pages (like dashboard) let everyone through
             return $next($request);
         }
 
-        $selectedTenant = $request->session()->get('selected_tenant');
-        $tenantId = is_array($selectedTenant) ? (int) ($selectedTenant['id'] ?? 0) : 0;
-        $userId = (int) (Auth::id() ?? 0);
+        $moduleName = $moduleMap[$segment];
 
-        if ($tenantId <= 0 || $userId <= 0) {
-            return $this->deny($request, 'Please select a tenant first.');
+        // Resolve active action based on route path / HTTP method
+        $action = 'ViewOnly';
+        $method = $request->method();
+        $path = $request->path();
+
+        if ($method === 'DELETE' || str_contains($path, 'delete')) {
+            $action = 'Delete';
+        } elseif (($method === 'POST' && str_contains($path, 'save')) || str_contains($path, 'create')) {
+            $action = 'Add';
+        } elseif ($method === 'PUT' || $method === 'PATCH' || str_contains($path, 'update') || str_contains($path, 'edit')) {
+            $action = 'Modify';
+        } elseif (str_contains($path, 'print')) {
+            $action = 'Print';
+        } elseif (str_contains($path, 'import')) {
+            $action = 'Import';
+        } elseif (str_contains($path, 'export')) {
+            $action = 'Export';
         }
 
-        $role = is_array($selectedTenant)
-            ? strtolower(trim((string) ($selectedTenant['role'] ?? '')))
-            : '';
+        $permissions = session('selected_tenant.permissions', []);
 
-        // Fallback lookup if session role is missing/stale.
-        if ($role === '') {
-            $dbRole = DB::connection('landlord')
-                ->table('tbl_tenant_users')
-                ->where('TenantID', $tenantId)
-                ->where('UserID', $userId)
-                ->where('IsActive', 1)
-                ->value('Role');
-
-            $role = strtolower(trim((string) ($dbRole ?? '')));
-            if ($role !== '') {
-                $selectedTenant['role'] = $role;
-                $request->session()->put('selected_tenant', $selectedTenant);
-            }
+        if (empty($permissions) || !isset($permissions[$moduleName])) {
+            return $this->deny($request, 'Access Denied: You do not have permissions for the ' . $moduleName . ' module.');
         }
 
-        if ($role !== '' && in_array($role, $allowedRoles, true)) {
+        $isAuthorized = (int)($permissions[$moduleName][$action] ?? 0) === 1;
+
+        // Fallback: If it's a POST/PUT edit form action but they only have ViewOnly, deny it.
+        if ($isAuthorized) {
             return $next($request);
         }
 
-        return $this->deny($request, 'You do not have permission for this tenant action.');
+        return $this->deny($request, "Access Denied: You do not have permission to perform this action ($action) in " . $moduleName . '.');
     }
 
     private function deny(Request $request, string $message): Response
     {
-        if ($request->expectsJson()) {
+        if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
                 'status' => 'error',
                 'message' => $message,
@@ -73,4 +85,3 @@ class EnsureTenantRole
             ->with('error', $message);
     }
 }
-

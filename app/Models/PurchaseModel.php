@@ -362,6 +362,22 @@ class PurchaseModel extends Model
             $stock->applyPurchaseLines($lines);
         });
 
+        try {
+            $tempDetail = DB::connection('tenant')->table('tbl_temp_purchase_detail')->where('RequestID', $requestID)->first();
+            if ($tempDetail) {
+                $header = DB::connection('tenant')->table('tbl_purchase_header')->where('PurchaseID', $tempDetail->PurchaseID)->first();
+                if ($header) {
+                    $details = DB::connection('tenant')->table('tbl_purchase_detail')->where('PurchaseID', $tempDetail->PurchaseID)->get()->toArray();
+                    \App\Services\AuditLogService::log('CREATE', 'PURCHASE', $header->ID, null, [
+                        'header' => (array)$header,
+                        'lines' => $details
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log purchase creation: ' . $e->getMessage());
+        }
+
         return ['status' => true, 'message' => null];
     }
 
@@ -396,6 +412,20 @@ class PurchaseModel extends Model
 
         $stock = new StockService;
 
+        $oldPurchase = null;
+        try {
+            $oldHeader = DB::connection('tenant')->table('tbl_purchase_header')->where('ID', $tid)->first();
+            if ($oldHeader) {
+                $details = DB::connection('tenant')->table('tbl_purchase_detail')->where('PurchaseID', $tid)->get()->toArray();
+                $oldPurchase = [
+                    'header' => (array)$oldHeader,
+                    'lines' => $details
+                ];
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to fetch old purchase for edit audit: ' . $e->getMessage());
+        }
+
         DB::transaction(function () use ($requestID, $tenantDbQuoted, $tid, $oldLines, $stock) {
             $stock->reversePurchaseLines($oldLines);
 
@@ -418,6 +448,19 @@ class PurchaseModel extends Model
             $stock->applyPurchaseLines($newLines);
         });
 
+        try {
+            if ($oldPurchase) {
+                $newHeader = DB::connection('tenant')->table('tbl_purchase_header')->where('ID', $tid)->first();
+                $newDetails = DB::connection('tenant')->table('tbl_purchase_detail')->where('PurchaseID', $tid)->get()->toArray();
+                \App\Services\AuditLogService::log('UPDATE', 'PURCHASE', $tid, $oldPurchase, [
+                    'header' => $newHeader ? (array)$newHeader : null,
+                    'lines' => $newDetails
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log purchase edit: ' . $e->getMessage());
+        }
+
         $newLines = DB::table('tbl_purchase_detail')
             ->where('PurchaseID', $tid)
             ->where('Status', '!=', 2)
@@ -439,6 +482,24 @@ class PurchaseModel extends Model
             ->where('RequestID', $requestID)
             ->value('TID');
 
+        // Fetch old values before deleting
+        $oldPurchase = null;
+        $purchaseId = $tid ?: null;
+        try {
+            if ($purchaseId) {
+                $oldHeader = DB::connection('tenant')->table('tbl_purchase_header')->where('ID', $purchaseId)->first();
+                if ($oldHeader) {
+                    $details = DB::connection('tenant')->table('tbl_purchase_detail')->where('PurchaseID', $purchaseId)->get()->toArray();
+                    $oldPurchase = [
+                        'header' => (array)$oldHeader,
+                        'lines' => $details
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to fetch old purchase for delete audit: ' . $e->getMessage());
+        }
+
         if (! $tid) {
             DB::statement("
                 UPDATE tbl_purchase_header uu
@@ -449,6 +510,28 @@ class PurchaseModel extends Model
                 ) u ON uu.ID = u.TID
                 SET uu.Status = u.Status, uu.UpdatedBy = u.UpdatedBy, uu.UpdatedOn = u.UpdatedOn
             ", [$requestID]);
+
+            // Try to find purchase ID from temp if possible
+            try {
+                $tempDetail = DB::connection('tenant')->table('tbl_temp_purchase_detail')->where('RequestID', $requestID)->first();
+                if ($tempDetail && !empty($tempDetail->TID)) {
+                    $purchaseId = $tempDetail->TID;
+                    $oldHeader = DB::connection('tenant')->table('tbl_purchase_header')->where('ID', $purchaseId)->first();
+                    if ($oldHeader) {
+                        $details = DB::connection('tenant')->table('tbl_purchase_detail')->where('PurchaseID', $purchaseId)->get()->toArray();
+                        $oldPurchase = [
+                            'header' => (array)$oldHeader,
+                            'lines' => $details
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {}
+
+            try {
+                if ($purchaseId && $oldPurchase) {
+                    \App\Services\AuditLogService::log('DELETE', 'PURCHASE', $purchaseId, $oldPurchase, null);
+                }
+            } catch (\Throwable $e) {}
 
             return;
         }
@@ -477,5 +560,11 @@ class PurchaseModel extends Model
                 SET uu.Status = u.Status, uu.UpdatedBy = u.UpdatedBy, uu.UpdatedOn = u.UpdatedOn
             ", [$requestID]);
         });
+
+        try {
+            if ($purchaseId && $oldPurchase) {
+                \App\Services\AuditLogService::log('DELETE', 'PURCHASE', $purchaseId, $oldPurchase, null);
+            }
+        } catch (\Throwable $e) {}
     }
 }

@@ -8,8 +8,12 @@ use App\Http\Controllers\DashboardsController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleReportController;
 use App\Http\Controllers\TenantListController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\AuditLogController;
 use App\Models\Task;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +40,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile/modal', [ProfileController::class, 'modal'])->name('profile.modal');
+    Route::post('/profile/update-info', [ProfileController::class, 'updateInfo'])->name('profile.update-info');
+    Route::post('/profile/update-password', [ProfileController::class, 'updatePassword'])->name('profile.update-password');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
@@ -60,6 +67,8 @@ Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->
 
     // ⚠️ Static segments BEFORE /{id} wildcard
     Route::get('/export/csv', [CustomerController::class, 'exportCSV'])->name('export-csv');
+    Route::get('/import/template', [CustomerController::class, 'downloadImportTemplate'])->name('import-template');
+    Route::post('/import', [CustomerController::class, 'importCustomers'])->middleware('tenant.role:owner,admin,accountant')->name('import');
     Route::post('/verify-fbr', [CustomerController::class, 'verifyFbr'])->middleware('tenant.role:owner,admin,accountant')->name('verify_fbr');
     Route::get('/modal', [CustomerController::class, 'modal'])->name('modal');
 
@@ -78,6 +87,8 @@ Route::middleware(['auth', 'tenant'])->prefix('suppliers')->name('suppliers.')->
     Route::post('/save', [SupplierController::class, 'save_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('save_transaction');
 
     Route::get('/export/csv', [SupplierController::class, 'exportCSV'])->name('export-csv');
+    Route::get('/import/template', [SupplierController::class, 'downloadImportTemplate'])->name('import-template');
+    Route::post('/import', [SupplierController::class, 'importCustomers'])->middleware('tenant.role:owner,admin,accountant')->name('import');
     Route::post('/verify-fbr', [SupplierController::class, 'verifyFbr'])->middleware('tenant.role:owner,admin,accountant')->name('verify_fbr');
     Route::get('/modal', [SupplierController::class, 'modal'])->name('modal');
 
@@ -115,6 +126,9 @@ Route::middleware(['auth', 'tenant'])->prefix('purchases')->name('purchases.')->
     Route::get('/{id}/breakup/download', [PurchaseBreakupController::class, 'download'])->name('breakup.download');
     Route::get('/{id}/breakup/settings', [PurchaseBreakupController::class, 'settings'])->name('breakup.settings');
     Route::get('/{id}/breakup/status', [PurchaseBreakupController::class, 'status'])->name('breakup.status');
+    Route::post('/{id}/breakup/post-to-fbr', [PurchaseBreakupController::class, 'postToFbr'])
+        ->middleware('tenant.role:owner,admin,accountant')
+        ->name('breakup.post-to-fbr');
 
     Route::get('/{id}/edit', [PurchaseController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
     Route::put('/{id}/update', [PurchaseController::class, 'edit_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('edit_transaction');
@@ -149,6 +163,8 @@ Route::middleware(['auth', 'tenant'])->prefix('products')->name('products.')->gr
     Route::post('/lookups/unit', [ProductController::class, 'storeQuickUnit'])->middleware('tenant.role:owner,admin,accountant')->name('lookups.unit-store');
 
     Route::get('/export/csv', [ProductController::class, 'exportCSV'])->name('exportCSV');
+    Route::get('/import/template', [ProductController::class, 'downloadImportTemplate'])->name('import-template');
+    Route::post('/import', [ProductController::class, 'importProducts'])->middleware('tenant.role:owner,admin,accountant')->name('import');
     Route::get('/modal', [ProductController::class, 'modal'])->name('modal');
     Route::get('/{id}/modal', [ProductController::class, 'modal'])->name('modal.id');
 
@@ -168,6 +184,11 @@ Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->gr
     // ⚠️ Static segments BEFORE /{id} wildcard
     Route::get('/export/csv', [InvoiceController::class, 'exportCSV'])->name('export-csv');
     Route::get('/modal', [InvoiceController::class, 'modal'])->name('modal');
+    Route::post('/bulk-post-fbr', [InvoiceController::class, 'bulkPostFbr'])->name('bulk-post-fbr');
+    Route::post('/print-template/save', [InvoiceController::class, 'savePrintTemplate'])->name('print-template.save');
+    Route::post('/print-template/save-as-new', [InvoiceController::class, 'saveAsNewPrintTemplate'])->name('print-template.save-as-new');
+    Route::post('/print-template/{templateId}/reset', [InvoiceController::class, 'resetPrintTemplate'])->whereNumber('templateId')->name('print-template.reset');
+    Route::post('/print-template/{templateId}/delete', [InvoiceController::class, 'deletePrintTemplate'])->whereNumber('templateId')->name('print-template.delete');
 
     Route::get('/{id}/edit', [InvoiceController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');
     Route::post('/{id}/update', [InvoiceController::class, 'edit_transaction'])->middleware('tenant.role:owner,admin,accountant')->name('edit_transaction');
@@ -175,14 +196,64 @@ Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->gr
     Route::get('/{id}/modal', [InvoiceController::class, 'modal'])->name('modal.id');
     Route::get('/{id}/print-view', [InvoiceController::class, 'printView'])->name('print-view');
     Route::post('/{id}/post-fbr', [InvoiceController::class, 'postToFbr'])->middleware('tenant.role:owner,admin,accountant')->name('post-fbr');
+    Route::post('/{id}/cancel-fbr', [InvoiceController::class, 'cancelFbr'])->middleware('tenant.role:owner,admin,accountant')->name('cancel-fbr');
     Route::get('/{id}', [InvoiceController::class, 'show'])->name('show');
+});
+
+// ── Bulk Invoices ─────────────────────────────────────────────
+use App\Http\Controllers\BulkInvoiceController;
+
+Route::middleware(['auth', 'tenant'])->prefix('bulk-invoices')->name('bulk-invoices.')->group(function () {
+    Route::get('/', [BulkInvoiceController::class, 'index'])->name('index');
+    Route::get('/import/template', [BulkInvoiceController::class, 'downloadImportTemplate'])->name('import-template');
+    Route::post('/import', [BulkInvoiceController::class, 'importInvoices'])->middleware('tenant.role:owner,admin,accountant')->name('import');
+    Route::get('/{id}/invoices', [BulkInvoiceController::class, 'getBatchInvoices'])->name('invoices');
+    Route::post('/rollback/{id}', [BulkInvoiceController::class, 'rollbackBatch'])->middleware('tenant.role:owner,admin,accountant')->name('rollback');
 });
 
 // ── Reports ───────────────────────────────────────────────────
 Route::middleware(['auth', 'tenant'])->prefix('reports')->name('reports.')->group(function () {
-    Route::get('/sale', [SaleReportController::class, 'index'])->name('sale');
+    Route::get('/', [ReportController::class, 'index'])->name('index');
+    Route::get('/sale', [ReportController::class, 'saleReportRedirect'])->name('sale');
     Route::get('/sale/export', [SaleReportController::class, 'exportCsv'])->name('sale.export');
     Route::get('/sale/print', [SaleReportController::class, 'printView'])->name('sale.print');
+
+    Route::get('/{reportId}', [ReportController::class, 'show'])->whereNumber('reportId')->name('show');
+    Route::post('/{reportId}/settings', [ReportController::class, 'saveSettings'])->whereNumber('reportId')->name('settings.save');
+    Route::post('/{reportId}/reset', [ReportController::class, 'resetSettings'])->whereNumber('reportId')->name('settings.reset');
+    Route::get('/{reportId}/export', [ReportController::class, 'exportCsv'])->whereNumber('reportId')->name('export');
+    Route::get('/{id}/print', [ReportController::class, 'printView'])->whereNumber('id')->name('print.legacy');
+    Route::get('/{reportId}/print', [ReportController::class, 'printView'])->whereNumber('reportId')->name('print');
+});
+
+// ── Roles & Permissions ───────────────────────────────────────
+Route::middleware(['auth', 'tenant'])->prefix('roles')->name('roles.')->group(function () {
+    Route::get('/', [RoleController::class, 'index'])->name('index');
+    Route::get('/create', [RoleController::class, 'create'])->name('create');
+    Route::post('/save', [RoleController::class, 'save_transaction'])->name('save_transaction');
+    Route::get('/modal', [RoleController::class, 'modal'])->name('modal');
+    Route::get('/{id}/modal', [RoleController::class, 'modal'])->name('modal.id');
+    Route::get('/{id}/edit', [RoleController::class, 'edit'])->name('edit');
+    Route::put('/{id}/update', [RoleController::class, 'edit_transaction'])->name('edit_transaction');
+    Route::delete('/{id}/delete', [RoleController::class, 'delete_transaction'])->name('delete_transaction');
+});
+
+// ── Users Management ──────────────────────────────────────────
+Route::middleware(['auth', 'tenant'])->prefix('users')->name('users.')->group(function () {
+    Route::get('/', [UserController::class, 'index'])->name('index');
+    Route::get('/create', [UserController::class, 'create'])->name('create');
+    Route::post('/save', [UserController::class, 'save_transaction'])->name('save_transaction');
+    Route::get('/modal', [UserController::class, 'modal'])->name('modal');
+    Route::get('/{id}/modal', [UserController::class, 'modal'])->name('modal.id');
+    Route::get('/{id}/edit', [UserController::class, 'edit'])->name('edit');
+    Route::put('/{id}/update', [UserController::class, 'edit_transaction'])->name('edit_transaction');
+    Route::delete('/{id}/delete', [UserController::class, 'delete_transaction'])->name('delete_transaction');
+});
+
+// ── Audit Logs ────────────────────────────────────────────────
+Route::middleware(['auth', 'tenant'])->prefix('audit-logs')->name('audit_logs.')->group(function () {
+    Route::get('/', [AuditLogController::class, 'index'])->name('index');
+    Route::get('/history', [AuditLogController::class, 'history'])->name('history');
 });
 
 require __DIR__.'/auth.php';

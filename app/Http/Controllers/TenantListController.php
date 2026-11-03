@@ -51,6 +51,29 @@ class TenantListController extends Controller
             return redirect()->route('tenants.index')->with('error', 'Tenant not found or not assigned to you.');
         }
 
+        $expiry = $tenant->ExpiryDate ?? $tenant->expirydate ?? null;
+        $expiryWarning = false;
+        $daysLeft = 0;
+
+        if ($expiry) {
+            try {
+                $expiryDate = \Carbon\Carbon::parse($expiry);
+                if ($expiryDate->isPast()) {
+                    return redirect()
+                        ->route('tenants.index')
+                        ->with('error', "Access Denied: The subscription for '{$tenant->TenantName}' has expired. Please contact support or renew your subscription.");
+                }
+                
+                if ($expiryDate->isFuture() && $expiryDate->lte(now()->addDays(7))) {
+                    $expiryWarning = true;
+                    // Ensure daysLeft is at least 0 (using ceil or similar to represent today vs tomorrow)
+                    $daysLeft = (int) max(0, now()->startOfDay()->diffInDays($expiryDate->startOfDay()));
+                }
+            } catch (\Throwable $e) {
+                // Ignore parsing errors
+            }
+        }
+
         // Save tenant DB credentials in session so the middleware can switch DB per request.
         // NOTE: Your `digital_invoicing.tbl_tenant` columns are: `DBServer`, `DBUser`, `DBPass`, `DatabaseName`.
         $dbServer = $tenant->DBServer ?? $tenant->dbserver ?? null;
@@ -90,6 +113,8 @@ class TenantListController extends Controller
             'tenant_user_id' => $tenant->TenantUserID ?? null,
             'role'           => strtolower((string) ($tenant->UserRole ?? 'user')),
             'ConsultantLogo' => $logoUrl,
+            'expiry_warning' => $expiryWarning,
+            'days_left'      => $daysLeft,
         ]);
 
         return redirect()->intended(route('dashboard', absolute: false));

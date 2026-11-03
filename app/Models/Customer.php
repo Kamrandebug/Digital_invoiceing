@@ -88,7 +88,8 @@ class Customer extends Model
 
   public static function getlistingdata($filters = [])
 {
-$query = DB::table('tbl_customer')->where('Status', '!=', 2);
+// No Status = 2 filter needed — deleted rows no longer live in tbl_customer (moved to tbl_customer_history)
+$query = DB::table('tbl_customer');
 
     if (! empty($filters['party_types'])) {
         $partyTypes = array_map('intval', (array) $filters['party_types']);
@@ -106,6 +107,7 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
         $query->where(function($q) use ($search) {
             $q->where('DisplayName',   'LIKE', "%{$search}%")
               ->orWhere('BusinessName', 'LIKE', "%{$search}%")
+              ->orWhere('AccountNo',    'LIKE', "%{$search}%")
               ->orWhere('FirstName',    'LIKE', "%{$search}%")
               ->orWhere('LastName',     'LIKE', "%{$search}%")
               ->orWhere('Address',      'LIKE', "%{$search}%")
@@ -139,7 +141,28 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
             (
                 SELECT 	t.ID,
                     CASE
-                    WHEN t.BusinessName IS NULL OR t.BusinessName = '' THEN 'Invalid Business Name'
+                    WHEN t.BusinessName IS NULL OR TRIM(t.BusinessName) = '' 
+                        THEN 'Missing Business Name'
+                    WHEN t.County IS NULL OR TRIM(t.County) = '' 
+                        THEN 'Missing Province'
+                    WHEN t.AccountNo IS NULL OR TRIM(t.AccountNo) = '' 
+                        THEN 'Missing AccountNo'
+                    WHEN t.Status NOT IN (0, 1) 
+                        THEN 'Invalid Status (Must be 1 for Active or 0 for InActive)'
+                    WHEN (
+                        SELECT COUNT(*) 
+                        FROM temp_customer tc 
+                        WHERE tc.RequestID = t.RequestID 
+                          AND LOWER(TRIM(tc.AccountNo)) = LOWER(TRIM(t.AccountNo))
+                    ) > 1 
+                        THEN CONCAT('Duplicate AccountNo \'', TRIM(t.AccountNo), '\' in batch')
+                    WHEN EXISTS (
+                        SELECT 1 
+                        FROM tbl_customer cust 
+                        WHERE LOWER(TRIM(cust.AccountNo)) = LOWER(TRIM(t.AccountNo))
+                          AND cust.Status IN (0, 1)
+                    ) 
+                        THEN CONCAT('AccountNo \'', TRIM(t.AccountNo), '\' already exists')
                     ELSE 'Pass' END AS `ErrMsg`
                 FROM `temp_customer` t
                 WHERE t.RequestID = ?
@@ -147,20 +170,25 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
             SET	uu.ErrMsg = u.ErrMsg;
         ", [$requestID]);
 
-        $errorSummary = DB::selectOne("
-            SELECT
-                IFNULL(COUNT(*),0) AS cnt,
-                GROUP_CONCAT(DISTINCT t.ErrMsg ORDER BY t.ErrMsg SEPARATOR ', ') AS ErrMsg
-            FROM `temp_customer` t
-            WHERE t.`ErrMsg` IS NOT NULL
-              AND t.`ErrMsg` <> 'Pass'
-              AND t.RequestID = ?
-        ", [$requestID]);
+        $failedRows = DB::table('temp_customer')
+            ->where('RequestID', $requestID)
+            ->whereNotNull('ErrMsg')
+            ->where('ErrMsg', '<>', 'Pass')
+            ->orderBy('ExcelRow', 'asc')
+            ->orderBy('ID', 'asc')
+            ->get(['ID', 'ExcelRow', 'ErrMsg']);
 
-        if ((int) ($errorSummary->cnt ?? 0) > 0) {
+        if ($failedRows->isNotEmpty()) {
+            $errors = [];
+            foreach ($failedRows as $row) {
+                $rowPrefix = !empty($row->ExcelRow) ? "Row {$row->ExcelRow}:" : "Row ID {$row->ID}:";
+                $errors[] = "{$rowPrefix} {$row->ErrMsg}";
+            }
+
             return [
                 'status' => false,
-                'message' => $errorSummary->ErrMsg ?: 'Unable to add customer due to invalid data.',
+                'message' => implode("<br>", $errors),
+                'errors' => $errors,
             ];
         }
 
@@ -172,8 +200,29 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
                 Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn
             FROM 	temp_customer
-            WHERE RequestID = ?
+            WHERE RequestID = ? AND ErrMsg = 'Pass'
         ", [$requestID]);
+
+        try {
+            $accountNos = DB::connection('tenant')->table('temp_customer')
+                ->where('RequestID', $requestID)
+                ->where('ErrMsg', 'Pass')
+                ->pluck('AccountNo')
+                ->filter()
+                ->all();
+
+            if (!empty($accountNos)) {
+                $insertedRecords = DB::connection('tenant')->table('tbl_customer')
+                    ->whereIn('AccountNo', $accountNos)
+                    ->get();
+                foreach ($insertedRecords as $inserted) {
+                    $module = ((int)$inserted->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
+                    \App\Services\AuditLogService::log('CREATE', $module, $inserted->ID, null, (array)$inserted);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log customer creation: ' . $e->getMessage());
+        }
 
         return [
             'status' => true,
@@ -196,6 +245,13 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 SELECT 	t.ID,
                     CASE
                     WHEN t.BusinessName IS NULL OR t.BusinessName = '' THEN 'Invalid Business Name'
+                    WHEN t.AccountNo IS NOT NULL AND TRIM(t.AccountNo) <> '' AND EXISTS (
+                        SELECT 1
+                        FROM tbl_customer cust
+                        WHERE LOWER(TRIM(cust.AccountNo)) = LOWER(TRIM(t.AccountNo))
+                          AND cust.ID != t.TID
+                          AND cust.Status IN (0, 1)
+                    ) THEN CONCAT('Customer Code ''', TRIM(t.AccountNo), ''' is already used by another customer')
                     ELSE 'Pass' END AS `ErrMsg`
                 FROM `temp_customer` t
                 WHERE t.RequestID = ?
@@ -220,6 +276,17 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
             ];
         }
 
+        // Fetch old values before updating
+        $oldRecord = null;
+        try {
+            $tempRow = DB::connection('tenant')->table('temp_customer')->where('RequestID', $requestID)->first();
+            if ($tempRow && !empty($tempRow->TID)) {
+                $oldRecord = DB::connection('tenant')->table('tbl_customer')->where('ID', $tempRow->TID)->first();
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to fetch old customer details for audit: ' . $e->getMessage());
+        }
+
         DB::statement("
             UPDATE tbl_customer uu
             JOIN (
@@ -242,6 +309,17 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 uu.Phone = u.Phone,
                 uu.Website = u.Website,
                 uu.Address = u.Address,
+                uu.City = u.City,
+                uu.County = u.County,
+                uu.PostalCode = u.PostalCode,
+                uu.Country = u.Country,
+                uu.SameAsBilling = u.SameAsBilling,
+                uu.BillingAddress = u.BillingAddress,
+                uu.BillingCity = u.BillingCity,
+                uu.BillingCounty = u.BillingCounty,
+                uu.BillingCountry = u.BillingCountry,
+                uu.BillingPostalCode = u.BillingPostalCode,
+                uu.FullBillingAddress = u.FullBillingAddress,
                 uu.NTN = u.NTN,
                 uu.CNIC = u.CNIC,
                 uu.SalesTaxNumber = u.SalesTaxNumber,
@@ -251,6 +329,7 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 uu.FilerStatusDate = u.FilerStatusDate,
                 uu.IsAdvanceTax = u.IsAdvanceTax,
                 uu.AdvanceTax = u.AdvanceTax,
+                uu.Notes = u.Notes,
                 uu.SalesTaxWithheldAtSource = u.SalesTaxWithheldAtSource,
                 uu.ExtraTax = u.ExtraTax,
                 uu.FurtherTax = u.FurtherTax,
@@ -260,6 +339,19 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
                 uu.UpdatedOn = u.UpdatedOn
         ", [$requestID]);
 
+        // Fetch new values after updating
+        try {
+            if ($oldRecord) {
+                $newRecord = DB::connection('tenant')->table('tbl_customer')->where('ID', $oldRecord->ID)->first();
+                if ($newRecord) {
+                    $module = ((int)$newRecord->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
+                    \App\Services\AuditLogService::log('UPDATE', $module, $oldRecord->ID, (array)$oldRecord, (array)$newRecord);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to log customer edit: ' . $e->getMessage());
+        }
+
         return [
             'status' => true,
             'message' => null,
@@ -267,23 +359,222 @@ $query = DB::table('tbl_customer')->where('Status', '!=', 2);
     }
 
     /**
-     * Execute delete: soft-update tbl_customer status from temp_customer. No return; runs query inside.
+     * Execute delete pipeline:
+     *   1. Resolve TID and fetch old record (for audit)
+     *   2. validate_can_delete()  — block if customer is referenced in invoices / purchases
+     *   3. move_history_data()    — INSERT INTO tbl_customer_history SELECT from tbl_customer
+     *   4. Hard DELETE FROM tbl_customer
+     *   5. AuditLogService::log() — unchanged
+     *
+     * Returns ['status' => bool, 'message' => string|null]
      */
-    public static function delete_transaction($validated = [])
+    public static function delete_transaction($validated = []): array
     {
         $requestID = $validated['RequestID'] ?? '';
-        DB::unprepared("
-            UPDATE tbl_customer uu
-            JOIN (
-                SELECT TID, 2 AS Status, CreatedBy, CreatedOn, UpdatedBy, UpdatedOn
-                FROM temp_customer
-                WHERE RequestID = '$requestID'
-            ) u ON uu.ID = u.TID
-            SET
-                uu.Status = u.Status,
-                uu.UpdatedBy = u.UpdatedBy,
-                uu.UpdatedOn = u.UpdatedOn
-        ");
+        $userId    = auth()->id() ?? 1;
+        $now       = now()->toDateTimeString();
+
+        // ── Resolve TID and old record early (needed for validation + audit) ──
+        $customerId = null;
+        $oldRecord  = null;
+        try {
+            $tempRow = DB::connection('tenant')
+                ->table('temp_customer')
+                ->where('RequestID', $requestID)
+                ->first();
+
+            if ($tempRow && !empty($tempRow->TID)) {
+                $customerId = (int) $tempRow->TID;
+                $oldRecord  = DB::connection('tenant')
+                    ->table('tbl_customer')
+                    ->where('ID', $customerId)
+                    ->first();
+            }
+        } catch (\Throwable $e) {
+            Log::error('delete_transaction: failed to fetch record for audit: ' . $e->getMessage());
+        }
+
+        // ── STEP 1: FK validation — block if customer is in use ──────────────
+        $blockReason = self::validate_can_delete($requestID);
+        if ($blockReason !== null) {
+            return ['status' => false, 'message' => $blockReason];
+        }
+
+        // ── STEPS 2-4 inside a transaction — all-or-nothing ──────────────────
+        // ── Bulk-ready: all three steps work on every TID in the RequestID batch ──
+        DB::transaction(function () use ($requestID, $userId, $now) {
+
+            // STEP 2: Copy ALL matching rows → tbl_customer_history (INSERT / SELECT)
+            // Already bulk-ready: archives every TID tied to this RequestID in one shot.
+            self::move_history_data($requestID, (int) $userId, $now, 'DELETE');
+
+            // STEP 3: Hard delete ALL matched customers from tbl_customer
+            // DELETE JOIN through temp_customer — works for single or bulk, zero code change needed later.
+            DB::statement("
+                DELETE c
+                FROM tbl_customer c
+                INNER JOIN temp_customer t ON t.TID = c.ID
+                WHERE t.RequestID = ?
+            ", [$requestID]);
+
+            // STEP 4: Audit log — single JOIN query through temp_customer GROUP BY TID
+            // Works for single or bulk: reads all archived rows for this RequestID in one shot.
+            try {
+                $archivedRows = DB::connection('tenant')
+                    ->table('tbl_customer_history as h')
+                    ->join(
+                        DB::raw('(SELECT TID FROM temp_customer WHERE RequestID = ? GROUP BY TID) t'),
+                        'h.OriginalID', '=', 't.TID'
+                    )
+                    ->where('h.ActionOn', $now)
+                    ->addBinding($requestID, 'join')
+                    ->get();
+
+                foreach ($archivedRows as $archived) {
+                    $module = ((int) $archived->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
+                    \App\Services\AuditLogService::log(
+                        'DELETE', $module, $archived->OriginalID, (array) $archived, null
+                    );
+                }
+            } catch (\Throwable $e) {
+                Log::error('delete_transaction: failed to write audit log: ' . $e->getMessage());
+            }
+
+        });
+
+
+        return ['status' => true, 'message' => null];
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  PRIVATE HELPERS — Delete pipeline
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Check whether the customer (resolved via temp_customer.TID) can be safely hard-deleted.
+     *
+     * Accepts $requestID — consistent with the rest of the delete pipeline
+     * (move_history_data, delete_transaction all work through RequestID).
+     *
+     * Uses a single SELECT with JOINs through temp_customer to resolve TID
+     * and check FK references in one DB round-trip.
+     *
+     * Returns null   → safe to proceed.
+     * Returns string → human-readable block reason to show to the user.
+     *
+     * @param  string  $requestID
+     */
+    private static function validate_can_delete(string $requestID): ?string
+    {
+        $result = DB::selectOne("
+            SELECT
+                -- Count active invoices linked to this customer via temp_customer.TID
+                (
+                    SELECT COUNT(*)
+                    FROM tbl_sales_invoice_header h
+                    INNER JOIN temp_customer t ON t.TID = h.CustomerID
+                    WHERE t.RequestID = ?
+                      AND h.Status != 2
+                ) AS invoice_count
+
+                -- -- Count active purchases linked to this supplier via temp_customer.TID
+                -- -- Temporarily disabled; uncomment when purchase validation is ready
+                -- ,(
+                --     SELECT COUNT(*)
+                --     FROM tbl_purchase_header p
+                --     INNER JOIN temp_customer t ON t.TID = p.SupplierID
+                --     WHERE t.RequestID = ?
+                --       AND p.Status != 2
+                -- ) AS purchase_count
+        ", [$requestID]);
+
+        $invoiceCount = (int) ($result->invoice_count ?? 0);
+        // $purchaseCount = (int) ($result->purchase_count ?? 0); // uncomment with query above
+
+        if ($invoiceCount > 0) {
+            return "Cannot delete: this customer has {$invoiceCount} active invoice(s). "
+                 . 'Please void or archive those invoices first.';
+        }
+
+        // if ($purchaseCount > 0) {
+        //     return "Cannot delete: this party is linked to {$purchaseCount} active purchase record(s). "
+        //          . 'Please remove those records first.';
+        // }
+
+        return null; // safe to proceed
+    }
+
+    /**
+     * Archive the customer row into tbl_customer_history using a single
+     * INSERT INTO ... SELECT statement (no PHP fetch round-trip).
+     *
+     * Data source  : temp_customer (filtered by RequestID) joined to tbl_customer via TID.
+     * Destination  : tbl_customer_history.
+     *
+     * @param  string       $requestID  The RequestID written to temp_customer by the controller
+     * @param  int          $actionBy   Auth user ID performing the action
+     * @param  string       $actionOn   Server timestamp (Y-m-d H:i:s)
+     * @param  string       $action     Action label: 'DELETE' | 'BULK_DELETE' | 'ARCHIVE' | ...
+     * @param  string|null  $actionNote Optional free-text note / batch reference
+     * @throws \RuntimeException if no matching row is found or insert fails
+     */
+    private static function move_history_data(
+        string  $requestID,
+        int     $actionBy,
+        string  $actionOn,
+        string  $action     = 'DELETE',
+        ?string $actionNote = null
+    ): void {
+        $inserted = DB::statement("
+            INSERT INTO tbl_customer_history (
+                OriginalID,
+                AccountNo, PartyType, IsArchive,
+                Title, FirstName, LastName, BusinessName, DisplayName,
+                Email, Mobile, Phone, Website,
+                Address, City, County, PostalCode, Country,
+                SameAsBilling,
+                BillingAddress, BillingCity, BillingCounty, BillingCountry,
+                BillingPostalCode, FullBillingAddress,
+                NTN, SalesTaxNumber, CNIC,
+                IsFiler, RegisterType, FilerStatus, FilerStatusDate,
+                IsAdvanceTax, AdvanceTax,
+                Notes,
+                SalesTaxWithheldAtSource, ExtraTax, FurtherTax, FedPayable,
+                Status, IsDashboard,
+                CreatedBy, CreatedOn,
+                UpdatedBy, UpdatedOn,
+                Action, ActionBy, ActionOn, ActionNote
+            )
+            SELECT
+                c.ID,
+                c.AccountNo, c.PartyType, c.IsArchive,
+                c.Title, c.FirstName, c.LastName, c.BusinessName, c.DisplayName,
+                c.Email, c.Mobile, c.Phone, c.Website,
+                c.Address, c.City, c.County, c.PostalCode, c.Country,
+                c.SameAsBilling,
+                c.BillingAddress, c.BillingCity, c.BillingCounty, c.BillingCountry,
+                c.BillingPostalCode, c.FullBillingAddress,
+                c.NTN, c.SalesTaxNumber, c.CNIC,
+                c.IsFiler, c.RegisterType, c.FilerStatus, c.FilerStatusDate,
+                c.IsAdvanceTax, c.AdvanceTax,
+                c.Notes,
+                c.SalesTaxWithheldAtSource, c.ExtraTax, c.FurtherTax, c.FedPayable,
+                c.Status, c.IsDashboard,
+                c.CreatedBy, c.CreatedOn,
+                c.UpdatedBy, c.UpdatedOn,
+                ?, ?, ?, ?
+            FROM tbl_customer c
+            INNER JOIN temp_customer t ON t.TID = c.ID
+            WHERE t.RequestID = ?
+        ", [strtoupper($action), $actionBy, $actionOn, $actionNote, $requestID]);
+
+
+        if (! $inserted) {
+            throw new \RuntimeException(
+                "move_history_data: INSERT/SELECT returned false for RequestID={$requestID}. "
+                . 'Check that temp_customer.TID matches a valid tbl_customer.ID.'
+            );
+        }
     }
 
 
