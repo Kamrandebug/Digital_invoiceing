@@ -865,14 +865,15 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        {{-- Optional Amount in Words --}}
-        @if($showAmountInWords)
-            <div class="p-2 mt-3 bg-light border-start border-3 border-primary">
-                <strong>Amount in Words:</strong> {{ $amountInWordsText }}
-            </div>
-        @endif
+            {{-- Amount in Words: single line, right-aligned, bold prefix, normal text --}}
+            @if($showAmountInWords)
+                <div class="amount-in-words-line text-end mt-2 pt-2 border-top">
+                    <strong class="text-uppercase" style="font-size: 11.5px; letter-spacing: 0.03em;">AMOUNT IN WORDS:</strong>
+                    <span class="fw-normal text-dark ms-1" style="font-size: 12px;">{{ $amountInWordsText }}</span>
+                </div>
+            @endif
+        </div>
 
         {{-- Optional Bank / Payment Details --}}
         @if($showBankDetails && $bankDetailsText !== '')
