@@ -454,7 +454,12 @@ class BulkInvoiceController extends Controller
                 'h.SaleOfTerm',
                 'h.TotalValues',
                 'h.ValueSalesExcludingST',
+                'h.FixedNotifiedValueOrRetailPrice',
                 'h.SalesTaxApplicable',
+                'h.FurtherTax',
+                'h.ExtraTax',
+                'h.FedPayable',
+                'h.Discount',
                 'h.FbrTransactionID',
                 'h.FbrResponseJson',
                 'h.Statusi',
@@ -480,6 +485,8 @@ class BulkInvoiceController extends Controller
                 'd.Quantity',
                 'd.Rate',
                 'd.Amount',
+                'd.TPRate',
+                'd.FixedNotifiedValueOrRetailPrice',
                 'd.GSTAmount',
                 'd.TotalValues',
                 'd.SaleTypeDesc',
@@ -502,6 +509,27 @@ class BulkInvoiceController extends Controller
         foreach ($invoices as $inv) {
             $inv->items = $details->get($inv->HeaderID, collect());
             $inv->items_count = count($inv->items);
+
+            // Extract tax percentage for display
+            $taxRateStr = '';
+            if ($inv->items->isNotEmpty()) {
+                $firstItem = $inv->items->first();
+                if (!empty($firstItem->SaleTypeToRateDesc)) {
+                    if (preg_match('/(\d+(\.\d+)?)%/', $firstItem->SaleTypeToRateDesc, $m)) {
+                        $taxRateStr = $m[1] . '%';
+                    } else {
+                        $taxRateStr = $firstItem->SaleTypeToRateDesc;
+                    }
+                }
+            }
+            if ($taxRateStr === '') {
+                $base = (float)(($inv->FixedNotifiedValueOrRetailPrice ?? 0) > 0 ? $inv->FixedNotifiedValueOrRetailPrice : $inv->ValueSalesExcludingST);
+                if ($base > 0 && (float)($inv->SalesTaxApplicable ?? 0) > 0) {
+                    $calcPct = round(((float)$inv->SalesTaxApplicable / $base) * 100);
+                    $taxRateStr = $calcPct . '%';
+                }
+            }
+            $inv->tax_rate = $taxRateStr ?: '18%';
 
             $statusi = (int) ($inv->Statusi ?? 0);
             $hasTransId = !empty(trim((string) ($inv->FbrTransactionID ?? '')));
@@ -526,6 +554,8 @@ class BulkInvoiceController extends Controller
         $liveTotalInvoices = $invoices->count();
         $liveTotalAmount = (float) $invoices->sum('TotalValues');
         $liveTotalTax = (float) $invoices->sum('SalesTaxApplicable');
+        $liveTotalExcl = (float) $invoices->sum('ValueSalesExcludingST');
+        $liveTotalFixed = (float) $invoices->sum('FixedNotifiedValueOrRetailPrice');
 
         // Auto-sync tbl_bulk_invoice_request totals if individual invoices were deleted
         if ($batch->TotalInvoices != $liveTotalInvoices || abs((float)$batch->TotalAmount - $liveTotalAmount) > 0.01) {
@@ -545,9 +575,11 @@ class BulkInvoiceController extends Controller
             'status'   => 'success',
             'batch'    => $batch,
             'summary'  => [
-                'total_invoices' => $liveTotalInvoices,
-                'total_amount'   => $liveTotalAmount,
-                'total_tax'      => $liveTotalTax,
+                'total_invoices'       => $liveTotalInvoices,
+                'total_amount'         => $liveTotalAmount,
+                'total_tax'            => $liveTotalTax,
+                'total_excl'           => $liveTotalExcl,
+                'total_fixed_notified' => $liveTotalFixed,
             ],
             'counts'   => $counts,
             'invoices' => $invoices,

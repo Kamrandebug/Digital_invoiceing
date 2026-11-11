@@ -115,7 +115,7 @@
                                 if (($sidebarPermissions[$mod->Name]['ViewOnly'] ?? 0) == 1) {
                                     return true;
                                 }
-                                if ($mod->Name === 'Bulk Invoices' && ($sidebarPermissions['Invoices']['ViewOnly'] ?? 0) == 1) {
+                                if (in_array($mod->Name, ['Bulk Invoices', 'Breakup Invoices'], true) && ($sidebarPermissions['Invoices']['ViewOnly'] ?? 0) == 1) {
                                     return true;
                                 }
                                 return false;
@@ -135,28 +135,30 @@
 
                     // ── Route helper: map CurrentPage slug → named route ──────────────────────
                     $routeMap = [
-                        'products'      => ['url'   => url('products')],
-                        'customers'     => ['url'   => url('customers-list')],
-                        'suppliers'     => ['route' => 'suppliers.index'],
-                        'purchases'     => ['route' => 'purchases.index'],
-                        'invoices'      => ['route' => 'invoices.index'],
-                        'bulk-invoices' => ['route' => 'bulk-invoices.index'],
-                        'users'         => ['route' => 'users.index'],
-                        'roles'         => ['route' => 'roles.index'],
-                        'audit-logs'    => ['route' => 'audit_logs.index'],
+                        'products'         => ['url'   => url('products')],
+                        'customers'        => ['url'   => url('customers-list')],
+                        'suppliers'        => ['route' => 'suppliers.index'],
+                        'purchases'        => ['route' => 'purchases.index'],
+                        'invoices'         => ['route' => 'invoices.index'],
+                        'bulk-invoices'    => ['route' => 'bulk-invoices.index'],
+                        'breakup-invoices' => ['route' => 'breakup-invoices.index'],
+                        'users'            => ['route' => 'users.index'],
+                        'roles'            => ['route' => 'roles.index'],
+                        'audit-logs'       => ['route' => 'audit_logs.index'],
                     ];
 
                     // ── Active route helper ───────────────────────────────────────────────────
                     $routeNameMap = [
-                        'products'      => 'products.*',
-                        'customers'     => 'customers.*',
-                        'suppliers'     => 'suppliers.*',
-                        'purchases'     => 'purchases.*',
-                        'invoices'      => 'invoices.*',
-                        'bulk-invoices' => 'bulk-invoices.*',
-                        'users'         => 'users.*',
-                        'roles'         => 'roles.*',
-                        'audit-logs'    => 'audit_logs.*',
+                        'products'         => 'products.*',
+                        'customers'        => 'customers.*',
+                        'suppliers'        => 'suppliers.*',
+                        'purchases'        => 'purchases.*',
+                        'invoices'         => 'invoices.*',
+                        'bulk-invoices'    => 'bulk-invoices.*',
+                        'breakup-invoices' => 'breakup-invoices.*',
+                        'users'            => 'users.*',
+                        'roles'            => 'roles.*',
+                        'audit-logs'       => 'audit_logs.*',
                     ];
                 @endphp
 

@@ -321,6 +321,7 @@
                     <i class="ti ti-dots-vertical"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{{ route('breakup-invoices.index') }}"><i class="ri-split-cells-horizontal me-1 text-primary"></i> Breakup Invoices</a></li>
                     @tenantCan('Invoices', 'Print')
                     <li><a class="dropdown-item" href="#">Bulk Print</a></li>
                     @endtenantCan

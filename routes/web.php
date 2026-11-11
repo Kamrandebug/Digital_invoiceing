@@ -211,6 +211,20 @@ Route::middleware(['auth', 'tenant'])->prefix('bulk-invoices')->name('bulk-invoi
     Route::post('/rollback/{id}', [BulkInvoiceController::class, 'rollbackBatch'])->middleware('tenant.role:owner,admin,accountant')->name('rollback');
 });
 
+// ── Breakup Invoices ──────────────────────────────────────────
+use App\Http\Controllers\BreakupInvoiceController;
+
+Route::middleware(['auth', 'tenant'])->prefix('breakup-invoices')->name('breakup-invoices.')->group(function () {
+    Route::get('/', [BreakupInvoiceController::class, 'index'])->name('index');
+    Route::get('/product-info/{id}', [BreakupInvoiceController::class, 'getProductInfo'])->name('product-info');
+    Route::post('/generate-preview', [BreakupInvoiceController::class, 'generatePreview'])->middleware('tenant.role:owner,admin,accountant')->name('generate-preview');
+    Route::post('/update-row', [BreakupInvoiceController::class, 'updateRow'])->middleware('tenant.role:owner,admin,accountant')->name('update-row');
+    Route::post('/delete-row', [BreakupInvoiceController::class, 'deleteRow'])->middleware('tenant.role:owner,admin,accountant')->name('delete-row');
+    Route::post('/save', [BreakupInvoiceController::class, 'save'])->middleware('tenant.role:owner,admin,accountant')->name('save');
+    Route::get('/{id}/invoices', [BreakupInvoiceController::class, 'getBatchInvoices'])->name('invoices');
+    Route::post('/rollback/{id}', [BreakupInvoiceController::class, 'rollback'])->middleware('tenant.role:owner,admin,accountant')->name('rollback');
+});
+
 // ── Reports ───────────────────────────────────────────────────
 Route::middleware(['auth', 'tenant'])->prefix('reports')->name('reports.')->group(function () {
     Route::get('/', [ReportController::class, 'index'])->name('index');
