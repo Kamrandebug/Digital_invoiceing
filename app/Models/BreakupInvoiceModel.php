@@ -226,6 +226,40 @@ class BreakupInvoiceModel extends Model
             $taxPercent = ((float) $m[1]) / 100.0;
         }
 
+        // Gross Unit Price (Tax inclusive, accounting for TPRate if Fixed Rate product)
+        $grossUnitPrice = $rate;
+        if ($isFixedValue === 1 && $tpRate > 0) {
+            $grossUnitPrice = $rate + ($tpRate * $taxPercent);
+        } else {
+            $grossUnitPrice = $rate * (1 + $taxPercent);
+        }
+
+        // Amount thresholds to Quantity synchronization
+        $minAmount = isset($params['min_amount']) && is_numeric($params['min_amount']) ? (float) $params['min_amount'] : 0.0;
+        $maxAmount = isset($params['max_amount']) && is_numeric($params['max_amount']) ? (float) $params['max_amount'] : 0.0;
+
+        if ($grossUnitPrice > 0) {
+            if ($minAmount > 0) {
+                $calcMinQty = $minAmount / $grossUnitPrice;
+                $minQty = $allowDecimal ? round($calcMinQty, 4) : max(1, (int) ceil($calcMinQty));
+            }
+            if ($maxAmount > 0) {
+                $calcMaxQty = $maxAmount / $grossUnitPrice;
+                $maxQty = $allowDecimal ? round($calcMaxQty, 4) : max($minQty, (int) floor($calcMaxQty));
+            }
+        }
+
+        if ($maxQty < $minQty) {
+            $maxQty = $minQty;
+        }
+
+        if ($targetQty < $minQty) {
+            return [
+                'status' => false,
+                'message' => "Total target quantity ({$targetQty}) is less than the minimum quantity per invoice ({$minQty})."
+            ];
+        }
+
         // Date calculations
         try {
             $carbonFrom = Carbon::parse($fromDate)->startOfDay();
@@ -733,7 +767,7 @@ class BreakupInvoiceModel extends Model
                         IF(t.Quantity > 0, (t.ValueSalesExcludingST / t.Quantity), 0.00) AS Rate,
                         t.ValueSalesExcludingST AS Amount,
                         COALESCE(p.Unit, 1) AS Unit,
-                        t.Quantity AS FBRQty,
+                        CASE WHEN COALESCE(p.Unit, 1) > 1 THEN t.Quantity ELSE NULL END AS FBRQty,
                         IFNULL(t.Weight, 0.00),
                         t.SalesTaxApplicable AS GSTAmount,
                         t.HsCode,

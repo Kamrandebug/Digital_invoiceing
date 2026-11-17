@@ -473,6 +473,17 @@ class BulkInvoiceController extends Controller
 
         $headerIds = $invoices->pluck('HeaderID')->toArray();
 
+        // Auto-heal legacy records where Unit <= 1 but FBRQty was erroneously populated
+        if (!empty($headerIds)) {
+            DB::connection('tenant')->table('tbl_sales_invoice_detail')
+                ->whereIn('InvoiceID', $headerIds)
+                ->where(function ($q) {
+                    $q->whereNull('Unit')->orWhere('Unit', '<=', 1);
+                })
+                ->whereNotNull('FBRQty')
+                ->update(['FBRQty' => null]);
+        }
+
         $details = DB::connection('tenant')->table('tbl_sales_invoice_detail as d')
             ->leftJoin('tbl_product as p', 'p.ID', '=', 'd.ProductID')
             ->whereIn('d.InvoiceID', $headerIds)

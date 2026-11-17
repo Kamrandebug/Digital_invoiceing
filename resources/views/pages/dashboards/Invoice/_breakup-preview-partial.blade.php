@@ -42,8 +42,21 @@
     </div>
 </div>
 
+{{-- Preview Grid Table Toolbar --}}
+<div class="d-flex justify-content-between align-items-center mb-2 px-1">
+    <div class="fs-12 text-muted">
+        <i class="ri-table-line me-1"></i> <strong>{{ count($rows) }}</strong> Generated Invoices in this batch
+    </div>
+    <div class="form-check form-switch mb-0">
+        <input class="form-check-input cursor-pointer" type="checkbox" id="toggleExtendedTaxes" onchange="toggleExtendedTaxColumns(this.checked)">
+        <label class="form-check-label fs-11 fw-medium text-dark cursor-pointer" for="toggleExtendedTaxes">
+            <i class="ri-percent-line text-primary me-1"></i> Show Extended Taxes <span class="text-muted fs-10">(Discount, FED, Extra Tax, Further Tax)</span>
+        </label>
+    </div>
+</div>
+
 {{-- Preview Grid Table --}}
-<div class="table-responsive border rounded mb-3" style="max-height: 420px; overflow-y: auto;">
+<div class="table-responsive border rounded mb-3" style="max-height: 420px; overflow-y: auto;" id="breakupPreviewTableWrap">
     <table class="table table-hover table-sm align-middle mb-0" id="breakupPreviewTable">
         <thead class="table-light sticky-top">
             <tr class="fs-12 text-nowrap">
@@ -55,8 +68,12 @@
                 <th style="width: 110px;" class="text-end">Qty</th>
                 <th style="width: 100px;" class="text-end">Rate</th>
                 <th style="width: 100px;" class="text-end">Excl. Tax</th>
+                <th style="width: 90px;" class="text-end col-ext-tax d-none">Discount</th>
                 <th style="width: 105px;" class="text-end">Fixed Notified</th>
                 <th style="width: 100px;" class="text-end">GST</th>
+                <th style="width: 90px;" class="text-end col-ext-tax d-none">FED</th>
+                <th style="width: 90px;" class="text-end col-ext-tax d-none">Extra Tax</th>
+                <th style="width: 90px;" class="text-end col-ext-tax d-none">Further Tax</th>
                 <th style="width: 110px;" class="text-end">Total</th>
                 <th style="width: 40px;" class="text-center">Action</th>
             </tr>
@@ -106,11 +123,23 @@
                     <td class="text-end fw-medium" id="row-excl-{{ $r->ID }}">
                         {{ number_format($r->ValueSalesExcludingST, 2) }}
                     </td>
+                    <td class="text-end text-muted col-ext-tax d-none" id="row-disc-{{ $r->ID }}">
+                        {{ number_format($r->Discount ?? 0, 2) }}
+                    </td>
                     <td class="text-end text-muted" id="row-fixed-{{ $r->ID }}">
                         {{ number_format($r->FixedNotifiedValueOrRetailPrice ?? 0, 2) }}
                     </td>
                     <td class="text-end text-muted" id="row-tax-{{ $r->ID }}" title="{{ $r->SaleTypeToRateDesc }}">
                         {{ number_format($r->SalesTaxApplicable, 2) }}
+                    </td>
+                    <td class="text-end text-muted col-ext-tax d-none" id="row-fed-{{ $r->ID }}">
+                        {{ number_format($r->FedPayable ?? 0, 2) }}
+                    </td>
+                    <td class="text-end text-muted col-ext-tax d-none" id="row-extra-{{ $r->ID }}">
+                        {{ number_format($r->ExtraTax ?? 0, 2) }}
+                    </td>
+                    <td class="text-end text-muted col-ext-tax d-none" id="row-further-{{ $r->ID }}">
+                        {{ number_format($r->FurtherTax ?? 0, 2) }}
                     </td>
                     <td class="text-end fw-bold text-dark" id="row-total-{{ $r->ID }}">
                         {{ number_format($r->TotalValues, 2) }}
@@ -126,7 +155,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="12" class="text-center py-4 text-muted">No records generated.</td>
+                    <td colspan="16" class="text-center py-4 text-muted">No records generated.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -136,8 +165,12 @@
                 <td class="text-end text-primary" id="tableFootQty">{{ number_format($totalQty, 2) }}</td>
                 <td></td>
                 <td class="text-end" id="tableFootExcl">{{ number_format($totalExclTax, 2) }}</td>
+                <td class="text-end text-muted col-ext-tax d-none" id="tableFootDisc">{{ number_format($rows->sum('Discount') ?? 0, 2) }}</td>
                 <td class="text-end text-muted" id="tableFootFixed">{{ number_format($totalFixedNotified ?? 0, 2) }}</td>
                 <td class="text-end" id="tableFootTax">{{ number_format($totalTax, 2) }}</td>
+                <td class="text-end text-muted col-ext-tax d-none" id="tableFootFed">{{ number_format($rows->sum('FedPayable') ?? 0, 2) }}</td>
+                <td class="text-end text-muted col-ext-tax d-none" id="tableFootExtra">{{ number_format($rows->sum('ExtraTax') ?? 0, 2) }}</td>
+                <td class="text-end text-muted col-ext-tax d-none" id="tableFootFurther">{{ number_format($rows->sum('FurtherTax') ?? 0, 2) }}</td>
                 <td class="text-end text-dark" id="tableFootTotal">{{ number_format($totalAmount, 2) }}</td>
                 <td></td>
             </tr>
@@ -145,24 +178,20 @@
     </table>
 </div>
 
-{{-- Commit Action Bar --}}
-<div class="card bg-light border-0 p-3 rounded">
+{{-- Batch Title Bar --}}
+<div class="p-2 border rounded bg-light mb-2">
     <div class="row g-2 align-items-center">
-        <div class="col-md-6 col-sm-12">
-            <label class="form-label fs-12 fw-semibold text-dark mb-1">Batch Title (Optional)</label>
+        <div class="col-md-2 col-sm-3">
+            <label class="form-label fs-12 fw-semibold text-dark mb-0 text-nowrap" for="commitBatchTitle">
+                <i class="ri-bookmark-line text-primary me-1"></i> Batch Title:
+            </label>
+        </div>
+        <div class="col-md-10 col-sm-9">
             <input type="text" 
-                   class="form-control form-control-sm" 
+                   class="form-control form-control-sm bg-white" 
                    id="commitBatchTitle" 
                    placeholder="e.g. Breakup Invoices - March Sales" 
                    value="Breakup: {{ count($rows) ? ($rows[0]->ProductDescription ?? 'Invoices') : 'Invoices' }} ({{ date('d-M-Y') }})">
-        </div>
-        <div class="col-md-6 col-sm-12 text-md-end mt-3 mt-md-0">
-            <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="reRollBreakup()">
-                <i class="ri-refresh-line me-1"></i> Re-generate / Re-roll
-            </button>
-            <button type="button" class="btn btn-sm btn-success px-3" id="btnCommitInvoices" onclick="commitBreakupInvoices()">
-                <i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices
-            </button>
         </div>
     </div>
 </div>

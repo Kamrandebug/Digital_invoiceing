@@ -1026,6 +1026,19 @@ class InvoiceModel extends Model
         }
 
         $detailInvId = $header->InvoiceID ?? $header->ID;
+
+        // Auto-heal line items where Unit <= 1 but FBRQty was erroneously populated
+        try {
+            DB::statement("
+                UPDATE tbl_sales_invoice_detail
+                SET FBRQty = NULL
+                WHERE (InvoiceID = ? OR InvoiceID = ?)
+                  AND (Unit IS NULL OR Unit <= 1)
+                  AND FBRQty IS NOT NULL
+            ", [$header->ID, $detailInvId]);
+        } catch (\Throwable $e) {
+            \Log::warning('Auto-heal FBRQty failed in post_to_fbr', ['error' => $e->getMessage()]);
+        }
         $validation = DB::selectOne("
             SELECT
                 GROUP_CONCAT(DISTINCT err.ErrMsg ORDER BY err.ErrMsg SEPARATOR '; ') AS ErrorSummary
@@ -1092,7 +1105,7 @@ SELECT
                     '"fixedNotifiedValueOrRetailPrice" : ', IFNULL(d.FixedNotifiedValueOrRetailPrice, 0), ',',
                     '"salesTaxApplicable" : ', IFNULL(d.SalesTaxApplicable, 0), ',',
                     '"salesTaxWithheldAtSource" : ', IFNULL(d.SalesTaxWithheldAtSource, 0), ',',
-                    '"extraTax" : ', JSON_QUOTE(IFNULL(CAST(d.ExtraTax AS CHAR), '')), ',',
+                    '"extraTax" : ', JSON_QUOTE(IF(d.ExtraTax IS NULL OR d.ExtraTax = 0, '', CAST(d.ExtraTax AS CHAR))), ',',
                     '"furtherTax" : ', IFNULL(d.FurtherTax, 0), ',',
                     '"sroScheduleNo" : ', JSON_QUOTE(IFNULL(d.SroScheduleDesc, '')), ',',
                     '"fedPayable" : ', IFNULL(d.FedPayable, 0), ',',

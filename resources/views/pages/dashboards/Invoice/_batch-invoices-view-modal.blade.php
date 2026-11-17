@@ -357,9 +357,14 @@
                 </div>
             </div>
             <div class="modal-footer d-flex justify-content-between align-items-center">
-                <a href="#" id="batchModalFullViewBtn" target="_blank" class="btn btn-sm btn-outline-primary btn-wave waves-light">
-                    <i class="ri-external-link-line me-1"></i> Open in Full Invoices List
-                </a>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="#" id="batchModalFullViewBtn" target="_blank" class="btn btn-sm btn-outline-primary btn-wave waves-light">
+                        <i class="ri-external-link-line me-1"></i> Open in Full Invoices List
+                    </a>
+                    <button type="button" id="batchModalPrintBtn" class="btn btn-sm btn-success btn-wave waves-light" onclick="printCurrentBatchFromModal()">
+                        <i class="fas fa-print me-1"></i> Print Batch Invoices
+                    </button>
+                </div>
                 <button type="button" class="btn btn-sm btn-light border btn-wave waves-light" data-bs-dismiss="modal">
                     <i class="ri-close-line me-1"></i> Close
                 </button>
@@ -372,6 +377,17 @@
 <script>
 let currentBatchRequestId = null;
 let currentBatchTab = 'all';
+let currentBatchTotalInvoices = 0;
+let currentBatchTitle = '';
+
+function printCurrentBatchFromModal() {
+    if (!currentBatchRequestId) return;
+    if (typeof triggerBatchPrint === 'function') {
+        triggerBatchPrint(currentBatchRequestId, currentBatchTotalInvoices || 0, currentBatchTitle);
+    } else {
+        window.open('/invoices/batch/' + encodeURIComponent(currentBatchRequestId) + '/print', '_blank');
+    }
+}
 
 /**
  * Open Modal & Fetch Invoices via AJAX
@@ -379,6 +395,7 @@ let currentBatchTab = 'all';
  */
 function viewBatchInvoices(requestId, title, customEndpoint) {
     currentBatchRequestId = requestId;
+    currentBatchTitle = title || 'Batch Invoices';
     currentBatchTab = 'all';
 
     document.getElementById('batchModalTitle').textContent = title || 'Batch Invoices';
@@ -442,6 +459,7 @@ function viewBatchInvoices(requestId, title, customEndpoint) {
 
             const liveTotalInvoices = (data.summary && data.summary.total_invoices !== undefined) ? data.summary.total_invoices : invoices.length;
             const liveTotalAmount = (data.summary && data.summary.total_amount !== undefined) ? data.summary.total_amount : invoices.reduce((acc, inv) => acc + (parseFloat(inv.TotalValues) || 0), 0);
+            currentBatchTotalInvoices = liveTotalInvoices;
 
             document.getElementById('batchModalInvoicesPill').innerHTML = '<i class="ri-file-text-line me-1"></i> ' + liveTotalInvoices + ' Invoices';
             document.getElementById('batchModalAmountPill').innerHTML = '<i class="ri-money-dollar-circle-line me-1"></i> PKR ' + Number(liveTotalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });

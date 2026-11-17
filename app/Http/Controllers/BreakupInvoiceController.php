@@ -83,11 +83,14 @@ class BreakupInvoiceController extends Controller
     public function generatePreview(Request $request)
     {
         $request->validate([
-            'customer_id'       => 'required|integer|min:1',
-            'product_id'        => 'required|integer|min:1',
-            'total_target_qty'  => 'required|numeric|min:0.0001',
-            'min_qty'           => 'required|numeric|min:0.0001',
-            'max_qty'           => 'required|numeric|min:0.0001|gte:min_qty',
+            'customer_id'         => 'required|integer|min:1',
+            'product_id'          => 'required|integer|min:1',
+            'total_target_qty'    => 'required|numeric|min:0.0001',
+            'total_target_amount' => 'nullable|numeric|min:0',
+            'min_qty'             => 'required|numeric|min:0.0001',
+            'max_qty'             => 'required|numeric|min:0.0001|gte:min_qty',
+            'min_amount'          => 'nullable|numeric|min:0',
+            'max_amount'          => 'nullable|numeric|min:0',
             'from_date'         => 'required|date',
             'to_date'           => 'required|date|after_or_equal:from_date',
             'sale_rate'         => 'nullable|numeric|min:0',

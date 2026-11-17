@@ -61,6 +61,138 @@
         border-top-left-radius: 8px;
         border-top-right-radius: 8px;
     }
+
+    /* ── Breakup Modal Sizing, Typography & Theme Alignment ── */
+    #breakupGeneratorModal .modal-dialog {
+        max-height: 94vh;
+        margin-top: 3vh;
+        margin-bottom: 3vh;
+    }
+    #breakupGeneratorModal .modal-content {
+        max-height: 94vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+    #breakupGeneratorModal .modal-header {
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0.65rem 1.15rem;
+    }
+    #breakupGeneratorModal .modal-footer {
+        background-color: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        padding: 0.55rem 1.15rem;
+    }
+    #breakupGeneratorModal .modal-body {
+        overflow-y: auto !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: #94a3b8 #f1f5f9 !important;
+        padding: 1rem 1.15rem !important;
+    }
+    #breakupGeneratorModal .modal-body::-webkit-scrollbar {
+        width: 8px !important;
+        height: 8px !important;
+        display: block !important;
+    }
+    #breakupGeneratorModal .modal-body::-webkit-scrollbar-track {
+        background: #f1f5f9 !important;
+        border-radius: 4px;
+    }
+    #breakupGeneratorModal .modal-body::-webkit-scrollbar-thumb {
+        background: #94a3b8 !important;
+        border-radius: 4px;
+    }
+    #breakupGeneratorModal .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #64748b !important;
+    }
+
+    /* Preview Table Typography & Compact Cells (Strictly Aligned with Batch View Modal) */
+    #breakupPreviewTable {
+        font-size: 12px;
+        margin-bottom: 0;
+    }
+    #breakupPreviewTable thead th {
+        padding: 0.35rem 0.55rem !important;
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    #breakupPreviewTable tbody td,
+    #breakupPreviewTable tfoot td {
+        padding: 0.28rem 0.55rem !important;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+        line-height: 1.3;
+        font-size: 12px;
+    }
+    #breakupPreviewTable tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    /* Preview Table Scrollbar */
+    #breakupPreviewTableWrap {
+        scrollbar-width: thin !important;
+        scrollbar-color: #94a3b8 #f1f5f9 !important;
+    }
+    #breakupPreviewTableWrap::-webkit-scrollbar {
+        width: 8px !important;
+        height: 8px !important;
+        display: block !important;
+    }
+    #breakupPreviewTableWrap::-webkit-scrollbar-track {
+        background: #f8fafc !important;
+        border-radius: 4px;
+    }
+    #breakupPreviewTableWrap::-webkit-scrollbar-thumb {
+        background: #cbd5e1 !important;
+        border-radius: 4px;
+    }
+    #breakupPreviewTableWrap::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8 !important;
+    }
+
+    /* Searchable Choices.js in Modal (Matching Theme fs-12 and form-control-sm) */
+    #breakupGeneratorModal .choices {
+        margin-bottom: 0 !important;
+        font-size: 12px !important;
+    }
+    #breakupGeneratorModal .choices__inner {
+        min-height: 31px !important;
+        padding: 0.2rem 0.5rem !important;
+        font-size: 12px !important;
+        border-radius: 0.25rem !important;
+        border: 1px solid #e2e8ee !important;
+        background-color: #fff !important;
+        line-height: 1.4 !important;
+    }
+    #breakupGeneratorModal .choices__list--single {
+        padding: 0 !important;
+        font-size: 12px !important;
+    }
+    #breakupGeneratorModal .choices__list--dropdown {
+        z-index: 1060 !important;
+        border: 1px solid #e2e8ee !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+        font-size: 12px !important;
+    }
+    #breakupGeneratorModal .choices__list--dropdown .choices__item {
+        font-size: 12px !important;
+        padding: 0.35rem 0.6rem !important;
+    }
+    #breakupGeneratorModal .choices__input {
+        font-size: 12px !important;
+        background-color: #fff !important;
+        margin-bottom: 0.25rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
 </style>
 @endsection
 
@@ -302,6 +434,11 @@
                                             </button>
                                         </li>
                                         <li>
+                                            <button type="button" class="dropdown-item" onclick="triggerBatchPrint('{{ $batch->RequestID }}', {{ (int) $batch->TotalInvoices }}, '{{ addslashes($batch->Title) }}')">
+                                                <i class="fas fa-print me-2 text-success"></i> Print Invoices ({{ $batch->TotalInvoices }})
+                                            </button>
+                                        </li>
+                                        <li>
                                             <a class="dropdown-item" href="{{ route('invoices.index', ['search' => $batch->RequestID, 'fbr_status' => 'all']) }}" target="_blank">
                                                 <i class="fas fa-external-link-alt me-2 text-secondary"></i> Open in Invoices Page
                                             </a>
@@ -370,138 +507,213 @@
             </div>
             <div class="modal-body p-3">
                 {{-- Form Setup Card --}}
-                <form id="breakupGeneratorForm" onsubmit="generateBreakupPreview(event)">
+                <form id="breakupGeneratorForm" novalidate onsubmit="generateBreakupPreview(event)">
                     @csrf
                     <input type="hidden" name="request_id" id="form_request_id" value="">
                     
-                    <div class="card border rounded mb-3">
-                        <div class="card-body p-3">
-                            <div class="row g-3">
-                                {{-- Customer Selection --}}
-                                <div class="col-md-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">Customer <span class="text-danger">*</span></label>
-                                    <select name="customer_id" id="modal_customer_id" class="form-select form-select-sm" required>
-                                        <option value="">-- Select Customer --</option>
-                                        @foreach($customers as $c)
-                                            <option value="{{ $c->ID }}">
-                                                {{ $c->DisplayName ?? $c->BusinessName ?? ('Customer #' . $c->ID) }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-
-                                {{-- Product Selection --}}
-                                <div class="col-md-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">Product <span class="text-danger">*</span></label>
-                                    <select name="product_id" id="modal_product_id" class="form-select form-select-sm" onchange="onProductSelect(this.value)" required>
-                                        <option value="">-- Select Product --</option>
-                                        @foreach($products as $p)
-                                            <option value="{{ $p->ID }}" 
-                                                    data-saleprice="{{ (float) $p->SalePrice }}"
-                                                    data-tprate="{{ (float) $p->TPRate }}"
-                                                    data-isfixed="{{ (int) ($p->IsFixedRate ?? $p->IsFixedValue ?? 0) }}"
-                                                    data-uom="{{ $p->Uom_Desc }}"
-                                                    data-saletype="{{ $p->SaleTypeDesc }}"
-                                                    data-salerate="{{ $p->SaleTypeToRateDesc }}">
-                                                {{ $p->Name }} {{ !empty($p->Code) ? "({$p->Code})" : '' }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-
-                                {{-- Product Attributes Info Bar (Auto-loaded) --}}
-                                <div class="col-12" id="productInfoBanner" style="display: none;">
-                                    <div class="p-2 border rounded bg-light d-flex flex-wrap gap-3 align-items-center fs-12">
-                                        <div><span class="text-muted">UOM:</span> <strong id="infoUom" class="badge bg-secondary-transparent">-</strong></div>
-                                        <div><span class="text-muted">FBR Sale Type:</span> <strong id="infoSaleType" class="text-dark">-</strong></div>
-                                        <div><span class="text-muted">Tax Rate:</span> <strong id="infoTaxRate" class="badge bg-info-transparent">-</strong></div>
-                                        <div><span class="text-muted">Fixed Value (TPRate):</span> <strong id="infoFixedRate" class="badge bg-warning-transparent">-</strong></div>
-                                    </div>
-                                </div>
-
-                                {{-- Sale Rate & Fixed Rate Override --}}
-                                <div class="col-md-3 col-sm-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">Sale Rate (PKR) <span class="text-danger">*</span></label>
-                                    <input type="number" step="any" min="0.01" name="sale_rate" id="modal_sale_rate" class="form-control form-control-sm text-end" placeholder="0.00" required>
-                                </div>
-
-                                <div class="col-md-3 col-sm-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">Fixed Rate (TPRate)</label>
-                                    <input type="number" step="any" min="0" name="tp_rate" id="modal_tp_rate" class="form-control form-control-sm text-end" placeholder="Optional" oninput="syncFixedRateFlag(this.value)">
-                                    <input type="hidden" name="is_fixed_value" id="modal_is_fixed_value" value="0">
-                                </div>
-
-                                <div class="col-md-3 col-sm-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">Sale of Term</label>
-                                    <select name="sale_of_term" class="form-select form-select-sm">
-                                        <option value="CASH">CASH</option>
-                                        <option value="CREDIT">CREDIT</option>
-                                    </select>
-                                </div>
-
-                                <div class="col-md-3 col-sm-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">Invoice Numbering</label>
-                                    <div class="d-flex align-items-center gap-3 mt-1">
-                                        <div class="form-check form-check-inline mb-0">
-                                            <input class="form-check-input" type="radio" name="numbering_mode" id="numModeAuto" value="auto" checked onchange="toggleNumberingMode()">
-                                            <label class="form-check-label fs-12 fw-medium" for="numModeAuto">Auto</label>
+                    <div class="card border rounded mb-3" id="breakupFormCard">
+                        <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                <span class="fs-12 fw-semibold text-dark text-nowrap"><i class="ri-equalizer-line text-primary me-1"></i> Generation Parameters</span>
+                                <span id="formCollapsedSummary" class="text-truncate" style="display: none;"></span>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-light border text-dark py-1 px-2 text-nowrap" id="btnToggleFormCard" onclick="toggleFormCardCollapse()">
+                                <i class="ri-arrow-up-s-line me-1" id="formCollapseIcon"></i><span id="formCollapseText">Collapse</span>
+                            </button>
+                        </div>
+                        <div id="breakupFormCardBody">
+                            <div class="card-body p-3 bg-light-subtle">
+                                {{-- Panel 1: Customer, Product & Pricing --}}
+                                <div class="border rounded p-3 mb-2 bg-white">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-6 col-sm-12">
+                                            <label class="form-label fs-12 fw-semibold mb-1">Customer <span class="text-danger">*</span></label>
+                                            <select name="customer_id" id="modal_customer_id" class="form-select form-select-sm fs-12">
+                                                <option value="">-- Select Customer --</option>
+                                                @foreach($customers as $c)
+                                                    <option value="{{ $c->ID }}">
+                                                        {{ $c->DisplayName ?? $c->BusinessName ?? ('Customer #' . $c->ID) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </div>
-                                        <div class="form-check form-check-inline mb-0">
-                                            <input class="form-check-input" type="radio" name="numbering_mode" id="numModeCustom" value="custom" onchange="toggleNumberingMode()">
-                                            <label class="form-check-label fs-12 fw-medium" for="numModeCustom">Prefix</label>
+                                        <div class="col-md-6 col-sm-12">
+                                            <label class="form-label fs-12 fw-semibold mb-1">Product <span class="text-danger">*</span></label>
+                                            <select name="product_id" id="modal_product_id" class="form-select form-select-sm fs-12" onchange="onProductSelect(this.value)">
+                                                <option value="">-- Select Product --</option>
+                                                @foreach($products as $p)
+                                                    <option value="{{ $p->ID }}" 
+                                                            data-saleprice="{{ (float) $p->SalePrice }}"
+                                                            data-tprate="{{ (float) $p->TPRate }}"
+                                                            data-isfixed="{{ (int) ($p->IsFixedRate ?? $p->IsFixedValue ?? 0) }}"
+                                                            data-uom="{{ $p->Uom_Desc }}"
+                                                            data-saletype="{{ $p->SaleTypeDesc }}"
+                                                            data-salerate="{{ $p->SaleTypeToRateDesc }}">
+                                                        {{ $p->Name }} {{ !empty($p->Code) ? "({$p->Code})" : '' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        
+                                        {{-- Product Attributes Compact Meta Strip (Auto-loaded) --}}
+                                        <div class="col-12" id="productInfoBanner" style="display: none;">
+                                            <div class="py-1 px-2 border rounded bg-light d-flex flex-wrap align-items-center gap-2 fs-11 text-muted">
+                                                <span><i class="ri-scales-3-line text-primary me-1"></i>UOM: <strong id="infoUom" class="text-dark">-</strong></span>
+                                                <span>&bull;</span>
+                                                <span><i class="ri-file-text-line text-primary me-1"></i>Sale Type: <strong id="infoSaleType" class="text-dark">-</strong></span>
+                                                <span>&bull;</span>
+                                                <span><i class="ri-percent-line text-primary me-1"></i>Tax Rate: <strong id="infoTaxRate" class="text-primary">-</strong></span>
+                                                <span>&bull;</span>
+                                                <span><i class="ri-price-tag-3-line text-primary me-1"></i>Fixed TPRate: <strong id="infoFixedRate" class="text-dark">-</strong></span>
+                                                <span>&bull;</span>
+                                                <span id="unitGrossPriceHint" class="text-success fw-semibold"></span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div id="customPrefixWrapper" class="mt-1" style="display: none;">
-                                        <input type="text" name="invoice_prefix" id="modal_invoice_prefix" class="form-control form-control-sm" value="INV-{{ date('Y') }}" placeholder="e.g. INV-2026">
+
+                                    <div class="row g-2">
+                                        <div class="col-md-4 col-sm-6">
+                                            <label class="form-label fs-12 fw-semibold mb-1">Sale Rate (PKR) <span class="text-danger">*</span></label>
+                                            <input type="number" step="any" min="0.01" name="sale_rate" id="modal_sale_rate" class="form-control form-control-sm fs-12 text-end" placeholder="0.00" required oninput="syncAllLimitsFromRates()">
+                                        </div>
+                                        <div class="col-md-4 col-sm-6">
+                                            <label class="form-label fs-12 fw-semibold mb-1">Fixed Rate (TPRate)</label>
+                                            <input type="number" step="any" min="0" name="tp_rate" id="modal_tp_rate" class="form-control form-control-sm fs-12 text-end" placeholder="Optional" oninput="syncFixedRateFlag(this.value); syncAllLimitsFromRates();">
+                                            <input type="hidden" name="is_fixed_value" id="modal_is_fixed_value" value="0">
+                                        </div>
+                                        <div class="col-md-4 col-sm-12">
+                                            <label class="form-label fs-12 fw-semibold mb-1">Sale of Term</label>
+                                            <select name="sale_of_term" class="form-select form-select-sm fs-12">
+                                                <option value="CASH">CASH</option>
+                                                <option value="CREDIT">CREDIT</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {{-- Target Total & Min/Max Constraints --}}
-                                <div class="col-md-4 col-sm-12">
-                                    <label class="form-label fs-12 fw-semibold mb-1 text-primary">
-                                        Total Target Quantity <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="input-group input-group-sm">
-                                        <input type="number" step="any" min="0.0001" name="total_target_qty" id="modal_target_qty" class="form-control form-control-sm text-end fw-bold" placeholder="e.g. 1000" required>
-                                        <span class="input-group-text bg-light text-muted" id="targetUomAddon">Units</span>
+                                {{-- Panel 2: Target Quantity, Schedule & Options --}}
+                                <div class="border rounded p-3 mb-2 bg-white">
+                                    <div class="row g-2 mb-2 align-items-stretch">
+                                        <div class="col-md-6 col-sm-12">
+                                            <div class="p-2 rounded border bg-light-subtle h-100">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <span class="fs-12 fw-semibold text-primary"><i class="ri-pie-chart-line me-1"></i>Total Target</span>
+                                                    <span class="text-muted fs-11"><i class="ri-repeat-line me-1"></i>Qty & Amount sync</span>
+                                                </div>
+                                                <div class="row g-2">
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-11 text-muted mb-1">Target Qty <span class="text-danger">*</span></label>
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="number" step="any" min="0.0001" name="total_target_qty" id="modal_target_qty" class="form-control form-control-sm fs-12 text-end fw-bold bg-white" placeholder="e.g. 1000" required oninput="onTargetQtyChange(this.value)">
+                                                            <span class="input-group-text bg-light text-muted fs-11 px-2" id="targetUomAddon">Units</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-11 text-muted mb-1">Target Amount (PKR)</label>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light text-muted fs-11 px-2">PKR</span>
+                                                            <input type="number" step="any" min="0" name="total_target_amount" id="modal_target_amount" class="form-control form-control-sm fs-12 text-end fw-bold bg-white" placeholder="e.g. 750000" oninput="onTargetAmountChange(this.value)" onblur="onTargetAmountBlur()">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-sm-6">
+                                            <div class="p-2 rounded border bg-white h-100 d-flex flex-column justify-content-between">
+                                                <label class="form-label fs-12 fw-semibold mb-1">From Date <span class="text-danger">*</span></label>
+                                                <input type="date" name="from_date" id="modal_from_date" class="form-control form-control-sm fs-12" value="{{ date('Y-m-01') }}" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-sm-6">
+                                            <div class="p-2 rounded border bg-white h-100 d-flex flex-column justify-content-between">
+                                                <label class="form-label fs-12 fw-semibold mb-1">To Date <span class="text-danger">*</span></label>
+                                                <input type="date" name="to_date" id="modal_to_date" class="form-control form-control-sm fs-12" value="{{ date('Y-m-d') }}" required>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-2 align-items-center pt-1">
+                                        <div class="col-md-6 col-sm-12">
+                                            <label class="form-label fs-12 fw-semibold mb-1">Invoice Numbering</label>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="form-check form-check-inline mb-0">
+                                                    <input class="form-check-input" type="radio" name="numbering_mode" id="numModeAuto" value="auto" checked onchange="toggleNumberingMode()">
+                                                    <label class="form-check-label fs-12 fw-medium" for="numModeAuto">Auto</label>
+                                                </div>
+                                                <div class="form-check form-check-inline mb-0">
+                                                    <input class="form-check-input" type="radio" name="numbering_mode" id="numModeCustom" value="custom" onchange="toggleNumberingMode()">
+                                                    <label class="form-check-label fs-12 fw-medium" for="numModeCustom">Prefix</label>
+                                                </div>
+                                                <div id="customPrefixWrapper" style="display: none; width: 140px;">
+                                                    <input type="text" name="invoice_prefix" id="modal_invoice_prefix" class="form-control form-control-sm fs-12" value="INV-{{ date('Y') }}" placeholder="e.g. INV-2026">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 col-sm-12 text-md-end pt-2 pt-md-0">
+                                            <div class="form-check form-switch d-inline-block mb-0 text-start">
+                                                <input class="form-check-input cursor-pointer" type="checkbox" name="allow_decimal_qty" id="modal_allow_decimal" value="1" onchange="onDecimalToggleChange()">
+                                                <label class="form-check-label fs-12 fw-medium text-dark cursor-pointer" for="modal_allow_decimal">
+                                                    Allow Decimal Quantities
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="col-md-4 col-sm-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">Min Qty per Invoice <span class="text-danger">*</span></label>
-                                    <input type="number" step="any" min="0.0001" name="min_qty" id="modal_min_qty" class="form-control form-control-sm text-end" placeholder="e.g. 20" required>
-                                </div>
+                                {{-- Panel 3: Per-Invoice Limits (Min & Max Comparison) --}}
+                                <div class="border rounded p-3 mb-0 bg-white">
+                                    <div class="row g-3">
+                                        <div class="col-md-6 col-sm-12">
+                                            <div class="p-2 rounded border bg-light-subtle">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <span class="fs-12 fw-semibold text-dark"><i class="ri-arrow-down-line text-success me-1"></i>Min per Invoice</span>
+                                                    <span class="text-muted fs-11"><i class="ri-repeat-line me-1"></i>Qty & Amount sync</span>
+                                                </div>
+                                                <div class="row g-2">
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-11 text-muted mb-1">Min Qty <span class="text-danger">*</span></label>
+                                                        <input type="number" step="any" min="0.0001" name="min_qty" id="modal_min_qty" class="form-control form-control-sm fs-12 text-end bg-white" placeholder="e.g. 10" required oninput="onMinQtyChange(this.value)">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-11 text-muted mb-1">Min Amount (PKR)</label>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light text-muted fs-11 px-2">PKR</span>
+                                                            <input type="number" step="any" min="0" name="min_amount" id="modal_min_amount" class="form-control form-control-sm fs-12 text-end bg-white" placeholder="e.g. 15000" oninput="onMinAmountChange(this.value)">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                <div class="col-md-4 col-sm-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">Max Qty per Invoice <span class="text-danger">*</span></label>
-                                    <input type="number" step="any" min="0.0001" name="max_qty" id="modal_max_qty" class="form-control form-control-sm text-end" placeholder="e.g. 50" required>
-                                </div>
-
-                                {{-- Date Range & Decimal Options --}}
-                                <div class="col-md-4 col-sm-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">From Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="from_date" id="modal_from_date" class="form-control form-control-sm" value="{{ date('Y-m-01') }}" required>
-                                </div>
-
-                                <div class="col-md-4 col-sm-6">
-                                    <label class="form-label fs-12 fw-semibold mb-1">To Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="to_date" id="modal_to_date" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" required>
-                                </div>
-
-                                <div class="col-md-4 col-sm-12 d-flex align-items-center pt-3">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="allow_decimal_qty" id="modal_allow_decimal" value="1">
-                                        <label class="form-check-label fs-12 fw-medium text-dark" for="modal_allow_decimal">
-                                            Allow Decimal Quantities
-                                        </label>
+                                        <div class="col-md-6 col-sm-12">
+                                            <div class="p-2 rounded border bg-light-subtle">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <span class="fs-12 fw-semibold text-dark"><i class="ri-arrow-up-line text-danger me-1"></i>Max per Invoice</span>
+                                                    <span class="text-muted fs-11"><i class="ri-repeat-line me-1"></i>Qty & Amount sync</span>
+                                                </div>
+                                                <div class="row g-2">
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-11 text-muted mb-1">Max Qty <span class="text-danger">*</span></label>
+                                                        <input type="number" step="any" min="0.0001" name="max_qty" id="modal_max_qty" class="form-control form-control-sm fs-12 text-end bg-white" placeholder="e.g. 50" required oninput="onMaxQtyChange(this.value)">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-11 text-muted mb-1">Max Amount (PKR)</label>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light text-muted fs-11 px-2">PKR</span>
+                                                            <input type="number" step="any" min="0" name="max_amount" id="modal_max_amount" class="form-control form-control-sm fs-12 text-end bg-white" placeholder="e.g. 50000" oninput="onMaxAmountChange(this.value)">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="card-footer bg-light py-2 text-end">
-                            <button type="submit" class="btn btn-sm btn-primary px-3" id="btnGeneratePreview">
-                                <i class="ri-sparkling-fill me-1"></i> Generate Preview
-                            </button>
+                            <div class="card-footer bg-light py-2 text-end">
+                                <button type="submit" class="btn btn-sm btn-primary px-3" id="btnGeneratePreview">
+                                    <i class="ri-sparkling-fill me-1"></i> Generate Preview
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -517,8 +729,22 @@
                 {{-- Staging Preview Container (Loaded via AJAX) --}}
                 <div id="breakupPreviewContainer"></div>
             </div>
-            <div class="modal-footer bg-light py-2">
-                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer bg-light py-2" id="breakupModalFooter">
+                <div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-2">
+                    <div id="footerSummaryPills" class="d-none d-flex align-items-center gap-2">
+                        <span class="badge bg-primary-transparent text-primary fs-11" id="footerInvoicesCount">0 Invoices</span>
+                        <span class="badge bg-success-transparent text-success fs-11" id="footerTotalAmount">PKR 0.00</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 ms-auto">
+                        <button type="button" class="btn btn-sm btn-light border text-dark d-none" id="btnFooterReroll" onclick="reRollBreakup()">
+                            <i class="ri-refresh-line me-1"></i> Re-roll
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success px-3 d-none" id="btnFooterCommit" onclick="commitBreakupInvoices()">
+                            <i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices
+                        </button>
+                        <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -528,6 +754,7 @@
 {{-- MODAL 2: VIEW BATCH INVOICES (Shared with Bulk Invoices)       --}}
 {{-- ══════════════════════════════════════════════════════════════════ --}}
 @include('pages.dashboards.Invoice._batch-invoices-view-modal')
+@include('pages.dashboards.Invoice._batch-print-chunk-modal')
 
 {{-- ══════════════════════════════════════════════════════════════════ --}}
 {{-- MODAL 3: ROLLBACK BATCH CONFIRMATION --}}
@@ -568,13 +795,431 @@
 @section('scripts')
 <script>
     const CSRF_TOKEN = '{{ csrf_token() }}';
+    let lastEditedLimitField = null;
+
+    // ── Pre-compiled Products Metadata Map (Immune to DOM dropdown manipulation) ──
+    const PRODUCTS_MAP = {
+        @foreach($products as $p)
+        "{{ $p->ID }}": {
+            id: {{ $p->ID }},
+            name: {!! json_encode($p->Name . (!empty($p->Code) ? " ({$p->Code})" : '')) !!},
+            salePrice: {{ (float) ($p->SalePrice ?? 0) }},
+            tpRate: {{ (float) ($p->TPRate ?? 0) }},
+            isFixed: {{ (int) ($p->IsFixedRate ?? $p->IsFixedValue ?? 0) }},
+            uom: {!! json_encode($p->Uom_Desc ?? '-') !!},
+            saleType: {!! json_encode($p->SaleTypeDesc ?? '-') !!},
+            taxRate: {!! json_encode($p->SaleTypeToRateDesc ?? '-') !!}
+        },
+        @endforeach
+    };
+
+    let customerChoicesInstance = null;
+    let productChoicesInstance = null;
+
+    function initChoicesDropdowns() {
+        try {
+            if (typeof Choices === 'undefined') return;
+
+            const custEl = document.getElementById('modal_customer_id');
+            if (custEl && !customerChoicesInstance && !custEl.closest('.choices')) {
+                customerChoicesInstance = new Choices(custEl, {
+                    allowHTML: true,
+                    searchEnabled: true,
+                    itemSelectText: '',
+                    shouldSort: false,
+                    removeItemButton: false,
+                    searchPlaceholderValue: 'Search customer...'
+                });
+            }
+
+            const prodEl = document.getElementById('modal_product_id');
+            if (prodEl && !productChoicesInstance && !prodEl.closest('.choices')) {
+                productChoicesInstance = new Choices(prodEl, {
+                    allowHTML: true,
+                    searchEnabled: true,
+                    itemSelectText: '',
+                    shouldSort: false,
+                    removeItemButton: false,
+                    searchPlaceholderValue: 'Search product...'
+                });
+
+                prodEl.addEventListener('change', function(e) {
+                    onProductSelect(this.value);
+                });
+                prodEl.addEventListener('addItem', function(e) {
+                    if (e.detail && e.detail.value) {
+                        onProductSelect(e.detail.value);
+                    }
+                });
+            }
+        } catch(err) {
+            console.warn('Choices initialization skipped:', err);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalEl = document.getElementById('breakupGeneratorModal');
+        if (modalEl) {
+            modalEl.addEventListener('shown.bs.modal', function() {
+                initChoicesDropdowns();
+            });
+        }
+    });
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function updateCollapsedSummary() {
+        const custSel = document.getElementById('modal_customer_id');
+        const prodSel = document.getElementById('modal_product_id');
+        const custOpt = custSel ? (custSel.querySelector(`option[value="${custSel.value}"]`) || (custSel.selectedIndex >= 0 ? custSel.options[custSel.selectedIndex] : null)) : null;
+        const prodId = prodSel ? prodSel.value : '';
+        const p = PRODUCTS_MAP[prodId];
+        const targetQty = document.getElementById('modal_target_qty').value || '0';
+        const targetAmt = parseFloat(document.getElementById('modal_target_amount')?.value) || 0;
+        const uom = document.getElementById('targetUomAddon').textContent.trim() || 'Units';
+        const amtStr = targetAmt > 0 ? ` (≈ PKR ${formatMoney(targetAmt)})` : '';
+
+        const custName = custOpt && custOpt.value ? custOpt.textContent.trim() : 'Customer';
+        const prodName = p && p.name ? p.name : (prodSel && prodSel.selectedIndex >= 0 && prodSel.options[prodSel.selectedIndex] ? prodSel.options[prodSel.selectedIndex].textContent.trim() : 'Product');
+
+        const summaryEl = document.getElementById('formCollapsedSummary');
+        if (summaryEl) {
+            summaryEl.innerHTML = `<span class="badge bg-light text-dark border fs-11 fw-normal px-2 py-1"><span class="text-primary fw-medium">${escapeHtml(custName)}</span> &bull; ${escapeHtml(prodName)} &bull; <strong class="text-dark">${escapeHtml(targetQty)} ${escapeHtml(uom)}${amtStr}</strong></span>`;
+        }
+    }
+
+    // ── Unified 2-State Workflow (Setup vs Review) ────────────────────
+    function switchMode(mode) {
+        const formBody = document.getElementById('breakupFormCardBody');
+        const previewContainer = document.getElementById('breakupPreviewContainer');
+        const summaryEl = document.getElementById('formCollapsedSummary');
+        const icon = document.getElementById('formCollapseIcon');
+        const text = document.getElementById('formCollapseText');
+        const footerSummary = document.getElementById('footerSummaryPills');
+        const btnFooterReroll = document.getElementById('btnFooterReroll');
+        const btnFooterCommit = document.getElementById('btnFooterCommit');
+
+        if (mode === 'review') {
+            // State 2: Review Mode -> Parameters collapsed, Preview visible, sticky footer actions active
+            if (formBody) formBody.style.display = 'none';
+            if (previewContainer) previewContainer.style.display = 'block';
+            if (summaryEl) {
+                updateCollapsedSummary();
+                summaryEl.style.display = 'inline-block';
+            }
+            if (icon) icon.className = 'ri-edit-line me-1';
+            if (text) text.textContent = 'Edit Parameters';
+
+            if (footerSummary) footerSummary.classList.remove('d-none');
+            if (btnFooterReroll) btnFooterReroll.classList.remove('d-none');
+            if (btnFooterCommit) btnFooterCommit.classList.remove('d-none');
+        } else {
+            // State 1: Setup / Edit Mode -> Parameters visible, Preview hidden, sticky footer actions hidden
+            if (formBody) formBody.style.display = 'block';
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (summaryEl) summaryEl.style.display = 'none';
+            if (icon) icon.className = 'ri-arrow-up-s-line me-1';
+            if (text) text.textContent = 'Collapse';
+
+            if (footerSummary) footerSummary.classList.add('d-none');
+            if (btnFooterReroll) btnFooterReroll.classList.add('d-none');
+            if (btnFooterCommit) btnFooterCommit.classList.add('d-none');
+        }
+    }
+
+    // ── Toggle Parameters Card Collapse ───────────────────────────────
+    function toggleFormCardCollapse() {
+        const formBody = document.getElementById('breakupFormCardBody');
+        const isCollapsed = formBody && formBody.style.display === 'none';
+        const hasPreview = !!document.getElementById('form_request_id').value;
+
+        if (isCollapsed) {
+            // User clicked "Edit Parameters" -> expand parameters, hide preview table
+            switchMode('edit');
+        } else {
+            // User clicked "Collapse"
+            if (hasPreview) {
+                switchMode('review');
+            } else {
+                formBody.style.display = 'none';
+                const icon = document.getElementById('formCollapseIcon');
+                const text = document.getElementById('formCollapseText');
+                if (icon) icon.className = 'ri-arrow-down-s-line me-1';
+                if (text) text.textContent = 'Expand';
+            }
+        }
+    }
 
     // ── Open Generator Modal ──────────────────────────────────────────
     function openBreakupModal() {
-        document.getElementById('form_request_id').value = '';
-        document.getElementById('breakupPreviewContainer').innerHTML = '';
-        const modal = new bootstrap.Modal(document.getElementById('breakupGeneratorModal'));
-        modal.show();
+        try {
+            const reqInput = document.getElementById('form_request_id');
+            if (reqInput) reqInput.value = '';
+            const prevContainer = document.getElementById('breakupPreviewContainer');
+            if (prevContainer) prevContainer.innerHTML = '';
+            switchMode('edit');
+        } catch (e) {
+            console.error('Modal prep error:', e);
+        }
+
+        const modalEl = document.getElementById('breakupGeneratorModal');
+        if (modalEl) {
+            try {
+                if (window.bootstrap && bootstrap.Modal) {
+                    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                } else if (window.$) {
+                    $('#breakupGeneratorModal').modal('show');
+                }
+            } catch (err) {
+                console.error('Error showing modal via bootstrap:', err);
+                if (window.$) {
+                    $('#breakupGeneratorModal').modal('show');
+                }
+            }
+        }
+    }
+
+    // ── Gross Unit Price Calculation (Accounting for FBR Sales Tax & 3rd Sched Fixed Rate) ──
+    function getGrossUnitPrice() {
+        const sel = document.getElementById('modal_product_id');
+        const productId = sel ? sel.value : '';
+        const p = PRODUCTS_MAP[productId];
+        const saleRate = parseFloat(document.getElementById('modal_sale_rate').value) || 0;
+        const tpRate = parseFloat(document.getElementById('modal_tp_rate').value) || 0;
+        const isFixed = parseInt(document.getElementById('modal_is_fixed_value').value) || 0;
+
+        let taxPercent = 0;
+        if (p && p.taxRate) {
+            const m = p.taxRate.match(/(\d+(\.\d+)?)%/);
+            if (m) {
+                taxPercent = parseFloat(m[1]) || 0;
+            } else {
+                const num = parseFloat(p.taxRate);
+                if (!isNaN(num)) taxPercent = num;
+            }
+        }
+
+        if (isFixed === 1 && tpRate > 0) {
+            return saleRate + (tpRate * (taxPercent / 100));
+        }
+        return saleRate * (1 + (taxPercent / 100));
+    }
+
+    let lastEditedTargetField = 'target_qty'; // 'target_qty' or 'target_amount'
+
+    // ── Two-Way Synchronizer: Target Qty <-> Target Amount ─────────────
+    function onTargetQtyChange(val) {
+        lastEditedTargetField = 'target_qty';
+        const grossPrice = getGrossUnitPrice();
+        const targetAmountInput = document.getElementById('modal_target_amount');
+        if (!targetAmountInput) return;
+
+        const qty = parseFloat(val);
+        if (isNaN(qty) || qty <= 0 || grossPrice <= 0) {
+            targetAmountInput.value = '';
+            updateCollapsedSummary();
+            return;
+        }
+
+        const amount = Math.round(qty * grossPrice * 100) / 100;
+        targetAmountInput.value = amount.toFixed(2);
+        updateCollapsedSummary();
+    }
+
+    function onTargetAmountChange(val) {
+        lastEditedTargetField = 'target_amount';
+        const grossPrice = getGrossUnitPrice();
+        const targetQtyInput = document.getElementById('modal_target_qty');
+        if (!targetQtyInput) return;
+
+        const amount = parseFloat(val);
+        if (isNaN(amount) || amount <= 0 || grossPrice <= 0) {
+            targetQtyInput.value = '';
+            updateCollapsedSummary();
+            return;
+        }
+
+        const allowDecimal = document.getElementById('modal_allow_decimal').checked;
+        let qty;
+        if (allowDecimal) {
+            qty = parseFloat((amount / grossPrice).toFixed(4));
+        } else {
+            qty = Math.max(1, Math.round(amount / grossPrice));
+        }
+        targetQtyInput.value = qty;
+        updateCollapsedSummary();
+    }
+
+    function onTargetAmountBlur() {
+        const grossPrice = getGrossUnitPrice();
+        const targetQtyInput = document.getElementById('modal_target_qty');
+        const targetAmountInput = document.getElementById('modal_target_amount');
+        if (!targetQtyInput || !targetAmountInput || grossPrice <= 0) return;
+
+        const allowDecimal = document.getElementById('modal_allow_decimal').checked;
+        const qty = parseFloat(targetQtyInput.value);
+        if (!allowDecimal && !isNaN(qty) && qty > 0) {
+            // Snap amount to the exact whole-unit physical amount
+            const snapped = Math.round(qty * grossPrice * 100) / 100;
+            targetAmountInput.value = snapped.toFixed(2);
+            updateCollapsedSummary();
+        }
+    }
+
+    // ── Live Batch Total Amount & Unit Gross Rate Display ─────────────
+    function updateBatchTotalAmountDisplay() {
+        const grossPrice = getGrossUnitPrice();
+        const targetQty = parseFloat(document.getElementById('modal_target_qty').value) || 0;
+        const estTotal = targetQty * grossPrice;
+
+        const hint = document.getElementById('unitGrossPriceHint');
+        if (hint) {
+            if (grossPrice > 0) {
+                hint.innerHTML = '<i class="ri-money-dollar-circle-line text-success me-1"></i>Gross Unit: <strong class="text-dark">PKR ' + formatMoney(grossPrice) + '</strong> <small class="text-muted">(incl. tax)</small>';
+            } else {
+                hint.innerHTML = '';
+            }
+        }
+    }
+
+    // ── Two-Way Synchronizers: Min/Max Qty <-> Amount ──────────────────
+    function onMinQtyChange(val) {
+        lastEditedLimitField = 'min_qty';
+        const grossPrice = getGrossUnitPrice();
+        const minAmountInput = document.getElementById('modal_min_amount');
+        if (!minAmountInput) return;
+
+        const qty = parseFloat(val);
+        if (isNaN(qty) || qty <= 0 || grossPrice <= 0) {
+            minAmountInput.value = '';
+            return;
+        }
+
+        const amount = Math.round(qty * grossPrice * 100) / 100;
+        minAmountInput.value = amount.toFixed(2);
+    }
+
+    function onMinAmountChange(val) {
+        lastEditedLimitField = 'min_amount';
+        const grossPrice = getGrossUnitPrice();
+        const minQtyInput = document.getElementById('modal_min_qty');
+        if (!minQtyInput) return;
+
+        const amount = parseFloat(val);
+        if (isNaN(amount) || amount <= 0 || grossPrice <= 0) {
+            minQtyInput.value = '';
+            return;
+        }
+
+        const allowDecimal = document.getElementById('modal_allow_decimal').checked;
+        let qty;
+        if (allowDecimal) {
+            qty = parseFloat((amount / grossPrice).toFixed(4));
+        } else {
+            qty = Math.max(1, Math.ceil(amount / grossPrice));
+        }
+        minQtyInput.value = qty;
+    }
+
+    function onMaxQtyChange(val) {
+        lastEditedLimitField = 'max_qty';
+        const grossPrice = getGrossUnitPrice();
+        const maxAmountInput = document.getElementById('modal_max_amount');
+        if (!maxAmountInput) return;
+
+        const qty = parseFloat(val);
+        if (isNaN(qty) || qty <= 0 || grossPrice <= 0) {
+            maxAmountInput.value = '';
+            return;
+        }
+
+        const amount = Math.round(qty * grossPrice * 100) / 100;
+        maxAmountInput.value = amount.toFixed(2);
+    }
+
+    function onMaxAmountChange(val) {
+        lastEditedLimitField = 'max_amount';
+        const grossPrice = getGrossUnitPrice();
+        const maxQtyInput = document.getElementById('modal_max_qty');
+        if (!maxQtyInput) return;
+
+        const amount = parseFloat(val);
+        if (isNaN(amount) || amount <= 0 || grossPrice <= 0) {
+            maxQtyInput.value = '';
+            return;
+        }
+
+        const allowDecimal = document.getElementById('modal_allow_decimal').checked;
+        let qty;
+        if (allowDecimal) {
+            qty = parseFloat((amount / grossPrice).toFixed(4));
+        } else {
+            const minQty = parseFloat(document.getElementById('modal_min_qty').value) || 1;
+            qty = Math.max(minQty, Math.floor(amount / grossPrice));
+        }
+        maxQtyInput.value = qty;
+    }
+
+    function onDecimalToggleChange() {
+        const grossPrice = getGrossUnitPrice();
+        if (grossPrice <= 0) return;
+
+        // Recalculate Target Qty from Target Amount if user edited Amount
+        const targetAmt = parseFloat(document.getElementById('modal_target_amount').value);
+        if (lastEditedTargetField === 'target_amount' && !isNaN(targetAmt) && targetAmt > 0) {
+            onTargetAmountChange(targetAmt);
+            onTargetAmountBlur();
+        }
+
+        // Recalculate Qty from Amount if user specified amounts
+        const minAmt = parseFloat(document.getElementById('modal_min_amount').value);
+        if (!isNaN(minAmt) && minAmt > 0) {
+            onMinAmountChange(minAmt);
+        }
+        const maxAmt = parseFloat(document.getElementById('modal_max_amount').value);
+        if (!isNaN(maxAmt) && maxAmt > 0) {
+            onMaxAmountChange(maxAmt);
+        }
+    }
+
+    function syncAllLimitsFromRates() {
+        updateBatchTotalAmountDisplay();
+        const grossPrice = getGrossUnitPrice();
+        if (grossPrice <= 0) return;
+
+        const targetAmt = parseFloat(document.getElementById('modal_target_amount').value);
+        const targetQty = parseFloat(document.getElementById('modal_target_qty').value);
+        if (lastEditedTargetField === 'target_amount' && !isNaN(targetAmt) && targetAmt > 0) {
+            onTargetAmountChange(targetAmt);
+            onTargetAmountBlur();
+        } else if (!isNaN(targetQty) && targetQty > 0) {
+            onTargetQtyChange(targetQty);
+        }
+
+        const minAmt = parseFloat(document.getElementById('modal_min_amount').value);
+        const minQty = parseFloat(document.getElementById('modal_min_qty').value);
+        if (lastEditedLimitField === 'min_amount' && !isNaN(minAmt) && minAmt > 0) {
+            onMinAmountChange(minAmt);
+        } else if (!isNaN(minQty) && minQty > 0) {
+            onMinQtyChange(minQty);
+        }
+
+        const maxAmt = parseFloat(document.getElementById('modal_max_amount').value);
+        const maxQty = parseFloat(document.getElementById('modal_max_qty').value);
+        if (lastEditedLimitField === 'max_amount' && !isNaN(maxAmt) && maxAmt > 0) {
+            onMaxAmountChange(maxAmt);
+        } else if (!isNaN(maxQty) && maxQty > 0) {
+            onMaxQtyChange(maxQty);
+        }
     }
 
     // ── Product Selection Auto-Loader ─────────────────────────────────
@@ -584,16 +1229,18 @@
             return;
         }
 
-        const sel = document.getElementById('modal_product_id');
-        const opt = sel.options[sel.selectedIndex];
+        const p = PRODUCTS_MAP[productId];
+        if (!p) {
+            document.getElementById('productInfoBanner').style.display = 'none';
+            return;
+        }
 
-        // Read data attributes directly for instantaneous responsiveness
-        const salePrice = opt.getAttribute('data-saleprice') || 0;
-        const tpRate = opt.getAttribute('data-tprate') || 0;
-        const isFixed = opt.getAttribute('data-isfixed') || 0;
-        const uom = opt.getAttribute('data-uom') || '-';
-        const saleType = opt.getAttribute('data-saletype') || '-';
-        const taxRate = opt.getAttribute('data-salerate') || '-';
+        const salePrice = p.salePrice || 0;
+        const tpRate = p.tpRate || 0;
+        const isFixed = p.isFixed || 0;
+        const uom = p.uom || '-';
+        const saleType = p.saleType || '-';
+        const taxRate = p.taxRate || '-';
 
         document.getElementById('modal_sale_rate').value = salePrice;
         document.getElementById('modal_tp_rate').value = tpRate > 0 ? tpRate : '';
@@ -606,6 +1253,8 @@
         document.getElementById('infoFixedRate').textContent = isFixed == 1 ? (tpRate + ' (Active)') : 'None';
 
         document.getElementById('productInfoBanner').style.display = 'block';
+
+        syncAllLimitsFromRates();
     }
 
     // ── Sync Fixed Rate Flag on user typing ───────────────────────────
@@ -634,6 +1283,53 @@
     function generateBreakupPreview(e) {
         if (e) e.preventDefault();
 
+        // Input validation before dispatch
+        const custVal = document.getElementById('modal_customer_id').value;
+        const prodVal = document.getElementById('modal_product_id').value;
+        const saleRate = parseFloat(document.getElementById('modal_sale_rate').value) || 0;
+        const targetQty = parseFloat(document.getElementById('modal_target_qty').value) || 0;
+        const minQty = parseFloat(document.getElementById('modal_min_qty').value) || 0;
+        const maxQty = parseFloat(document.getElementById('modal_max_qty').value) || 0;
+
+        if (!custVal) {
+            alert('Please select a Customer.');
+            return;
+        }
+        if (!prodVal) {
+            alert('Please select a Product.');
+            return;
+        }
+        if (saleRate <= 0) {
+            alert('Please enter a valid Sale Rate.');
+            document.getElementById('modal_sale_rate').focus();
+            return;
+        }
+        if (targetQty <= 0) {
+            alert('Please enter a valid Total Target Quantity or Amount.');
+            document.getElementById('modal_target_qty').focus();
+            return;
+        }
+        if (minQty <= 0) {
+            alert('Please enter a valid Min Quantity.');
+            document.getElementById('modal_min_qty').focus();
+            return;
+        }
+        if (maxQty <= 0) {
+            alert('Please enter a valid Max Quantity.');
+            document.getElementById('modal_max_qty').focus();
+            return;
+        }
+        if (minQty > maxQty) {
+            alert('Min Quantity cannot exceed Max Quantity.');
+            document.getElementById('modal_min_qty').focus();
+            return;
+        }
+        if (maxQty > targetQty) {
+            alert('Max Quantity cannot exceed Total Target Quantity.');
+            document.getElementById('modal_max_qty').focus();
+            return;
+        }
+
         const form = document.getElementById('breakupGeneratorForm');
         const formData = new FormData(form);
 
@@ -646,6 +1342,7 @@
 
         document.getElementById('previewLoadingSpinner').style.display = 'block';
         document.getElementById('breakupPreviewContainer').innerHTML = '';
+        document.getElementById('breakupPreviewContainer').style.display = 'none';
         document.getElementById('btnGeneratePreview').disabled = true;
 
         fetch('{{ route("breakup-invoices.generate-preview") }}', {
@@ -668,11 +1365,49 @@
 
             document.getElementById('form_request_id').value = data.request_id;
             document.getElementById('breakupPreviewContainer').innerHTML = data.preview_html;
+
+            // Switch to Review Mode: parameters collapsed, preview table visible, footer action buttons shown
+            switchMode('review');
+
+            const footCount = document.getElementById('footerInvoicesCount');
+            const footAmt = document.getElementById('footerTotalAmount');
+            if (footCount && data.totals) footCount.textContent = data.totals.total_invoices + ' Invoices';
+            if (footAmt && data.totals) footAmt.textContent = 'PKR ' + formatMoney(data.totals.total_amount);
+
+            // Restore extended taxes toggle state if it was enabled
+            const toggleCheckbox = document.getElementById('toggleExtendedTaxes');
+            if (toggleCheckbox && showExtendedTaxesState) {
+                toggleCheckbox.checked = true;
+                toggleExtendedTaxColumns(true);
+            }
+
+            // Smooth scroll down to the preview section
+            setTimeout(() => {
+                const previewEl = document.getElementById('breakupPreviewContainer');
+                if (previewEl) {
+                    previewEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
         })
         .catch(err => {
             document.getElementById('previewLoadingSpinner').style.display = 'none';
             document.getElementById('btnGeneratePreview').disabled = false;
             alert('Failed to connect to server: ' + err);
+        });
+    }
+
+    // ── Toggle Extended Tax Columns (Discount, FED, Extra Tax, Further Tax) ──
+    let showExtendedTaxesState = false;
+
+    function toggleExtendedTaxColumns(show) {
+        showExtendedTaxesState = show;
+        const cols = document.querySelectorAll('.col-ext-tax');
+        cols.forEach(el => {
+            if (show) {
+                el.classList.remove('d-none');
+            } else {
+                el.classList.add('d-none');
+            }
         });
     }
 
@@ -772,6 +1507,12 @@
         const amtDisp = document.getElementById('previewTotalAmountDisplay');
         if (amtDisp) amtDisp.textContent = formatMoney(totals.total_amount);
 
+        const footInvs = document.getElementById('footerInvoicesCount');
+        if (footInvs) footInvs.textContent = totals.total_invoices + ' Invoices';
+
+        const footAmt = document.getElementById('footerTotalAmount');
+        if (footAmt) footAmt.textContent = 'PKR ' + formatMoney(totals.total_amount);
+
         const footQty = document.getElementById('tableFootQty');
         if (footQty) footQty.textContent = formatMoney(totalQty);
 
@@ -810,16 +1551,24 @@
     // ── Confirm & Move to Live Invoices ────────────────────────────────
     function commitBreakupInvoices() {
         const requestId = document.getElementById('form_request_id').value;
-        const batchTitle = document.getElementById('commitBatchTitle').value;
+        const batchTitleInput = document.getElementById('commitBatchTitle');
+        const batchTitle = batchTitleInput ? batchTitleInput.value : '';
         const btn = document.getElementById('btnCommitInvoices');
+        const btnFooter = document.getElementById('btnFooterCommit');
 
         if (!requestId) {
             alert('No preview batch active. Please generate a preview first.');
             return;
         }
 
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Moving to Invoices...';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Moving to Invoices...';
+        }
+        if (btnFooter) {
+            btnFooter.disabled = true;
+            btnFooter.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Moving...';
+        }
 
         fetch('{{ route("breakup-invoices.save") }}', {
             method: 'POST',
@@ -836,8 +1585,14 @@
         .then(res => res.json())
         .then(data => {
             if (!data.status) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices';
+                }
+                if (btnFooter) {
+                    btnFooter.disabled = false;
+                    btnFooter.innerHTML = '<i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices';
+                }
                 alert('Commit failed: ' + (data.message || 'Error saving invoices.'));
                 return;
             }
@@ -846,8 +1601,14 @@
             window.location.reload();
         })
         .catch(err => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices';
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices';
+            }
+            if (btnFooter) {
+                btnFooter.disabled = false;
+                btnFooter.innerHTML = '<i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices';
+            }
             alert('Server error: ' + err);
         });
     }

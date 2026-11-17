@@ -275,6 +275,162 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Bulk print selected invoices (from checkboxes / POST form or query).
+     */
+    public function bulkPrintView(Request $request)
+    {
+        $rawIds = $request->input('invoice_ids');
+        if (is_string($rawIds)) {
+            $rawIds = explode(',', $rawIds);
+        }
+        $invoiceIds = array_values(array_filter(array_map('intval', (array) $rawIds)));
+
+        if (empty($invoiceIds)) {
+            return redirect()->route('invoices.index')->with('error', 'Please select at least one invoice to print.');
+        }
+
+        // Limit to max 100 invoices per bulk print request for browser stability
+        $invoiceIds = array_slice($invoiceIds, 0, 100);
+
+        $requestedTemplateId = $request->filled('template_id') ? (int) $request->input('template_id') : null;
+        $printData = PrintTemplateModel::getBulkInvoicePrintData($invoiceIds, null, 4, $requestedTemplateId);
+
+        if (! $printData || empty($printData['invoicesData'])) {
+            abort(404, 'No invoices found for the selected IDs.');
+        }
+
+        $template = $printData['template'];
+        $defaultOrientation = strtolower(trim((string) ($template->PrintOrientation ?? 'portrait')));
+        $orientation = $request->filled('orientation')
+            ? strtolower(trim((string) $request->input('orientation')))
+            : $defaultOrientation;
+        if (! in_array($orientation, ['portrait', 'landscape'], true)) {
+            $orientation = 'portrait';
+        }
+
+        return view('pages.dashboards.Invoice.invoice-bulk-print', [
+            'invoicesData'    => $printData['invoicesData'],
+            'totalInvoices'   => count($printData['invoicesData']),
+            'seller'          => $printData['seller'],
+            'template'        => $template,
+            'allTemplates'    => $printData['allTemplates'],
+            'templateFields'  => $printData['templateFields'],
+            'templateColumns' => $printData['templateColumns'],
+            'orientation'     => $orientation,
+            'batchTitle'      => 'Selected Invoices (' . count($printData['invoicesData']) . ')',
+            'requestId'       => null,
+            'offset'          => 0,
+            'limit'           => count($printData['invoicesData']),
+            'isBatch'         => false,
+        ]);
+    }
+
+    /**
+     * Print all or chunked invoices from a batch RequestID (Breakup / Bulk import).
+     */
+    public function batchPrintView(Request $request, string $requestId)
+    {
+        $limit  = max(1, min(100, (int) $request->query('limit', 100)));
+        $offset = max(0, (int) $request->query('offset', 0));
+        if ($request->filled('part')) {
+            $part = max(1, (int) $request->query('part'));
+            $offset = ($part - 1) * $limit;
+        }
+
+        $requestedTemplateId = $request->filled('template_id') ? (int) $request->query('template_id') : null;
+        $printData = PrintTemplateModel::getBulkInvoicePrintData(null, $requestId, 4, $requestedTemplateId, $offset, $limit);
+
+        if (! $printData || empty($printData['invoicesData'])) {
+            abort(404, 'No invoices found for this batch request.');
+        }
+
+        $template = $printData['template'];
+        $defaultOrientation = strtolower(trim((string) ($template->PrintOrientation ?? 'portrait')));
+        $orientation = $request->filled('orientation')
+            ? strtolower(trim((string) $request->query('orientation')))
+            : $defaultOrientation;
+        if (! in_array($orientation, ['portrait', 'landscape'], true)) {
+            $orientation = 'portrait';
+        }
+
+        $totalInvoices = (int) ($printData['totalInvoices'] ?? count($printData['invoicesData']));
+        $batchTitle    = $printData['batchTitle'] ?? $requestId;
+
+        return view('pages.dashboards.Invoice.invoice-bulk-print', [
+            'invoicesData'    => $printData['invoicesData'],
+            'totalInvoices'   => $totalInvoices,
+            'seller'          => $printData['seller'],
+            'template'        => $template,
+            'allTemplates'    => $printData['allTemplates'],
+            'templateFields'  => $printData['templateFields'],
+            'templateColumns' => $printData['templateColumns'],
+            'orientation'     => $orientation,
+            'batchTitle'      => $batchTitle,
+            'requestId'       => $requestId,
+            'offset'          => $offset,
+            'limit'           => $limit,
+            'isBatch'         => true,
+        ]);
+    }
+
+    /**
+     * Return JSON chunk information for a batch request if total > 100.
+     */
+    public function getBatchPrintChunks(Request $request, string $requestId)
+    {
+        $countRow = DB::connection('tenant')->selectOne("
+            SELECT COUNT(*) AS cnt
+            FROM `tbl_sales_invoice_header`
+            WHERE `RequestID` = ? AND `Status` != 2
+        ", [$requestId]);
+
+        $total = (int) ($countRow->cnt ?? 0);
+        if ($total === 0) {
+            return response()->json(['success' => false, 'message' => 'No invoices found for this batch.'], 404);
+        }
+
+        $batchTitle = $requestId;
+        try {
+            $batchRow = DB::connection('tenant')->selectOne("
+                SELECT `Title` FROM `tbl_bulk_invoice_request` WHERE `RequestID` = ? LIMIT 1
+            ", [$requestId]);
+            if ($batchRow && ! empty($batchRow->Title)) {
+                $batchTitle = $batchRow->Title;
+            }
+        } catch (\Throwable $e) {
+            // Fail-safe: fallback to requestId without error
+        }
+
+        $chunkSize = 100;
+        $numParts = (int) ceil($total / $chunkSize);
+        $parts = [];
+
+        for ($p = 1; $p <= $numParts; $p++) {
+            $offset = ($p - 1) * $chunkSize;
+            $end = min($total, $offset + $chunkSize);
+            $countInPart = $end - $offset;
+            $parts[] = [
+                'part'        => $p,
+                'offset'      => $offset,
+                'limit'       => $chunkSize,
+                'count'       => $countInPart,
+                'label'       => "Part {$p}: Invoices " . ($offset + 1) . " – {$end} ({$countInPart})",
+                'url'         => route('invoices.batch-print', ['requestId' => $requestId, 'offset' => $offset, 'limit' => $chunkSize]),
+            ];
+        }
+
+        return response()->json([
+            'success'      => true,
+            'requestId'    => $requestId,
+            'batchTitle'   => $batchTitle,
+            'total'        => $total,
+            'chunkSize'    => $chunkSize,
+            'numParts'     => $numParts,
+            'parts'        => $parts,
+        ]);
+    }
+
+    /**
      * Stage print template fields and columns into `tbl_temp_print_template_fields`
      * and `tbl_temp_print_template_columns` for set-based RequestID validation.
      */

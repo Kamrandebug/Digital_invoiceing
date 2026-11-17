@@ -484,8 +484,18 @@
                 </li>
             </ul>
 
-            @if($canPostFbr && in_array($fbrStatus ?? 'not_posted', ['not_posted', 'error', 'failed']))
-            <div class="ms-auto d-flex align-items-center py-1">
+            <div class="ms-auto d-flex align-items-center gap-2 py-1">
+                <button type="button" 
+                        id="bulkPrintBtn" 
+                        class="btn btn-sm btn-light border text-dark btn-wave waves-light shadow-sm d-none"
+                        onclick="triggerBulkPrintSelected()"
+                        title="Print selected invoices to PDF">
+                    <i class="fas fa-print me-1 text-primary"></i> 
+                    <span>Bulk Print</span>
+                    <span id="bulkPrintCountBadge" class="badge bg-primary text-white ms-1">0</span>
+                </button>
+
+                @if($canPostFbr && in_array($fbrStatus ?? 'not_posted', ['not_posted', 'error', 'failed']))
                 <button type="button" 
                         id="bulkPostFbrBtn" 
                         class="btn btn-sm btn-primary btn-wave waves-light shadow-sm"
@@ -494,8 +504,8 @@
                     <span id="bulkPostBtnLabel">Post to FBR</span>
                     <span id="bulkPostCountBadge" class="badge bg-white text-primary ms-1 d-none">0</span>
                 </button>
+                @endif
             </div>
-            @endif
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -1280,12 +1290,61 @@
             }
         }
 
+        // Bulk Print button visibility & badge
+        const bulkPrintBtn = document.getElementById('bulkPrintBtn');
+        const bulkPrintBadge = document.getElementById('bulkPrintCountBadge');
+        if (bulkPrintBtn && bulkPrintBadge) {
+            if (count > 0) {
+                bulkPrintBadge.textContent = count;
+                bulkPrintBtn.classList.remove('d-none');
+            } else {
+                bulkPrintBtn.classList.add('d-none');
+            }
+        }
+
         // Update selectAll state
         const allBoxes = document.querySelectorAll('.invoice-checkbox');
         const selectAllBox = document.getElementById('selectAll');
         if (selectAllBox && allBoxes.length > 0) {
             selectAllBox.checked = (allBoxes.length === count);
         }
+    }
+
+    function triggerBulkPrintSelected() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.invoice-checkbox:checked'));
+        if (checkedBoxes.length === 0) {
+            alert('Please select at least one invoice to print.');
+            return;
+        }
+
+        if (checkedBoxes.length > 100) {
+            alert('You have selected ' + checkedBoxes.length + ' invoices. Maximum 100 invoices can be printed in a single request.');
+            return;
+        }
+
+        // Create a hidden form and submit via POST to keep the address bar clean
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('invoices.bulk-print') }}";
+        form.target = '_blank';
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = "{{ csrf_token() }}";
+        form.appendChild(csrfInput);
+
+        checkedBoxes.forEach(function (cb) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'invoice_ids[]';
+            input.value = cb.value;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
     }
 
     function toggleSelectAll() {

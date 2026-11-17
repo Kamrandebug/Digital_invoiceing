@@ -412,6 +412,11 @@
                                                 </button>
                                             </li>
                                             <li>
+                                                <button type="button" class="dropdown-item" onclick="triggerBatchPrint('{{ $batch->RequestID }}', {{ (int) $batch->TotalInvoices }}, '{{ addslashes($batch->Title) }}')">
+                                                    <i class="fas fa-print me-2 text-success"></i> Print Invoices ({{ $batch->TotalInvoices }})
+                                                </button>
+                                            </li>
+                                            <li>
                                                 <a class="dropdown-item" href="{{ route('invoices.index', ['search' => $batch->RequestID, 'fbr_status' => 'all']) }}" target="_blank">
                                                     <i class="fas fa-external-link-alt me-2 text-secondary"></i> Open in Invoices Page
                                                 </a>
@@ -473,6 +478,7 @@
 
 {{-- ── Shared Batch Invoices Modal (View invoices against this request) ── --}}
 @include('pages.dashboards.Invoice._batch-invoices-view-modal')
+@include('pages.dashboards.Invoice._batch-print-chunk-modal')
 
 {{-- Bulk Invoice Import Modal --}}
 <div class="modal fade" id="bulkInvoiceImportModal" tabindex="-1" aria-labelledby="bulkInvoiceImportModalLabel" aria-hidden="true" data-bs-backdrop="static">

@@ -382,7 +382,7 @@ class BulkInvoiceModel extends Model
                 IF(t.Quantity > 0, (t.ValueSalesExcludingST / t.Quantity), 0.00) AS Rate,
                 t.ValueSalesExcludingST AS Amount,
                 COALESCE(p.Unit, 1) AS Unit,
-                t.Quantity AS FBRQty,
+                CASE WHEN COALESCE(p.Unit, 1) > 1 THEN t.Quantity ELSE NULL END AS FBRQty,
                 IFNULL(t.Weight, 0.00),
                 t.SalesTaxApplicable AS GSTAmount,
                 t.HsCode,

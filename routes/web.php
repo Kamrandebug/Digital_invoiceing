@@ -185,6 +185,9 @@ Route::middleware(['auth', 'tenant'])->prefix('invoices')->name('invoices.')->gr
     Route::get('/export/csv', [InvoiceController::class, 'exportCSV'])->name('export-csv');
     Route::get('/modal', [InvoiceController::class, 'modal'])->name('modal');
     Route::post('/bulk-post-fbr', [InvoiceController::class, 'bulkPostFbr'])->name('bulk-post-fbr');
+    Route::match(['GET', 'POST'], '/bulk-print', [InvoiceController::class, 'bulkPrintView'])->name('bulk-print');
+    Route::get('/batch/{requestId}/print', [InvoiceController::class, 'batchPrintView'])->name('batch-print');
+    Route::get('/batch/{requestId}/print-chunks', [InvoiceController::class, 'getBatchPrintChunks'])->name('batch-print-chunks');
     Route::post('/print-template/save', [InvoiceController::class, 'savePrintTemplate'])->name('print-template.save');
     Route::post('/print-template/save-as-new', [InvoiceController::class, 'saveAsNewPrintTemplate'])->name('print-template.save-as-new');
     Route::post('/print-template/{templateId}/reset', [InvoiceController::class, 'resetPrintTemplate'])->whereNumber('templateId')->name('print-template.reset');

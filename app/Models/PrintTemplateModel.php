@@ -246,6 +246,300 @@ class PrintTemplateModel extends Model
     }
 
     /**
+     * Fetch print data for multiple invoices in bulk (for batches or checkbox selection).
+     *
+     * @param array|null  $invoiceIds
+     * @param string|null $requestId
+     * @param int         $moduleId
+     * @param int|null    $requestedTemplateId
+     * @param int         $offset
+     * @param int         $limit
+     * @return array|null
+     */
+    public static function getBulkInvoicePrintData(
+        ?array $invoiceIds = null,
+        ?string $requestId = null,
+        int $moduleId = 4,
+        ?int $requestedTemplateId = null,
+        int $offset = 0,
+        int $limit = 100
+    ): ?array {
+        $limit = max(1, min(100, (int) $limit));
+        $offset = max(0, (int) $offset);
+
+        $totalCount = 0;
+        $invoices = collect();
+        $batchTitle = '';
+
+        if (! empty($requestId)) {
+            $countRow = DB::connection('tenant')->selectOne("
+                SELECT COUNT(*) AS cnt
+                FROM `tbl_sales_invoice_header`
+                WHERE `RequestID` = ? AND `Status` != 2
+            ", [$requestId]);
+            $totalCount = (int) ($countRow->cnt ?? 0);
+
+            // Fetch batch title if available from tbl_bulk_invoice_request
+            $batchTitle = $requestId;
+            try {
+                $batchRow = DB::connection('tenant')->selectOne("
+                    SELECT `Title` FROM `tbl_bulk_invoice_request` WHERE `RequestID` = ? LIMIT 1
+                ", [$requestId]);
+                if ($batchRow && ! empty($batchRow->Title)) {
+                    $batchTitle = $batchRow->Title;
+                }
+            } catch (\Throwable $e) {
+                // Fail-safe: fallback to requestId without error
+            }
+
+            if ($totalCount === 0) {
+                return null;
+            }
+
+            $invoices = collect(DB::connection('tenant')->select("
+                SELECT
+                    h.*,
+                    CASE
+                        WHEN cust.ID IS NULL THEN '—'
+                        WHEN TRIM(CONCAT(COALESCE(cust.FirstName, ''), ' ', COALESCE(cust.LastName, ''))) <> ''
+                            THEN TRIM(CONCAT(COALESCE(cust.FirstName, ''), ' ', COALESCE(cust.LastName, '')))
+                        WHEN COALESCE(TRIM(cust.BusinessName), '') <> ''
+                            THEN TRIM(cust.BusinessName)
+                        ELSE CONCAT('Customer #', cust.ID)
+                    END AS CustomerDisplayName
+                FROM `tbl_sales_invoice_header` h
+                LEFT JOIN `tbl_customer` cust ON h.`CustomerID` = cust.`ID`
+                WHERE h.`RequestID` = ?
+                  AND h.`Status` != 2
+                ORDER BY h.`ID` ASC
+                LIMIT {$limit} OFFSET {$offset}
+            ", [$requestId]));
+        } elseif (! empty($invoiceIds)) {
+            $cleanIds = array_values(array_filter(array_map('intval', $invoiceIds)));
+            if (empty($cleanIds)) {
+                return null;
+            }
+            $totalCount = count($cleanIds);
+            $cleanIdsSlice = array_slice($cleanIds, $offset, $limit);
+            if (empty($cleanIdsSlice)) {
+                return null;
+            }
+            $placeholders = implode(',', array_fill(0, count($cleanIdsSlice), '?'));
+
+            $invoices = collect(DB::connection('tenant')->select("
+                SELECT
+                    h.*,
+                    CASE
+                        WHEN cust.ID IS NULL THEN '—'
+                        WHEN TRIM(CONCAT(COALESCE(cust.FirstName, ''), ' ', COALESCE(cust.LastName, ''))) <> ''
+                            THEN TRIM(CONCAT(COALESCE(cust.FirstName, ''), ' ', COALESCE(cust.LastName, '')))
+                        WHEN COALESCE(TRIM(cust.BusinessName), '') <> ''
+                            THEN TRIM(cust.BusinessName)
+                        ELSE CONCAT('Customer #', cust.ID)
+                    END AS CustomerDisplayName
+                FROM `tbl_sales_invoice_header` h
+                LEFT JOIN `tbl_customer` cust ON h.`CustomerID` = cust.`ID`
+                WHERE h.`ID` IN ({$placeholders})
+                  AND h.`Status` != 2
+                ORDER BY h.`ID` ASC
+            ", $cleanIdsSlice));
+            $batchTitle = 'Selected Invoices (' . count($invoices) . ')';
+        } else {
+            return null;
+        }
+
+        if ($invoices->isEmpty()) {
+            return null;
+        }
+
+        // Gather all invoice IDs to fetch line items in one batch query
+        $targetInvoiceIds = $invoices->map(function ($inv) {
+            return (int) ($inv->InvoiceID ?? $inv->ID);
+        })->unique()->values()->all();
+
+        $itemsGrouped = collect();
+        if (! empty($targetInvoiceIds)) {
+            $itemPlaceholders = implode(',', array_fill(0, count($targetInvoiceIds), '?'));
+            $allItems = collect(DB::connection('tenant')->select("
+                SELECT
+                    d.ID,
+                    d.InvoiceID,
+                    d.ProductID,
+                    d.Unit AS raw_Unit,
+
+                    COALESCE(d.Quantity, 0) AS raw_Quantity,
+                    COALESCE(CASE WHEN d.Unit > 1 AND d.FBRQty IS NOT NULL THEN d.FBRQty ELSE d.Quantity END, 0) AS raw_FbrQty,
+                    COALESCE(d.Amount, 0) AS raw_Amount,
+                    COALESCE(d.DiscountAmount, d.Discount, 0) AS raw_Discount,
+                    COALESCE(d.FixedNotifiedValueOrRetailPrice, 0) AS raw_FixedNotifiedValue,
+                    COALESCE(d.GSTAmount, d.SalesTaxApplicable, 0) AS raw_SalesTaxAmount,
+                    COALESCE(d.ExtraTax, 0) AS raw_ExtraTax,
+                    COALESCE(d.FurtherTax, 0) AS raw_FurtherTax,
+                    COALESCE(d.FedPayable, 0) AS raw_FedPayable,
+                    COALESCE(d.TotalValues, 0) AS raw_TotalValues,
+
+                    COALESCE(NULLIF(TRIM(CONVERT(p.Name USING utf8mb4)), ''), '—') AS ProductName,
+                    COALESCE(NULLIF(TRIM(CONVERT(d.HsCode USING utf8mb4)), ''), '—') AS HsCode,
+                    COALESCE(NULLIF(TRIM(CONVERT(d.ProductDescription USING utf8mb4)), ''), '—') AS ProductDescription,
+
+                    CONCAT(
+                        CASE
+                            WHEN TRIM(COALESCE(CONVERT(p.Name USING utf8mb4), '')) <> ''
+                                THEN CONCAT('<strong>', TRIM(CONVERT(p.Name USING utf8mb4)), '</strong>')
+                            ELSE ''
+                        END,
+                        CASE
+                            WHEN TRIM(COALESCE(CONVERT(d.HsCode USING utf8mb4), '')) <> ''
+                                THEN CONCAT(' <span class=\"text-muted\" style=\"font-size:10.5px;\">(HS Code: ', TRIM(CONVERT(d.HsCode USING utf8mb4)), ')</span>')
+                            ELSE ''
+                        END,
+                        CASE
+                            WHEN TRIM(COALESCE(CONVERT(d.ProductDescription USING utf8mb4), '')) <> ''
+                                 AND TRIM(COALESCE(CONVERT(d.ProductDescription USING utf8mb4), '')) <> TRIM(COALESCE(CONVERT(p.Name USING utf8mb4), ''))
+                                THEN CONCAT('<div class=\"text-muted mt-1\" style=\"font-size:11.5px; line-height:1.35;\">', TRIM(CONVERT(d.ProductDescription USING utf8mb4)), '</div>')
+                            ELSE ''
+                        END
+                    ) AS CombinedDescription,
+
+                    CASE
+                        WHEN d.Unit > 1
+                             AND TRIM(COALESCE(CONVERT(u.UnitName USING utf8mb4), '')) <> ''
+                             AND TRIM(CONVERT(u.UnitName USING utf8mb4)) NOT IN ('No Unit', '—', '-')
+                            THEN TRIM(CONVERT(u.UnitName USING utf8mb4))
+                        WHEN TRIM(COALESCE(CONVERT(d.Uom_Desc USING utf8mb4), '')) <> ''
+                             AND TRIM(CONVERT(d.Uom_Desc USING utf8mb4)) NOT IN ('No Unit', '—', '-')
+                            THEN TRIM(CONVERT(d.Uom_Desc USING utf8mb4))
+                        ELSE '—'
+                    END AS Unit,
+
+                    CASE
+                        WHEN d.Unit > 1
+                             AND TRIM(COALESCE(CONVERT(u.UnitName USING utf8mb4), '')) <> ''
+                             AND TRIM(CONVERT(u.UnitName USING utf8mb4)) NOT IN ('No Unit', '—', '-')
+                            THEN TRIM(CONVERT(u.UnitName USING utf8mb4))
+                        ELSE '—'
+                    END AS CustomUnit,
+
+                    CASE
+                        WHEN TRIM(COALESCE(CONVERT(d.Uom_Desc USING utf8mb4), '')) <> ''
+                             AND TRIM(CONVERT(d.Uom_Desc USING utf8mb4)) NOT IN ('No Unit', '—', '-')
+                            THEN TRIM(CONVERT(d.Uom_Desc USING utf8mb4))
+                        ELSE '—'
+                    END AS HsUnit,
+
+                    CASE
+                        WHEN d.Quantity = FLOOR(d.Quantity) THEN FORMAT(d.Quantity, 0)
+                        ELSE FORMAT(d.Quantity, 2)
+                    END AS Quantity,
+
+                    CONCAT(
+                        CASE
+                            WHEN d.Quantity = FLOOR(d.Quantity) THEN FORMAT(d.Quantity, 0)
+                            ELSE FORMAT(d.Quantity, 2)
+                        END,
+                        CASE
+                            WHEN d.Unit > 1
+                                 AND TRIM(COALESCE(CONVERT(u.UnitName USING utf8mb4), '')) <> ''
+                                 AND TRIM(CONVERT(u.UnitName USING utf8mb4)) NOT IN ('No Unit', '—', '-')
+                                THEN CONCAT(' <small class=\"text-muted ms-1\">', TRIM(CONVERT(u.UnitName USING utf8mb4)), '</small>')
+                            WHEN TRIM(COALESCE(CONVERT(d.Uom_Desc USING utf8mb4), '')) <> ''
+                                 AND TRIM(CONVERT(d.Uom_Desc USING utf8mb4)) NOT IN ('No Unit', '—', '-')
+                                THEN CONCAT(' <small class=\"text-muted ms-1\">', TRIM(CONVERT(d.Uom_Desc USING utf8mb4)), '</small>')
+                            ELSE ''
+                        END
+                    ) AS QtyWithUnit,
+
+                    CASE
+                        WHEN (CASE WHEN d.Unit > 1 AND d.FBRQty IS NOT NULL THEN d.FBRQty ELSE d.Quantity END) = FLOOR(CASE WHEN d.Unit > 1 AND d.FBRQty IS NOT NULL THEN d.FBRQty ELSE d.Quantity END)
+                            THEN FORMAT(CASE WHEN d.Unit > 1 AND d.FBRQty IS NOT NULL THEN d.FBRQty ELSE d.Quantity END, 0)
+                        ELSE FORMAT(CASE WHEN d.Unit > 1 AND d.FBRQty IS NOT NULL THEN d.FBRQty ELSE d.Quantity END, 2)
+                    END AS FbrQty,
+
+                    CONCAT(
+                        CASE
+                            WHEN (CASE WHEN d.Unit > 1 AND d.FBRQty IS NOT NULL THEN d.FBRQty ELSE d.Quantity END) = FLOOR(CASE WHEN d.Unit > 1 AND d.FBRQty IS NOT NULL THEN d.FBRQty ELSE d.Quantity END)
+                                THEN FORMAT(CASE WHEN d.Unit > 1 AND d.FBRQty IS NOT NULL THEN d.FBRQty ELSE d.Quantity END, 0)
+                            ELSE FORMAT(CASE WHEN d.Unit > 1 AND d.FBRQty IS NOT NULL THEN d.FBRQty ELSE d.Quantity END, 2)
+                        END,
+                        CASE
+                            WHEN TRIM(COALESCE(CONVERT(d.Uom_Desc USING utf8mb4), '')) <> ''
+                                 AND TRIM(CONVERT(d.Uom_Desc USING utf8mb4)) NOT IN ('No Unit', '—', '-')
+                                THEN CONCAT(' <small class=\"text-muted ms-1\">', TRIM(CONVERT(d.Uom_Desc USING utf8mb4)), '</small>')
+                            ELSE ''
+                        END
+                    ) AS FbrQtyWithUnit,
+
+                    FORMAT(COALESCE(d.Rate, 0), 2) AS Rate,
+                    FORMAT(COALESCE(d.DiscountAmount, d.Discount, 0), 2) AS Discount,
+                    FORMAT(COALESCE(d.Amount, 0), 2) AS ValueExclTax,
+                    FORMAT(COALESCE(d.FixedNotifiedValueOrRetailPrice, 0), 2) AS FixedNotifiedValue,
+                    COALESCE(NULLIF(TRIM(CONVERT(d.SaleTypeToRateDesc USING utf8mb4)), ''), '—') AS TaxRate,
+                    FORMAT(COALESCE(d.GSTAmount, d.SalesTaxApplicable, 0), 2) AS SalesTaxAmount,
+                    FORMAT(COALESCE(d.ExtraTax, 0), 2) AS ExtraTax,
+                    FORMAT(COALESCE(d.FurtherTax, 0), 2) AS FurtherTax,
+                    FORMAT(COALESCE(d.FedPayable, 0), 2) AS FedPayable,
+                    FORMAT(COALESCE(d.TotalValues, 0), 2) AS TotalInclTax
+
+                FROM `tbl_sales_invoice_detail` d
+                LEFT JOIN `tbl_product` p ON d.`ProductID` = p.`ID`
+                LEFT JOIN `tbl_Unit` u ON d.`Unit` = u.`id`
+                WHERE d.`InvoiceID` IN ({$itemPlaceholders})
+                  AND d.`Status` != 2
+                ORDER BY d.`InvoiceID` ASC, d.`ID` ASC
+            ", $targetInvoiceIds));
+
+            $itemsGrouped = $allItems->groupBy('InvoiceID');
+        }
+
+        // Fetch Buyers in batch
+        $customerIds = $invoices->pluck('CustomerID')->filter()->unique()->values()->all();
+        $buyersKeyed = collect();
+        if (! empty($customerIds)) {
+            $custPlaceholders = implode(',', array_fill(0, count($customerIds), '?'));
+            $buyersKeyed = collect(DB::connection('tenant')->select("
+                SELECT * FROM `tbl_customer` WHERE `ID` IN ({$custPlaceholders})
+            ", $customerIds))->keyBy('ID');
+        }
+
+        // Seller Profile (queried once)
+        $sellerRows = DB::connection('tenant')->select("
+            SELECT * FROM `tbl_business_info` WHERE `IsArchive` = 0 ORDER BY `ID` ASC LIMIT 1
+        ");
+        $seller = $sellerRows[0] ?? null;
+
+        // Templates & Custom Configuration (queried once)
+        $allTemplates    = self::getTemplates($moduleId);
+        $template        = self::getActiveTemplate($moduleId, $requestedTemplateId);
+        $templateFields  = $template ? self::getTemplateFields((int) $template->ID) : collect();
+        $templateColumns = $template ? self::getTemplateColumns((int) $template->ID) : collect();
+
+        // Assemble list
+        $invoicesData = [];
+        foreach ($invoices as $inv) {
+            $invId = (int) ($inv->InvoiceID ?? $inv->ID);
+            $invoicesData[] = [
+                'invoice' => $inv,
+                'items'   => $itemsGrouped->get($invId, collect()),
+                'buyer'   => $buyersKeyed->get($inv->CustomerID, null),
+            ];
+        }
+
+        return [
+            'invoicesData'    => $invoicesData,
+            'totalInvoices'   => $totalCount,
+            'offset'          => $offset,
+            'limit'           => $limit,
+            'seller'          => $seller,
+            'template'        => $template,
+            'allTemplates'    => $allTemplates,
+            'templateFields'  => $templateFields,
+            'templateColumns' => $templateColumns,
+            'batchTitle'      => $batchTitle,
+            'requestId'       => $requestId,
+        ];
+    }
+
+    /**
      * Get all active templates for a module (e.g. ModuleID = 4 for Sales Invoice).
      */
     public static function getTemplates(int $moduleId = 4): Collection
