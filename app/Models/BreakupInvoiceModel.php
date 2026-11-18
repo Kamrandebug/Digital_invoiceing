@@ -854,23 +854,19 @@ class BreakupInvoiceModel extends Model
 
     /**
      * Pre-flight safety check before delete or rollback:
-     * Blocks if any invoice in the batch has already been submitted to FBR.
+     * Blocks if all invoices in the batch have already been submitted to FBR.
      */
     public static function validate_can_delete(string $requestID): ?array
     {
-        $stats = DB::connection('tenant')->selectOne("
-            SELECT
-                COUNT(*) AS total_count,
-                COALESCE(SUM(CASE WHEN (h.Statusi = 7 OR (h.FbrTransactionID IS NOT NULL AND TRIM(h.FbrTransactionID) <> '')) THEN 1 ELSE 0 END), 0) AS posted_count
-            FROM tbl_sales_invoice_header h
-            WHERE h.RequestID = ?
-        ", [$requestID]);
+        $stats = BulkInvoiceModel::validate_batch_rollback($requestID);
+        $totalCount    = (int) ($stats->total_count ?? 0);
+        $postedCount   = (int) ($stats->posted_count ?? 0);
+        $unpostedCount = (int) ($stats->unposted_count ?? 0);
 
-        $postedCount = (int) ($stats->posted_count ?? 0);
-        if ($postedCount > 0) {
+        if ($totalCount > 0 && $unpostedCount === 0) {
             return [
                 'status'  => false,
-                'message' => "Cannot delete batch: {$postedCount} invoice(s) in this batch have already been submitted to FBR.",
+                'message' => "Cannot rollback batch: All {$postedCount} invoice(s) in this batch have already been submitted to FBR and cannot be deleted.",
             ];
         }
 
@@ -989,68 +985,20 @@ class BreakupInvoiceModel extends Model
 
     /**
      * Delete transaction: Executes the complete history-first hard delete pipeline.
+     * Uses BulkInvoiceModel::rollback_batch for consistent partial & full rollback support.
      */
     public static function delete_transaction(string $requestID, int $userId = 1): array
     {
-        $now = now()->toDateTimeString();
-
-        // 1. Pre-flight Validation
-        $validationError = self::validate_can_delete($requestID);
-        if ($validationError !== null) {
-            return $validationError;
-        }
-
-        $batch = DB::connection('tenant')->table('tbl_bulk_invoice_request')
-            ->where('RequestID', $requestID)
-            ->first();
-
+        // Clean staging rows if any remain
         try {
-            DB::connection('tenant')->transaction(function () use ($requestID, $userId, $now, $batch) {
-                // STEP A: Snapshot Batch Request
-                self::move_history_batch($requestID, $userId, $now, 'DELETE');
-
-                // STEP B: Snapshot Headers
-                self::move_history_header($requestID, $userId, $now, 'DELETE');
-
-                // STEP C: Snapshot Detail Items
-                self::move_history_detail($requestID, $userId, $now, 'DELETE');
-
-                // STEP D: Hard DELETE line items
-                DB::connection('tenant')->table('tbl_sales_invoice_detail')
-                    ->where('RequestID', $requestID)
-                    ->delete();
-
-                // STEP E: Hard DELETE headers
-                DB::connection('tenant')->table('tbl_sales_invoice_header')
-                    ->where('RequestID', $requestID)
-                    ->delete();
-
-                // STEP F: Hard DELETE batch
-                DB::connection('tenant')->table('tbl_bulk_invoice_request')
-                    ->where('RequestID', $requestID)
-                    ->delete();
-
-                // STEP G: Clean staging rows if any remain
-                DB::connection('tenant')->table('tbl_temp_invoice_detail')
-                    ->where('RequestID', $requestID)
-                    ->delete();
-            });
-
-            // Audit Log
-            try {
-                AuditLogService::log('DELETE', 'BREAKUP_INVOICE', $batch->ID ?? 0, (array) $batch, [
-                    'RequestID'  => $requestID,
-                    'ActionNote' => 'Breakup invoice batch rolled back and archived.',
-                ]);
-            } catch (\Throwable $e) {
-                Log::error('Failed to log breakup batch delete: ' . $e->getMessage());
-            }
-
-            return ['status' => true, 'message' => 'Batch successfully rolled back and archived.'];
+            DB::connection('tenant')->table('tbl_temp_invoice_detail')
+                ->where('RequestID', $requestID)
+                ->delete();
         } catch (\Throwable $e) {
-            Log::error('BreakupInvoiceModel::delete_transaction failed: ' . $e->getMessage());
-            return ['status' => false, 'message' => 'Rollback failed: ' . $e->getMessage()];
+            // ignore if temp table doesn't exist
         }
+
+        return BulkInvoiceModel::rollback_batch($requestID, $userId);
     }
 }
 

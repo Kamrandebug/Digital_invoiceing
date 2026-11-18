@@ -55,7 +55,14 @@ class BulkInvoiceModel extends Model
      */
     public static function getListingData(array $filters = [])
     {
+        $sessionUserName = auth()->user()?->name ?: (session('selected_tenant.user_name') ?: 'System');
+        $quotedFallback  = DB::connection('tenant')->getPdo()->quote($sessionUserName);
+
         $query = DB::connection('tenant')->table('tbl_bulk_invoice_request as b')
+            ->leftJoin('tbl_user as u', function ($join) {
+                $join->on('u.ID', '=', 'b.CreatedBy')
+                     ->orOn('u.MasterUserID', '=', 'b.CreatedBy');
+            })
             ->select(
                 'b.ID',
                 'b.RequestID',
@@ -72,8 +79,11 @@ class BulkInvoiceModel extends Model
                 'b.CreatedBy',
                 'b.CreatedOn',
                 DB::raw("(SELECT COUNT(*) FROM tbl_sales_invoice_header h WHERE h.RequestID = b.RequestID AND (h.Statusi = 7 OR (h.FbrTransactionID IS NOT NULL AND TRIM(h.FbrTransactionID) <> ''))) as LivePostedCount"),
-                DB::raw("(SELECT COUNT(*) FROM tbl_sales_invoice_header h WHERE h.RequestID = b.RequestID) as LiveTotalCount")
+                DB::raw("(SELECT COUNT(*) FROM tbl_sales_invoice_header h WHERE h.RequestID = b.RequestID AND (h.Statusi = 6 OR (h.Statusi = 0 AND (h.FbrTransactionID IS NULL OR TRIM(h.FbrTransactionID) = '') AND h.FbrResponseJson IS NOT NULL AND TRIM(h.FbrResponseJson) <> ''))) as LiveErrorCount"),
+                DB::raw("(SELECT COUNT(*) FROM tbl_sales_invoice_header h WHERE h.RequestID = b.RequestID) as LiveTotalCount"),
+                DB::raw("COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.FirstName, ''), ' ', COALESCE(u.LastName, ''))), ''), u.Email, {$quotedFallback}) as CreatedByName")
             )
+            ->where('b.SourceType', $filters['source_type'] ?? 'EXCEL_IMPORT')
             ->where('b.Status', '!=', 2)
             ->orderBy('b.ID', 'desc');
 

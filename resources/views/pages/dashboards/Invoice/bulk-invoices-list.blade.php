@@ -331,64 +331,66 @@
                 <table class="table text-nowrap listing-table" id="bulkInvoicesTable">
                     <thead>
                         <tr>
-                            <th style="width: 50px;">#</th>
-                            <th>Request Title / Source</th>
-                            <th>Request ID</th>
-                            <th>Source Type</th>
-                            <th class="text-center">Invoices</th>
-                            <th class="text-center">Items</th>
-                            <th class="text-end">Total Ex-Tax (PKR)</th>
-                            <th class="text-end">Total GST (PKR)</th>
-                            <th class="text-end">Total Net (PKR)</th>
-                            <th>Created Date</th>
-                            <th class="action-col text-end">Action</th>
+                            <th class="ps-3">Request Title / File</th>
+                            <th class="text-center" style="width: 90px;">Invoices</th>
+                            <th class="text-end" style="width: 140px;">Total Amount</th>
+                            <th class="text-end" style="width: 130px;">Total Tax</th>
+                            <th class="text-center" style="width: 190px;">FBR Status</th>
+                            <th>Created By</th>
+                            <th>Created On</th>
+                            <th class="action-col text-end pe-3">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($batches as $index => $batch)
+                    <tbody class="fs-12">
+                        @forelse($batches as $batch)
                         <tr>
-                            <td class="text-muted">{{ $batches->firstItem() + $index }}</td>
-                            <td>
-                                <div class="fw-semibold text-dark">{{ $batch->Title }}</div>
-                                @if(!empty($batch->SourceReference))
-                                    <small class="text-muted"><i class="fas fa-file-excel text-success me-1"></i> {{ $batch->SourceReference }}</small>
-                                @endif
+                            <td class="ps-3">
+                                <div class="fw-semibold text-dark fs-12">{{ $batch->Title }}</div>
+                                <div class="d-flex align-items-center gap-1 mt-0.5">
+                                    @if(!empty($batch->SourceReference))
+                                        <span class="text-muted fs-11"><i class="fas fa-file-excel text-success me-1"></i>{{ $batch->SourceReference }}</span>
+                                        <span class="text-muted fs-10">&bull;</span>
+                                    @endif
+                                    <code class="text-primary font-monospace fs-10" title="Request ID: {{ $batch->RequestID }}">
+                                        {{ substr($batch->RequestID, 0, 8) }}...{{ substr($batch->RequestID, -4) }}
+                                    </code>
+                                </div>
                             </td>
-                            <td>
-                                <code class="fs-11 text-secondary">{{ substr($batch->RequestID, 0, 8) }}...{{ substr($batch->RequestID, -4) }}</code>
+                            <td class="text-center">
+                                <span class="badge bg-primary-transparent fs-11 fw-semibold">{{ $batch->LiveTotalCount ?? $batch->TotalInvoices }}</span>
                             </td>
-                            <td>
-                                @if($batch->SourceType === 'EXCEL_IMPORT')
-                                    <span class="badge bg-primary-transparent text-primary"><i class="fas fa-file-import me-1"></i> Excel Import</span>
+                            <td class="text-end fw-semibold">
+                                PKR {{ number_format($batch->TotalAmount, 2) }}
+                            </td>
+                            <td class="text-end text-muted">
+                                PKR {{ number_format($batch->TotalTax, 2) }}
+                            </td>
+                            <td class="text-center">
+                                @php
+                                    $liveTotal = (int) ($batch->LiveTotalCount ?? $batch->TotalInvoices);
+                                    $livePosted = (int) ($batch->LivePostedCount ?? $batch->FbrPostedCount ?? 0);
+                                @endphp
+                                @if($liveTotal === 0)
+                                    <span class="badge bg-light text-muted">Empty Batch</span>
+                                @elseif($livePosted >= $liveTotal)
+                                    <span class="badge rounded-pill bg-success-subtle text-success text-nowrap" style="font-size: 11px; padding: 4px 8px;">
+                                        <i class="fas fa-check-circle me-1"></i> {{ $livePosted }} of {{ $liveTotal }} Successfully Posted
+                                    </span>
+                                @elseif($livePosted > 0)
+                                    <span class="badge rounded-pill bg-warning-subtle text-warning text-nowrap" style="font-size: 11px; padding: 4px 8px;">
+                                        <i class="fas fa-paper-plane me-1"></i> {{ $livePosted }} of {{ $liveTotal }} Successfully Posted
+                                    </span>
                                 @else
-                                    <span class="badge bg-info-transparent text-info"><i class="fas fa-layer-group me-1"></i> Purchase Breakup</span>
+                                    <span class="badge rounded-pill bg-light text-muted border text-nowrap" style="font-size: 11px; padding: 4px 8px;">
+                                        <i class="fas fa-clock me-1 text-muted"></i> 0 of {{ $liveTotal }} Successfully Posted
+                                    </span>
                                 @endif
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-success-transparent text-success fw-semibold fs-11" title="Live Invoices">{{ $batch->LiveTotalCount ?? $batch->TotalInvoices }}</span>
-                                @if(($batch->LivePostedCount ?? 0) > 0)
-                                    <small class="d-block text-success fs-10 mt-1" title="Posted to FBR">
-                                        <i class="fas fa-check-circle"></i> {{ $batch->LivePostedCount }} posted
-                                    </small>
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-light text-dark fw-medium fs-11">{{ $batch->TotalItems }}</span>
-                            </td>
-                            <td class="text-end text-muted font-monospace">
-                                {{ number_format($batch->TotalExTax ?? ($batch->TotalAmount - $batch->TotalTax), 2) }}
-                            </td>
-                            <td class="text-end text-muted font-monospace">
-                                {{ number_format($batch->TotalTax, 2) }}
-                            </td>
-                            <td class="text-end fw-bold text-dark font-monospace">
-                                {{ number_format($batch->TotalAmount, 2) }}
                             </td>
                             <td>
-                                <div class="fs-12 text-dark">{{ date('d M Y', strtotime($batch->CreatedOn)) }}</div>
-                                <small class="text-muted">{{ date('h:i A', strtotime($batch->CreatedOn)) }}</small>
+                                <span class="fw-medium text-dark">{{ $batch->CreatedByName ?: 'System' }}</span>
                             </td>
-                            <td class="action-col text-end">
+                            <td>{{ \Carbon\Carbon::parse($batch->CreatedOn)->format('d-M-Y H:i') }}</td>
+                            <td class="action-col text-end pe-3">
                                 <div class="action-wrapper d-inline-flex justify-content-end">
                                     <div class="btn-group btn-listing">
                                         <button type="button"
@@ -426,14 +428,14 @@
                                                 $livePosted = (int) ($batch->LivePostedCount ?? $batch->FbrPostedCount ?? 0);
                                             @endphp
                                             @if($liveTotal > 0 && $livePosted >= $liveTotal)
-                                                <li><hr class="dropdown-divider"></li>
+                                                <li><hr class="dropdown-divider my-1"></li>
                                                 <li>
                                                     <span class="dropdown-item text-muted disabled" style="cursor: not-allowed;" title="All invoices in this batch have already been submitted to FBR and cannot be deleted">
                                                         <i class="fas fa-lock me-2 text-muted"></i> Rollback Blocked (FBR Posted)
                                                     </span>
                                                 </li>
                                             @else
-                                                <li><hr class="dropdown-divider"></li>
+                                                <li><hr class="dropdown-divider my-1"></li>
                                                 <li>
                                                     <button type="button" class="dropdown-item text-danger" onclick="confirmBatchRollback('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}', {{ $liveTotal }}, {{ $livePosted }})">
                                                         <i class="fas fa-trash-alt me-2 text-danger"></i> Rollback Batch
@@ -447,7 +449,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="11" class="text-center py-5">
+                            <td colspan="8" class="text-center py-5">
                                 <i class="fas fa-folder-open fa-3x text-muted mb-3 d-block"></i>
                                 <p class="text-muted mb-2">No bulk invoicing requests found.</p>
                                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bulkInvoiceImportModal">

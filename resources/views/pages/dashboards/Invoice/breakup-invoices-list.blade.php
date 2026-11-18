@@ -53,6 +53,128 @@
         font-size: 11px;
     }
 
+    /* ── Enhanced Rollback Modal Custom Styling ── */
+    #rollbackBatchModal .modal-content {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    #rollbackBatchModal .modal-header {
+        background: #ffffff;
+        border-bottom: 1px solid #f1f5f9;
+        padding: 16px 20px;
+    }
+    #rollbackBatchModal .rollback-icon-circle {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+    }
+    #rollbackBatchModal .rollback-icon-circle.danger {
+        background-color: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+    #rollbackBatchModal .rollback-icon-circle.warning {
+        background-color: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fde68a;
+    }
+    #rollbackBatchModal .rollback-icon-circle.info {
+        background-color: #e0f2fe;
+        color: #0284c7;
+        border: 1px solid #bae6fd;
+    }
+    #rollbackBatchModal .rollback-icon-circle.secondary {
+        background-color: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+    }
+
+    #rollbackBatchModal .batch-preview-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 14px;
+    }
+    #rollbackBatchModal .batch-stat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 11.5px;
+        font-weight: 500;
+        color: #334155;
+    }
+
+    #rollbackBatchModal .rollback-notice-card {
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 12.5px;
+        line-height: 1.5;
+    }
+    #rollbackBatchModal .rollback-notice-card.danger {
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-left: 4px solid #ef4444;
+        color: #1e293b;
+    }
+    #rollbackBatchModal .rollback-notice-card.warning {
+        background-color: #fffbeb;
+        border: 1px solid #fde68a;
+        border-left: 4px solid #f59e0b;
+        color: #1e293b;
+    }
+    #rollbackBatchModal .rollback-notice-card.info {
+        background-color: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-left: 4px solid #22c55e;
+        color: #1e293b;
+    }
+    #rollbackBatchModal .rollback-notice-title {
+        font-weight: 700;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+    }
+    #rollbackBatchModal .rollback-notice-body {
+        font-size: 12px;
+        color: #334155;
+    }
+
+    #rollbackBatchModal .modal-footer {
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        padding: 12px 20px;
+    }
+    #rollbackBatchModal .btn-cancel {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+    }
+    #rollbackBatchModal .btn-cancel:hover {
+        background-color: #f1f5f9;
+        color: #1e293b;
+    }
+    #rollbackBatchModal .btn-rollback {
+        background-color: #dc2626;
+        border: 1px solid #b91c1c;
+        color: #ffffff;
+    }
+    #rollbackBatchModal .btn-rollback:hover {
+        background-color: #b91c1c;
+        color: #ffffff;
+    }
+
     /* ── Header tab/card styling — mirrors invoice-list and bulk-invoices ── */
     .invoice-card-tab-header {
         background-color: #f8fafc;
@@ -347,7 +469,7 @@
                         <th class="text-center">Invoices</th>
                         <th class="text-end">Total Amount</th>
                         <th class="text-end">Total Tax</th>
-                        <th class="text-center" style="width: 140px;">FBR Status</th>
+                        <th class="text-center" style="width: 190px;">FBR Status</th>
                         <th>Created By</th>
                         <th>Created On</th>
                         <th class="action-col text-end pe-3">Action</th>
@@ -381,28 +503,20 @@
                             @php
                                 $liveTotal = (int) ($batch->LiveTotalCount ?? $batch->TotalInvoices);
                                 $livePosted = (int) ($batch->LivePostedCount ?? $batch->FbrPostedCount ?? 0);
-                                $liveError = (int) ($batch->LiveErrorCount ?? 0);
                             @endphp
                             @if($liveTotal === 0)
                                 <span class="badge bg-light text-muted">Empty Batch</span>
                             @elseif($livePosted >= $liveTotal)
-                                <span class="badge rounded-pill bg-success-subtle text-success" style="font-size: 11px; padding: 4px 8px;">
-                                    <i class="fas fa-check-circle me-1"></i> All Posted ({{ $livePosted }}/{{ $liveTotal }})
+                                <span class="badge rounded-pill bg-success-subtle text-success text-nowrap" style="font-size: 11px; padding: 4px 8px;">
+                                    <i class="fas fa-check-circle me-1"></i> {{ $livePosted }} of {{ $liveTotal }} Successfully Posted
                                 </span>
                             @elseif($livePosted > 0)
-                                <span class="badge rounded-pill bg-warning-subtle text-warning" style="font-size: 11px; padding: 4px 8px;">
-                                    <i class="fas fa-paper-plane me-1"></i> {{ $livePosted }}/{{ $liveTotal }} Posted
-                                </span>
-                                @if($liveError > 0)
-                                    <small class="d-block text-danger font-monospace fs-10 mt-0.5">{{ $liveError }} error(s)</small>
-                                @endif
-                            @elseif($liveError > 0)
-                                <span class="badge rounded-pill bg-danger-subtle text-danger" style="font-size: 11px; padding: 4px 8px;">
-                                    <i class="fas fa-exclamation-triangle me-1"></i> {{ $liveError }} Error(s)
+                                <span class="badge rounded-pill bg-warning-subtle text-warning text-nowrap" style="font-size: 11px; padding: 4px 8px;">
+                                    <i class="fas fa-paper-plane me-1"></i> {{ $livePosted }} of {{ $liveTotal }} Successfully Posted
                                 </span>
                             @else
-                                <span class="badge rounded-pill bg-light text-muted border" style="font-size: 11px; padding: 4px 8px;">
-                                    <i class="fas fa-clock me-1 text-muted"></i> Not Posted (0/{{ $liveTotal }})
+                                <span class="badge rounded-pill bg-light text-muted border text-nowrap" style="font-size: 11px; padding: 4px 8px;">
+                                    <i class="fas fa-clock me-1 text-muted"></i> 0 of {{ $liveTotal }} Successfully Posted
                                 </span>
                             @endif
                         </td>
@@ -444,19 +558,20 @@
                                             </a>
                                         </li>
                                         @php
-                                            $isPostedBatch = ($batch->FbrPostedCount ?? 0) > 0;
+                                            $liveTotal = (int) ($batch->LiveTotalCount ?? $batch->TotalInvoices);
+                                            $livePosted = (int) ($batch->LivePostedCount ?? $batch->FbrPostedCount ?? 0);
                                         @endphp
-                                        @if($isPostedBatch)
+                                        @if($liveTotal > 0 && $livePosted >= $liveTotal)
                                             <li><hr class="dropdown-divider my-1"></li>
                                             <li>
-                                                <span class="dropdown-item text-muted disabled" style="cursor: not-allowed;" title="Invoices in this batch have already been submitted to FBR and cannot be deleted">
+                                                <span class="dropdown-item text-muted disabled" style="cursor: not-allowed;" title="All invoices in this batch have already been submitted to FBR and cannot be deleted">
                                                     <i class="fas fa-lock me-2 text-muted"></i> Rollback Blocked (FBR Posted)
                                                 </span>
                                             </li>
                                         @else
                                             <li><hr class="dropdown-divider my-1"></li>
                                             <li>
-                                                <button type="button" class="dropdown-item text-danger" onclick="confirmRollbackBatch('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}', {{ $batch->TotalInvoices }})">
+                                                <button type="button" class="dropdown-item text-danger" onclick="confirmBatchRollback('{{ $batch->RequestID }}', '{{ addslashes($batch->Title) }}', {{ $liveTotal }}, {{ $livePosted }})">
                                                     <i class="fas fa-trash-alt me-2 text-danger"></i> Rollback Batch
                                                 </button>
                                             </li>
@@ -757,35 +872,188 @@
 @include('pages.dashboards.Invoice._batch-print-chunk-modal')
 
 {{-- ══════════════════════════════════════════════════════════════════ --}}
-{{-- MODAL 3: ROLLBACK BATCH CONFIRMATION --}}
+{{-- MODAL 3: ROLLBACK BATCH CONFIRMATION (Enhanced UI/UX)         --}}
 {{-- ══════════════════════════════════════════════════════════════════ --}}
-<div class="modal fade" id="rollbackBreakupModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger-transparent py-2">
-                <h5 class="modal-title fs-14 fw-semibold text-danger">
-                    <i class="ri-alert-line me-1"></i> Rollback Breakup Batch
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="rollbackBatchForm" method="POST" onsubmit="executeRollbackBatch(event)">
+<div class="modal fade" id="rollbackBatchModal" tabindex="-1" aria-labelledby="rollbackBatchModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+        <div class="modal-content shadow-lg border-0">
+            <form id="rollbackBatchForm" method="POST" action="">
                 @csrf
-                <input type="hidden" name="request_id" id="rollback_request_id" value="">
-                <div class="modal-body p-3">
-                    <div class="alert alert-warning fs-12 mb-3">
-                        <i class="ri-error-warning-line me-1"></i> This action will hard delete all unposted invoices in this batch and archive them into history tables.
+                <div class="modal-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rollback-icon-circle danger" id="rollbackHeaderIconBadge">
+                            <i class="fas fa-trash-alt" id="rollbackHeaderIcon"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0 fs-15" id="rollbackModalHeaderTitle">
+                                Rollback Batch
+                            </h5>
+                            <small class="text-muted fs-11" id="rollbackModalHeaderSubtitle">
+                                Confirm invoice removal & history archiving
+                            </small>
+                        </div>
                     </div>
-                    <div class="fs-13">
-                        Are you sure you want to rollback batch: <strong id="rollback_batch_title" class="text-dark"></strong> (<span id="rollback_invoices_count"></span> invoices)?
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    {{-- Target Batch Preview Card --}}
+                    <div class="batch-preview-card mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="fs-11 fw-bold text-uppercase text-secondary" style="letter-spacing: 0.5px;">
+                                <i class="fas fa-layer-group me-1 text-primary"></i> Target Batch
+                            </span>
+                            <span class="badge bg-white text-muted border font-monospace fs-10" id="rollbackBatchReqBadge"></span>
+                        </div>
+                        <div class="fw-bold text-dark fs-13 mb-2" id="rollbackBatchTitle"></div>
+                        <div class="d-flex flex-wrap gap-2 pt-2 border-top border-slate-200">
+                            <div class="batch-stat-pill">
+                                <span class="text-muted">Total Invoices:</span>
+                                <strong class="text-dark" id="rollbackStatTotal">0</strong>
+                            </div>
+                            <div class="batch-stat-pill">
+                                <span class="text-success"><i class="fas fa-check-circle me-1"></i>FBR Posted:</span>
+                                <strong class="text-success" id="rollbackStatPosted">0</strong>
+                            </div>
+                            <div class="batch-stat-pill">
+                                <span class="text-danger"><i class="fas fa-trash-alt me-1"></i>To Delete:</span>
+                                <strong class="text-danger" id="rollbackStatUnposted">0</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- High-Contrast Notice / Alert Card --}}
+                    <div class="rollback-notice-card danger" id="rollbackAlertBox">
+                        <div class="rollback-notice-title" id="rollbackNoticeTitle">
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                            <span>Confirm Deletion</span>
+                        </div>
+                        <div class="rollback-notice-body" id="rollbackNoticeBody">
+                            <!-- Populated dynamically via JS -->
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light py-2">
-                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-sm btn-danger px-3" id="btnConfirmRollback">
-                        <i class="ri-delete-bin-line me-1"></i> Yes, Rollback Batch
+                <div class="modal-footer d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-sm btn-cancel px-3 py-1-5 fs-12 fw-semibold" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-sm btn-rollback px-3 py-1-5 fs-12 fw-semibold shadow-sm d-inline-flex align-items-center gap-1" id="rollbackSubmitBtn">
+                        <i class="fas fa-trash-alt me-1"></i> <span id="rollbackSubmitBtnText">Confirm Rollback</span>
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+{{-- ══════════════════════════════════════════════════════════════════ --}}
+{{-- MODAL 4: DIFFERENCE / TARGET MISMATCH CONFIRMATION MODAL        --}}
+{{-- ══════════════════════════════════════════════════════════════════ --}}
+<div class="modal fade" id="differenceWarningModal" tabindex="-1" aria-labelledby="differenceWarningModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rollback-icon-circle warning">
+                        <i class="fas fa-balance-scale text-warning"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0 fs-15">
+                            Target Quantity Mismatch
+                        </h5>
+                        <small class="text-muted fs-11">
+                            Generated total differs from target allocation
+                        </small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                {{-- Difference Summary Preview Card --}}
+                <div class="batch-preview-card mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="fs-11 fw-bold text-uppercase text-secondary" style="letter-spacing: 0.5px;">
+                            <i class="fas fa-layer-group me-1 text-primary"></i> Allocation Reconciliation
+                        </span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 pt-2 border-top border-slate-200">
+                        <div class="batch-stat-pill">
+                            <span class="text-muted">Target Qty:</span>
+                            <strong class="text-dark" id="diffWarnTargetQty">0.00</strong>
+                        </div>
+                        <div class="batch-stat-pill">
+                            <span class="text-primary"><i class="fas fa-calculator me-1"></i>Generated Sum:</span>
+                            <strong class="text-primary" id="diffWarnGeneratedQty">0.00</strong>
+                        </div>
+                        <div class="batch-stat-pill">
+                            <span class="text-warning"><i class="fas fa-exclamation-circle me-1"></i>Difference:</span>
+                            <strong id="diffWarnDifferenceVal">0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Notice Alert Card --}}
+                <div class="rollback-notice-card warning" id="diffWarnAlertBox">
+                    <div class="rollback-notice-title" id="diffWarnNoticeTitle">
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                        <span>Unallocated Difference Detected</span>
+                    </div>
+                    <div class="rollback-notice-body" id="diffWarnNoticeBody">
+                        The generated total quantity does not match your target quantity.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-sm btn-cancel px-3 py-1-5 fs-12 fw-semibold" data-bs-dismiss="modal">
+                    Cancel & Adjust
+                </button>
+                <button type="button" class="btn btn-sm btn-success px-3 py-1-5 fs-12 fw-semibold shadow-sm d-inline-flex align-items-center gap-1" onclick="executeCommitBreakupInvoices(true)">
+                    <i class="ri-check-double-line me-1"></i> Yes, Proceed with Difference
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ══════════════════════════════════════════════════════════════════ --}}
+{{-- MODAL 5: COMMIT SUCCESS MODAL                                   --}}
+{{-- ══════════════════════════════════════════════════════════════════ --}}
+<div class="modal fade" id="commitSuccessModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content shadow-lg border-0 text-center p-3">
+            <div class="modal-body p-3">
+                <div class="avatar avatar-xl bg-success-transparent rounded-circle mx-auto mb-3" style="width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-check-circle fs-28 text-success"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-1 fs-16">Invoices Created Successfully!</h5>
+                <p class="text-muted fs-12 mb-3" id="commitSuccessMessage">The invoices have been successfully generated and saved to your invoice list.</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <button type="button" class="btn btn-sm btn-success px-4 py-1-5 fs-12 fw-semibold" onclick="window.location.reload();">
+                        <i class="ri-check-line me-1"></i> Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ══════════════════════════════════════════════════════════════════ --}}
+{{-- MODAL 6: THEMED ALERT / NOTICE MODAL                            --}}
+{{-- ══════════════════════════════════════════════════════════════════ --}}
+<div class="modal fade" id="themedAlertModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content shadow-lg border-0 text-center p-3">
+            <div class="modal-body p-3">
+                <div class="avatar avatar-xl rounded-circle mx-auto mb-3" id="themedAlertIconBg" style="width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fs-28" id="themedAlertIcon"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-1 fs-16" id="themedAlertTitle">Notice</h5>
+                <p class="fs-12 mb-3 text-muted" id="themedAlertMessage">Message</p>
+                <div class="d-flex justify-content-center">
+                    <button type="button" class="btn btn-sm btn-secondary px-4 py-1-5 fs-12 fw-semibold" data-bs-dismiss="modal">
+                        Close
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -1292,40 +1560,40 @@
         const maxQty = parseFloat(document.getElementById('modal_max_qty').value) || 0;
 
         if (!custVal) {
-            alert('Please select a Customer.');
+            showThemedAlert('Customer Required', 'Please select a Customer.', 'warning');
             return;
         }
         if (!prodVal) {
-            alert('Please select a Product.');
+            showThemedAlert('Product Required', 'Please select a Product.', 'warning');
             return;
         }
         if (saleRate <= 0) {
-            alert('Please enter a valid Sale Rate.');
+            showThemedAlert('Invalid Rate', 'Please enter a valid Sale Rate.', 'warning');
             document.getElementById('modal_sale_rate').focus();
             return;
         }
         if (targetQty <= 0) {
-            alert('Please enter a valid Total Target Quantity or Amount.');
+            showThemedAlert('Invalid Target', 'Please enter a valid Total Target Quantity or Amount.', 'warning');
             document.getElementById('modal_target_qty').focus();
             return;
         }
         if (minQty <= 0) {
-            alert('Please enter a valid Min Quantity.');
+            showThemedAlert('Invalid Min Quantity', 'Please enter a valid Min Quantity.', 'warning');
             document.getElementById('modal_min_qty').focus();
             return;
         }
         if (maxQty <= 0) {
-            alert('Please enter a valid Max Quantity.');
+            showThemedAlert('Invalid Max Quantity', 'Please enter a valid Max Quantity.', 'warning');
             document.getElementById('modal_max_qty').focus();
             return;
         }
         if (minQty > maxQty) {
-            alert('Min Quantity cannot exceed Max Quantity.');
+            showThemedAlert('Range Mismatch', 'Min Quantity cannot exceed Max Quantity.', 'warning');
             document.getElementById('modal_min_qty').focus();
             return;
         }
         if (maxQty > targetQty) {
-            alert('Max Quantity cannot exceed Total Target Quantity.');
+            showThemedAlert('Limit Exceeded', 'Max Quantity cannot exceed Total Target Quantity.', 'warning');
             document.getElementById('modal_max_qty').focus();
             return;
         }
@@ -1359,7 +1627,7 @@
             document.getElementById('btnGeneratePreview').disabled = false;
 
             if (!data.status) {
-                alert('Generation Error: ' + (data.message || 'Failed to generate preview.'));
+                showThemedAlert('Generation Error', data.message || 'Failed to generate preview.', 'error');
                 return;
             }
 
@@ -1392,7 +1660,7 @@
         .catch(err => {
             document.getElementById('previewLoadingSpinner').style.display = 'none';
             document.getElementById('btnGeneratePreview').disabled = false;
-            alert('Failed to connect to server: ' + err);
+            showThemedAlert('Connection Error', 'Failed to connect to server: ' + err, 'error');
         });
     }
 
@@ -1426,7 +1694,7 @@
         const newDate = dateInput ? dateInput.value : null;
 
         if (newQty <= 0) {
-            alert('Quantity must be greater than zero.');
+            showThemedAlert('Invalid Quantity', 'Quantity must be greater than zero.', 'warning');
             return;
         }
 
@@ -1446,7 +1714,7 @@
         .then(res => res.json())
         .then(data => {
             if (!data.status) {
-                alert(data.message || 'Row update failed.');
+                showThemedAlert('Update Failed', data.message || 'Row update failed.', 'error');
                 return;
             }
 
@@ -1461,7 +1729,7 @@
             // Update batch summary counters
             syncPreviewTotals(data.batch_totals);
         })
-        .catch(err => alert('Failed to update row: ' + err));
+        .catch(err => showThemedAlert('Update Error', 'Failed to update row: ' + err, 'error'));
     }
 
     // ── Delete Single Row from Preview ─────────────────────────────────
@@ -1480,7 +1748,7 @@
         .then(res => res.json())
         .then(data => {
             if (!data.status) {
-                alert(data.message || 'Delete row failed.');
+                showThemedAlert('Delete Failed', data.message || 'Delete row failed.', 'error');
                 return;
             }
 
@@ -1489,7 +1757,7 @@
 
             syncPreviewTotals(data.batch_totals);
         })
-        .catch(err => alert('Failed to delete row: ' + err));
+        .catch(err => showThemedAlert('Delete Error', 'Failed to delete row: ' + err, 'error'));
     }
 
     // ── Sync Footers & Difference Counters ─────────────────────────────
@@ -1548,18 +1816,104 @@
         }
     }
 
-    // ── Confirm & Move to Live Invoices ────────────────────────────────
+    // ── Themed Alert Modal Helper ────────────────────────────────────
+    function showThemedAlert(title, message, type = 'error') {
+        const titleEl = document.getElementById('themedAlertTitle');
+        const msgEl = document.getElementById('themedAlertMessage');
+        const iconBg = document.getElementById('themedAlertIconBg');
+        const icon = document.getElementById('themedAlertIcon');
+
+        if (titleEl) titleEl.textContent = title;
+        if (msgEl) msgEl.textContent = message;
+
+        if (type === 'error') {
+            if (iconBg) iconBg.className = 'avatar avatar-xl bg-danger-transparent rounded-circle mx-auto mb-3';
+            if (icon) icon.className = 'fas fa-times-circle fs-28 text-danger';
+            if (msgEl) msgEl.className = 'fs-12 mb-3 text-danger';
+        } else if (type === 'warning') {
+            if (iconBg) iconBg.className = 'avatar avatar-xl bg-warning-transparent rounded-circle mx-auto mb-3';
+            if (icon) icon.className = 'fas fa-exclamation-triangle fs-28 text-warning';
+            if (msgEl) msgEl.className = 'fs-12 mb-3 text-dark';
+        } else {
+            if (iconBg) iconBg.className = 'avatar avatar-xl bg-info-transparent rounded-circle mx-auto mb-3';
+            if (icon) icon.className = 'fas fa-info-circle fs-28 text-info';
+            if (msgEl) msgEl.className = 'fs-12 mb-3 text-muted';
+        }
+
+        const modalEl = document.getElementById('themedAlertModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    }
+
+    // ── Confirm & Move to Live Invoices (with Difference Balance Guard) ──
     function commitBreakupInvoices() {
+        const requestId = document.getElementById('form_request_id').value;
+        if (!requestId) {
+            showThemedAlert('No Batch Active', 'No preview batch active. Please generate a preview first.', 'warning');
+            return;
+        }
+
+        // Calculate reconciliation difference between Target Qty and current sum of Qty in preview
+        const targetQty = parseFloat(document.getElementById('modal_target_qty').value) || 0;
+        let totalGenQty = 0;
+        document.querySelectorAll('.preview-qty-input').forEach(inp => {
+            totalGenQty += (parseFloat(inp.value) || 0);
+        });
+
+        // Round to 4 decimal places to avoid floating point precision artifacts
+        const diff = Math.round((targetQty - totalGenQty) * 10000) / 10000;
+
+        // If difference is significant (> 0.001), prompt Difference Warning Modal
+        if (Math.abs(diff) > 0.001) {
+            document.getElementById('diffWarnTargetQty').textContent = formatMoney(targetQty);
+            document.getElementById('diffWarnGeneratedQty').textContent = formatMoney(totalGenQty);
+
+            const alertBox = document.getElementById('diffWarnAlertBox');
+            const noticeTitle = document.getElementById('diffWarnNoticeTitle');
+            const noticeBody = document.getElementById('diffWarnNoticeBody');
+            const diffValBadge = document.getElementById('diffWarnDifferenceVal');
+
+            if (diff > 0) {
+                // Short / Under-allocated
+                diffValBadge.textContent = '+' + formatMoney(diff) + ' (Short)';
+                diffValBadge.className = 'text-warning';
+                alertBox.className = 'rollback-notice-card warning';
+                noticeTitle.innerHTML = '<i class="fas fa-exclamation-triangle text-warning me-1"></i> Under-Allocated Batch (Short by ' + formatMoney(diff) + ')';
+                noticeBody.innerHTML = 'Your generated total quantity (<strong>' + formatMoney(totalGenQty) + '</strong>) is less than your target (<strong>' + formatMoney(targetQty) + '</strong>).<br>There is an unallocated difference of <strong class="text-danger">+' + formatMoney(diff) + '</strong>.<br><br>Do you want to proceed and save this partial batch, or adjust your invoice quantities?';
+            } else {
+                // Over-allocated
+                diffValBadge.textContent = '-' + formatMoney(Math.abs(diff)) + ' (Over)';
+                diffValBadge.className = 'text-danger';
+                alertBox.className = 'rollback-notice-card danger';
+                noticeTitle.innerHTML = '<i class="fas fa-exclamation-circle text-danger me-1"></i> Over-Allocated Batch (Exceeds by ' + formatMoney(Math.abs(diff)) + ')';
+                noticeBody.innerHTML = 'Your generated total quantity (<strong>' + formatMoney(totalGenQty) + '</strong>) exceeds your target (<strong>' + formatMoney(targetQty) + '</strong>) by <strong class="text-danger">' + formatMoney(Math.abs(diff)) + '</strong>.<br><br>Do you want to proceed and save this batch with the excess quantity, or adjust your invoice quantities?';
+            }
+
+            const diffModal = new bootstrap.Modal(document.getElementById('differenceWarningModal'));
+            diffModal.show();
+            return;
+        }
+
+        // If perfectly balanced, execute save directly
+        executeCommitBreakupInvoices(false);
+    }
+
+    function executeCommitBreakupInvoices(fromWarningModal) {
+        if (fromWarningModal) {
+            const warnEl = document.getElementById('differenceWarningModal');
+            if (warnEl) {
+                const warnModal = bootstrap.Modal.getInstance(warnEl);
+                if (warnModal) warnModal.hide();
+            }
+        }
+
         const requestId = document.getElementById('form_request_id').value;
         const batchTitleInput = document.getElementById('commitBatchTitle');
         const batchTitle = batchTitleInput ? batchTitleInput.value : '';
         const btn = document.getElementById('btnCommitInvoices');
         const btnFooter = document.getElementById('btnFooterCommit');
-
-        if (!requestId) {
-            alert('No preview batch active. Please generate a preview first.');
-            return;
-        }
 
         if (btn) {
             btn.disabled = true;
@@ -1593,12 +1947,21 @@
                     btnFooter.disabled = false;
                     btnFooter.innerHTML = '<i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices';
                 }
-                alert('Commit failed: ' + (data.message || 'Error saving invoices.'));
+                showThemedAlert('Commit Failed', data.message || 'Error saving invoices.', 'error');
                 return;
             }
 
-            alert(data.message || 'Invoices moved successfully!');
-            window.location.reload();
+            // Close generator modal
+            const genModalEl = document.getElementById('breakupGeneratorModal');
+            if (genModalEl) {
+                const genModal = bootstrap.Modal.getInstance(genModalEl);
+                if (genModal) genModal.hide();
+            }
+
+            // Show themed success modal
+            document.getElementById('commitSuccessMessage').textContent = data.message || 'Invoices have been saved and moved to your Invoices list.';
+            const successModal = new bootstrap.Modal(document.getElementById('commitSuccessModal'));
+            successModal.show();
         })
         .catch(err => {
             if (btn) {
@@ -1609,50 +1972,99 @@
                 btnFooter.disabled = false;
                 btnFooter.innerHTML = '<i class="ri-check-double-line me-1"></i> Confirm & Move to Invoices';
             }
-            alert('Server error: ' + err);
+            showThemedAlert('Server Error', 'Failed to communicate with the server: ' + err, 'error');
         });
     }
 
-    // ── Rollback Confirmation Modal ────────────────────────────────────
-    function confirmRollbackBatch(requestId, title, count) {
-        document.getElementById('rollback_request_id').value = requestId;
-        document.getElementById('rollback_batch_title').textContent = title;
-        document.getElementById('rollback_invoices_count').textContent = count;
-        const modal = new bootstrap.Modal(document.getElementById('rollbackBreakupModal'));
+    // ── Enhanced Rollback Confirmation Modal (Same as Bulk Invoices) ──────
+    function confirmBatchRollback(requestId, title, totalCount, postedCount) {
+        postedCount = parseInt(postedCount) || 0;
+        totalCount = parseInt(totalCount) || 0;
+        const unpostedCount = Math.max(0, totalCount - postedCount);
+
+        document.getElementById('rollbackBatchTitle').textContent = title || 'Untitled Batch';
+        document.getElementById('rollbackBatchReqBadge').textContent = requestId ? (requestId.substring(0, 8) + '...' + requestId.substring(requestId.length - 4)) : '';
+        document.getElementById('rollbackStatTotal').textContent = totalCount;
+        document.getElementById('rollbackStatPosted').textContent = postedCount;
+        document.getElementById('rollbackStatUnposted').textContent = unpostedCount;
+
+        document.getElementById('rollbackBatchForm').action = '{{ url("breakup-invoices/rollback") }}/' + requestId;
+
+        const iconBadge = document.getElementById('rollbackHeaderIconBadge');
+        const headerIcon = document.getElementById('rollbackHeaderIcon');
+        const headerTitle = document.getElementById('rollbackModalHeaderTitle');
+        const headerSubtitle = document.getElementById('rollbackModalHeaderSubtitle');
+
+        const alertBox = document.getElementById('rollbackAlertBox');
+        const noticeTitle = document.getElementById('rollbackNoticeTitle');
+        const noticeBody = document.getElementById('rollbackNoticeBody');
+        const submitBtn = document.getElementById('rollbackSubmitBtn');
+
+        if (totalCount > 0 && unpostedCount === 0) {
+            // CASE 1: All invoices already posted to FBR — BLOCK
+            iconBadge.className = 'rollback-icon-circle secondary';
+            headerIcon.className = 'fas fa-lock';
+            headerTitle.textContent = 'Rollback Blocked';
+            headerSubtitle.textContent = 'FBR submitted invoices cannot be rolled back';
+
+            alertBox.className = 'rollback-notice-card danger';
+            noticeTitle.innerHTML = '<i class="fas fa-ban text-danger"></i> <span style="color: #991b1b;">Rollback Prohibited</span>';
+            noticeBody.innerHTML = 'All <strong>' + totalCount + '</strong> invoice(s) in this batch have already been submitted to FBR and cannot be deleted via batch rollback.<br><small class="text-muted mt-1 d-block"><i class="fas fa-info-circle me-1"></i> If you need to void an FBR-submitted invoice, use the Credit Note / Cancel feature in the Invoices screen.</small>';
+
+            submitBtn.disabled = true;
+            submitBtn.className = 'btn btn-sm btn-secondary px-3 py-1-5 fs-12 fw-semibold';
+            submitBtn.innerHTML = '<i class="fas fa-lock me-1"></i> Cannot Rollback';
+        } else if (postedCount > 0) {
+            // CASE 2: Partial Rollback — Preserves posted, deletes unposted
+            iconBadge.className = 'rollback-icon-circle warning';
+            headerIcon.className = 'fas fa-shield-alt';
+            headerTitle.textContent = 'Partial Batch Rollback';
+            headerSubtitle.textContent = 'Preserves FBR invoices and deletes unposted';
+
+            alertBox.className = 'rollback-notice-card warning';
+            noticeTitle.innerHTML = '<i class="fas fa-shield-alt text-warning"></i> <span style="color: #92400e;">FBR Invoices Protected (' + postedCount + ' Posted)</span>';
+            noticeBody.innerHTML = '<strong>' + postedCount + ' out of ' + totalCount + '</strong> invoices have already been submitted to FBR and will remain <span class="badge bg-success text-white fw-semibold">Safely Preserved</span>.<br><br>Do you want to proceed with rolling back the remaining <strong class="text-danger">' + unpostedCount + '</strong> unposted invoice(s)?';
+
+            submitBtn.disabled = false;
+            submitBtn.className = 'btn btn-sm btn-rollback px-3 py-1-5 fs-12 fw-semibold shadow-sm d-inline-flex align-items-center gap-1';
+            submitBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Rollback (' + unpostedCount + ' Unposted Invoices)';
+        } else if (totalCount === 0) {
+            // CASE 3: Empty Batch — Remove orphaned record
+            iconBadge.className = 'rollback-icon-circle info';
+            headerIcon.className = 'fas fa-info-circle';
+            headerTitle.textContent = 'Remove Empty Batch';
+            headerSubtitle.textContent = 'Clean up orphaned batch metadata';
+
+            alertBox.className = 'rollback-notice-card info';
+            noticeTitle.innerHTML = '<i class="fas fa-info-circle text-success"></i> <span style="color: #166534;">Clean Up Empty Batch</span>';
+            noticeBody.innerHTML = 'No live invoices remain under this batch. This action will cleanly remove the empty batch request record from the database.';
+
+            submitBtn.disabled = false;
+            submitBtn.className = 'btn btn-sm btn-rollback px-3 py-1-5 fs-12 fw-semibold shadow-sm d-inline-flex align-items-center gap-1';
+            submitBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Remove Empty Batch';
+        } else {
+            // CASE 4: Full Rollback (0 posted, all unposted)
+            iconBadge.className = 'rollback-icon-circle danger';
+            headerIcon.className = 'fas fa-trash-alt';
+            headerTitle.textContent = 'Rollback Batch Invoices';
+            headerSubtitle.textContent = 'Archived to history and permanently removed';
+
+            alertBox.className = 'rollback-notice-card danger';
+            noticeTitle.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> <span style="color: #991b1b;">Confirm Batch Removal</span>';
+            noticeBody.innerHTML = 'Are you sure? This will delete all <strong>' + totalCount + '</strong> unposted invoice(s) in this batch and remove the batch request.<br><small class="text-muted mt-1 d-block"><i class="fas fa-history me-1"></i> All deleted invoices and line items are safely recorded in the audit history table.</small>';
+
+            submitBtn.disabled = false;
+            submitBtn.className = 'btn btn-sm btn-rollback px-3 py-1-5 fs-12 fw-semibold shadow-sm d-inline-flex align-items-center gap-1';
+            submitBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Confirm Rollback';
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('rollbackBatchModal'));
         modal.show();
     }
 
-    function executeRollbackBatch(e) {
-        e.preventDefault();
-        const requestId = document.getElementById('rollback_request_id').value;
-        const btn = document.getElementById('btnConfirmRollback');
-
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Rolling back...';
-
-        fetch('{{ url("breakup-invoices/rollback") }}/' + requestId, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': CSRF_TOKEN,
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (!data.status) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i> Yes, Rollback Batch';
-                alert('Rollback failed: ' + (data.message || 'Error.'));
-                return;
-            }
-            alert(data.message || 'Batch rolled back successfully.');
-            window.location.reload();
-        })
-        .catch(err => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="ri-delete-bin-line me-1"></i> Yes, Rollback Batch';
-            alert('Server error: ' + err);
-        });
+    // Alias for backwards compatibility
+    function confirmRollbackBatch(requestId, title, count) {
+        confirmBatchRollback(requestId, title, count, 0);
     }
 
     function formatMoney(num) {

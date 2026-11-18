@@ -32,8 +32,9 @@ class BulkInvoiceController extends Controller
             'source_type' => $request->input('source_type'),
         ];
 
-        // Summary Counters
+        // Summary Counters (filtered by source type, defaulting to EXCEL_IMPORT)
         $summary = DB::connection('tenant')->table('tbl_bulk_invoice_request')
+            ->where('SourceType', $filters['source_type'] ?? 'EXCEL_IMPORT')
             ->where('Status', '!=', 2)
             ->selectRaw('
                 COUNT(*) as total_batches,
