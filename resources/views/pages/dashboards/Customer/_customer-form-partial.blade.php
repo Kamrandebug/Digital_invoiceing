@@ -604,7 +604,9 @@
 							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Tax Filer Status</label>
 							@if($isReadonly)
 								<div class="_cfp-detail-value">
-									@if(!empty($customer->IsFiler))
+									@if(!empty($customer->IsUnregistered))
+										<span class="badge bg-secondary-subtle text-secondary"><i class="fas fa-user-slash me-1"></i> Unregistered Buyer</span>
+									@elseif(!empty($customer->IsFiler))
 										<i class="fas fa-check-circle text-success"></i> Tax Filer
 									@else
 										<i class="fas fa-times-circle text-danger"></i> Non-Filer
@@ -620,68 +622,75 @@
 								</div>
 							@endif
 						</div>
+
+						<div class="col-md-5">
+							<label class="{{ $isReadonly ? '_cfp-detail-label' : 'form-label' }}">Unregistered Buyer Flag</label>
+							@if($isReadonly)
+								<div class="_cfp-detail-value">
+									@if(!empty($customer->IsUnregistered))
+										<span class="text-warning fw-semibold"><i class="fas fa-check-square me-1"></i> Yes (FBR Check Skipped)</span>
+									@else
+										<span class="text-muted"><i class="far fa-square me-1"></i> No</span>
+									@endif
+								</div>
+							@else
+								<div class="form-check mt-1">
+									<input type="hidden" name="IsUnregistered" value="0">
+									<input class="form-check-input" type="checkbox"
+										   name="IsUnregistered" id="{{ $uid }}_IsUnregistered" value="1"
+										   {{ old('IsUnregistered', $customer->IsUnregistered ?? '0') == '1' ? 'checked' : '' }}>
+									<label class="form-check-label" for="{{ $uid }}_IsUnregistered">
+										Unregistered Buyer (Skip FBR Check)
+									</label>
+								</div>
+								<div class="form-text text-muted fs-11">
+									Skips FBR check for walk-in / retail buyers and automatically applies non-filer tax rates.
+								</div>
+							@endif
+						</div>
 					</div>
 					<div class="row g-2">
 						@if($isReadonly)
 							@if(empty($customer->IsFiler))
 								<div class="col-12 mt-2">
 									<div class="row g-2">
-										<div class="col-md-3">
+										<div class="col-md-6">
 											<span class="_cfp-detail-label">Sales tax withheld at source</span>
 											<div class="_cfp-detail-value">{{ $customer->SalesTaxWithheldAtSource ?? '—' }}</div>
 										</div>
-										<div class="col-md-3">
-											<span class="_cfp-detail-label">Extra tax</span>
-											<div class="_cfp-detail-value">{{ number_format((float) ($customer->ExtraTax ?? 0), 2) }}</div>
-										</div>
-										<div class="col-md-3">
-											<span class="_cfp-detail-label">Further tax</span>
-											<div class="_cfp-detail-value">{{ number_format((float) ($customer->FurtherTax ?? 0), 2) }}</div>
-										</div>
-										<div class="col-md-3">
-											<span class="_cfp-detail-label">FED payable</span>
-											<div class="_cfp-detail-value">{{ number_format((float) ($customer->FedPayable ?? 0), 2) }}</div>
+										<div class="col-md-6">
+											<span class="_cfp-detail-label">Further tax (%)</span>
+											<div class="_cfp-detail-value">{{ number_format((float) ($customer->FurtherTax ?? 0), 2) }}%</div>
 										</div>
 									</div>
 								</div>
 							@else
 								<div class="col-12 mt-2">
-									<p class="text-muted small mb-0"><i class="fas fa-info-circle"></i> Withholding / extra / further / FED stored as <strong>0.00</strong> for tax filers.</p>
+									<p class="text-muted small mb-0"><i class="fas fa-info-circle"></i> Withholding / further tax stored as <strong>0.00</strong> for tax filers.</p>
 								</div>
 							@endif
 						@else
 							<div id="{{ $uid }}_nonFilerTaxRow" class="col-12 mt-1 {{ (string) old('IsFiler', $customer->IsFiler ?? '1') === '1' ? 'd-none' : '' }}">
 								<p class="text-muted small mb-2">For <strong>non-tax filers</strong> only. Hidden when &quot;Is Tax Filer?&quot; is checked (defaults 0.00).</p>
 								<div class="row g-2">
-									<div class="col-md-3">
+									<div class="col-md-6">
 										<label class="form-label" for="{{ $uid }}_SalesTaxWithheldAtSource">Sales tax withheld at source</label>
 										<input type="text" name="SalesTaxWithheldAtSource" id="{{ $uid }}_SalesTaxWithheldAtSource" maxlength="50"
 											   class="form-control form-control-sm @error('SalesTaxWithheldAtSource') is-invalid @enderror"
 											   value="{{ old('SalesTaxWithheldAtSource', $customer->SalesTaxWithheldAtSource ?? '') }}" placeholder="Optional">
 										@error('SalesTaxWithheldAtSource')<div class="invalid-feedback">{{ $message }}</div>@enderror
 									</div>
-									<div class="col-md-3">
-										<label class="form-label" for="{{ $uid }}_ExtraTax">Extra tax</label>
-										<input type="number" step="0.01" min="0" max="999.99" name="ExtraTax" id="{{ $uid }}_ExtraTax"
-											   class="form-control form-control-sm @error('ExtraTax') is-invalid @enderror"
-											   value="{{ old('ExtraTax', isset($customer->ExtraTax) ? number_format((float) $customer->ExtraTax, 2, '.', '') : '0.00') }}">
-										@error('ExtraTax')<div class="invalid-feedback">{{ $message }}</div>@enderror
-									</div>
-									<div class="col-md-3">
-										<label class="form-label" for="{{ $uid }}_FurtherTax">Further tax</label>
+									<div class="col-md-6">
+										<label class="form-label" for="{{ $uid }}_FurtherTax">Further tax (%)</label>
 										<input type="number" step="0.01" min="0" max="999.99" name="FurtherTax" id="{{ $uid }}_FurtherTax"
 											   class="form-control form-control-sm @error('FurtherTax') is-invalid @enderror"
 											   value="{{ old('FurtherTax', isset($customer->FurtherTax) ? number_format((float) $customer->FurtherTax, 2, '.', '') : '0.00') }}">
 										@error('FurtherTax')<div class="invalid-feedback">{{ $message }}</div>@enderror
 									</div>
-									<div class="col-md-3">
-										<label class="form-label" for="{{ $uid }}_FedPayable">FED payable</label>
-										<input type="number" step="0.01" min="0" max="999.99" name="FedPayable" id="{{ $uid }}_FedPayable"
-											   class="form-control form-control-sm @error('FedPayable') is-invalid @enderror"
-											   value="{{ old('FedPayable', isset($customer->FedPayable) ? number_format((float) $customer->FedPayable, 2, '.', '') : '0.00') }}">
-										@error('FedPayable')<div class="invalid-feedback">{{ $message }}</div>@enderror
-									</div>
 								</div>
+								{{-- Extra tax and FED payable are configured at Product level --}}
+								<input type="hidden" name="ExtraTax" id="{{ $uid }}_ExtraTax" value="0.00">
+								<input type="hidden" name="FedPayable" id="{{ $uid }}_FedPayable" value="0.00">
 							</div>
 						@endif
 
@@ -950,6 +959,35 @@
     }
     document.getElementById(uid + '_IsFiler')?.addEventListener('change', syncNonFilerTaxFields);
     syncNonFilerTaxFields();
+
+    function syncUnregisteredBuyer() {
+        const unregCb = document.getElementById(uid + '_IsUnregistered');
+        const isFilerCb = document.getElementById(uid + '_IsFiler');
+        const fbrVerifyBtn = document.getElementById(uid + '_fbr_verify_btn');
+        if (!unregCb) return;
+
+        if (unregCb.checked) {
+            if (isFilerCb) {
+                isFilerCb.checked = false;
+                isFilerCb.disabled = true;
+                syncNonFilerTaxFields();
+            }
+            if (fbrVerifyBtn) {
+                fbrVerifyBtn.disabled = true;
+                fbrVerifyBtn.title = "Buyer is marked as Unregistered (FBR check skipped)";
+            }
+        } else {
+            if (isFilerCb) {
+                isFilerCb.disabled = false;
+            }
+            if (fbrVerifyBtn) {
+                fbrVerifyBtn.disabled = false;
+                fbrVerifyBtn.title = "";
+            }
+        }
+    }
+    document.getElementById(uid + '_IsUnregistered')?.addEventListener('change', syncUnregisteredBuyer);
+    syncUnregisteredBuyer();
 
     if (typeof window.initCustomerFbrVerify === 'function') {
         window.initCustomerFbrVerify(

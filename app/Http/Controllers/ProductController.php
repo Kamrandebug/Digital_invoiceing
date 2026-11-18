@@ -113,6 +113,8 @@ class ProductController extends Controller
             'SalePrice'       => ['required', 'numeric', 'min:0'],
             'Cost'            => ['nullable', 'numeric', 'min:0'],
             'TPRate'          => ['nullable', 'numeric', 'min:0'],
+            'ExtraTax'        => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'FedPayable'      => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'IsFixedValue'    => ['required', 'integer', 'in:0,1'],
             'Weight'          => ['nullable', 'numeric', 'min:0'],
 
@@ -185,6 +187,8 @@ class ProductController extends Controller
                 'SalePrice'       => $request->SalePrice ?? 0,
                 'Cost'            => $request->Cost ?? 0,
                 'TPRate'          => ((int) $request->input('IsFixedValue', 0) === 1) ? ($request->TPRate ?? 0) : 0,
+                'ExtraTax'        => (float) ($request->input('ExtraTax', 0) ?: 0),
+                'FedPayable'      => (float) ($request->input('FedPayable', 0) ?: 0),
                 'IsFixedRate'     => (int) $request->input('IsFixedValue', 0),
                 'Weight'          => $request->Weight ?? 0,
                 'Image'           => $request->Image ?? null,
@@ -259,6 +263,8 @@ class ProductController extends Controller
                         'sro_item_id'             => $prodRow->SroItemID ?? '',
                         'tp_rate'                 => (float) ($prodRow->TPRate ?? 0),
                         'is_fixed_rate'           => $isFixed,
+                        'extra_tax'               => (float) ($prodRow->ExtraTax ?? 0),
+                        'fed_payable'             => (float) ($prodRow->FedPayable ?? 0),
                     ];
                 }
 
@@ -464,6 +470,8 @@ class ProductController extends Controller
             'SalePrice'       => ['required', 'numeric', 'min:0'],
             'Cost'            => ['nullable', 'numeric', 'min:0'],
             'TPRate'          => ['nullable', 'numeric', 'min:0'],
+            'ExtraTax'        => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'FedPayable'      => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'IsFixedValue'    => ['required', 'integer', 'in:0,1'],
             'Weight'          => ['nullable', 'numeric', 'min:0'],
 
@@ -534,6 +542,8 @@ class ProductController extends Controller
                 'SalePrice'       => $request->SalePrice ?? 0,
                 'Cost'            => $product->Cost ?? 0,
                 'TPRate'          => ((int) $request->input('IsFixedValue', 0) === 1) ? ($request->TPRate ?? 0) : 0,
+                'ExtraTax'        => (float) ($request->input('ExtraTax', $product->ExtraTax ?? 0) ?: 0),
+                'FedPayable'      => (float) ($request->input('FedPayable', $product->FedPayable ?? 0) ?: 0),
                 'IsFixedRate'     => (int) $request->input('IsFixedValue', 0),
                 'Weight'          => $request->Weight ?? 0,
                 'Image'           => $request->Image ?? $product->Image ?? null,

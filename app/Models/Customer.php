@@ -57,6 +57,7 @@ class Customer extends Model
         'NTN',
         'SalesTtaxNumber',
         'IsFiler',
+        'IsUnregistered',
         'RegisterType',
         'FilerStatus',
         'FilerStatusDate',
@@ -133,6 +134,7 @@ $query = DB::table('tbl_customer');
      */
     public static function save_transaction($validated)
     {
+        self::ensureUnregisteredColumn();
         $requestID = $validated['RequestID'] ?? '';
 
         DB::statement("
@@ -194,10 +196,10 @@ $query = DB::table('tbl_customer');
 
         DB::statement("
             INSERT INTO tbl_customer (AccountNo,PartyType,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
-                SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
+                SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,IsUnregistered,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
                 Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn)
             SELECT 	AccountNo,PartyType,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,
-                SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
+                SameAsBilling,BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,NTN,SalesTaxNumber,CNIC,IsFiler,IFNULL(IsUnregistered, 0),RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,
                 Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,`Status`,CreatedBy,CreatedOn
             FROM 	temp_customer
             WHERE RequestID = ? AND ErrMsg = 'Pass'
@@ -236,6 +238,7 @@ $query = DB::table('tbl_customer');
      */
     public static function edit_transaction($validated)
     {
+        self::ensureUnregisteredColumn();
         $requestID = $validated['RequestID'] ?? '';
 
         DB::statement("
@@ -292,7 +295,7 @@ $query = DB::table('tbl_customer');
             JOIN (
                 SELECT TID,AccountNo,Title,FirstName,LastName,BusinessName,DisplayName,Email,Mobile,Phone,Website,Address,City,County,PostalCode,Country,SameAsBilling,
 			BillingAddress,BillingCity,BillingCounty,BillingCountry,BillingPostalCode,FullBillingAddress,
-			NTN,SalesTaxNumber,CNIC,IsFiler,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,
+			NTN,SalesTaxNumber,CNIC,IsFiler,IsUnregistered,RegisterType,FilerStatus,FilerStatusDate,IsAdvanceTax,AdvanceTax,Notes,`SalesTaxWithheldAtSource`,`ExtraTax`,`FurtherTax`,`FedPayable`,
 			`Status`,UpdatedBy,UpdatedOn
                 FROM temp_customer
                 WHERE RequestID = ?
@@ -324,6 +327,7 @@ $query = DB::table('tbl_customer');
                 uu.CNIC = u.CNIC,
                 uu.SalesTaxNumber = u.SalesTaxNumber,
                 uu.IsFiler = u.IsFiler,
+                uu.IsUnregistered = IFNULL(u.IsUnregistered, 0),
                 uu.RegisterType = u.RegisterType,
                 uu.FilerStatus = u.FilerStatus,
                 uu.FilerStatusDate = u.FilerStatusDate,
@@ -536,7 +540,7 @@ $query = DB::table('tbl_customer');
                 BillingAddress, BillingCity, BillingCounty, BillingCountry,
                 BillingPostalCode, FullBillingAddress,
                 NTN, SalesTaxNumber, CNIC,
-                IsFiler, RegisterType, FilerStatus, FilerStatusDate,
+                IsFiler, IsUnregistered, RegisterType, FilerStatus, FilerStatusDate,
                 IsAdvanceTax, AdvanceTax,
                 Notes,
                 SalesTaxWithheldAtSource, ExtraTax, FurtherTax, FedPayable,
@@ -555,7 +559,7 @@ $query = DB::table('tbl_customer');
                 c.BillingAddress, c.BillingCity, c.BillingCounty, c.BillingCountry,
                 c.BillingPostalCode, c.FullBillingAddress,
                 c.NTN, c.SalesTaxNumber, c.CNIC,
-                c.IsFiler, c.RegisterType, c.FilerStatus, c.FilerStatusDate,
+                c.IsFiler, IFNULL(c.IsUnregistered, 0), c.RegisterType, c.FilerStatus, c.FilerStatusDate,
                 c.IsAdvanceTax, c.AdvanceTax,
                 c.Notes,
                 c.SalesTaxWithheldAtSource, c.ExtraTax, c.FurtherTax, c.FedPayable,
@@ -574,6 +578,50 @@ $query = DB::table('tbl_customer');
                 "move_history_data: INSERT/SELECT returned false for RequestID={$requestID}. "
                 . 'Check that temp_customer.TID matches a valid tbl_customer.ID.'
             );
+        }
+    }
+
+    /**
+     * Self-healing helper: ensure IsUnregistered column exists on tenant tables
+     */
+    public static function ensureUnregisteredColumn(): void
+    {
+        try {
+            $conn = DB::connection('tenant');
+            $hasCol = $conn->selectOne("
+                SELECT COUNT(*) as cnt
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'tbl_customer'
+                  AND COLUMN_NAME = 'IsUnregistered'
+            ");
+            if ((int)($hasCol->cnt ?? 0) === 0) {
+                $conn->statement("ALTER TABLE `tbl_customer` ADD COLUMN `IsUnregistered` TINYINT(1) NOT NULL DEFAULT 0 AFTER `IsFiler`");
+            }
+
+            $hasTempCol = $conn->selectOne("
+                SELECT COUNT(*) as cnt
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'temp_customer'
+                  AND COLUMN_NAME = 'IsUnregistered'
+            ");
+            if ((int)($hasTempCol->cnt ?? 0) === 0) {
+                $conn->statement("ALTER TABLE `temp_customer` ADD COLUMN `IsUnregistered` TINYINT(1) NOT NULL DEFAULT 0 AFTER `IsFiler`");
+            }
+
+            $hasHistCol = $conn->selectOne("
+                SELECT COUNT(*) as cnt
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'tbl_customer_history'
+                  AND COLUMN_NAME = 'IsUnregistered'
+            ");
+            if ((int)($hasHistCol->cnt ?? 0) === 0) {
+                $conn->statement("ALTER TABLE `tbl_customer_history` ADD COLUMN `IsUnregistered` TINYINT(1) NOT NULL DEFAULT 0 AFTER `IsFiler`");
+            }
+        } catch (\Throwable $e) {
+            Log::warning('ensureUnregisteredColumn check/alter skipped: ' . $e->getMessage());
         }
     }
 

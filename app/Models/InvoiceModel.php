@@ -100,7 +100,8 @@ class InvoiceModel extends Model
         $query = "SELECT p.ID, p.Name AS ProductName, p.SalePrice, 0 AS GstPercentage,
                   p.HsCode, p.SaleInformation, p.UomID,
                   (SELECT u.UnitName FROM tbl_Unit u WHERE u.id = p.Unit LIMIT 1) AS UnitName,
-                  p.SaleTypeID, p.SaleTypeToRateID, p.SroScheduleID, p.SroItemID, p.TPRate, p.IsFixedRate, p.Unit
+                  p.SaleTypeID, p.SaleTypeToRateID, p.SroScheduleID, p.SroItemID, p.TPRate, p.IsFixedRate, p.Unit,
+                  IFNULL(p.ExtraTax, 0.00) AS ExtraTax, IFNULL(p.FedPayable, 0.00) AS FedPayable
                   FROM tbl_product p
                   WHERE p.Status = 1";
 

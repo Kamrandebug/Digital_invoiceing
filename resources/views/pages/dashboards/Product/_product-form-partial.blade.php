@@ -385,6 +385,39 @@
                             @endif
                         </div>
                     </div>
+                    <div class="row g-2 mt-2 pt-2 border-top">
+                        <div class="col-md-6">
+                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">Extra Tax (%)</label>
+                            @if($isReadonly)
+                                <div class="_pfp-detail-value">{{ number_format((float) ($product->ExtraTax ?? 0), 2) }}%</div>
+                            @else
+                                <input type="number"
+                                       step="0.01"
+                                       min="0"
+                                       max="100"
+                                       name="ExtraTax"
+                                       class="form-control @error('ExtraTax') is-invalid @enderror"
+                                       value="{{ old('ExtraTax', isset($product->ExtraTax) ? number_format((float)$product->ExtraTax, 2, '.', '') : '0.00') }}"
+                                       placeholder="0.00">
+                                @error('ExtraTax')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            @endif
+                        </div>
+                        <div class="col-md-6">
+                            <label class="{{ $isReadonly ? '_pfp-detail-label' : 'form-label' }}">FED Payable (PKR)</label>
+                            @if($isReadonly)
+                                <div class="_pfp-detail-value">{{ number_format((float) ($product->FedPayable ?? 0), 2) }}</div>
+                            @else
+                                <input type="number"
+                                       step="0.01"
+                                       min="0"
+                                       name="FedPayable"
+                                       class="form-control @error('FedPayable') is-invalid @enderror"
+                                       value="{{ old('FedPayable', isset($product->FedPayable) ? number_format((float)$product->FedPayable, 2, '.', '') : '0.00') }}"
+                                       placeholder="0.00">
+                                @error('FedPayable')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            @endif
+                        </div>
+                    </div>
                         </div>
                     </div>
                 </div>

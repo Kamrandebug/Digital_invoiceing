@@ -644,6 +644,8 @@
                                             data-sro-item-id="{{ $prod->SroItemID ?? '' }}"
                                             data-tp-rate="{{ $prod->TPRate ?? 0 }}"
                                             data-is-fixed-rate="{{ in_array(strtolower(trim((string) ($prod->IsFixedRate ?? '0'))), ['1', 'true', 'yes', 'y', 'on'], true) ? 1 : 0 }}"
+                                            data-extra-tax="{{ $prod->ExtraTax ?? 0 }}"
+                                            data-fed-payable="{{ $prod->FedPayable ?? 0 }}"
                                             {{ ($item->ProductID ?? 0) == $prod->ID ? 'selected' : '' }}>
                                         {{ $prod->ProductName ?? $prod->Name ?? $prod->Code ?? ('Product #' . $prod->ID) }}
                                     </option>
@@ -819,7 +821,9 @@
                                         data-sro-schedule-id="{{ $prod->SroScheduleID ?? '' }}"
                                         data-sro-item-id="{{ $prod->SroItemID ?? '' }}"
                                         data-tp-rate="{{ $prod->TPRate ?? 0 }}"
-                                        data-is-fixed-rate="{{ in_array(strtolower(trim((string) ($prod->IsFixedRate ?? '0'))), ['1', 'true', 'yes', 'y', 'on'], true) ? 1 : 0 }}">
+                                        data-is-fixed-rate="{{ in_array(strtolower(trim((string) ($prod->IsFixedRate ?? '0'))), ['1', 'true', 'yes', 'y', 'on'], true) ? 1 : 0 }}"
+                                        data-extra-tax="{{ $prod->ExtraTax ?? 0 }}"
+                                        data-fed-payable="{{ $prod->FedPayable ?? 0 }}">
                                     {{ $prod->ProductName ?? $prod->Name ?? $prod->Code ?? ('Product #' . $prod->ID) }}
                                 </option>
                             @endforeach
@@ -1806,6 +1810,8 @@
                 const sroScheduleId = ds.sroScheduleId || opt.getAttribute('data-sro-schedule-id') || '';
                 const sroItemId = ds.sroItemId || opt.getAttribute('data-sro-item-id') || '';
                 const tpRate = ds.tpRate || opt.getAttribute('data-tp-rate') || 0;
+                const extraTax = ds.extraTax != null && ds.extraTax !== '' ? ds.extraTax : (opt.getAttribute('data-extra-tax') || '0');
+                const fedPayable = ds.fedPayable != null && ds.fedPayable !== '' ? ds.fedPayable : (opt.getAttribute('data-fed-payable') || '0');
                 const isFixedRaw = ds.isFixedRate != null && ds.isFixedRate !== ''
                     ? ds.isFixedRate
                     : (opt.getAttribute('data-is-fixed-rate') || '0');
@@ -1821,6 +1827,11 @@
                 const fixedRateEl = rowEl(row, '.ifp-fixed-rate');
                 const isFixedHidden = rowEl(row, '.ifp-is-fixed-rate');
                 const isFixedCb = rowEl(row, '.ifp-is-fixed-rate-cb');
+                const extraTaxPctInput = rowEl(row, '.ifp-extra-tax-pct');
+                const fedPayablePctInput = rowEl(row, '.ifp-fed-payable-pct');
+
+                if (extraTaxPctInput) extraTaxPctInput.value = n(extraTax).toFixed(2);
+                if (fedPayablePctInput) fedPayablePctInput.value = n(fedPayable).toFixed(2);
 
                 if (hsInp) hsInp.value = hsCode;
                 if (detailsTa) {
@@ -1940,15 +1951,11 @@
         const isFilerHidden = rowEl(row, '.ifp-is-filer');
         const isFilerCb = rowEl(row, '.ifp-is-filer-cb');
         const withheldInput = rowEl(row, '.ifp-sales-tax-withheld');
-        const extraTaxPctInput = rowEl(row, '.ifp-extra-tax-pct');
         const furtherTaxPctInput = rowEl(row, '.ifp-further-tax-pct');
-        const fedPayablePctInput = rowEl(row, '.ifp-fed-payable-pct');
         if (isFilerHidden) isFilerHidden.value = String(meta.isFiler);
         if (isFilerCb) isFilerCb.checked = !!meta.isFiler;
         if (withheldInput) withheldInput.value = meta.salesTaxWithheldAtSource.toFixed(2);
-        if (extraTaxPctInput) extraTaxPctInput.value = meta.extraTaxPct.toFixed(2);
         if (furtherTaxPctInput) furtherTaxPctInput.value = meta.furtherTaxPct.toFixed(2);
-        if (fedPayablePctInput) fedPayablePctInput.value = meta.fedPayablePct.toFixed(2);
     }
 
     // ── Tax dropdowns (per row): HS Code → UOM; Sale Type → Sale Type To Rate → SRO Schedule → SRO Item ──
@@ -2668,6 +2675,8 @@
         o.setAttribute('data-sro-item-id', String(p.sro_item_id != null ? p.sro_item_id : ''));
         o.setAttribute('data-tp-rate', String(p.tp_rate != null ? p.tp_rate : 0));
         o.setAttribute('data-is-fixed-rate', String(p.is_fixed_rate != null ? p.is_fixed_rate : 0));
+        o.setAttribute('data-extra-tax', String(p.extra_tax != null ? p.extra_tax : 0));
+        o.setAttribute('data-fed-payable', String(p.fed_payable != null ? p.fed_payable : 0));
         return o;
     }
     function ifpApplyNewProductToAllRows(p) {

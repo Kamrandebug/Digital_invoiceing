@@ -70,6 +70,8 @@ Route::middleware(['auth', 'tenant'])->prefix('customers')->name('customers.')->
     Route::get('/import/template', [CustomerController::class, 'downloadImportTemplate'])->name('import-template');
     Route::post('/import', [CustomerController::class, 'importCustomers'])->middleware('tenant.role:owner,admin,accountant')->name('import');
     Route::post('/verify-fbr', [CustomerController::class, 'verifyFbr'])->middleware('tenant.role:owner,admin,accountant')->name('verify_fbr');
+    Route::post('/fbr-bulk-sync/init', [CustomerController::class, 'initFbrBulkSync'])->middleware('tenant.role:owner,admin,accountant')->name('fbr_bulk_sync.init');
+    Route::post('/fbr-bulk-sync/batch', [CustomerController::class, 'processFbrBulkSyncBatch'])->middleware('tenant.role:owner,admin,accountant')->name('fbr_bulk_sync.batch');
     Route::get('/modal', [CustomerController::class, 'modal'])->name('modal');
 
     Route::get('/{id}/edit', [CustomerController::class, 'edit'])->middleware('tenant.role:owner,admin,accountant')->name('edit');

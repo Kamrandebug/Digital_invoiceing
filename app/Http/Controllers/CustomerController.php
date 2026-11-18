@@ -182,7 +182,9 @@ class CustomerController extends Controller
             ]);
         }
 
-        if ((int) $request->input('IsFiler', 0) === 1) {
+        if ($request->boolean('IsUnregistered')) {
+            $request->merge(['IsFiler' => 0]);
+        } elseif ((int) $request->input('IsFiler', 0) === 1) {
             $request->merge([
                 'SalesTaxWithheldAtSource' => null,
                 'ExtraTax' => '0.00',
@@ -221,6 +223,7 @@ try {
         'NTN'               => 'nullable|string|max:50',
         'SalesTaxNumber'    => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]{5,50}$/', 'unique:tbl_customer,SalesTaxNumber'],
         'IsFiler'           => 'nullable|boolean',
+        'IsUnregistered'    => 'nullable|boolean',
         'RegisterType'      => 'nullable|string|max:25',
         'FilerStatus'       => 'nullable|string|max:25',
         'FilerStatusDate'   => 'nullable|date',
@@ -333,6 +336,7 @@ try {
                 'SalesTaxNumber'    => $request->SalesTaxNumber ?? '',
                 'CNIC'              => $request->CNIC,
                 'IsFiler'           => $request->input('IsFiler', 0),
+                'IsUnregistered'    => $request->boolean('IsUnregistered') ? 1 : 0,
                 'RegisterType'      => $this->nullableFbrField($request->input('RegisterType')),
                 'FilerStatus'       => $this->nullableFbrField($request->input('FilerStatus')),
                 'FilerStatusDate'   => $this->nullableFbrDate($request->input('FilerStatusDate')),
@@ -380,6 +384,7 @@ try {
                         'id'                   => (int) $custRow->ID,
                         'label'                => $label,
                         'is_filer'             => (int) ($custRow->IsFiler ?? 0) ? 1 : 0,
+                        'is_unregistered'      => (int) ($custRow->IsUnregistered ?? 0) === 1 ? 1 : 0,
                         'sales_tax_withheld'   => $custRow->SalesTaxWithheldAtSource ?? 0,
                         'extra_tax'            => $custRow->ExtraTax ?? 0,
                         'further_tax'          => $custRow->FurtherTax ?? 0,
@@ -628,7 +633,9 @@ public function modal(Request $request, $id = null)
             ]);
         }
 
-        if ((int) $request->input('IsFiler', 0) === 1) {
+        if ($request->boolean('IsUnregistered')) {
+            $request->merge(['IsFiler' => 0]);
+        } elseif ((int) $request->input('IsFiler', 0) === 1) {
             $request->merge([
                 'SalesTaxWithheldAtSource' => null,
                 'ExtraTax' => '0.00',
@@ -673,6 +680,7 @@ try {
             Rule::unique('tbl_customer', 'SalesTaxNumber')->where('Status', 1)->ignore((int) $id, 'ID'),
         ],
         'IsFiler'           => 'nullable|boolean',
+        'IsUnregistered'    => 'nullable|boolean',
         'RegisterType'      => 'nullable|string|max:25',
         'FilerStatus'       => 'nullable|string|max:25',
         'FilerStatusDate'   => 'nullable|date',
@@ -785,6 +793,7 @@ try {
                 'SalesTaxNumber'    => $request->SalesTaxNumber ?? '',
                 'CNIC'              => $request->CNIC,
                 'IsFiler'           => $request->input('IsFiler', 0),
+                'IsUnregistered'    => $request->boolean('IsUnregistered') ? 1 : 0,
                 'RegisterType'      => $this->nullableFbrField($request->input('RegisterType')),
                 'FilerStatus'       => $this->nullableFbrField($request->input('FilerStatus')),
                 'FilerStatusDate'   => $this->nullableFbrDate($request->input('FilerStatusDate')),
@@ -1194,6 +1203,7 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
                     'SalesTaxNumber'           => $row['SalesTaxNumber'] ?? '',
                     'CNIC'                     => $row['CNIC'] ?? null,
                     'IsFiler'                  => $isFiler,
+                    'IsUnregistered'           => 0,
                     'RegisterType'             => $row['RegisterType'] ?? null,
                     'FilerStatus'              => $row['FilerStatus'] ?? null,
                     'FilerStatusDate'          => $row['FilerStatusDate'] ?? null,
@@ -1245,5 +1255,180 @@ return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInpu
             }
             return redirect()->back()->with('error', $err);
         }
+    }
+
+    /**
+     * AJAX: Initialize FBR Bulk Sync for customers.
+     * Fetches all qualifying customer IDs (has non-empty NTN, not marked as Unregistered).
+     */
+    public function initFbrBulkSync(Request $request)
+    {
+        Customer::ensureUnregisteredColumn();
+
+        $query = DB::connection('tenant')->table('tbl_customer');
+
+        $partyTypes = $this->partyTypesForList();
+        if ($this->includeNullPartyTypeInList()) {
+            $query->where(function ($q) use ($partyTypes) {
+                $q->whereIn('PartyType', $partyTypes)->orWhereNull('PartyType');
+            });
+        } else {
+            $query->whereIn('PartyType', $partyTypes);
+        }
+
+        $query->whereIn('Status', [0, 1]);
+
+        // Must have non-empty NTN
+        $query->whereNotNull('NTN')
+              ->whereRaw("TRIM(NTN) <> ''");
+
+        // Must NOT be marked as Unregistered buyer (user rule: separate toggle permanently skips FBR check)
+        $query->where(function ($q) {
+            $q->whereNull('IsUnregistered')
+              ->orWhere('IsUnregistered', 0);
+        });
+
+        $ids = $query->orderBy('ID', 'asc')->pluck('ID')->all();
+
+        return response()->json([
+            'status' => 'success',
+            'total' => count($ids),
+            'ids' => $ids,
+        ]);
+    }
+
+    /**
+     * AJAX: Process a chunk/batch of customer IDs for FBR verification and tax configuration.
+     */
+    public function processFbrBulkSyncBatch(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1|max:50',
+            'ids.*' => 'integer',
+            'further_tax_rate' => 'nullable|numeric|min:0|max:100',
+            'advance_tax_rate' => 'nullable|numeric|min:0|max:100',
+            'apply_advance_tax' => 'nullable|boolean',
+            'as_of_date' => 'nullable|date',
+        ]);
+
+        Customer::ensureUnregisteredColumn();
+
+        $ids = array_map('intval', $request->input('ids', []));
+        $furtherTaxRate = round((float) $request->input('further_tax_rate', 4.00), 2);
+        $advanceTaxRate = round((float) $request->input('advance_tax_rate', 0.00), 2);
+        $applyAdvanceTax = (bool) $request->boolean('apply_advance_tax');
+        $asOfDate = $request->input('as_of_date') ?: now()->toDateString();
+        try {
+            $asOfDate = \Carbon\Carbon::parse($asOfDate)->toDateString();
+        } catch (\Throwable) {
+            $asOfDate = now()->toDateString();
+        }
+
+        $customers = DB::connection('tenant')->table('tbl_customer')
+            ->whereIn('ID', $ids)
+            ->get();
+
+        $results = [];
+        $now = now()->toDateTimeString();
+
+        foreach ($customers as $customer) {
+            $displayName = trim($customer->BusinessName ?? '')
+                ?: trim($customer->DisplayName ?? '')
+                ?: trim(trim(($customer->FirstName ?? '') . ' ' . ($customer->LastName ?? '')))
+                ?: ('Customer #' . $customer->ID);
+
+            $ntn = trim((string) ($customer->NTN ?? ''));
+
+            // Rule 2 & 3: Skip if NTN is empty or customer marked as Unregistered
+            if ($ntn === '' || (int)($customer->IsUnregistered ?? 0) === 1) {
+                $results[] = [
+                    'id' => $customer->ID,
+                    'account_no' => $customer->AccountNo ?? '-',
+                    'name' => $displayName,
+                    'ntn' => $ntn ?: 'N/A',
+                    'status' => 'Skipped',
+                    'is_filer' => 0,
+                    'further_tax' => (float)($customer->FurtherTax ?? 0),
+                    'message' => $ntn === '' ? 'Skipped (No NTN)' : 'Skipped (Unregistered Buyer)',
+                ];
+                continue;
+            }
+
+            // Verify with FBR
+            $fbrRes = Customer::verify_fbr($ntn, $asOfDate);
+
+            if (! ($fbrRes['success'] ?? false)) {
+                $results[] = [
+                    'id' => $customer->ID,
+                    'account_no' => $customer->AccountNo ?? '-',
+                    'name' => $displayName,
+                    'ntn' => $ntn,
+                    'status' => 'Error',
+                    'is_filer' => (int)($customer->IsFiler ?? 0),
+                    'further_tax' => (float)($customer->FurtherTax ?? 0),
+                    'message' => $fbrRes['message'] ?? 'FBR lookup failed',
+                ];
+                continue;
+            }
+
+            $filerStatus = $fbrRes['filer_status'] ?? null;
+            $registerType = $fbrRes['register_type'] ?? null;
+            $isActiveFiler = ($filerStatus === 'Active');
+
+            $updateData = [
+                'FilerStatus' => $filerStatus,
+                'RegisterType' => $registerType,
+                'FilerStatusDate' => $asOfDate,
+                'UpdatedOn' => $now,
+            ];
+
+            if ($isActiveFiler) {
+                $updateData['IsFiler'] = 1;
+                $updateData['FurtherTax'] = 0.00;
+                $updateData['ExtraTax'] = 0.00;
+                $updateData['SalesTaxWithheldAtSource'] = null;
+                if ($applyAdvanceTax) {
+                    $updateData['IsAdvanceTax'] = 0;
+                    $updateData['AdvanceTax'] = 0.00;
+                }
+            } else {
+                $updateData['IsFiler'] = 0;
+                $updateData['FurtherTax'] = $furtherTaxRate;
+                if ($applyAdvanceTax) {
+                    $updateData['IsAdvanceTax'] = 1;
+                    $updateData['AdvanceTax'] = $advanceTaxRate;
+                }
+            }
+
+            DB::connection('tenant')->table('tbl_customer')
+                ->where('ID', $customer->ID)
+                ->update($updateData);
+
+            // Audit Log
+            try {
+                $newRecord = DB::connection('tenant')->table('tbl_customer')->where('ID', $customer->ID)->first();
+                $module = ((int)$customer->PartyType === 2) ? 'SUPPLIER' : 'CUSTOMER';
+                \App\Services\AuditLogService::log('UPDATE', $module, $customer->ID, (array)$customer, (array)$newRecord);
+            } catch (\Throwable $e) {
+                \Log::warning('AuditLogService bulk sync log skipped: ' . $e->getMessage());
+            }
+
+            $displayStatus = $isActiveFiler ? 'Registered (Active)' : ($registerType === 'Registered' ? 'Registered (In-Active)' : 'Unregistered');
+            $results[] = [
+                'id' => $customer->ID,
+                'account_no' => $customer->AccountNo ?? '-',
+                'name' => $displayName,
+                'ntn' => $ntn,
+                'status' => $displayStatus,
+                'is_filer' => $isActiveFiler ? 1 : 0,
+                'further_tax' => (float)$updateData['FurtherTax'],
+                'message' => $isActiveFiler ? 'Registered (Active) (Further Tax: 0.00%)' : "{$displayStatus} (Further Tax: {$furtherTaxRate}%)",
+            ];
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'processed' => $results,
+        ]);
     }
 }

@@ -64,6 +64,8 @@ class ProductModel extends Model
         'IsShipping',
         'IsPurchasing',
         'TPRate',
+        'ExtraTax',
+        'FedPayable',
         'TPMargin',
         'Unit',
         'UnitName',
@@ -256,12 +258,12 @@ class ProductModel extends Model
 
         DB::connection('landlord')->statement("
             INSERT INTO {$tenantDbQuoted}.tbl_product (
-                VoucherID,`Name`,`Code`,`Type`,CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,IsFixedRate,Weight,Image,
+                VoucherID,`Name`,`Code`,`Type`,CategoryID,CurrentQuantity,Unit,SalePrice,Cost,TPRate,ExtraTax,FedPayable,IsFixedRate,Weight,Image,
                 HsCode,UomID,Uom_Desc,SaleTypeID,SaleTypeDesc,SaleTypeToRateID,SaleTypeToRateDesc,SroScheduleID,SroScheduleDesc,
                 SroItemID,SroItemSerialNo,SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
             )
             SELECT
-                VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,IsFixedRate,Weight,Image,
+                VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,IFNULL(t.ExtraTax, 0.00),IFNULL(t.FedPayable, 0.00),IsFixedRate,Weight,Image,
                 HsCode,UOM,COALESCE(t.Uom_Desc, fho.`description`),SaleType,COALESCE(t.SaleTypeDesc, fttc.`transactioN_DESC`),
                 SaleTypeToRate,COALESCE(t.SaleTypeToRateDesc, fsttr.`ratE_DESC`),SroSchedule,COALESCE(t.SroScheduleDesc, fss.`srO_DESC`),
                 SroItem,COALESCE(t.SroItemSerialNo, fsi.`srO_ITEM_DESC`),SaleInformation,`Status`,CreatedBy,CreatedOn,RequestID
@@ -350,7 +352,7 @@ class ProductModel extends Model
         DB::connection('landlord')->statement("
             UPDATE {$tenantDbQuoted}.tbl_product uu
             JOIN (
-                SELECT t.TID, VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,IsFixedRate,Weight,Image,
+                SELECT t.TID, VoucherID,`Name`,`Code`,`Type`,t.CategoryID,CurrentQuantity,t.Unit,SalePrice,Cost,TPRate,IFNULL(t.ExtraTax, 0.00) AS ExtraTax,IFNULL(t.FedPayable, 0.00) AS FedPayable,IsFixedRate,Weight,Image,
                 HsCode,UOM,fho.`description` AS Uom_Desc,SaleType,fttc.`transactioN_DESC` AS SaleTypeDesc,
                 SaleTypeToRate, fsttr.`ratE_DESC` AS SaleTypeToRateDesc, SroSchedule,fss.`srO_DESC` AS SroScheduleDesc,
                 SroItem,fsi.`srO_ITEM_DESC` AS SroItemSerialNo,SaleInformation,`Status`,UpdatedBy,UpdatedOn,RequestID
@@ -372,6 +374,8 @@ class ProductModel extends Model
                 uu.SalePrice          = u.SalePrice,
                 uu.Cost               = u.Cost,
                 uu.TPRate             = u.TPRate,
+                uu.ExtraTax           = u.ExtraTax,
+                uu.FedPayable         = u.FedPayable,
                 uu.IsFixedRate        = u.IsFixedRate,
                 uu.Weight             = u.Weight,
                 uu.Image              = u.Image,
